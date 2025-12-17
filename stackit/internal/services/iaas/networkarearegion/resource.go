@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -70,8 +73,9 @@ func NewNetworkAreaRegionResource() resource.Resource {
 
 // networkAreaRegionResource is the resource implementation.
 type networkAreaRegionResource struct {
-	client       *iaas.APIClient
-	providerData core.ProviderData
+	client                *iaas.APIClient
+	resourceManagerClient *resourcemanager.APIClient
+	providerData          core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -117,11 +121,16 @@ func (r *networkAreaRegionResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
+	r.resourceManagerClient = resourcemanagerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -434,10 +443,16 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
+		return
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete network area region configuration
-	err := r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))
 		return
