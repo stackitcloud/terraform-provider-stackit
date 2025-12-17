@@ -14,7 +14,7 @@ description: |-
 
 {{ tffile (printf "examples/resources/%s/resource.tf" .Name) }}
 
-## Migration of IaaS resources from versions <= v0.73.0
+## Migration of IaaS resources from versions <= v0.74.0
 
 The release of the STACKIT IaaS API v2 provides a lot of new features, but also includes some breaking changes
 (when coming from v1 of the STACKIT IaaS API) which must be somehow represented on Terraform side. The 
@@ -22,18 +22,18 @@ The release of the STACKIT IaaS API v2 provides a lot of new features, but also 
 
 ### Breaking change: Network area route resource (stackit_network_area_route)
 
-**Configuration for <= v0.73.0**
+**Configuration for <= v0.74.0**
 
 ```terraform
 resource "stackit_network_area_route" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  prefix          = "192.168.0.0/24" # prefix field got removed for provider versions > v0.73.0, use the new destination field instead
+  prefix          = "192.168.0.0/24" # prefix field got removed for provider versions > v0.74.0, use the new destination field instead
   next_hop        = "192.168.0.0" # schema of the next_hop field changed, see below
 }
 ```
 
-**Configuration for > v0.73.0**
+**Configuration for > v0.74.0**
 
 ```terraform
 resource "stackit_network_area_route" "example" {
