@@ -15,20 +15,20 @@ import (
 
 func TestMapFields(t *testing.T) {
 	type args struct {
-		state  Model
+		state  ModelV1
 		input  *iaas.Route
 		region string
 	}
 	tests := []struct {
 		description string
 		args        args
-		expected    Model
+		expected    ModelV1
 		isValid     bool
 	}{
 		{
 			description: "id_ok",
 			args: args{
-				state: Model{
+				state: ModelV1{
 					OrganizationId:     types.StringValue("oid"),
 					NetworkAreaId:      types.StringValue("naid"),
 					NetworkAreaRouteId: types.StringValue("narid"),
@@ -36,16 +36,16 @@ func TestMapFields(t *testing.T) {
 				input:  &iaas.Route{},
 				region: "eu01",
 			},
-			expected: Model{
+			expected: ModelV1{
 				Id:                 types.StringValue("oid,naid,eu01,narid"),
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				NetworkAreaRouteId: types.StringValue("narid"),
-				Destination: &DestinationModel{
+				Destination: &DestinationModelV1{
 					Type:  types.StringNull(),
 					Value: types.StringNull(),
 				},
-				NextHop: &NexthopModel{
+				NextHop: &NexthopModelV1{
 					Type:  types.StringNull(),
 					Value: types.StringNull(),
 				},
@@ -57,7 +57,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "values_ok",
 			args: args{
-				state: Model{
+				state: ModelV1{
 					OrganizationId:     types.StringValue("oid"),
 					NetworkAreaId:      types.StringValue("naid"),
 					NetworkAreaRouteId: types.StringValue("narid"),
@@ -83,16 +83,16 @@ func TestMapFields(t *testing.T) {
 				},
 				region: "eu02",
 			},
-			expected: Model{
+			expected: ModelV1{
 				Id:                 types.StringValue("oid,naid,eu02,narid"),
 				OrganizationId:     types.StringValue("oid"),
 				NetworkAreaId:      types.StringValue("naid"),
 				NetworkAreaRouteId: types.StringValue("narid"),
-				Destination: &DestinationModel{
+				Destination: &DestinationModelV1{
 					Type:  types.StringValue("cidrv4"),
 					Value: types.StringValue("prefix"),
 				},
-				NextHop: &NexthopModel{
+				NextHop: &NexthopModelV1{
 					Type:  types.StringValue("ipv4"),
 					Value: types.StringValue("hop"),
 				},
@@ -118,7 +118,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "no_resource_id",
 			args: args{
-				state: Model{
+				state: ModelV1{
 					OrganizationId: types.StringValue("oid"),
 					NetworkAreaId:  types.StringValue("naid"),
 				},
@@ -148,18 +148,18 @@ func TestMapFields(t *testing.T) {
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *Model
+		input       *ModelV1
 		expected    *iaas.CreateNetworkAreaRoutePayload
 		isValid     bool
 	}{
 		{
 			description: "default_ok",
-			input: &Model{
-				Destination: &DestinationModel{
+			input: &ModelV1{
+				Destination: &DestinationModelV1{
 					Type:  types.StringValue("cidrv4"),
 					Value: types.StringValue("prefix"),
 				},
-				NextHop: &NexthopModel{
+				NextHop: &NexthopModelV1{
 					Type:  types.StringValue("ipv4"),
 					Value: types.StringValue("hop"),
 				},
@@ -214,13 +214,13 @@ func TestToCreatePayload(t *testing.T) {
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *Model
+		input       *ModelV1
 		expected    *iaas.UpdateNetworkAreaRoutePayload
 		isValid     bool
 	}{
 		{
 			"default_ok",
-			&Model{
+			&ModelV1{
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key1": types.StringValue("value1"),
 					"key2": types.StringValue("value2"),
@@ -256,7 +256,7 @@ func TestToUpdatePayload(t *testing.T) {
 
 func TestToNextHopPayload(t *testing.T) {
 	type args struct {
-		model *Model
+		model *ModelV1
 	}
 	tests := []struct {
 		name    string
@@ -267,8 +267,8 @@ func TestToNextHopPayload(t *testing.T) {
 		{
 			name: "ipv4",
 			args: args{
-				model: &Model{
-					NextHop: &NexthopModel{
+				model: &ModelV1{
+					NextHop: &NexthopModelV1{
 						Type:  types.StringValue("ipv4"),
 						Value: types.StringValue("10.20.30.40"),
 					},
@@ -285,8 +285,8 @@ func TestToNextHopPayload(t *testing.T) {
 		{
 			name: "ipv6",
 			args: args{
-				model: &Model{
-					NextHop: &NexthopModel{
+				model: &ModelV1{
+					NextHop: &NexthopModelV1{
 						Type:  types.StringValue("ipv6"),
 						Value: types.StringValue("2001:db8:85a3:0:0:8a2e:370:7334"),
 					},
@@ -303,8 +303,8 @@ func TestToNextHopPayload(t *testing.T) {
 		{
 			name: "internet",
 			args: args{
-				model: &Model{
-					NextHop: &NexthopModel{
+				model: &ModelV1{
+					NextHop: &NexthopModelV1{
 						Type: types.StringValue("internet"),
 					},
 				},
@@ -319,8 +319,8 @@ func TestToNextHopPayload(t *testing.T) {
 		{
 			name: "blackhole",
 			args: args{
-				model: &Model{
-					NextHop: &NexthopModel{
+				model: &ModelV1{
+					NextHop: &NexthopModelV1{
 						Type: types.StringValue("blackhole"),
 					},
 				},
@@ -335,8 +335,8 @@ func TestToNextHopPayload(t *testing.T) {
 		{
 			name: "invalid type",
 			args: args{
-				model: &Model{
-					NextHop: &NexthopModel{
+				model: &ModelV1{
+					NextHop: &NexthopModelV1{
 						Type: types.StringValue("foobar"),
 					},
 				},
@@ -353,7 +353,7 @@ func TestToNextHopPayload(t *testing.T) {
 		{
 			name: "nexthop in model is nil",
 			args: args{
-				model: &Model{
+				model: &ModelV1{
 					NextHop: nil,
 				},
 			},
@@ -376,7 +376,7 @@ func TestToNextHopPayload(t *testing.T) {
 
 func TestToDestinationPayload(t *testing.T) {
 	type args struct {
-		model *Model
+		model *ModelV1
 	}
 	tests := []struct {
 		name    string
@@ -387,8 +387,8 @@ func TestToDestinationPayload(t *testing.T) {
 		{
 			name: "cidrv4",
 			args: args{
-				model: &Model{
-					Destination: &DestinationModel{
+				model: &ModelV1{
+					Destination: &DestinationModelV1{
 						Type:  types.StringValue("cidrv4"),
 						Value: types.StringValue("192.168.1.0/24"),
 					},
@@ -405,8 +405,8 @@ func TestToDestinationPayload(t *testing.T) {
 		{
 			name: "cidrv6",
 			args: args{
-				model: &Model{
-					Destination: &DestinationModel{
+				model: &ModelV1{
+					Destination: &DestinationModelV1{
 						Type:  types.StringValue("cidrv6"),
 						Value: types.StringValue("2001:db8:1234::/48"),
 					},
@@ -423,8 +423,8 @@ func TestToDestinationPayload(t *testing.T) {
 		{
 			name: "invalid type",
 			args: args{
-				model: &Model{
-					Destination: &DestinationModel{
+				model: &ModelV1{
+					Destination: &DestinationModelV1{
 						Type: types.StringValue("foobar"),
 					},
 				},
@@ -441,7 +441,7 @@ func TestToDestinationPayload(t *testing.T) {
 		{
 			name: "destination in model is nil",
 			args: args{
-				model: &Model{
+				model: &ModelV1{
 					Destination: nil,
 				},
 			},
@@ -469,7 +469,7 @@ func TestMapRouteNextHop(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *NexthopModel
+		want    *NexthopModelV1
 		wantErr bool
 	}{
 		{
@@ -484,7 +484,7 @@ func TestMapRouteNextHop(t *testing.T) {
 					},
 				},
 			},
-			want: &NexthopModel{
+			want: &NexthopModelV1{
 				Type:  types.StringValue("ipv4"),
 				Value: types.StringValue("192.168.1.0/24"),
 			},
@@ -501,7 +501,7 @@ func TestMapRouteNextHop(t *testing.T) {
 					},
 				},
 			},
-			want: &NexthopModel{
+			want: &NexthopModelV1{
 				Type:  types.StringValue("ipv6"),
 				Value: types.StringValue("2001:db8:85a3:0:0:8a2e:370:7334"),
 			},
@@ -517,7 +517,7 @@ func TestMapRouteNextHop(t *testing.T) {
 					},
 				},
 			},
-			want: &NexthopModel{
+			want: &NexthopModelV1{
 				Type: types.StringValue("blackhole"),
 			},
 		},
@@ -532,7 +532,7 @@ func TestMapRouteNextHop(t *testing.T) {
 					},
 				},
 			},
-			want: &NexthopModel{
+			want: &NexthopModelV1{
 				Type: types.StringValue("internet"),
 			},
 		},
@@ -558,7 +558,7 @@ func TestMapRouteDestination(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *DestinationModel
+		want    *DestinationModelV1
 		wantErr bool
 	}{
 		{
@@ -573,7 +573,7 @@ func TestMapRouteDestination(t *testing.T) {
 					},
 				},
 			},
-			want: &DestinationModel{
+			want: &DestinationModelV1{
 				Type:  types.StringValue("cidrv4"),
 				Value: types.StringValue("192.168.1.0/24"),
 			},
@@ -590,7 +590,7 @@ func TestMapRouteDestination(t *testing.T) {
 					},
 				},
 			},
-			want: &DestinationModel{
+			want: &DestinationModelV1{
 				Type:  types.StringValue("cidrv6"),
 				Value: types.StringValue("2001:db8:1234::/48"),
 			},
@@ -602,7 +602,7 @@ func TestMapRouteDestination(t *testing.T) {
 					Destination: nil,
 				},
 			},
-			want: &DestinationModel{
+			want: &DestinationModelV1{
 				Type:  types.StringNull(),
 				Value: types.StringNull(),
 			},

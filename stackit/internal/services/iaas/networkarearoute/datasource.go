@@ -134,7 +134,7 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 
 // Read refreshes the Terraform state with the latest data.
 func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ModelV1
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
