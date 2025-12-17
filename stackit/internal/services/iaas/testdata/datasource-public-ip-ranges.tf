@@ -1,1 +1,0 @@
-data "stackit_public_ip_ranges" "example" {}

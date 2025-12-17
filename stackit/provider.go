@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -19,90 +18,13 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
-	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
-	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
-	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
-	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
-	gitInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/instance"
-	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
-	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
-	iaasImageV2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/imagev2"
-	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
-	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
-	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
-	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
-	iaasNetworkAreaRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearegion"
-	iaasNetworkAreaRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearoute"
-	iaasNetworkInterface "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterface"
-	iaasNetworkInterfaceAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkinterfaceattach"
-	iaasProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/project"
-	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
-	iaasPublicIpAssociate "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipassociate"
-	iaasPublicIpRanges "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipranges"
-	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
-	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
-	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
-	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
-	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
-	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
-	iaasalphaRoutingTableRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/route"
-	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
-	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
-	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
-	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
-	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
-	kmsWrappingKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/wrapping-key"
-	loadBalancer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/loadbalancer"
-	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
-	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
-	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
-	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
-	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
-	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
-	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
-	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
-	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
-	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
-	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
-	alertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/alertgroup"
-	observabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/credential"
-	observabilityInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/instance"
-	logAlertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/log-alertgroup"
-	observabilityScrapeConfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/scrapeconfig"
-	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
-	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
-	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
-	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
-	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
 	postgresFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/instance"
-	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
-	rabbitMQInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/instance"
-	redisCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/credential"
-	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
-	resourceManagerFolder "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/folder"
-	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
-	scfOrganization "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organization"
-	scfOrganizationmanager "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organizationmanager"
-	scfPlatform "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/platform"
-	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
-	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
-	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
-	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
-	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
-	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
-	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
-	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
-	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
-	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
-	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 )
 
 // Ensure the implementation satisfies the expected interfaces
 var (
-	_ provider.Provider                       = &Provider{}
-	_ provider.ProviderWithEphemeralResources = &Provider{}
+	_ provider.Provider = &Provider{}
 )
 
 // Provider is the provider implementation.
@@ -491,158 +413,15 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		alertGroup.NewAlertGroupDataSource,
-		cdn.NewDistributionDataSource,
-		cdnCustomDomain.NewCustomDomainDataSource,
-		dnsZone.NewZoneDataSource,
-		dnsRecordSet.NewRecordSetDataSource,
-		gitInstance.NewGitDataSource,
-		iaasAffinityGroup.NewAffinityGroupDatasource,
-		iaasImage.NewImageDataSource,
-		iaasImageV2.NewImageV2DataSource,
-		iaasNetwork.NewNetworkDataSource,
-		iaasNetworkArea.NewNetworkAreaDataSource,
-		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
-		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
-		iaasNetworkInterface.NewNetworkInterfaceDataSource,
-		iaasVolume.NewVolumeDataSource,
-		iaasProject.NewProjectDataSource,
-		iaasPublicIp.NewPublicIpDataSource,
-		iaasPublicIpRanges.NewPublicIpRangesDataSource,
-		iaasKeyPair.NewKeyPairDataSource,
-		iaasServer.NewServerDataSource,
-		iaasSecurityGroup.NewSecurityGroupDataSource,
-		iaasalphaRoutingTable.NewRoutingTableDataSource,
-		iaasalphaRoutingTableRoute.NewRoutingTableRouteDataSource,
-		iaasalphaRoutingTables.NewRoutingTablesDataSource,
-		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
-		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
-		kmsKey.NewKeyDataSource,
-		kmsKeyRing.NewKeyRingDataSource,
-		kmsWrappingKey.NewWrappingKeyDataSource,
-		loadBalancer.NewLoadBalancerDataSource,
-		logMeInstance.NewInstanceDataSource,
-		logMeCredential.NewCredentialDataSource,
-		logAlertGroup.NewLogAlertGroupDataSource,
-		machineType.NewMachineTypeDataSource,
-		mariaDBInstance.NewInstanceDataSource,
-		mariaDBCredential.NewCredentialDataSource,
-		mongoDBFlexInstance.NewInstanceDataSource,
-		mongoDBFlexUser.NewUserDataSource,
-		objectStorageBucket.NewBucketDataSource,
-		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
-		objecStorageCredential.NewCredentialDataSource,
-		observabilityInstance.NewInstanceDataSource,
-		observabilityScrapeConfig.NewScrapeConfigDataSource,
-		openSearchInstance.NewInstanceDataSource,
-		openSearchCredential.NewCredentialDataSource,
-		postgresFlexDatabase.NewDatabaseDataSource,
-		postgresFlexInstance.NewInstanceDataSource,
-		postgresFlexUser.NewUserDataSource,
-		rabbitMQInstance.NewInstanceDataSource,
-		rabbitMQCredential.NewCredentialDataSource,
-		redisInstance.NewInstanceDataSource,
-		redisCredential.NewCredentialDataSource,
-		resourceManagerProject.NewProjectDataSource,
-		scfOrganization.NewScfOrganizationDataSource,
-		scfOrganizationmanager.NewScfOrganizationManagerDataSource,
-		scfPlatform.NewScfPlatformDataSource,
-		resourceManagerFolder.NewFolderDataSource,
-		secretsManagerInstance.NewInstanceDataSource,
-		secretsManagerUser.NewUserDataSource,
-		sqlServerFlexInstance.NewInstanceDataSource,
-		sqlServerFlexUser.NewUserDataSource,
-		serverBackupSchedule.NewScheduleDataSource,
-		serverBackupSchedule.NewSchedulesDataSource,
-		serverUpdateSchedule.NewScheduleDataSource,
-		serverUpdateSchedule.NewSchedulesDataSource,
-		serviceAccount.NewServiceAccountDataSource,
-		skeCluster.NewClusterDataSource,
-	}
+	return []func() datasource.DataSource{}
 }
 
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
-		alertGroup.NewAlertGroupResource,
-		cdn.NewDistributionResource,
-		cdnCustomDomain.NewCustomDomainResource,
-		dnsZone.NewZoneResource,
-		dnsRecordSet.NewRecordSetResource,
-		gitInstance.NewGitResource,
-		iaasAffinityGroup.NewAffinityGroupResource,
-		iaasImage.NewImageResource,
-		iaasNetwork.NewNetworkResource,
-		iaasNetworkArea.NewNetworkAreaResource,
-		iaasNetworkAreaRegion.NewNetworkAreaRegionResource,
-		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
-		iaasNetworkInterface.NewNetworkInterfaceResource,
-		iaasVolume.NewVolumeResource,
-		iaasPublicIp.NewPublicIpResource,
-		iaasKeyPair.NewKeyPairResource,
-		iaasVolumeAttach.NewVolumeAttachResource,
-		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
-		iaasServiceAccountAttach.NewServiceAccountAttachResource,
-		iaasPublicIpAssociate.NewPublicIpAssociateResource,
-		iaasServer.NewServerResource,
-		iaasSecurityGroup.NewSecurityGroupResource,
-		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
-		iaasalphaRoutingTable.NewRoutingTableResource,
-		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
-		kmsKey.NewKeyResource,
-		kmsKeyRing.NewKeyRingResource,
-		kmsWrappingKey.NewWrappingKeyResource,
-		loadBalancer.NewLoadBalancerResource,
-		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
-		logMeInstance.NewInstanceResource,
-		logMeCredential.NewCredentialResource,
-		logAlertGroup.NewLogAlertGroupResource,
-		mariaDBInstance.NewInstanceResource,
-		mariaDBCredential.NewCredentialResource,
-		modelServingToken.NewTokenResource,
-		mongoDBFlexInstance.NewInstanceResource,
-		mongoDBFlexUser.NewUserResource,
-		objectStorageBucket.NewBucketResource,
-		objecStorageCredentialsGroup.NewCredentialsGroupResource,
-		objecStorageCredential.NewCredentialResource,
-		observabilityCredential.NewCredentialResource,
-		observabilityInstance.NewInstanceResource,
-		observabilityScrapeConfig.NewScrapeConfigResource,
-		openSearchInstance.NewInstanceResource,
-		openSearchCredential.NewCredentialResource,
-		postgresFlexDatabase.NewDatabaseResource,
-		postgresFlexInstance.NewInstanceResource,
 		postgresFlexAlphaInstance.NewInstanceResource,
-		postgresFlexUser.NewUserResource,
-		rabbitMQInstance.NewInstanceResource,
-		rabbitMQCredential.NewCredentialResource,
-		redisInstance.NewInstanceResource,
-		redisCredential.NewCredentialResource,
-		resourceManagerProject.NewProjectResource,
-		scfOrganization.NewScfOrganizationResource,
-		scfOrganizationmanager.NewScfOrganizationManagerResource,
-		resourceManagerFolder.NewFolderResource,
-		secretsManagerInstance.NewInstanceResource,
-		secretsManagerUser.NewUserResource,
-		sqlServerFlexInstance.NewInstanceResource,
-		sqlServerFlexUser.NewUserResource,
-		serverBackupSchedule.NewScheduleResource,
-		serverUpdateSchedule.NewScheduleResource,
-		serviceAccount.NewServiceAccountResource,
-		serviceAccountToken.NewServiceAccountTokenResource,
-		serviceAccountKey.NewServiceAccountKeyResource,
-		skeCluster.NewClusterResource,
-		skeKubeconfig.NewKubeconfigResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 
 	return resources
-}
-
-// EphemeralResources defines the ephemeral resources implemented in the provider.
-func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{
-		access_token.NewAccessTokenEphemeralResource,
-	}
 }
