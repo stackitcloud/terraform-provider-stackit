@@ -8,8 +8,10 @@ variable "default_prefix_length" {}
 variable "max_prefix_length" {}
 variable "min_prefix_length" {}
 
-variable "route_prefix" {}
-variable "route_next_hop" {}
+variable "route_destination_type" {}
+variable "route_destination_value" {}
+variable "route_next_hop_type" {}
+variable "route_next_hop_value" {}
 variable "label" {}
 
 resource "stackit_network_area" "network_area" {
@@ -33,8 +35,14 @@ resource "stackit_network_area" "network_area" {
 resource "stackit_network_area_route" "network_area_route" {
   organization_id = stackit_network_area.network_area.organization_id
   network_area_id = stackit_network_area.network_area.network_area_id
-  prefix          = var.route_prefix
-  next_hop        = var.route_next_hop
+  destination = {
+    type  = var.route_destination_type
+    value = var.route_destination_value
+  }
+  next_hop = {
+    type  = var.route_next_hop_type
+    value = var.route_next_hop_value
+  }
   labels = {
     "acc-test" : var.label
   }

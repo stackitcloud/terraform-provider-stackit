@@ -28,9 +28,12 @@ type DatasourceModel struct {
 	ProjectId      types.String `tfsdk:"project_id"`
 	AreaId         types.String `tfsdk:"area_id"`
 	InternetAccess types.Bool   `tfsdk:"internet_access"`
-	State          types.String `tfsdk:"state"`
+	Status         types.String `tfsdk:"status"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	UpdatedAt      types.String `tfsdk:"updated_at"`
+
+	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	State types.String `tfsdk:"state"`
 }
 
 // NewProjectDataSource is a helper function to simplify the provider implementation.
@@ -70,7 +73,7 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 		"project_id":      "STACKIT project ID.",
 		"area_id":         "The area ID to which the project belongs to.",
 		"internet_access": "Specifies if the project has internet_access",
-		"state":           "Specifies the state of the project.",
+		"status":          "Specifies the status of the project.",
 		"created_at":      "Date-time when the project was created.",
 		"updated_at":      "Date-time when the project was last updated.",
 	}
@@ -98,8 +101,14 @@ func (d *projectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: descriptions["internet_access"],
 				Computed:    true,
 			},
+			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"state": schema.StringAttribute{
-				Description: descriptions["state"],
+				DeprecationMessage: "Deprecated: Will be removed in May 2026. Use the `status` field instead.",
+				Description:        descriptions["status"],
+				Computed:           true,
+			},
+			"status": schema.StringAttribute{
+				Description: descriptions["status"],
 				Computed:    true,
 			},
 			"created_at": schema.StringAttribute{
@@ -170,8 +179,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	var projectId string
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
-	} else if projectResp.ProjectId != nil {
-		projectId = *projectResp.ProjectId
+	} else if projectResp.Id != nil {
+		projectId = *projectResp.Id
 	} else {
 		return fmt.Errorf("project id is not present")
 	}
@@ -202,7 +211,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 
 	model.AreaId = areaId
 	model.InternetAccess = types.BoolPointerValue(projectResp.InternetAccess)
-	model.State = types.StringPointerValue(projectResp.State)
+	model.State = types.StringPointerValue(projectResp.Status)
+	model.Status = types.StringPointerValue(projectResp.Status)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	return nil

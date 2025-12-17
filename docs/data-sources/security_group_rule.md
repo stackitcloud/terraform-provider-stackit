@@ -29,13 +29,17 @@ data "stackit_security_group_rule" "example" {
 - `security_group_id` (String) The security group ID.
 - `security_group_rule_id` (String) The security group rule ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `description` (String) The description of the security group rule.
 - `direction` (String) The direction of the traffic which the rule should match. Some of the possible values are: Possible values are: `ingress`, `egress`.
 - `ether_type` (String) The ethertype which the rule should match.
 - `icmp_parameters` (Attributes) ICMP Parameters. (see [below for nested schema](#nestedatt--icmp_parameters))
-- `id` (String) Terraform's internal datasource ID. It is structured as "`project_id`,`security_group_id`,`security_group_rule_id`".
+- `id` (String) Terraform's internal datasource ID. It is structured as "`project_id`,`region`,`security_group_id`,`security_group_rule_id`".
 - `ip_range` (String) The remote IP range which the rule should match.
 - `port_range` (Attributes) The range of ports. (see [below for nested schema](#nestedatt--port_range))
 - `protocol` (Attributes) The internet protocol which the rule should match. (see [below for nested schema](#nestedatt--protocol))

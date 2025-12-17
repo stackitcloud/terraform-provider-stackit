@@ -31,7 +31,8 @@ func NewSecurityGroupDataSource() datasource.DataSource {
 
 // securityGroupDataSource is the data source implementation.
 type securityGroupDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -40,12 +41,13 @@ func (d *securityGroupDataSource) Metadata(_ context.Context, req datasource.Met
 }
 
 func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -54,14 +56,14 @@ func (d *securityGroupDataSource) Configure(ctx context.Context, req datasource.
 }
 
 // Schema defines the schema for the resource.
-func (r *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Security group datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`security_group_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`security_group_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -71,6 +73,11 @@ func (r *securityGroupDataSource) Schema(_ context.Context, _ datasource.SchemaR
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"security_group_id": schema.StringAttribute{
 				Description: "The security group ID.",
@@ -110,14 +117,16 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
-	securityGroupResp, err := d.client.GetSecurityGroup(ctx, projectId, securityGroupId).Execute()
+	securityGroupResp, err := d.client.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -135,7 +144,7 @@ func (d *securityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, securityGroupResp, &model)
+	err = mapFields(ctx, securityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Processing API payload: %v", err))
 		return

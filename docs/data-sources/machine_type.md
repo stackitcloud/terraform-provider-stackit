@@ -63,6 +63,7 @@ stackit server machine-type list
 
 ### Optional
 
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `sort_ascending` (Boolean) Sort machine types by name ascending (`true`) or descending (`false`). Defaults to `false`
 
 ### Read-Only
@@ -70,7 +71,7 @@ stackit server machine-type list
 - `description` (String) Machine type description.
 - `disk` (Number) Disk size in GB.
 - `extra_specs` (Map of String) Extra specs (e.g., CPU type, overcommit ratio).
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`image_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`image_id`".
 - `name` (String) Name of the machine type (e.g. 's1.2').
 - `ram` (Number) RAM size in MB.
 - `vcpus` (Number) Number of vCPUs.

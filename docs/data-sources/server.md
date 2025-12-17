@@ -27,13 +27,17 @@ data "stackit_server" "example" {
 - `project_id` (String) STACKIT project ID to which the server is associated.
 - `server_id` (String) The server ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `affinity_group` (String) The affinity group the server is assigned to.
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
 - `created_at` (String) Date-time when the server was created
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`".
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container

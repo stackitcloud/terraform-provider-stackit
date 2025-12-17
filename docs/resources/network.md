@@ -34,12 +34,11 @@ resource "stackit_network" "example_routed_network" {
 }
 
 resource "stackit_network" "example_non_routed_network" {
-  project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name               = "example-non-routed-network"
-  ipv4_nameservers   = ["1.2.3.4", "5.6.7.8"]
-  ipv4_prefix_length = 24
-  ipv4_gateway       = "10.1.2.3"
-  ipv4_prefix        = "10.1.2.0/24"
+  project_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name             = "example-non-routed-network"
+  ipv4_nameservers = ["1.2.3.4", "5.6.7.8"]
+  ipv4_gateway     = "10.1.2.3"
+  ipv4_prefix      = "10.1.2.0/24"
   labels = {
     "key" = "value"
   }
@@ -51,7 +50,7 @@ resource "stackit_network" "example_non_routed_network" {
 # These attributes cannot be configured together: [ipv4_prefix,ipv4_prefix_length,ipv4_gateway]
 import {
   to = stackit_network.import-example
-  id = "${var.project_id},${var.network_id}"
+  id = "${var.project_id},${var.region},${var.network_id}"
 }
 ```
 
@@ -77,15 +76,13 @@ import {
 - `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed in January 2026, use `ipv4_nameservers` to configure the nameservers for IPv4.
 - `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
-- `region` (String) Can only be used when experimental "network" is set.
-The resource region. If not defined, the provider region is used.
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `routed` (Boolean) If set to `true`, the network is routed and therefore accessible from other networks.
-- `routing_table_id` (String) Can only be used when experimental "network" is set.
-The ID of the routing table associated with the network.
+- `routing_table_id` (String) The ID of the routing table associated with the network.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`network_id`".
 - `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.

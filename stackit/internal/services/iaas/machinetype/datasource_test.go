@@ -13,32 +13,39 @@ import (
 )
 
 func TestMapDataSourceFields(t *testing.T) {
+	type args struct {
+		initial DataSourceModel
+		input   *iaas.MachineType
+		region  string
+	}
 	tests := []struct {
 		name        string
-		initial     DataSourceModel
-		input       *iaas.MachineType
+		args        args
 		expected    DataSourceModel
 		expectError bool
 	}{
 		{
 			name: "valid simple values",
-			initial: DataSourceModel{
-				ProjectId: types.StringValue("pid"),
-			},
-			input: &iaas.MachineType{
-				Name:        utils.Ptr("s1.2"),
-				Description: utils.Ptr("general-purpose small"),
-				Disk:        utils.Ptr(int64(20)),
-				Ram:         utils.Ptr(int64(2048)),
-				Vcpus:       utils.Ptr(int64(2)),
-				ExtraSpecs: &map[string]interface{}{
-					"cpu":         "amd-epycrome-7702",
-					"overcommit":  "1",
-					"environment": "general",
+			args: args{
+				initial: DataSourceModel{
+					ProjectId: types.StringValue("pid"),
 				},
+				input: &iaas.MachineType{
+					Name:        utils.Ptr("s1.2"),
+					Description: utils.Ptr("general-purpose small"),
+					Disk:        utils.Ptr(int64(20)),
+					Ram:         utils.Ptr(int64(2048)),
+					Vcpus:       utils.Ptr(int64(2)),
+					ExtraSpecs: &map[string]interface{}{
+						"cpu":         "amd-epycrome-7702",
+						"overcommit":  "1",
+						"environment": "general",
+					},
+				},
+				region: "eu01",
 			},
 			expected: DataSourceModel{
-				Id:          types.StringValue("pid,s1.2"),
+				Id:          types.StringValue("pid,eu01,s1.2"),
 				ProjectId:   types.StringValue("pid"),
 				Name:        types.StringValue("s1.2"),
 				Description: types.StringValue("general-purpose small"),
@@ -50,42 +57,50 @@ func TestMapDataSourceFields(t *testing.T) {
 					"overcommit":  types.StringValue("1"),
 					"environment": types.StringValue("general"),
 				}),
+				Region: types.StringValue("eu01"),
 			},
 			expectError: false,
 		},
 		{
 			name: "missing name should fail",
-			initial: DataSourceModel{
-				ProjectId: types.StringValue("pid-456"),
-			},
-			input: &iaas.MachineType{
-				Description: utils.Ptr("gp-medium"),
+			args: args{
+				initial: DataSourceModel{
+					ProjectId: types.StringValue("pid-456"),
+				},
+				input: &iaas.MachineType{
+					Description: utils.Ptr("gp-medium"),
+				},
 			},
 			expected:    DataSourceModel{},
 			expectError: true,
 		},
 		{
-			name:        "nil machineType should fail",
-			initial:     DataSourceModel{},
-			input:       nil,
+			name: "nil machineType should fail",
+			args: args{
+				initial: DataSourceModel{},
+				input:   nil,
+			},
 			expected:    DataSourceModel{},
 			expectError: true,
 		},
 		{
 			name: "empty extraSpecs should return null map",
-			initial: DataSourceModel{
-				ProjectId: types.StringValue("pid-789"),
-			},
-			input: &iaas.MachineType{
-				Name:        utils.Ptr("m1.noextras"),
-				Description: utils.Ptr("no extras"),
-				Disk:        utils.Ptr(int64(10)),
-				Ram:         utils.Ptr(int64(1024)),
-				Vcpus:       utils.Ptr(int64(1)),
-				ExtraSpecs:  &map[string]interface{}{},
+			args: args{
+				initial: DataSourceModel{
+					ProjectId: types.StringValue("pid-789"),
+				},
+				input: &iaas.MachineType{
+					Name:        utils.Ptr("m1.noextras"),
+					Description: utils.Ptr("no extras"),
+					Disk:        utils.Ptr(int64(10)),
+					Ram:         utils.Ptr(int64(1024)),
+					Vcpus:       utils.Ptr(int64(1)),
+					ExtraSpecs:  &map[string]interface{}{},
+				},
+				region: "eu01",
 			},
 			expected: DataSourceModel{
-				Id:          types.StringValue("pid-789,m1.noextras"),
+				Id:          types.StringValue("pid-789,eu01,m1.noextras"),
 				ProjectId:   types.StringValue("pid-789"),
 				Name:        types.StringValue("m1.noextras"),
 				Description: types.StringValue("no extras"),
@@ -93,24 +108,28 @@ func TestMapDataSourceFields(t *testing.T) {
 				Ram:         types.Int64Value(1024),
 				Vcpus:       types.Int64Value(1),
 				ExtraSpecs:  types.MapNull(types.StringType),
+				Region:      types.StringValue("eu01"),
 			},
 			expectError: false,
 		},
 		{
 			name: "nil extrasSpecs should return null map",
-			initial: DataSourceModel{
-				ProjectId: types.StringValue("pid-987"),
-			},
-			input: &iaas.MachineType{
-				Name:        utils.Ptr("g1.nil"),
-				Description: utils.Ptr("missing extras"),
-				Disk:        utils.Ptr(int64(40)),
-				Ram:         utils.Ptr(int64(8096)),
-				Vcpus:       utils.Ptr(int64(4)),
-				ExtraSpecs:  nil,
+			args: args{
+				initial: DataSourceModel{
+					ProjectId: types.StringValue("pid-987"),
+				},
+				input: &iaas.MachineType{
+					Name:        utils.Ptr("g1.nil"),
+					Description: utils.Ptr("missing extras"),
+					Disk:        utils.Ptr(int64(40)),
+					Ram:         utils.Ptr(int64(8096)),
+					Vcpus:       utils.Ptr(int64(4)),
+					ExtraSpecs:  nil,
+				},
+				region: "eu01",
 			},
 			expected: DataSourceModel{
-				Id:          types.StringValue("pid-987,g1.nil"),
+				Id:          types.StringValue("pid-987,eu01,g1.nil"),
 				ProjectId:   types.StringValue("pid-987"),
 				Name:        types.StringValue("g1.nil"),
 				Description: types.StringValue("missing extras"),
@@ -118,24 +137,27 @@ func TestMapDataSourceFields(t *testing.T) {
 				Ram:         types.Int64Value(8096),
 				Vcpus:       types.Int64Value(4),
 				ExtraSpecs:  types.MapNull(types.StringType),
+				Region:      types.StringValue("eu01"),
 			},
 			expectError: false,
 		},
 		{
 			name: "invalid extraSpecs with non-string values",
-			initial: DataSourceModel{
-				ProjectId: types.StringValue("test-err"),
-			},
-			input: &iaas.MachineType{
-				Name:        utils.Ptr("invalid"),
-				Description: utils.Ptr("bad map"),
-				Disk:        utils.Ptr(int64(10)),
-				Ram:         utils.Ptr(int64(4096)),
-				Vcpus:       utils.Ptr(int64(2)),
-				ExtraSpecs: &map[string]interface{}{
-					"cpu":   "intel",
-					"burst": true, // not a string
-					"gen":   8,    // not a string
+			args: args{
+				initial: DataSourceModel{
+					ProjectId: types.StringValue("test-err"),
+				},
+				input: &iaas.MachineType{
+					Name:        utils.Ptr("invalid"),
+					Description: utils.Ptr("bad map"),
+					Disk:        utils.Ptr(int64(10)),
+					Ram:         utils.Ptr(int64(4096)),
+					Vcpus:       utils.Ptr(int64(2)),
+					ExtraSpecs: &map[string]interface{}{
+						"cpu":   "intel",
+						"burst": true, // not a string
+						"gen":   8,    // not a string
+					},
 				},
 			},
 			expected:    DataSourceModel{},
@@ -145,7 +167,7 @@ func TestMapDataSourceFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, &tt.initial)
+			err := mapDataSourceFields(context.Background(), tt.args.input, &tt.args.initial, tt.args.region)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error but got none")
@@ -157,13 +179,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			diff := cmp.Diff(tt.expected, tt.initial)
+			diff := cmp.Diff(tt.expected, tt.args.initial)
 			if diff != "" {
 				t.Errorf("unexpected diff (-want +got):\n%s", diff)
 			}
 
 			// Extra sanity check for proper ID format
-			if id := tt.initial.Id.ValueString(); !strings.HasPrefix(id, tt.initial.ProjectId.ValueString()+",") {
+			if id := tt.args.initial.Id.ValueString(); !strings.HasPrefix(id, tt.args.initial.ProjectId.ValueString()+",") {
 				t.Errorf("unexpected ID format: got %q", id)
 			}
 		})

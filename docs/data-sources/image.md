@@ -27,12 +27,16 @@ data "stackit_image" "example" {
 - `image_id` (String) The image ID.
 - `project_id` (String) STACKIT project ID to which the image is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `checksum` (Attributes) Representation of an image checksum. (see [below for nested schema](#nestedatt--checksum))
 - `config` (Attributes) Properties to set hardware and scheduling settings for an image. (see [below for nested schema](#nestedatt--config))
 - `disk_format` (String) The disk format of the image.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`image_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`image_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `min_disk_size` (Number) The minimum disk size of the image in GB.
 - `min_ram` (Number) The minimum RAM of the image in MB.
