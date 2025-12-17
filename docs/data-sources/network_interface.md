@@ -29,11 +29,15 @@ data "stackit_network_interface" "example" {
 - `network_interface_id` (String) The network interface ID.
 - `project_id` (String) STACKIT project ID to which the network interface is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `allowed_addresses` (List of String) The list of CIDR (Classless Inter-Domain Routing) notations.
 - `device` (String) The device UUID of the network interface.
-- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`network_id`,`network_interface_id`".
+- `id` (String) Terraform's internal data source ID. It is structured as "`project_id`,`region`,`network_id`,`network_interface_id`".
 - `ipv4` (String) The IPv4 address.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a network interface.
 - `mac` (String) The MAC address of network interface.

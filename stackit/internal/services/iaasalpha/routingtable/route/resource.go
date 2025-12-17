@@ -176,6 +176,9 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
+						Validators: []validator.String{
+							validate.CIDR(),
+						},
 					},
 				},
 			},
@@ -212,6 +215,9 @@ func (r *routeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.IP(false),
 						},
 					},
 				},

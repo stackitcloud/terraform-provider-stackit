@@ -40,9 +40,10 @@ import {
 
 - `description` (String) The description of the security group.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `stateful` (Boolean) Configures if a security group is stateful or stateless. There can only be one type of security groups per network interface/server.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`security_group_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`security_group_id`".
 - `security_group_id` (String) The security group ID.
