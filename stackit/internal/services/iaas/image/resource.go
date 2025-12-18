@@ -650,7 +650,7 @@ func (r *imageResource) ImportState(ctx context.Context, req resource.ImportStat
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": idParts[0],
 		"region":     idParts[1],
 		"image_id":   idParts[2],

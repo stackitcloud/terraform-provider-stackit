@@ -223,7 +223,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 	ctx = core.LogResponse(ctx)
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    projectId,
 		"zone_id":       zoneId,
 		"record_set_id": *recordSetResp.Rrset.Id,
@@ -399,7 +399,7 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id":    idParts[0],
 		"zone_id":       idParts[1],
 		"record_set_id": idParts[2],

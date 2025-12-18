@@ -325,7 +325,7 @@ func (r *affinityGroupResource) ImportState(ctx context.Context, req resource.Im
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":        idParts[0],
 		"region":            idParts[1],
 		"affinity_group_id": idParts[2],

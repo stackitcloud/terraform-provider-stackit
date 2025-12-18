@@ -317,7 +317,7 @@ func (r *networkInterfaceAttachResource) ImportState(ctx context.Context, req re
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id":           idParts[0],
 		"region":               idParts[1],
 		"server_id":            idParts[2],
