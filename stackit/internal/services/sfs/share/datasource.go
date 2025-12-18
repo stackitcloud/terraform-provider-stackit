@@ -54,12 +54,9 @@ func (r *shareDataSource) Configure(ctx context.Context, req datasource.Configur
 		return
 	}
 
-	if !datasourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Datasource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		datasourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Datasource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
@@ -126,7 +123,7 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 // Schema implements datasource.DataSource.
 func (r *shareDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "NFS-Share datasource schema. Must have a `region` specified in the provider configuration."
+	description := "SFS Share schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
 		Description:         description,
@@ -144,7 +141,7 @@ func (r *shareDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				},
 			},
 			"resource_pool_id": schema.StringAttribute{
-				Description: "The ID of the resource pool for the NFS share.",
+				Description: "The ID of the resource pool for the SFS share.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),

@@ -28,14 +28,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// datasourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var datasourceBetaCheckDone bool
-
-//go:embed description.md
-var markdownDescription string
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource               = &shareResource{}
@@ -108,12 +100,9 @@ func (r *shareResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 
-	if !datasourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Resource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		datasourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Resource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
@@ -126,9 +115,10 @@ func (r *shareResource) Configure(ctx context.Context, req resource.ConfigureReq
 
 // Schema defines the schema for the resource.
 func (r *shareResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	description := "SFS Share schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(markdownDescription, core.Resource),
-		Description:         markdownDescription,
+		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
+		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`resource_pool_id`,`share_id`\".",
@@ -149,7 +139,7 @@ func (r *shareResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"resource_pool_id": schema.StringAttribute{
-				Description: "The ID of the resource pool for the NFS share.",
+				Description: "The ID of the resource pool for the SFS share.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

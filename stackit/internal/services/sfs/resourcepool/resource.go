@@ -31,14 +31,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// datasourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var datasourceBetaCheckDone bool
-
-//go:embed description.md
-var markdownDescription string
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &resourcePoolResource{}
@@ -113,12 +105,9 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	if !datasourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Resource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		datasourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Resource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
@@ -133,7 +122,7 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Resource-pool resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription(description+"\n"+markdownDescription, core.Resource),
+		MarkdownDescription: features.AddBetaDescription(description, core.Resource),
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -182,10 +171,9 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"ip_acl": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Required:            true,
-				Description:         `List of IPs that can mount the resource pool in read-only; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).`,
-				MarkdownDescription: markdownDescription,
+				ElementType: types.StringType,
+				Required:    true,
+				Description: `List of IPs that can mount the resource pool in read-only; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).`,
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
 					listvalidator.ValueStringsAre(validate.CIDR()),

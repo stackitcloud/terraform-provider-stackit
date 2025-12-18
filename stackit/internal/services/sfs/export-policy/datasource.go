@@ -20,11 +20,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-// datasourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var datasourceBetaCheckDone bool
-
 var (
 	_ datasource.DataSource              = (*exportPolicyDataSource)(nil)
 	_ datasource.DataSourceWithConfigure = (*exportPolicyDataSource)(nil)
@@ -48,12 +43,9 @@ func (d *exportPolicyDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	if !datasourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Datasource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		datasourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Datasource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)

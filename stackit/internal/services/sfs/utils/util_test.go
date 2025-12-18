@@ -45,7 +45,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *sfs.APIClient {
 				apiClient, err := sfs.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {

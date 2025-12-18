@@ -38,7 +38,7 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 
 - `availability_zone` (String) Availability zone.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`resource_pool_id`".
-- `ip_acl` (List of String) SFS resource pool. Must have a region specified in the provider configuration.
+- `ip_acl` (List of String) List of IPs that can mount the resource pool in read-only; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).
 - `name` (String) Name of the resource pool.
 - `performance_class` (String) Name of the performance class.
 - `performance_class_downgradable_at` (String) Time when the performance class can be downgraded again.

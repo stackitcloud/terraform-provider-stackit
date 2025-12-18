@@ -61,12 +61,9 @@ func (r *resourcePoolDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	if !datasourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Datasource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		datasourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Datasource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
@@ -161,10 +158,9 @@ func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: "Availability zone.",
 			},
 			"ip_acl": schema.ListAttribute{
-				ElementType:         types.StringType,
-				Computed:            true,
-				Description:         `List of IPs that can mount the resource pool in read-only; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).`,
-				MarkdownDescription: markdownDescription,
+				ElementType: types.StringType,
+				Computed:    true,
+				Description: `List of IPs that can mount the resource pool in read-only; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).`,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(validate.CIDR()),
 				},

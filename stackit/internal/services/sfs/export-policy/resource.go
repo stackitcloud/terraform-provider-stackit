@@ -33,11 +33,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 )
 
-// resourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var resourceBetaCheckDone bool
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &exportPolicyResource{}
@@ -133,12 +128,9 @@ func (r *exportPolicyResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	if !resourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Resource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		resourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_export_policy", core.Resource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)

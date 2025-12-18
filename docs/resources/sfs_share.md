@@ -3,14 +3,13 @@
 page_title: "stackit_sfs_share Resource - stackit"
 subcategory: ""
 description: |-
-  SFS Shares. Must have a region specified in the provider configuration.
+  SFS Share schema. Must have a region specified in the provider configuration.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_sfs_share (Resource)
 
-SFS Shares. Must have a region specified in the provider configuration.
-
+SFS Share schema. Must have a `region` specified in the provider configuration.
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
@@ -23,6 +22,12 @@ resource "stackit_sfs_share" "example" {
   name                       = "my-nfs-share"
   export_policy              = "high-performance-class"
   space_hard_limit_gigabytes = 32
+}
+
+# Only use the import statement, if you want to import an existing sfs share
+import {
+  to = stackit_sfs_resource_pool.resourcepool
+  id = "${var.project_id},${var.region},${var.resource_pool_id},${var.share_id}"
 }
 ```
 
@@ -37,7 +42,7 @@ clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share
 - `name` (String) Name of the share.
 - `project_id` (String) STACKIT project ID to which the share is associated.
-- `resource_pool_id` (String) The ID of the resource pool for the NFS share.
+- `resource_pool_id` (String) The ID of the resource pool for the SFS share.
 - `space_hard_limit_gigabytes` (Number) Space hard limit for the Share. 
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
 				(unit: gigabytes)

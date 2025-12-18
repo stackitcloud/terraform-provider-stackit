@@ -87,7 +87,7 @@ func TestMapFields(t *testing.T) {
 				ShareId:                 testShareId,
 				ExportPolicyName:        testPolicyName,
 				SpaceHardLimitGigabytes: types.Int64Value(42),
-				Region:                  types.StringValue("eu01"),
+				Region:                  testRegion,
 				MountPath:               types.StringValue("mountpoint"),
 			},
 			isValid: true,

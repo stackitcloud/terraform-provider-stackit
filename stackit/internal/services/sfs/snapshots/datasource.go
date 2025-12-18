@@ -28,11 +28,6 @@ var (
 	_ datasource.DataSourceWithConfigure = (*resourcePoolSnapshotDataSource)(nil)
 )
 
-// datasourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var datasourceBetaCheckDone bool
-
 var snapshotModelType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		"comment":                types.StringType,
@@ -78,12 +73,9 @@ func (r *resourcePoolSnapshotDataSource) Configure(ctx context.Context, req data
 		return
 	}
 
-	if !datasourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool_snapshot", core.Datasource)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		datasourceBetaCheckDone = true
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool_snapshot", core.Datasource)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)

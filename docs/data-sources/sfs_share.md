@@ -3,13 +3,13 @@
 page_title: "stackit_sfs_share Data Source - stackit"
 subcategory: ""
 description: |-
-  NFS-Share datasource schema. Must have a region specified in the provider configuration.
+  SFS Share schema. Must have a region specified in the provider configuration.
   ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_sfs_share (Data Source)
 
-NFS-Share datasource schema. Must have a `region` specified in the provider configuration.
+SFS Share schema. Must have a `region` specified in the provider configuration.
 
 ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
@@ -29,7 +29,7 @@ data "stackit_sfs_share" "example" {
 ### Required
 
 - `project_id` (String) STACKIT project ID to which the share is associated.
-- `resource_pool_id` (String) The ID of the resource pool for the NFS share.
+- `resource_pool_id` (String) The ID of the resource pool for the SFS share.
 - `share_id` (String) share ID
 
 ### Optional

@@ -19,8 +19,6 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 	if providerData.SfsCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.SfsCustomEndpoint))
-	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
 	}
 	apiClient, err := sfs.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {

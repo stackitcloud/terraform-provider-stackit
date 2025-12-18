@@ -434,7 +434,7 @@ func createClient() (*sfs.APIClient, error) {
 	var client *sfs.APIClient
 	var err error
 	if testutil.SFSCustomEndpoint == "" {
-		client, err = sfs.NewAPIClient(config.WithRegion(testutil.Region))
+		client, err = sfs.NewAPIClient()
 	} else {
 		client, err = sfs.NewAPIClient(
 			config.WithEndpoint(testutil.SFSCustomEndpoint),

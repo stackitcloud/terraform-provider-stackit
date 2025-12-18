@@ -10,3 +10,9 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
   ]
   snapshots_are_visible = true
 }
+
+# Only use the import statement, if you want to import an existing resource pool
+import {
+  to = stackit_sfs_resource_pool.resourcepool
+  id = "${var.project_id},${var.region},${var.resource_pool_id}"
+}
