@@ -374,7 +374,7 @@ func (r *publicIpResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":   idParts[0],
 		"region":       idParts[1],
 		"public_ip_id": idParts[2],

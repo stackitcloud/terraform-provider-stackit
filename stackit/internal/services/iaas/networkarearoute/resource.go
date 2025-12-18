@@ -547,7 +547,7 @@ func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"organization_id":       idParts[0],
 		"network_area_id":       idParts[1],
 		"region":                idParts[2],

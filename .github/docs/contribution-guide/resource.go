@@ -211,7 +211,7 @@ func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, re
 	// only in case the create bar API call is asynchronous (Make sure to include *ALL* fields which are part of the
 	// internal terraform resource id! And please include the comment below in your code):
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id": projectId,
 		"region":     region,
 		"bar_id":     resp.BarId,
@@ -335,7 +335,7 @@ func (r *barResource) ImportState(ctx context.Context, req resource.ImportStateR
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": idParts[0],
 		"region":     idParts[1],
 		"bar_id":     idParts[2],

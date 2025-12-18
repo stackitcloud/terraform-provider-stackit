@@ -289,7 +289,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	ctx = core.LogResponse(ctx)
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"organization_id": organizationId,
 		"network_area_id": networkAreaId,
 		"region":          region,
@@ -482,7 +482,7 @@ func (r *networkAreaRegionResource) ImportState(ctx context.Context, req resourc
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"organization_id": idParts[0],
 		"network_area_id": idParts[1],
 		"region":          idParts[2],
