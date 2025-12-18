@@ -16,13 +16,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	coreutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -116,26 +116,10 @@ func (r *shareResource) Configure(ctx context.Context, req resource.ConfigureReq
 		datasourceBetaCheckDone = true
 	}
 
-	var apiClient *sfs.APIClient
-	var err error
-	if r.providerData.SfsCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "sfs_custom_endpoint", r.providerData.SfsCustomEndpoint)
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.SfsCustomEndpoint),
-		)
-	} else {
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.GetRegion()),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
@@ -244,6 +228,8 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 
+	ctx = core.InitProviderContext(ctx)
+
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Create Resourcepool", fmt.Sprintf("Cannot create payload: %v", err))
@@ -258,7 +244,9 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	if share.Share == nil || share.Share.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "error creating share", "Calling API: Incomplete response (id missing)")
 		return
@@ -328,6 +316,8 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "share_id", shareId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	response, err := r.client.GetShareExecute(ctx, projectId, region, resourcePoolId, shareId)
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
@@ -340,7 +330,8 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, response.Share, region, &model)
@@ -375,6 +366,8 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Retrieve values from state
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
@@ -403,7 +396,9 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	// the responses of create and update are not compatible, so we can't use a unified
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
@@ -449,13 +444,17 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Delete existing share
 	_, err := r.client.DeleteShareExecute(ctx, projectId, region, resourcePoolId, shareId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	// only delete, if no error occurred
 	_, err = wait.DeleteShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {

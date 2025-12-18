@@ -19,13 +19,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	coreutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -121,26 +121,10 @@ func (r *resourcePoolResource) Configure(ctx context.Context, req resource.Confi
 		datasourceBetaCheckDone = true
 	}
 
-	var apiClient *sfs.APIClient
-	var err error
-	if r.providerData.SfsCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "sfs_custom_endpoint", r.providerData.SfsCustomEndpoint)
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.SfsCustomEndpoint),
-		)
-	} else {
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.GetRegion()),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
@@ -248,6 +232,8 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Cannot create payload: %v", err))
@@ -262,7 +248,9 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	if resourcePool == nil || resourcePool.ResourcePool == nil || resourcePool.ResourcePool.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "error creating resource pool", "Calling API: Incomplete response (id missing)")
 		return
@@ -330,6 +318,8 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	response, err := r.client.GetResourcePoolExecute(ctx, projectId, region, resourcePoolId)
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
@@ -342,7 +332,8 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, region, response.ResourcePool, &model)
@@ -375,6 +366,8 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Retrieve values from state
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
@@ -403,7 +396,9 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	// the responses of create and update are not compatible, so we can't use a unified
 	// mapFields function. Therefore, we issue a GET request after the create
 	// to get a compatible structure
@@ -447,13 +442,17 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Delete existing resource pool
 	_, err := r.client.DeleteResourcePoolExecute(ctx, projectId, region, resourcePoolId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	// only delete, if no error occurred
 	_, err = wait.DeleteResourcePoolWaitHandler(ctx, r.client, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {

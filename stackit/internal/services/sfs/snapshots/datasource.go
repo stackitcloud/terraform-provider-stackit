@@ -13,12 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -86,26 +86,10 @@ func (r *resourcePoolSnapshotDataSource) Configure(ctx context.Context, req data
 		datasourceBetaCheckDone = true
 	}
 
-	var apiClient *sfs.APIClient
-	var err error
-	if r.providerData.SfsCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "sfs_custom_endpoint", r.providerData.SfsCustomEndpoint)
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.SfsCustomEndpoint),
-		)
-	} else {
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.GetRegion()),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the datasource configuration", err))
+	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
@@ -130,6 +114,8 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	response, err := r.client.ListResourcePoolSnapshotsExecute(ctx, projectId, region, resourcePoolId)
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
@@ -142,7 +128,8 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading resource pool snapshot", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapDataSourceFields(ctx, region, response.ResourcePoolSnapshots, &model)

@@ -21,11 +21,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -141,26 +141,10 @@ func (r *exportPolicyResource) Configure(ctx context.Context, req resource.Confi
 		resourceBetaCheckDone = true
 	}
 
-	var apiClient *sfs.APIClient
-	var err error
-	if r.providerData.SfsCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "sfs_custom_endpoint", r.providerData.SfsCustomEndpoint)
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithEndpoint(r.providerData.SfsCustomEndpoint),
-		)
-	} else {
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(r.providerData.RoundTripper),
-			config.WithRegion(r.providerData.GetRegion()),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
@@ -281,6 +265,8 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	var rules = []rulesModel{}
 	if !(model.Rules.IsNull() || model.Rules.IsUnknown()) {
 		diags = model.Rules.ElementsAs(ctx, &rules, false)
@@ -301,7 +287,9 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
+
 	if createResp == nil || createResp.ShareExportPolicy == nil || createResp.ShareExportPolicy.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", "response did not contain an ID")
 		return
@@ -353,6 +341,8 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// get export policy
 	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
@@ -366,7 +356,8 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	// map export policy
 	err = mapFields(ctx, exportPolicyResp, &model, region)
@@ -400,6 +391,8 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	var rules = []rulesModel{}
 	if !(model.Rules.IsNull() || model.Rules.IsUnknown()) {
 		diags = model.Rules.ElementsAs(ctx, &rules, false)
@@ -420,7 +413,8 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	// get export policy
 	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
@@ -461,11 +455,14 @@ func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	_, err := r.client.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting export policy", fmt.Sprintf("Calling API: %v", err))
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "SFS export policy delete")
 }

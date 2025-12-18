@@ -11,12 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -56,26 +56,10 @@ func (d *exportPolicyDataSource) Configure(ctx context.Context, req datasource.C
 		datasourceBetaCheckDone = true
 	}
 
-	var apiClient *sfs.APIClient
-	var err error
-	if d.providerData.SfsCustomEndpoint != "" {
-		ctx = tflog.SetField(ctx, "sfs_custom_endpoint", d.providerData.SfsCustomEndpoint)
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(d.providerData.RoundTripper),
-			config.WithEndpoint(d.providerData.SfsCustomEndpoint),
-		)
-	} else {
-		apiClient, err = sfs.NewAPIClient(
-			config.WithCustomAuth(d.providerData.RoundTripper),
-			config.WithRegion(d.providerData.GetRegion()),
-		)
-	}
-
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the datasource configuration", err))
+	apiClient := sfsUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	d.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
@@ -99,6 +83,8 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	// get export policy
 	exportPolicyResp, err := d.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
@@ -112,7 +98,8 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
 		return
 	}
-	// TODO: log traceId
+
+	ctx = core.LogResponse(ctx)
 
 	// map export policy
 	err = mapFields(ctx, exportPolicyResp, &model, region)

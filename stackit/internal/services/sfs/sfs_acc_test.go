@@ -137,7 +137,6 @@ var (
 		"name":                       fmt.Sprintf("acc-sfs-share-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":                 testutil.ProjectId,
 		"region":                     "eu01",
-		"export_policy":              "admin1",
 		"space_hard_limit_gigabytes": "42",
 	}
 
@@ -147,7 +146,6 @@ var (
 		"name":                       fmt.Sprintf("acc-sfs-share-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":                 testutil.ProjectId,
 		"region":                     "eu02",
-		"export_policy":              "spadmin2",
 		"space_hard_limit_gigabytes": "42",
 	}
 )
@@ -168,11 +166,22 @@ func nsfShareConfig(configParams map[string]string) string {
 			region = "eu01"
 		}
 
+		resource "stackit_sfs_export_policy" "exportpolicy" {
+			project_id        = "{{.project_id}}"
+			name              = "{{.name}}"
+			rules = [
+				{
+					ip_acl = ["192.168.2.0/24"]
+					order = 1
+				}
+			]
+		}
+
 		resource "stackit_sfs_share" "share" {
 			project_id                 =  "{{.project_id}}"
 			resource_pool_id            = stackit_sfs_resource_pool.resourcepool.resource_pool_id
 			name                       = "{{.name}}"
-			export_policy              = "{{.export_policy}}"
+			export_policy              = stackit_sfs_export_policy.exportpolicy.name
 			space_hard_limit_gigabytes = {{.space_hard_limit_gigabytes}}
 		}
 
@@ -372,7 +381,8 @@ func TestAccShareResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testCreateShare["name"]),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testCreateShare["space_hard_limit_gigabytes"]),
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "export_policy", testCreateShare["export_policy"]),
+					resource.TestCheckResourceAttrPair("stackit_sfs_share.share", "export_policy",
+						"stackit_sfs_export_policy.exportpolicy", "name"),
 
 					// datasource
 					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "project_id", testCreateResourcePool["project_id"]),
@@ -412,7 +422,8 @@ func TestAccShareResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testUpdateShare["name"]),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testUpdateShare["space_hard_limit_gigabytes"]),
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "export_policy", testUpdateShare["export_policy"]),
+					resource.TestCheckResourceAttrPair("stackit_sfs_share.share", "export_policy",
+						"stackit_sfs_export_policy.exportpolicy", "name"),
 				),
 			},
 		},
