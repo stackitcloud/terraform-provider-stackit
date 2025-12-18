@@ -11,6 +11,7 @@ on:
 env:
   DAYS_BEFORE_PR_STALE: 7
   DAYS_BEFORE_PR_CLOSE: 7
+  EXEMPT_PR_LABELS: "ignore-stale"
 
 permissions:
   issues: write
@@ -30,6 +31,7 @@ jobs:
           close-pr-message: "This PR was closed automatically because it has been stalled for ${{ env.DAYS_BEFORE_PR_CLOSE }} days with no activity. Feel free to re-open it at any time."
           days-before-pr-stale: ${{ env.DAYS_BEFORE_PR_STALE }}
           days-before-pr-close: ${{ env.DAYS_BEFORE_PR_CLOSE }}
+          exempt-pr-labels: ${{ env.EXEMPT_PR_LABELS }}
           # never mark issues as stale or close them
           days-before-issue-stale: -1
           days-before-issue-close: -1
