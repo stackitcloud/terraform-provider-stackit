@@ -1,3 +1,5 @@
+# Copyright (c) STACKIT
+
 terraform {
   required_providers {
     stackitalpha = {

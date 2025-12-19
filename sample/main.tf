@@ -1,3 +1,5 @@
+# Copyright (c) STACKIT
+
 resource "stackitalpha_kms_keyring" "keyring" {
   project_id   = var.project_id
   display_name = "keyring01"

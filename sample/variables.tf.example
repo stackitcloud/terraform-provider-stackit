@@ -5,3 +5,7 @@ variable "project_id" {
 variable "sa_email" {
   default = "<SERVICE ACCOUNT EMAIL>"
 }
+
+variable "db_username" {
+  default = "<DB USERNAME>"
+}

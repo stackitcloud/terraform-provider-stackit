@@ -1,3 +1,5 @@
+// Copyright (c) STACKIT
+
 package utils
 
 import (
@@ -9,7 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	"github.com/stackitcloud/terraform-provider-stackit/pkg/sqlserverflexalpha"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -34,7 +37,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *sqlserverflex.APIClient
+		expected *sqlserverflexalpha.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -43,8 +46,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *sqlserverflex.APIClient {
-				apiClient, err := sqlserverflex.NewAPIClient(
+			expected: func() *sqlserverflexalpha.APIClient {
+				apiClient, err := sqlserverflexalpha.NewAPIClient(
 					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
@@ -63,8 +66,8 @@ func TestConfigureClient(t *testing.T) {
 					SQLServerFlexCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *sqlserverflex.APIClient {
-				apiClient, err := sqlserverflex.NewAPIClient(
+			expected: func() *sqlserverflexalpha.APIClient {
+				apiClient, err := sqlserverflexalpha.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)
@@ -77,18 +80,20 @@ func TestConfigureClient(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			diags := diag.Diagnostics{}
+		t.Run(
+			tt.name, func(t *testing.T) {
+				ctx := context.Background()
+				diags := diag.Diagnostics{}
 
-			actual := ConfigureClient(ctx, tt.args.providerData, &diags)
-			if diags.HasError() != tt.wantErr {
-				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
-			}
+				actual := ConfigureClient(ctx, tt.args.providerData, &diags)
+				if diags.HasError() != tt.wantErr {
+					t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
+				}
 
-			if !reflect.DeepEqual(actual, tt.expected) {
-				t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
-			}
-		})
+				if !reflect.DeepEqual(actual, tt.expected) {
+					t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
+				}
+			},
+		)
 	}
 }

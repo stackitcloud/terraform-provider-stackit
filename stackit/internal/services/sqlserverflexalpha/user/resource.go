@@ -1,12 +1,17 @@
-package sqlserverflex
+// Copyright (c) STACKIT
+
+package sqlserverflexalpha
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/pkg/sqlserverflexalpha"
+	sqlserverflexalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflexalpha/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -24,7 +29,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -36,16 +40,18 @@ var (
 )
 
 type Model struct {
-	Id         types.String `tfsdk:"id"` // needed by TF
-	UserId     types.String `tfsdk:"user_id"`
-	InstanceId types.String `tfsdk:"instance_id"`
-	ProjectId  types.String `tfsdk:"project_id"`
-	Username   types.String `tfsdk:"username"`
-	Roles      types.Set    `tfsdk:"roles"`
-	Password   types.String `tfsdk:"password"`
-	Host       types.String `tfsdk:"host"`
-	Port       types.Int64  `tfsdk:"port"`
-	Region     types.String `tfsdk:"region"`
+	Id              types.String `tfsdk:"id"` // needed by TF
+	UserId          types.Int64  `tfsdk:"user_id"`
+	InstanceId      types.String `tfsdk:"instance_id"`
+	ProjectId       types.String `tfsdk:"project_id"`
+	Username        types.String `tfsdk:"username"`
+	Roles           types.Set    `tfsdk:"roles"`
+	Password        types.String `tfsdk:"password"`
+	Host            types.String `tfsdk:"host"`
+	Port            types.Int64  `tfsdk:"port"`
+	Region          types.String `tfsdk:"region"`
+	Status          types.String `tfsdk:"status"`
+	DefaultDatabase types.String `tfsdk:"default_database"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -55,13 +61,13 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client       *sqlserverflex.APIClient
+	client       *sqlserverflexalpha.APIClient
 	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
 func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_sqlserverflex_user"
+	resp.TypeName = req.ProviderTypeName + "_sqlserverflexalpha_user"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -72,17 +78,21 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := sqlserverflexalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "SQLServer Flex user client configured")
+	tflog.Info(ctx, "SQLServer Alpha Flex user client configured")
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) ModifyPlan(
+	ctx context.Context,
+	req resource.ModifyPlanRequest,
+	resp *resource.ModifyPlanResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
@@ -113,14 +123,16 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "SQLServer Flex user resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
-		"user_id":     "User ID.",
-		"instance_id": "ID of the SQLServer Flex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"username":    "Username of the SQLServer Flex instance.",
-		"roles":       "Database access levels for the user. The values for the default roles are: `##STACKIT_DatabaseManager##`, `##STACKIT_LoginManager##`, `##STACKIT_ProcessManager##`, `##STACKIT_ServerManager##`, `##STACKIT_SQLAgentManager##`, `##STACKIT_SQLAgentUser##`",
-		"password":    "Password of the user account.",
+		"main":             "SQLServer Flex user resource schema. Must have a `region` specified in the provider configuration.",
+		"id":               "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
+		"user_id":          "User ID.",
+		"instance_id":      "ID of the SQLServer Flex instance.",
+		"project_id":       "STACKIT project ID to which the instance is associated.",
+		"username":         "Username of the SQLServer Flex instance.",
+		"roles":            "Database access levels for the user. The values for the default roles are: `##STACKIT_DatabaseManager##`, `##STACKIT_LoginManager##`, `##STACKIT_ProcessManager##`, `##STACKIT_ServerManager##`, `##STACKIT_SQLAgentManager##`, `##STACKIT_SQLAgentUser##`",
+		"password":         "Password of the user account.",
+		"status":           "Status of the user.",
+		"default_database": "Default database of the user.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -203,12 +215,22 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"status": schema.StringAttribute{
+				Computed: true,
+			},
+			"default_database": schema.StringAttribute{
+				Computed: true,
+			},
 		},
 	}
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Create(
+	ctx context.Context,
+	req resource.CreateRequest,
+	resp *resource.CreateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -226,7 +248,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var roles []string
+	var roles []sqlserverflexalpha.UserRole
 	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
 		diags = model.Roles.ElementsAs(ctx, &roles, false)
 		resp.Diagnostics.Append(diags...)
@@ -242,7 +264,12 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.CreateUser(ctx, projectId, instanceId, region).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateUserRequest(
+		ctx,
+		projectId,
+		region,
+		instanceId,
+	).CreateUserRequestPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -250,17 +277,27 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	if userResp == nil || userResp.Item == nil || userResp.Item.Id == nil || *userResp.Item.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
+	if userResp == nil || userResp.Id == nil || *userResp.Id == 0 {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating user",
+			"API didn't return user Id. A user might have been created",
+		)
 		return
 	}
-	userId := *userResp.Item.Id
+	userId := *userResp.Id
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Map response body to schema
 	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating user",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	// Set state to fully populated data
@@ -273,7 +310,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Read(
+	ctx context.Context,
+	req resource.ReadRequest,
+	resp *resource.ReadResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -285,16 +326,21 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userId := model.UserId.ValueInt64()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	recordSetResp, err := r.client.GetUserRequest(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(
+			err,
+			&oapiErr,
+		)
+		//nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
@@ -308,7 +354,12 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	// Map response body to schema
 	err = mapFields(recordSetResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading user",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 
@@ -322,13 +373,21 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *userResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Update(
+	ctx context.Context,
+	_ resource.UpdateRequest,
+	resp *resource.UpdateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", "User can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userResource) Delete(
+	ctx context.Context,
+	req resource.DeleteRequest,
+	resp *resource.DeleteResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -341,7 +400,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userId := model.UserId.ValueInt64()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -349,7 +408,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing record set
-	err := r.client.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
+	err := r.client.DeleteUserRequest(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -362,12 +421,20 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,zone_id,record_set_id
-func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *userResource) ImportState(
+	ctx context.Context,
+	req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse,
+) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics,
+		core.LogAndAddError(
+			ctx, &resp.Diagnostics,
 			"Error importing user",
-			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q", req.ID),
+			fmt.Sprintf(
+				"Expected import identifier with format [project_id],[region],[instance_id],[user_id], got %q",
+				req.ID,
+			),
 		)
 		return
 	}
@@ -376,28 +443,35 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
-	core.LogAndAddWarning(ctx, &resp.Diagnostics,
+	core.LogAndAddWarning(
+		ctx,
+		&resp.Diagnostics,
 		"SQLServer Flex user imported with empty password",
 		"The user password is not imported as it is only available upon creation of a new user. The password field will be empty.",
 	)
 	tflog.Info(ctx, "SQLServer Flex user state imported")
 }
 
-func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, region string) error {
-	if userResp == nil || userResp.Item == nil {
+func mapFieldsCreate(userResp *sqlserverflexalpha.CreateUserResponse, model *Model, region string) error {
+	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
+	user := userResp
 
 	if user.Id == nil {
 		return fmt.Errorf("user id not present")
 	}
 	userId := *user.Id
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
-	model.UserId = types.StringValue(userId)
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(),
+		region,
+		model.InstanceId.ValueString(),
+		strconv.FormatInt(userId, 10),
+	)
+	model.UserId = types.Int64Value(userId)
 	model.Username = types.StringPointerValue(user.Username)
 
 	if user.Password == nil {
@@ -406,9 +480,9 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	model.Password = types.StringValue(*user.Password)
 
 	if user.Roles != nil {
-		roles := []attr.Value{}
+		var roles []attr.Value
 		for _, role := range *user.Roles {
-			roles = append(roles, types.StringValue(role))
+			roles = append(roles, types.StringValue(string(role)))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
@@ -424,21 +498,24 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	model.Region = types.StringValue(region)
+	model.Status = types.StringPointerValue(user.Status)
+	model.DefaultDatabase = types.StringPointerValue(user.DefaultDatabase)
+
 	return nil
 }
 
-func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region string) error {
-	if userResp == nil || userResp.Item == nil {
+func mapFields(userResp *sqlserverflexalpha.GetUserResponse, model *Model, region string) error {
+	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
+	user := userResp
 
-	var userId string
-	if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
+	var userId int64
+	if model.UserId.ValueInt64() != 0 {
+		userId = model.UserId.ValueInt64()
 	} else if user.Id != nil {
 		userId = *user.Id
 	} else {
@@ -448,15 +525,15 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 		model.ProjectId.ValueString(),
 		region,
 		model.InstanceId.ValueString(),
-		userId,
+		strconv.FormatInt(userId, 10),
 	)
-	model.UserId = types.StringValue(userId)
+	model.UserId = types.Int64Value(userId)
 	model.Username = types.StringPointerValue(user.Username)
 
 	if user.Roles != nil {
-		roles := []attr.Value{}
+		var roles []attr.Value
 		for _, role := range *user.Roles {
-			roles = append(roles, types.StringValue(role))
+			roles = append(roles, types.StringValue(string(role)))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
@@ -475,13 +552,17 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 	return nil
 }
 
-func toCreatePayload(model *Model, roles []string) (*sqlserverflex.CreateUserPayload, error) {
+func toCreatePayload(
+	model *Model,
+	roles []sqlserverflexalpha.UserRole,
+) (*sqlserverflexalpha.CreateUserRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	return &sqlserverflex.CreateUserPayload{
-		Username: conversion.StringValueToPointer(model.Username),
-		Roles:    &roles,
+	return &sqlserverflexalpha.CreateUserRequestPayload{
+		Username:        conversion.StringValueToPointer(model.Username),
+		DefaultDatabase: conversion.StringValueToPointer(model.DefaultDatabase),
+		Roles:           &roles,
 	}, nil
 }

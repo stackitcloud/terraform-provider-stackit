@@ -1,3 +1,5 @@
+// Copyright (c) STACKIT
+
 /*
 STACKIT MSSQL Service API
 

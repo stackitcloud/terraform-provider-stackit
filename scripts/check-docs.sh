@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) STACKIT
+
 
 # This script is used to ensure for PRs the docs are up-to-date via the CI pipeline
 # Usage: ./check-docs.sh
