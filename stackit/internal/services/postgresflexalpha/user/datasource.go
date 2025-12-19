@@ -1,14 +1,14 @@
-// Copyright (c) STACKIT
-
-package postgresflexa
+package postgresflexalpha
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/stackitcloud/terraform-provider-stackit/pkg/postgresflexalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
+	postgresflexalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -20,7 +20,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -29,15 +28,17 @@ var (
 )
 
 type DataSourceModel struct {
-	Id         types.String `tfsdk:"id"` // needed by TF
-	UserId     types.String `tfsdk:"user_id"`
-	InstanceId types.String `tfsdk:"instance_id"`
-	ProjectId  types.String `tfsdk:"project_id"`
-	Username   types.String `tfsdk:"username"`
-	Roles      types.Set    `tfsdk:"roles"`
-	Host       types.String `tfsdk:"host"`
-	Port       types.Int64  `tfsdk:"port"`
-	Region     types.String `tfsdk:"region"`
+	Id               types.String `tfsdk:"id"` // needed by TF
+	UserId           types.Int64  `tfsdk:"user_id"`
+	InstanceId       types.String `tfsdk:"instance_id"`
+	ProjectId        types.String `tfsdk:"project_id"`
+	Username         types.String `tfsdk:"username"`
+	Roles            types.Set    `tfsdk:"roles"`
+	Host             types.String `tfsdk:"host"`
+	Port             types.Int64  `tfsdk:"port"`
+	Region           types.String `tfsdk:"region"`
+	Status           types.String `tfsdk:"status"`
+	ConnectionString types.String `tfsdk:"connection_string"`
 }
 
 // NewUserDataSource is a helper function to simplify the provider implementation.
@@ -47,24 +48,32 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client       *postgresflex.APIClient
+	client       *postgresflexalpha.APIClient
 	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_postgresflex_user"
+func (r *userDataSource) Metadata(
+	_ context.Context,
+	req datasource.MetadataRequest,
+	resp *datasource.MetadataResponse,
+) {
+	resp.TypeName = req.ProviderTypeName + "_postgresflexalpha_user"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (r *userDataSource) Configure(
+	ctx context.Context,
+	req datasource.ConfigureRequest,
+	resp *datasource.ConfigureResponse,
+) {
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := postgresflexalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -75,12 +84,14 @@ func (r *userDataSource) Configure(ctx context.Context, req datasource.Configure
 // Schema defines the schema for the data source.
 func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Postgres Flex user data source schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
-		"user_id":     "User ID.",
-		"instance_id": "ID of the PostgresFlex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"region":      "The resource region. If not defined, the provider region is used.",
+		"main":              "Postgres Flex user data source schema. Must have a `region` specified in the provider configuration.",
+		"id":                "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
+		"user_id":           "User ID.",
+		"instance_id":       "ID of the PostgresFlex instance.",
+		"project_id":        "STACKIT project ID to which the instance is associated.",
+		"region":            "The resource region. If not defined, the provider region is used.",
+		"status":            "The current status of the user.",
+		"connection_string": "The connection string for the user to the instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -131,12 +142,22 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Optional:    true,
 				Description: descriptions["region"],
 			},
+			"status": schema.StringAttribute{
+				Computed: true,
+			},
+			"connection_string": schema.StringAttribute{
+				Computed: true,
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *userDataSource) Read(
+	ctx context.Context,
+	req datasource.ReadRequest,
+	resp *datasource.ReadResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -148,21 +169,26 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userId := model.UserId.ValueInt64()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUserRequest(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading user",
-			fmt.Sprintf("User with ID %q or instance with ID %q does not exist in project %q.", userId, instanceId, projectId),
+			fmt.Sprintf(
+				"User with ID %q or instance with ID %q does not exist in project %q.",
+				userId,
+				instanceId,
+				projectId,
+			),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -176,7 +202,12 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	// Map response body to schema and populate Computed attribute values
 	err = mapDataSourceFields(recordSetResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading user",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 
@@ -189,35 +220,36 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	tflog.Info(ctx, "Postgres Flex user read")
 }
 
-func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSourceModel, region string) error {
-	if userResp == nil || userResp.Item == nil {
+func mapDataSourceFields(userResp *postgresflexalpha.GetUserResponse, model *DataSourceModel, region string) error {
+	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
+	user := userResp
 
-	var userId string
-	if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
+	var userId int64
+	if model.UserId.ValueInt64() != 0 {
+		userId = model.UserId.ValueInt64()
 	} else if user.Id != nil {
 		userId = *user.Id
 	} else {
 		return fmt.Errorf("user id not present")
 	}
+
 	model.Id = utils.BuildInternalTerraformId(
-		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
+		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), strconv.FormatInt(userId, 10),
 	)
-	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.UserId = types.Int64Value(userId)
+	model.Username = types.StringPointerValue(user.Name)
 
 	if user.Roles == nil {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
-		roles := []attr.Value{}
+		var roles []attr.Value
 		for _, role := range *user.Roles {
-			roles = append(roles, types.StringValue(role))
+			roles = append(roles, types.StringValue(string(role)))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
 		if diags.HasError() {
@@ -228,5 +260,7 @@ func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSour
 	model.Host = types.StringPointerValue(user.Host)
 	model.Port = types.Int64PointerValue(user.Port)
 	model.Region = types.StringValue(region)
+	model.Status = types.StringPointerValue(user.Status)
+	model.ConnectionString = types.StringPointerValue(user.ConnectionString)
 	return nil
 }
