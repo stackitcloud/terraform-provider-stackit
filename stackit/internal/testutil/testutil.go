@@ -87,8 +87,10 @@ var (
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
 	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
 	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
+	SFSCustomEndpoint             = os.Getenv("TF_ACC_SFS_CUSTOM_ENDPOINT")
 	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
+	TokenCustomEndpoint           = os.Getenv("TF_ACC_TOKEN_CUSTOM_ENDPOINT")
 )
 
 // Provider config helper functions
@@ -432,6 +434,26 @@ func ServerUpdateProviderConfig() string {
 			enable_beta_resources = true
 		}`,
 		ServerUpdateCustomEndpoint,
+	)
+}
+
+func SFSProviderConfig() string {
+	if SFSCustomEndpoint == "" || TokenCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+			enable_beta_resources = true
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			region = "eu01"
+			sfs_custom_endpoint = "%s"
+			token_custom_endpoint = "%s"
+			enable_beta_resources = true
+		}`,
+		SFSCustomEndpoint,
+		TokenCustomEndpoint,
 	)
 }
 
