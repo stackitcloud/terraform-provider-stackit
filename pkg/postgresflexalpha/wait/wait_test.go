@@ -2,7 +2,6 @@ package wait
 
 import (
 	"context"
-	"math"
 	"testing"
 	"time"
 
@@ -169,8 +168,8 @@ func TestCreateInstanceWaitHandler(t *testing.T) {
 				if !cmp.Equal(gotRes, wantRes) {
 					t.Fatalf("handler gotRes = %v, want %v", gotRes, wantRes)
 				}
-			},
-		)
+			}
+		})
 	}
 }
 
@@ -244,7 +243,8 @@ func TestUpdateInstanceWaitHandler(t *testing.T) {
 				if !cmp.Equal(gotRes, wantRes) {
 					t.Fatalf("handler gotRes = %v, want %v", gotRes, wantRes)
 				}
-			},
+			}
+		},
 		)
 	}
 }
@@ -382,14 +382,14 @@ func TestDeleteUserWaitHandler(t *testing.T) {
 				isUserDeleted: !tt.deleteFails,
 			}
 
-				handler := DeleteUserWaitHandler(context.Background(), apiClient, "", "", "", userId)
+			handler := DeleteUserWaitHandler(context.Background(), apiClient, "", "", "", userId)
 
-				_, err := handler.SetTimeout(10 * time.Millisecond).WaitWithContext(context.Background())
+			_, err := handler.SetTimeout(10 * time.Millisecond).WaitWithContext(context.Background())
 
-				if (err != nil) != tt.wantErr {
-					t.Fatalf("handler error = %v, wantErr %v", err, tt.wantErr)
-				}
-			},
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("handler error = %v, wantErr %v", err, tt.wantErr)
+			}
+		},
 		)
 	}
 }

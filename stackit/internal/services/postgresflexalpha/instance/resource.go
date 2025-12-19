@@ -720,13 +720,13 @@ func mapFields(ctx context.Context, resp *postgresflexalpha.GetInstanceResponse,
 			"ram":         flavor.RAM,
 		}
 	} else {
-		// TODO
-		//flavorValues = map[string]attr.Value{
+		// TODO @mhenselin
+		// flavorValues = map[string]attr.Value{
 		//	"id":          types.StringValue(*instance.FlavorId),
 		//	"description": types.StringValue(*instance.FlavorId.Description),
 		//	"cpu":         types.Int64PointerValue(instance.FlavorId.Cpu),
 		//	"ram":         types.Int64PointerValue(instance.FlavorId.Memory),
-		//}
+		// }
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {

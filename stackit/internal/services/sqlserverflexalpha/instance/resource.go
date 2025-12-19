@@ -629,7 +629,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if flavor.RAM.IsNull() || flavor.RAM.IsUnknown() {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Instance creation waiting: flavor ram is null or unknown")
 	}
-	// flavorData := getFlavorModelById(ctx, r.client, &model, flavor)
 
 	// Map response body to schema
 	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)

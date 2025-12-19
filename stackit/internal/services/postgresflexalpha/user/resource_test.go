@@ -6,8 +6,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/pkg/postgresflexalpha"
 )
 
 func TestMapFieldsCreate(t *testing.T) {

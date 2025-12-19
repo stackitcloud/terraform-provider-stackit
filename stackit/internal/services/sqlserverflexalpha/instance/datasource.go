@@ -71,7 +71,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
 		"options":         "Custom parameters for the SQLServer Flex instance.",
 		"region":          "The resource region. If not defined, the provider region is used.",
-		// TODO
+		// TODO @mhenselin
 	}
 
 	resp.Schema = schema.Schema{

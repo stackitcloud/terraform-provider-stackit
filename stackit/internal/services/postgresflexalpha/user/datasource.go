@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 
@@ -47,7 +48,7 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client       *postgresflexalpha.APIClient
+	client       *postgresflex.APIClient
 	providerData core.ProviderData
 }
 
@@ -72,7 +73,7 @@ func (r *userDataSource) Configure(
 		return
 	}
 
-	apiClient := postgresflexalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -219,7 +220,7 @@ func (r *userDataSource) Read(
 	tflog.Info(ctx, "Postgres Flex user read")
 }
 
-func mapDataSourceFields(userResp *postgresflexalpha.GetUserResponse, model *DataSourceModel, region string) error {
+func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSourceModel, region string) error {
 	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
