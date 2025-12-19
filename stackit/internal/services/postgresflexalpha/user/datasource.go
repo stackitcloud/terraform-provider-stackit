@@ -8,7 +8,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/pkg/postgresflexalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/utils"
+	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"

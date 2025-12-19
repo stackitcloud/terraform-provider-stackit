@@ -723,9 +723,9 @@ func mapFields(ctx context.Context, resp *postgresflexalpha.GetInstanceResponse,
 		// TODO
 		//flavorValues = map[string]attr.Value{
 		//	"id":          types.StringValue(*instance.FlavorId),
-		//	"description": types.StringValue(*instance.Flavor.Description),
-		//	"cpu":         types.Int64PointerValue(instance.Flavor.Cpu),
-		//	"ram":         types.Int64PointerValue(instance.Flavor.Memory),
+		//	"description": types.StringValue(*instance.FlavorId.Description),
+		//	"cpu":         types.Int64PointerValue(instance.FlavorId.Cpu),
+		//	"ram":         types.Int64PointerValue(instance.FlavorId.Memory),
 		//}
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)

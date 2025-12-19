@@ -89,6 +89,16 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	return &value
 }
 
+// Int32ValueToPointer converts basetypes.Int64Value to a pointer to int64.
+// It returns nil if the value is null or unknown.
+func Int32ValueToPointer(s basetypes.Int32Value) *int32 {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueInt32()
+	return &value
+}
+
 // Int64ValueToPointer converts basetypes.Int64Value to a pointer to int64.
 // It returns nil if the value is null or unknown.
 func Int64ValueToPointer(s basetypes.Int64Value) *int64 {
