@@ -48,7 +48,7 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client       *postgresflex.APIClient
+	client       *postgresflexalpha.APIClient
 	providerData core.ProviderData
 }
 
@@ -73,7 +73,7 @@ func (r *userDataSource) Configure(
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := postgresflexalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
