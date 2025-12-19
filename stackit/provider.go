@@ -21,6 +21,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	postgresFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/instance"
+	sqlServerFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflexalpha/instance"
 	sqlServerFlexAlpaUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflexalpha/user"
 )
 
@@ -485,6 +486,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		sqlServerFlexAlphaInstance.NewInstanceDataSource,
 		sqlServerFlexAlpaUser.NewUserDataSource,
 	}
 }
@@ -493,6 +495,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		postgresFlexAlphaInstance.NewInstanceResource,
+		sqlServerFlexAlphaInstance.NewInstanceResource,
 		sqlServerFlexAlpaUser.NewUserResource,
 	}
 	return resources
