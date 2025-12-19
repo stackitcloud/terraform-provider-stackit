@@ -1,3 +1,5 @@
+// Copyright (c) STACKIT
+
 package main
 
 import (

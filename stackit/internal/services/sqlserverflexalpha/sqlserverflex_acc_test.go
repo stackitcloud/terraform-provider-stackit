@@ -1,3 +1,5 @@
+// Copyright (c) STACKIT
+
 package sqlserverflex_test
 
 import (

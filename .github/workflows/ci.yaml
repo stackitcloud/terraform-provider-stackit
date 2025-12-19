@@ -8,7 +8,7 @@ on:
       - main
 
 env:
-  GO_VERSION: "1.24"
+  GO_VERSION: "1.25"
   CODE_COVERAGE_FILE_NAME: "coverage.out" # must be the same as in Makefile
   CODE_COVERAGE_ARTIFACT_NAME: "code-coverage"
 
