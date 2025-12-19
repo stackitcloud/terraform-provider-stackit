@@ -68,6 +68,7 @@ type ProviderData struct {
 	ServerUpdateCustomEndpoint      string
 	SKECustomEndpoint               string
 	ServiceEnablementCustomEndpoint string
+	SfsCustomEndpoint               string
 	ServiceAccountCustomEndpoint    string
 	EnableBetaResources             bool
 	Experiments                     []string

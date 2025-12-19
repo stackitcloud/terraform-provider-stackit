@@ -92,6 +92,10 @@ import (
 	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
 	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
 	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
+	exportpolicy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/export-policy"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/resourcepool"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/share"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshots"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
@@ -160,6 +164,7 @@ type providerModel struct {
 	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
 	ServiceAccountCustomEndpoint    types.String `tfsdk:"service_account_custom_endpoint"`
 	ServiceEnablementCustomEndpoint types.String `tfsdk:"service_enablement_custom_endpoint"`
+	SfsCustomEndpoint               types.String `tfsdk:"sfs_custom_endpoint"`
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
@@ -206,6 +211,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"sqlserverflex_custom_endpoint":      "Custom endpoint for the SQL Server Flex service",
 		"ske_custom_endpoint":                "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
+		"sfs_custom_endpoint":                "Custom endpoint for the Stackit Filestorage API",
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
 		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
@@ -374,6 +380,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["service_enablement_custom_endpoint"],
 			},
+			"sfs_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["sfs_custom_endpoint"],
+			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
@@ -451,6 +461,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { providerData.ServerUpdateCustomEndpoint = v })
 	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
 	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
+	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { providerData.SfsCustomEndpoint = v })
 	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 
@@ -558,6 +569,10 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
 		skeCluster.NewClusterDataSource,
+		resourcepool.NewResourcePoolDataSource,
+		share.NewShareDataSource,
+		exportpolicy.NewExportPolicyDataSource,
+		snapshots.NewResourcePoolSnapshotDataSource,
 	}
 }
 
@@ -632,6 +647,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		serviceAccountKey.NewServiceAccountKeyResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
+		resourcepool.NewResourcePoolResource,
+		share.NewShareResource,
+		exportpolicy.NewExportPolicyResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 
