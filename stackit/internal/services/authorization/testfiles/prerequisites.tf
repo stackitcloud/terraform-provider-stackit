@@ -8,3 +8,9 @@ resource "stackit_authorization_project_role_assignment" "serviceaccount" {
   role        = "reader"
   subject     = var.test_service_account
 }
+
+resource "stackit_resourcemanager_folder" "test" {
+  name                = "test"
+  owner_email         = "foo.bar@stackit.cloud"
+  parent_container_id = var.organization_id
+}
