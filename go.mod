@@ -20,7 +20,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.1
-	github.com/stackitcloud/stackit-sdk-go/services/logs v0.1.1
+	github.com/stackitcloud/stackit-sdk-go/services/logs v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.2
