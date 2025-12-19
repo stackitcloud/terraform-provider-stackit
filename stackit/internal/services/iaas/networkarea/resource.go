@@ -325,6 +325,16 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	networkAreaId := *networkArea.Id
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
+	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
+	// persist state - just in case anything goes wrong while creating the network area region
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"organization_id": model.OrganizationId.ValueString(),
+		"network_area_id": networkAreaId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Map response body to schema
 	err = mapFields(ctx, networkArea, &model)
 	if err != nil {
