@@ -32,7 +32,7 @@ type logsInstanceDataSource struct {
 	client *logs.APIClient
 }
 
-func (d *logsInstanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *logsInstanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_logs_instance"
 }
 
@@ -50,7 +50,7 @@ func (d *logsInstanceDataSource) Configure(ctx context.Context, req datasource.C
 	tflog.Info(ctx, "Logs client configured")
 }
 
-func (d *logsInstanceDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("Logs instance resource schema.", core.Resource),
 		Description:         fmt.Sprintf("Logs instance resource schema. %s", core.ResourceRegionFallbackDocstring),
@@ -123,7 +123,7 @@ func (d *logsInstanceDataSource) Schema(ctx context.Context, req datasource.Sche
 	}
 }
 
-func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)

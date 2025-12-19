@@ -99,7 +99,7 @@ func (r *logsInstanceResource) Configure(ctx context.Context, req resource.Confi
 	tflog.Info(ctx, "Logs client configured")
 }
 
-func (r *logsInstanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (r *logsInstanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	if req.Config.Raw.IsNull() {
 		return
@@ -126,11 +126,11 @@ func (r *logsInstanceResource) ModifyPlan(ctx context.Context, req resource.Modi
 	}
 }
 
-func (r *logsInstanceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *logsInstanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_logs_instance"
 }
 
-func (r *logsInstanceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *logsInstanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("Logs instance resource schema.", core.Resource),
 		Description:         fmt.Sprintf("Logs instance resource schema. %s", core.ResourceRegionFallbackDocstring),
@@ -212,7 +212,7 @@ func (r *logsInstanceResource) Schema(ctx context.Context, req resource.SchemaRe
 	}
 }
 
-func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -262,7 +262,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 	tflog.Info(ctx, "Logs instance created")
 }
 
-func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -305,7 +305,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	tflog.Info(ctx, "Logs Instance read")
 }
 
-func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -351,7 +351,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	tflog.Info(ctx, "Logs Instance updated")
 }
 
-func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
