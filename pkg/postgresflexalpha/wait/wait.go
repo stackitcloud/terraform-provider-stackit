@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package wait
 
 import (
@@ -29,7 +27,7 @@ type APIClientInstanceInterface interface {
 
 // Interface needed for tests
 type APIClientUserInterface interface {
-	GetUserExecute(ctx context.Context, projectId, region, instanceId, userId string) (*postgresflex.GetUserResponse, error)
+	GetUserRequestExecute(ctx context.Context, projectId, region, instanceId string, userId int64) (*postgresflex.GetUserResponse, error)
 }
 
 // CreateInstanceWaitHandler will wait for instance creation
@@ -152,9 +150,9 @@ func ForceDeleteInstanceWaitHandler(ctx context.Context, a APIClientInstanceInte
 }
 
 // DeleteUserWaitHandler will wait for delete
-func DeleteUserWaitHandler(ctx context.Context, a APIClientUserInterface, projectId, region, instanceId, userId string) *wait.AsyncActionHandler[struct{}] {
+func DeleteUserWaitHandler(ctx context.Context, a APIClientUserInterface, projectId, region, instanceId string, userId int64) *wait.AsyncActionHandler[struct{}] {
 	handler := wait.New(func() (waitFinished bool, response *struct{}, err error) {
-		_, err = a.GetUserExecute(ctx, projectId, region, instanceId, userId)
+		_, err = a.GetUserRequestExecute(ctx, projectId, region, instanceId, userId)
 		if err == nil {
 			return false, nil, nil
 		}

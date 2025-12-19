@@ -1,0 +1,282 @@
+// Copyright (c) STACKIT
+
+package sqlserverflex
+
+import (
+	"context"
+	"reflect"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+
+	sqlserverflex "github.com/stackitcloud/terraform-provider-stackit/pkg/sqlserverflexalpha"
+)
+
+func TestNewInstanceResource(t *testing.T) {
+	tests := []struct {
+		name string
+		want resource.Resource
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewInstanceResource(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewInstanceResource() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_instanceResource_Configure(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.ConfigureRequest
+		resp *resource.ConfigureResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Configure(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_Create(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.CreateRequest
+		resp *resource.CreateResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Create(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_Delete(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.DeleteRequest
+		resp *resource.DeleteResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Delete(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_ImportState(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.ImportStateRequest
+		resp *resource.ImportStateResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.ImportState(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_Metadata(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		in0  context.Context
+		req  resource.MetadataRequest
+		resp *resource.MetadataResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Metadata(tt.args.in0, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_ModifyPlan(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.ModifyPlanRequest
+		resp *resource.ModifyPlanResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.ModifyPlan(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_Read(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.ReadRequest
+		resp *resource.ReadResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Read(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_Schema(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		in0  context.Context
+		in1  resource.SchemaRequest
+		resp *resource.SchemaResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Schema(tt.args.in0, tt.args.in1, tt.args.resp)
+		})
+	}
+}
+
+func Test_instanceResource_Update(t *testing.T) {
+	type fields struct {
+		client       *sqlserverflex.APIClient
+		providerData core.ProviderData
+	}
+	type args struct {
+		ctx  context.Context
+		req  resource.UpdateRequest
+		resp *resource.UpdateResponse
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &instanceResource{
+				client:       tt.fields.client,
+				providerData: tt.fields.providerData,
+			}
+			r.Update(tt.args.ctx, tt.args.req, tt.args.resp)
+		})
+	}
+}

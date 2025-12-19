@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package wait
 
 import (
@@ -12,7 +10,7 @@ import (
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/terraform-provider-stackit/pkg/sqlserverflexalpha"
 )
 
 const (
@@ -25,20 +23,20 @@ const (
 
 // Interface needed for tests
 type APIClientInstanceInterface interface {
-	GetInstanceExecute(ctx context.Context, projectId, instanceId, region string) (*sqlserverflex.GetInstanceResponse, error)
+	GetInstanceRequestExecute(ctx context.Context, projectId, region, instanceId string) (*sqlserverflex.GetInstanceResponse, error)
 }
 
 // CreateInstanceWaitHandler will wait for instance creation
 func CreateInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface, projectId, instanceId, region string) *wait.AsyncActionHandler[sqlserverflex.GetInstanceResponse] {
 	handler := wait.New(func() (waitFinished bool, response *sqlserverflex.GetInstanceResponse, err error) {
-		s, err := a.GetInstanceExecute(ctx, projectId, instanceId, region)
+		s, err := a.GetInstanceRequestExecute(ctx, projectId, region, instanceId)
 		if err != nil {
 			return false, nil, err
 		}
-		if s == nil || s.Item == nil || s.Item.Id == nil || *s.Item.Id != instanceId || s.Item.Status == nil {
+		if s == nil || s.Id == nil || *s.Id != instanceId || s.Status == nil {
 			return false, nil, nil
 		}
-		switch strings.ToLower(*s.Item.Status) {
+		switch strings.ToLower(string(*s.Status)) {
 		case strings.ToLower(InstanceStateSuccess):
 			return true, s, nil
 		case strings.ToLower(InstanceStateUnknown), strings.ToLower(InstanceStateFailed):
@@ -55,14 +53,14 @@ func CreateInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface
 // UpdateInstanceWaitHandler will wait for instance update
 func UpdateInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface, projectId, instanceId, region string) *wait.AsyncActionHandler[sqlserverflex.GetInstanceResponse] {
 	handler := wait.New(func() (waitFinished bool, response *sqlserverflex.GetInstanceResponse, err error) {
-		s, err := a.GetInstanceExecute(ctx, projectId, instanceId, region)
+		s, err := a.GetInstanceRequestExecute(ctx, projectId, region, instanceId)
 		if err != nil {
 			return false, nil, err
 		}
-		if s == nil || s.Item == nil || s.Item.Id == nil || *s.Item.Id != instanceId || s.Item.Status == nil {
+		if s == nil || s.Id == nil || *s.Id != instanceId || s.Status == nil {
 			return false, nil, nil
 		}
-		switch strings.ToLower(*s.Item.Status) {
+		switch strings.ToLower(string(*s.Status)) {
 		case strings.ToLower(InstanceStateSuccess):
 			return true, s, nil
 		case strings.ToLower(InstanceStateUnknown), strings.ToLower(InstanceStateFailed):
@@ -84,7 +82,7 @@ func PartialUpdateInstanceWaitHandler(ctx context.Context, a APIClientInstanceIn
 // DeleteInstanceWaitHandler will wait for instance deletion
 func DeleteInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface, projectId, instanceId, region string) *wait.AsyncActionHandler[struct{}] {
 	handler := wait.New(func() (waitFinished bool, response *struct{}, err error) {
-		_, err = a.GetInstanceExecute(ctx, projectId, instanceId, region)
+		_, err = a.GetInstanceRequestExecute(ctx, projectId, region, instanceId)
 		if err == nil {
 			return false, nil, nil
 		}

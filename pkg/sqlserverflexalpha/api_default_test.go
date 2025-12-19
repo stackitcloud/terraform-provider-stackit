@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 /*
 STACKIT MSSQL Service API
 
@@ -586,7 +584,9 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		projectId := projectIdValue
 		region := regionValue
 
-		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region).Execute()
+		page := int64(1)
+		size := int64(10)
+		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region, &page, &size, FLAVORSORT_ID_DESC).Execute()
 
 		if reqErr != nil {
 			t.Fatalf("error in call: %v", reqErr)
