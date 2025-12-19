@@ -298,7 +298,7 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"encryption_parameters": schema.SingleNestedAttribute{
-				Description: "Parameter to connect to a key-encryption-key within the STACKIT-KMS to create encrypted volumes.",
+				Description: "Parameter to connect to a key-encryption-key within the STACKIT-KMS to create encrypted volumes. These parameters never leave the backend again. So these parameters are not present on imports or in the datasource. They live only in your Terraform state after creation of the resource.",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),

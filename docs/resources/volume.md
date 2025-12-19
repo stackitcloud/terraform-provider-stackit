@@ -41,7 +41,7 @@ import {
 ### Optional
 
 - `description` (String) The description of the volume.
-- `encryption_parameters` (Attributes) Parameter to connect to a key-encryption-key within the STACKIT-KMS to create encrypted volumes. (see [below for nested schema](#nestedatt--encryption_parameters))
+- `encryption_parameters` (Attributes) Parameter to connect to a key-encryption-key within the STACKIT-KMS to create encrypted volumes. These parameters never leave the backend again. So these parameters are not present on imports or in the datasource. They live only in your Terraform state after creation of the resource. (see [below for nested schema](#nestedatt--encryption_parameters))
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the volume.
 - `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/products/storage/block-storage/basics/service-plans/#currently-available-service-plans-performance-classes)
