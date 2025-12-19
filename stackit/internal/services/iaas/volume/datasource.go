@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -23,6 +27,23 @@ import (
 var (
 	_ datasource.DataSource = &volumeDataSource{}
 )
+
+type DatasourceModel struct {
+	// basically the same as the resource model, just without encryption parameters as they are only **sent** to the API, but **never returned**
+	Id               types.String `tfsdk:"id"` // needed by TF
+	ProjectId        types.String `tfsdk:"project_id"`
+	Region           types.String `tfsdk:"region"`
+	VolumeId         types.String `tfsdk:"volume_id"`
+	Name             types.String `tfsdk:"name"`
+	AvailabilityZone types.String `tfsdk:"availability_zone"`
+	Labels           types.Map    `tfsdk:"labels"`
+	Description      types.String `tfsdk:"description"`
+	PerformanceClass types.String `tfsdk:"performance_class"`
+	Size             types.Int64  `tfsdk:"size"`
+	ServerId         types.String `tfsdk:"server_id"`
+	Source           types.Object `tfsdk:"source"`
+	Encrypted        types.Bool   `tfsdk:"encrypted"`
+}
 
 // NewVolumeDataSource is a helper function to simplify the provider implementation.
 func NewVolumeDataSource() datasource.DataSource {
@@ -134,13 +155,17 @@ func (d *volumeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 					},
 				},
 			},
+			"encrypted": schema.BoolAttribute{
+				Description: "Indicates if the volume is encrypted.",
+				Computed:    true,
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DatasourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -174,7 +199,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, volumeResp, &model, region)
+	err = mapDatasourceFields(ctx, volumeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -185,4 +210,63 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	tflog.Info(ctx, "volume read")
+}
+
+func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *DatasourceModel, region string) error {
+	if volumeResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var volumeId string
+	if model.VolumeId.ValueString() != "" {
+		volumeId = model.VolumeId.ValueString()
+	} else if volumeResp.Id != nil {
+		volumeId = *volumeResp.Id
+	} else {
+		return fmt.Errorf("Volume id not present")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, volumeId)
+	model.Region = types.StringValue(region)
+
+	labels, err := iaasUtils.MapLabels(ctx, volumeResp.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+
+	var sourceValues map[string]attr.Value
+	var sourceObject basetypes.ObjectValue
+	if volumeResp.Source == nil {
+		sourceObject = types.ObjectNull(sourceTypes)
+	} else {
+		sourceValues = map[string]attr.Value{
+			"type": types.StringPointerValue(volumeResp.Source.Type),
+			"id":   types.StringPointerValue(volumeResp.Source.Id),
+		}
+		var diags diag.Diagnostics
+		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating source: %w", core.DiagsToError(diags))
+		}
+	}
+
+	model.VolumeId = types.StringValue(volumeId)
+	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
+	model.Description = types.StringPointerValue(volumeResp.Description)
+	model.Name = types.StringPointerValue(volumeResp.Name)
+	// Workaround for volumes with no names which return an empty string instead of nil
+	if name := volumeResp.Name; name != nil && *name == "" {
+		model.Name = types.StringNull()
+	}
+	model.Labels = labels
+	model.PerformanceClass = types.StringPointerValue(volumeResp.PerformanceClass)
+	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
+	model.Size = types.Int64PointerValue(volumeResp.Size)
+	model.Source = sourceObject
+	model.Encrypted = types.BoolPointerValue(volumeResp.Encrypted)
+
+	return nil
 }

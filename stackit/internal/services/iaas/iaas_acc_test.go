@@ -225,13 +225,15 @@ var testConfigVolumeVarsMinUpdated = func() config.Variables {
 // VOLUME - MAX
 
 var testConfigVolumeVarsMax = config.Variables{
-	"project_id":        config.StringVariable(testutil.ProjectId),
-	"availability_zone": config.StringVariable("eu01-1"),
-	"name":              config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
-	"size":              config.IntegerVariable(16),
-	"description":       config.StringVariable("description"),
-	"performance_class": config.StringVariable("storage_premium_perf0"),
-	"label":             config.StringVariable("label"),
+	"project_id":           config.StringVariable(testutil.ProjectId),
+	"availability_zone":    config.StringVariable("eu01-1"),
+	"name":                 config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"size":                 config.IntegerVariable(16),
+	"description":          config.StringVariable("description"),
+	"performance_class":    config.StringVariable("storage_premium_perf0"),
+	"label":                config.StringVariable("label"),
+	"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"key_payload_base64":   config.StringVariable("Y2hhbmdpbmdwbGFuc29mdGJhcmtmaXJzdGNoYW5nZXJlZGh1bmdkb29uY2VoaXN0b3I="),
 }
 
 var testConfigVolumeVarsMaxUpdated = func() config.Variables {
@@ -1492,6 +1494,8 @@ func TestAccVolumeMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
 					resource.TestCheckResourceAttrSet("stackit_volume.volume_size", "performance_class"),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "encrypted", "false"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "encryption_parameters"),
 
 					// Volume source
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
@@ -1506,6 +1510,8 @@ func TestAccVolumeMin(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "source.type", "volume"),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "encrypted", "false"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "encryption_parameters"),
 				),
 			},
 			// Data source
@@ -1539,6 +1545,7 @@ func TestAccVolumeMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_size", "performance_class"),
 					resource.TestCheckNoResourceAttr("data.stackit_volume.volume_size", "server_id"),
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["size"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "encrypted", "false"),
 
 					// Volume source
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
@@ -1555,6 +1562,7 @@ func TestAccVolumeMin(t *testing.T) {
 						"data.stackit_volume.volume_size", "volume_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "source.type", "volume"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "encrypted", "false"),
 				),
 			},
 			// Import
@@ -1605,6 +1613,8 @@ func TestAccVolumeMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["size"])),
 					resource.TestCheckResourceAttrSet("stackit_volume.volume_size", "performance_class"),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "server_id"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "encryption_parameters"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "encrypted", "false"),
 
 					// Volume source
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["project_id"])),
@@ -1620,6 +1630,8 @@ func TestAccVolumeMin(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "source.type", "volume"),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "server_id"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "encryption_parameters"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "encrypted", "false"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -1650,6 +1662,8 @@ func TestAccVolumeMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "labels.%", "1"),
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "labels.acc-test", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["label"])),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "server_id"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "encryption_parameters"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "encrypted", "false"),
 
 					// Volume source
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
@@ -1668,6 +1682,50 @@ func TestAccVolumeMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "source.type", "volume"),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "server_id"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "encryption_parameters"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "encrypted", "false"),
+
+					// Volume encrypted - no key payload
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "performance_class"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encrypted", "true"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "key_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_id",
+					),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_version", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "keyring_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_keyring_id",
+					),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.key_payload_base64"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.service_account", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["service_account_mail"])),
+
+					// Volume encrypted - with key payload
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "performance_class"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encrypted", "true"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "key_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_id",
+					),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_version", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "keyring_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_keyring_id",
+					),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.key_payload_base64"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.service_account", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["service_account_mail"])),
 				),
 			},
 			// Data source
@@ -1685,6 +1743,16 @@ func TestAccVolumeMax(t *testing.T) {
 					data "stackit_volume" "volume_source" {
 						project_id  = stackit_volume.volume_source.project_id
 						volume_id = stackit_volume.volume_source.volume_id
+					}
+					
+					data "stackit_volume" "volume_encrypted_no_key_payload" {
+						project_id  = stackit_volume.volume_encrypted_no_key_payload.project_id
+						volume_id = stackit_volume.volume_encrypted_no_key_payload.volume_id
+					}
+					
+					data "stackit_volume" "volume_encrypted_with_key_payload" {
+						project_id  = stackit_volume.volume_encrypted_with_key_payload.project_id
+						volume_id = stackit_volume.volume_encrypted_with_key_payload.volume_id
 					}
 					`,
 					testutil.IaaSProviderConfig(), resourceVolumeMaxConfig,
@@ -1705,6 +1773,7 @@ func TestAccVolumeMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "name", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])),
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "labels.%", "1"),
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "labels.acc-test", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["label"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_size", "encrypted", "false"),
 
 					// Volume source
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
@@ -1726,6 +1795,27 @@ func TestAccVolumeMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "source.type", "volume"),
 					resource.TestCheckNoResourceAttr("data.stackit_volume.volume_source", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_source", "encrypted", "false"),
+
+					// Volume encrypted - no key payload
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_encrypted_no_key_payload", "volume_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["size"])),
+					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_encrypted_no_key_payload", "performance_class"),
+					resource.TestCheckNoResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "encrypted", "true"),
+
+					// Volume encrypted - with key payload
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_encrypted_no_key_payload", "volume_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["size"])),
+					resource.TestCheckResourceAttrSet("data.stackit_volume.volume_encrypted_no_key_payload", "performance_class"),
+					resource.TestCheckNoResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_volume.volume_encrypted_no_key_payload", "encrypted", "true"),
 				),
 			},
 			// Import
@@ -1763,6 +1853,58 @@ func TestAccVolumeMax(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
+			{
+				ConfigVariables: testConfigVolumeVarsMax,
+				ResourceName:    "stackit_volume.volume_encrypted_no_key_payload",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.volume_encrypted_no_key_payload"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_encrypted_no_key_payload")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+				// the values below won't be imported, as they can be only **sent** to the API, but will be **never returned**
+				ImportStateVerifyIgnore: []string{
+					"encryption_parameters",
+					"encryption_parameters.kek_key_id",
+					"encryption_parameters.kek_key_version",
+					"encryption_parameters.kek_keyring_id",
+					"encryption_parameters.key_payload_base64",
+					"encryption_parameters.service_account",
+				},
+			},
+			{
+				ConfigVariables: testConfigVolumeVarsMax,
+				ResourceName:    "stackit_volume.volume_encrypted_with_key_payload",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_volume.volume_encrypted_with_key_payload"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_volume.volume_encrypted_with_key_payload")
+					}
+					volumeId, ok := r.Primary.Attributes["volume_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute volume_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, volumeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+				// the values below won't be imported, as they can be only **sent** to the API, but will be **never returned**
+				ImportStateVerifyIgnore: []string{
+					"encryption_parameters",
+					"encryption_parameters.kek_key_id",
+					"encryption_parameters.kek_key_version",
+					"encryption_parameters.kek_keyring_id",
+					"encryption_parameters.key_payload_base64",
+					"encryption_parameters.service_account",
+				},
+			},
 			// Update
 			{
 				ConfigVariables: testConfigVolumeVarsMaxUpdated,
@@ -1779,6 +1921,8 @@ func TestAccVolumeMax(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "server_id"),
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "labels.%", "1"),
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "labels.acc-test", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["label"])),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_size", "encryption_parameters"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_size", "encrypted", "false"),
 
 					// Volume source
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["project_id"])),
@@ -1796,6 +1940,50 @@ func TestAccVolumeMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("stackit_volume.volume_source", "source.type", "volume"),
 					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "server_id"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_source", "encryption_parameters"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_source", "encrypted", "false"),
+
+					// Volume encrypted - no key payload
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "performance_class"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encrypted", "true"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "key_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_id",
+					),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_version", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "keyring_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_keyring_id",
+					),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.key_payload_base64"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.service_account", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["service_account_mail"])),
+
+					// Volume encrypted - with key payload
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "volume_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "availability_zone", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["availability_zone"])),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "size", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["size"])),
+					resource.TestCheckResourceAttrSet("stackit_volume.volume_encrypted_no_key_payload", "performance_class"),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "server_id"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encrypted", "true"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "key_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_id",
+					),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_key_version", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_kms_key.key", "keyring_id",
+						"stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.kek_keyring_id",
+					),
+					resource.TestCheckNoResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.key_payload_base64"),
+					resource.TestCheckResourceAttr("stackit_volume.volume_encrypted_no_key_payload", "encryption_parameters.service_account", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["service_account_mail"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
