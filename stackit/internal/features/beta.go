@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package features
 
 import (
@@ -9,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 )
 
 // BetaResourcesEnabled returns whether this provider has beta functionality enabled.

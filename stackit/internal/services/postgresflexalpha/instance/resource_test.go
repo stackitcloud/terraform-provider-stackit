@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package postgresflex
 
 import (
@@ -10,8 +8,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	postgresflex "github.com/stackitcloud/terraform-provider-stackit/pkg/postgresflexalpha"
 )
 
 type postgresFlexClientMocked struct {

@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package conversion
 
 import (
@@ -11,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 )
 
 func ToString(ctx context.Context, v attr.Value) (string, error) {

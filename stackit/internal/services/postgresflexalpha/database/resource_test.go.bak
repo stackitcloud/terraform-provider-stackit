@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package postgresflexa
 
 import (

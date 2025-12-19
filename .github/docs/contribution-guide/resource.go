@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package foo
 
 import (
@@ -14,10 +12,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	fooUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/foo/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
+	fooUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/foo/utils"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/foo"      // Import service "foo" from the STACKIT SDK for Go
 	"github.com/stackitcloud/stackit-sdk-go/services/foo/wait" // Import service "foo" waiters from the STACKIT SDK for Go (in case the service API has asynchronous endpoints)

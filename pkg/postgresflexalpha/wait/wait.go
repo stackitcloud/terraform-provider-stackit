@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	postgresflex "github.com/stackitcloud/terraform-provider-stackit/pkg/postgresflexalpha"
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"

@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package stackit
 
 import (
@@ -16,14 +14,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/features"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	postgresFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/instance"
-	postgresFlexAlphaUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflexalpha/user"
-	sqlServerFlexAlphaInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflexalpha/instance"
-	sqlServerFlexAlpaUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflexalpha/user"
+
+	postgresFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance"
+	sqlServerFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/instance"
+	sqlserverFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/user"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -490,7 +488,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		//postgresFlexAlphaInstance.NewInstanceDataSource(),
 		postgresFlexAlphaUser.NewUserDataSource,
 		sqlServerFlexAlphaInstance.NewInstanceDataSource,
-		sqlServerFlexAlpaUser.NewUserDataSource,
+		sqlserverFlexAlphaUser.NewUserDataSource,
 	}
 }
 
@@ -500,7 +498,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		postgresFlexAlphaInstance.NewInstanceResource,
 		postgresFlexAlphaUser.NewUserResource,
 		sqlServerFlexAlphaInstance.NewInstanceResource,
-		sqlServerFlexAlpaUser.NewUserResource,
+		sqlserverFlexAlphaUser.NewUserResource,
 	}
 	return resources
 }

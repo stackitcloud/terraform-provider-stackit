@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package testutil
 
 import (

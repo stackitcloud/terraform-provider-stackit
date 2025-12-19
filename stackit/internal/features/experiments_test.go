@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package features
 
 import (
@@ -7,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 )
 
 func TestValidExperiment(t *testing.T) {

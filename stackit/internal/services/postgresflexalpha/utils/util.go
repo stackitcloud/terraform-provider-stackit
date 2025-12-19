@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package utils
 
 import (
@@ -7,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	postgresflex "github.com/stackitcloud/terraform-provider-stackit/pkg/postgresflexalpha"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 )
 
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *postgresflex.APIClient {

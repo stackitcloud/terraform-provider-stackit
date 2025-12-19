@@ -8,7 +8,7 @@ on:
       - main
 
 env:
-  GO_VERSION: "1.25"
+  GO_VERSION: "1.24"
   CODE_COVERAGE_FILE_NAME: "coverage.out" # must be the same as in Makefile
   CODE_COVERAGE_ARTIFACT_NAME: "code-coverage"
 
@@ -33,6 +33,10 @@ jobs:
       - name: "Ensure docs are up-to-date"
         if: ${{ github.event_name == 'pull_request' }}
         run: ./scripts/check-docs.sh
+
+      - name: "Run go mod tidy"
+        if: ${{ github.event_name == 'pull_request' }}
+        run: go mod tidy
 
       - name: Lint
         run: make lint

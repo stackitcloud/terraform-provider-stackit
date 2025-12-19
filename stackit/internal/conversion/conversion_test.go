@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package conversion
 
 import (
@@ -8,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"

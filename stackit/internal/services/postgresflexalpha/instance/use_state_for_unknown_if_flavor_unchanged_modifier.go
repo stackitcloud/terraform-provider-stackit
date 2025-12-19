@@ -1,5 +1,3 @@
-// Copyright (c) STACKIT
-
 package postgresflex
 
 import (
