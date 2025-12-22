@@ -40,6 +40,8 @@ func CreateInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface
 		}
 		switch strings.ToLower(string(*s.Status)) {
 		case strings.ToLower(InstanceStateSuccess):
+			// if no instance address - return false
+			// if no router address - return false
 			return true, s, nil
 		case strings.ToLower(InstanceStateUnknown), strings.ToLower(InstanceStateFailed):
 			return true, s, fmt.Errorf("create failed for instance with id %s", instanceId)
@@ -48,7 +50,7 @@ func CreateInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface
 		}
 	})
 	handler.SetTimeout(45 * time.Minute)
-	handler.SetSleepBeforeWait(5 * time.Second)
+	handler.SetSleepBeforeWait(15 * time.Second)
 	return handler
 }
 

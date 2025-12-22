@@ -26,11 +26,3 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
   }
   version = 14
 }
-
-
-resource "stackitprivatepreview_sqlserverflexalpha_user" "ptlsdbuser" {
-  project_id  = stackitprivatepreview_postgresflexalpha_instance.ptlsdbsrv.project_id
-  instance_id = stackitprivatepreview_postgresflexalpha_instance.ptlsdbsrv.id
-  username    = var.db_username
-  roles       = ["createdb", "login", "createrole"]
-}

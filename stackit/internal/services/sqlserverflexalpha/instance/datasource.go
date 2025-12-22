@@ -64,16 +64,23 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":            "SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id":     "ID of the SQLServer Flex instance.",
-		"project_id":      "STACKIT project ID to which the instance is associated.",
-		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the SQLServer Flex instance.",
-		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
-		"options":         "Custom parameters for the SQLServer Flex instance.",
-		"region":          "The resource region. If not defined, the provider region is used.",
-		// TODO @mhenselin
+		"main":             "SQLServer Flex ALPHA instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":               "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":      "ID of the SQLServer Flex instance.",
+		"project_id":       "STACKIT project ID to which the instance is associated.",
+		"name":             "Instance name.",
+		"access_scope":     "The access scope of the instance. (e.g. SNA)",
+		"acl":              "The Access Control List (ACL) for the SQLServer Flex instance.",
+		"backup_schedule":  `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
+		"region":           "The resource region. If not defined, the provider region is used.",
+		"encryption":       "The encryption block.",
+		"network":          "The network block.",
+		"keyring_id":       "STACKIT KMS - KeyRing ID of the encryption key to use.",
+		"key_id":           "STACKIT KMS - Key ID of the encryption key to use.",
+		"key_version":      "STACKIT KMS - Key version to use in the encryption key.",
+		"service:account":  "STACKIT KMS - service account to use in the encryption key.",
+		"instance_address": "The returned instance IP address of the SQLServer Flex instance.",
+		"router_address":   "The returned router IP address of the SQLServer Flex instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -107,6 +114,10 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["backup_schedule"],
 				Computed:    true,
 			},
+			"is_deletable": schema.BoolAttribute{
+				Description: descriptions["is_deletable"],
+				Computed:    true,
+			},
 			"flavor": schema.SingleNestedAttribute{
 				Computed: true,
 				Attributes: map[string]schema.Attribute{
@@ -120,6 +131,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Computed: true,
 					},
 					"ram": schema.Int64Attribute{
+						Computed: true,
+					},
+					"node_type": schema.StringAttribute{
 						Computed: true,
 					},
 				},

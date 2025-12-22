@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 
@@ -147,15 +148,13 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"user_id": schema.StringAttribute{
+			"user_id": schema.Int64Attribute{
 				Description: descriptions["user_id"],
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
-				Validators: []validator.String{
-					validate.NoSeparator(),
-				},
+				Validators: []validator.Int64{},
 			},
 			"instance_id": schema.StringAttribute{
 				Description: descriptions["instance_id"],

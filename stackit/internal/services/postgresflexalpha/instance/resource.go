@@ -278,6 +278,10 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					},
 					"size": schema.Int64Attribute{
 						Required: true,
+						//PlanModifiers: []planmodifier.Int64{
+						// TODO - req replace if new size smaller than state size
+						// int64planmodifier.RequiresReplaceIf(),
+						//},
 					},
 				},
 			},
