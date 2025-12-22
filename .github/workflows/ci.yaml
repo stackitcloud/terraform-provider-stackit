@@ -38,8 +38,13 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: go mod tidy
 
-      - name: Lint
-        run: make lint
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.7
+
+#      - name: Lint
+#        run: make lint
       
       - name: Test
         run: make test
