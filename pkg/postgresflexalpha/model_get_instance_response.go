@@ -222,6 +222,26 @@ func setGetInstanceResponseGetStorageAttributeType(arg *GetInstanceResponseGetSt
 }
 
 /*
+	types and functions for encryption
+*/
+
+// isModel
+type GetInstanceResponseGetEncryptionAttributeType = *InstanceEncryption
+type GetInstanceResponseGetEncryptionArgType = InstanceEncryption
+type GetInstanceResponseGetEncryptionRetType = InstanceEncryption
+
+func getGetInstanceResponseGetEncryptionAttributeTypeOk(arg GetInstanceResponseGetEncryptionAttributeType) (ret GetInstanceResponseGetEncryptionRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setGetInstanceResponseGetEncryptionAttributeType(arg *GetInstanceResponseGetEncryptionAttributeType, val GetInstanceResponseGetEncryptionRetType) {
+	*arg = &val
+}
+
+/*
 	types and functions for version
 */
 
@@ -256,6 +276,7 @@ type GetInstanceResponse struct {
 	// Whether the instance can be deleted or not.
 	// REQUIRED
 	IsDeletable GetInstanceResponsegetIsDeletableAttributeType `json:"isDeletable" required:"true"`
+	Encryption  GetInstanceResponseGetEncryptionAttributeType  `json:"encryption,omitempty"`
 	// The name of the instance.
 	// REQUIRED
 	Name GetInstanceResponseGetNameAttributeType `json:"name" required:"true"`

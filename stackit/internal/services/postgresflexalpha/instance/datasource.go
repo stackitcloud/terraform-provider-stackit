@@ -60,7 +60,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 // Schema defines the schema for the data source.
-func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *instanceDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
@@ -98,11 +98,6 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["name"],
 				Computed:    true,
 			},
-			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Computed:    true,
-			},
 			"backup_schedule": schema.StringAttribute{
 				Computed: true,
 			},
@@ -121,7 +116,15 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"ram": schema.Int64Attribute{
 						Computed: true,
 					},
+					"node_type": schema.StringAttribute{
+						Computed: true,
+					},
 				},
+				//CustomType: postgresflex.FlavorType{
+				//	ObjectType: types.ObjectType{
+				//		AttrTypes: postgresflex.FlavorValue{}.AttributeTypes(ctx),
+				//	},
+				//},
 			},
 			"replicas": schema.Int64Attribute{
 				Computed: true,
@@ -146,7 +149,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["region"],
 			},
 			"encryption": schema.SingleNestedAttribute{
-				Required: true,
+				Computed: true,
 				Attributes: map[string]schema.Attribute{
 					"key_id": schema.StringAttribute{
 						Description: descriptions["key_id"],
@@ -236,13 +239,30 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var flavor = &flavorModel{}
+	if instanceResp != nil && instanceResp.FlavorId != nil {
+		flavor.Id = types.StringValue(*instanceResp.FlavorId)
+	}
+
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
+
+		err := getFlavorModelById(ctx, r.client, &model, flavor)
+		if err != nil {
+			resp.Diagnostics.AddError(err.Error(), err.Error())
+			return
+		}
+
+		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
+
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -261,7 +281,16 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, network, region)
+	var encryption = &encryptionModel{}
+	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

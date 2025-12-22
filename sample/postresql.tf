@@ -1,7 +1,6 @@
 resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
   project_id      = var.project_id
   name            = "pgsql-example-instance"
-  acl             = ["0.0.0.0/0"]
   backup_schedule = "0 0 * * *"
   flavor = {
     cpu = 2
@@ -29,7 +28,7 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
 
 data "stackitprivatepreview_postgresflexalpha_instance" "datapsql" {
   project_id = var.project_id
-  instance_id = "e0c028e0-a201-4b75-8ee5-50a0ad17b0d7"
+  instance_id = "fdb6573e-2dea-4e1d-a638-9157cf90c3ba"
   region = "eu01"
 }
 

@@ -199,17 +199,13 @@ func toCreatePayload(model *Model, storage *storageModel, encryption *encryption
 		encryptionPayload.ServiceAccount = conversion.StringValueToPointer(encryption.ServiceAccount)
 	}
 
-	networkPayload := &sqlserverflex.CreateInstanceRequestPayloadGetNetworkArgType{}
-	if network != nil {
-		networkPayload.AccessScope = sqlserverflex.CreateInstanceRequestPayloadNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(network.AccessScope))
-	}
-
 	flavorId := ""
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		modelValues := model.Flavor.Attributes()
 		if _, ok := modelValues["id"]; !ok {
 			return nil, fmt.Errorf("flavor has not yet been created")
 		}
+		// TODO - how to get rid of that trim?
 		flavorId = strings.Trim(modelValues["id"].String(), "\"")
 	}
 
@@ -222,7 +218,15 @@ func toCreatePayload(model *Model, storage *storageModel, encryption *encryption
 		}
 	}
 
+	networkPayload := &sqlserverflex.CreateInstanceRequestPayloadGetNetworkArgType{}
+	if network != nil {
+		networkPayload.AccessScope = sqlserverflex.CreateInstanceRequestPayloadNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(network.AccessScope))
+		// TODO - implement as soon as exists
+		// networkPayload.ACL
+	}
+
 	return &sqlserverflex.CreateInstanceRequestPayload{
+		// TODO - remove as soon as exists in network
 		Acl:            &aclElements,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       &flavorId,

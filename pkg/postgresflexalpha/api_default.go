@@ -193,7 +193,7 @@ type DefaultApi interface {
 		@param region The region which should be addressed
 		@return ApiGetFlavorsRequestRequest
 	*/
-	GetFlavorsRequest(ctx context.Context, projectId string, region string) ApiGetFlavorsRequestRequest
+	GetFlavorsRequest(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) ApiGetFlavorsRequestRequest
 	/*
 		GetFlavorsRequestExecute executes the request
 
@@ -203,7 +203,7 @@ type DefaultApi interface {
 		@return GetFlavorsResponse
 
 	*/
-	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*GetFlavorsResponse, error)
+	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) (*GetFlavorsResponse, error)
 	/*
 		GetInstanceRequest Get Specific Instance
 		Get information about a specific available instance
@@ -2520,7 +2520,7 @@ Get all available flavors for a project.
 	@param region The region which should be addressed
 	@return ApiGetFlavorsRequestRequest
 */
-func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, region string) ApiGetFlavorsRequestRequest {
+func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) ApiGetFlavorsRequestRequest {
 	return GetFlavorsRequestRequest{
 		apiService: a.defaultApi,
 		ctx:        ctx,
@@ -2529,7 +2529,7 @@ func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, reg
 	}
 }
 
-func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*GetFlavorsResponse, error) {
+func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) (*GetFlavorsResponse, error) {
 	r := GetFlavorsRequestRequest{
 		apiService: a.defaultApi,
 		ctx:        ctx,

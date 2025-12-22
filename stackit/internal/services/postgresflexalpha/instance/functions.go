@@ -3,6 +3,7 @@ package postgresflexalpha
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,10 +14,19 @@ import (
 )
 
 type postgresflexClient interface {
-	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*postgresflex.GetFlavorsResponse, error)
+	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *postgresflex.FlavorSort) (*postgresflex.GetFlavorsResponse, error)
 }
 
-func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, network *networkModel, region string) error {
+func mapFields(
+	ctx context.Context,
+	resp *postgresflex.GetInstanceResponse,
+	model *Model,
+	flavor *flavorModel,
+	storage *storageModel,
+	encryption *encryptionModel,
+	network *networkModel,
+	region string,
+) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -34,28 +44,26 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 		return fmt.Errorf("instance id not present")
 	}
 
-	/*
-
-		var aclList basetypes.ListValue
-		var diags diag.Diagnostics
-		if instance.Acl == nil {
-			aclList = types.ListNull(types.StringType)
-		} else {
-			respACL := *instance.Acl
-			modelACL, err := utils.ListValuetoStringSlice(model.ACL)
-			if err != nil {
-				return err
-			}
-
-			reconciledACL := utils.ReconcileStringSlices(modelACL, respACL)
-
-			aclList, diags = types.ListValueFrom(ctx, types.StringType, reconciledACL)
-			if diags.HasError() {
-				return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
-			}
+	var encryptionValues map[string]attr.Value
+	if instance.Encryption == nil {
+		encryptionValues = map[string]attr.Value{
+			"keyring_id":      encryption.KeyRingId,
+			"key_id":          encryption.KeyId,
+			"key_version":     encryption.KeyVersion,
+			"service_account": encryption.ServiceAccount,
 		}
-
-	*/
+	} else {
+		encryptionValues = map[string]attr.Value{
+			"keyring_id":      types.StringValue(*instance.Encryption.KekKeyRingId),
+			"key_id":          types.StringValue(*instance.Encryption.KekKeyId),
+			"key_version":     types.StringValue(*instance.Encryption.KekKeyVersion),
+			"service_account": types.StringValue(*instance.Encryption.ServiceAccount),
+		}
+	}
+	encryptionObject, diags := types.ObjectValue(encryptionTypes, encryptionValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating encryption: %w", core.DiagsToError(diags))
+	}
 
 	var networkValues map[string]attr.Value
 	if instance.Network == nil {
@@ -93,21 +101,25 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 
 	var flavorValues map[string]attr.Value
 	if instance.FlavorId == nil {
+		return fmt.Errorf("instance has no flavor id")
+	}
+	if !flavor.Id.IsUnknown() && !flavor.Id.IsNull() {
+		if *instance.FlavorId != flavor.Id.ValueString() {
+			return fmt.Errorf("instance has different flavor id %s - %s", *instance.FlavorId, flavor.Id.ValueString())
+		}
+	}
+	if model.Flavor.IsNull() || model.Flavor.IsUnknown() {
 		flavorValues = map[string]attr.Value{
 			"id":          flavor.Id,
 			"description": flavor.Description,
 			"cpu":         flavor.CPU,
 			"ram":         flavor.RAM,
+			"node_type":   flavor.NodeType,
 		}
 	} else {
-		// TODO @mhenselin
-		// flavorValues = map[string]attr.Value{
-		//	"id":          types.StringValue(*instance.FlavorId),
-		//	"description": types.StringValue(*instance.FlavorId.Description),
-		//	"cpu":         types.Int64PointerValue(instance.FlavorId.Cpu),
-		//	"ram":         types.Int64PointerValue(instance.FlavorId.Memory),
-		// }
+		flavorValues = model.Flavor.Attributes()
 	}
+
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
@@ -133,7 +145,6 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
-	// model.ACL = aclList
 	model.Network = networkObject
 	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
@@ -142,17 +153,14 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Region = types.StringValue(region)
-	//model.Encryption = types.ObjectValue()
-	//model.Network = networkModel
+	model.Encryption = encryptionObject
+	model.Network = networkObject
 	return nil
 }
 
-func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, enc *encryptionModel, net *networkModel) (*postgresflex.CreateInstanceRequestPayload, error) {
+func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, enc *encryptionModel, net *networkModel) (*postgresflex.CreateInstanceRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
-	}
-	if acl == nil {
-		return nil, fmt.Errorf("nil acl")
 	}
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
@@ -162,46 +170,57 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	replVal := int32(model.Replicas.ValueInt64())
+
+	storagePayload := &postgresflex.CreateInstanceRequestPayloadGetStorageArgType{
+		PerformanceClass: conversion.StringValueToPointer(storage.Class),
+		Size:             conversion.Int64ValueToPointer(storage.Size),
+	}
+
+	encryptionPayload := &postgresflex.CreateInstanceRequestPayloadGetEncryptionArgType{}
+	if enc != nil {
+		encryptionPayload.KekKeyId = conversion.StringValueToPointer(enc.KeyId)
+		encryptionPayload.KekKeyVersion = conversion.StringValueToPointer(enc.KeyVersion)
+		encryptionPayload.KekKeyRingId = conversion.StringValueToPointer(enc.KeyRingId)
+		encryptionPayload.ServiceAccount = conversion.StringValueToPointer(enc.ServiceAccount)
+	}
+
+	var aclElements []string
+	if net != nil && !(net.ACL.IsNull() || net.ACL.IsUnknown()) {
+		aclElements = make([]string, 0, len(net.ACL.Elements()))
+		diags := net.ACL.ElementsAs(context.TODO(), &aclElements, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("creating network: %w", core.DiagsToError(diags))
+		}
+	}
+
+	networkPayload := &postgresflex.CreateInstanceRequestPayloadGetNetworkArgType{}
+	if net != nil {
+		networkPayload = &postgresflex.CreateInstanceRequestPayloadGetNetworkArgType{
+			AccessScope: postgresflex.InstanceNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(net.AccessScope)),
+			Acl:         &aclElements,
+		}
+	}
+
 	return &postgresflex.CreateInstanceRequestPayload{
-		// TODO - verify working
-		//Acl: &[]string{
-		//	strings.Join(acl, ","),
-		//},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		// TODO - verify working
-		Replicas: postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(&replVal),
-		// TODO - verify working
-		Storage: postgresflex.CreateInstanceRequestPayloadGetStorageAttributeType(&postgresflex.Storage{
-			PerformanceClass: conversion.StringValueToPointer(storage.Class),
-			Size:             conversion.Int64ValueToPointer(storage.Size),
-		}),
-		Version: conversion.StringValueToPointer(model.Version),
-		// TODO - verify working
-		Encryption: postgresflex.CreateInstanceRequestPayloadGetEncryptionAttributeType(
-			&postgresflex.InstanceEncryption{
-				KekKeyId:       conversion.StringValueToPointer(enc.KeyId), // model.Encryption.Attributes(),
-				KekKeyRingId:   conversion.StringValueToPointer(enc.KeyRingId),
-				KekKeyVersion:  conversion.StringValueToPointer(enc.KeyVersion),
-				ServiceAccount: conversion.StringValueToPointer(enc.ServiceAccount),
-			},
-		),
-		Network: &postgresflex.InstanceNetwork{
-			AccessScope: postgresflex.InstanceNetworkGetAccessScopeAttributeType(
-				conversion.StringValueToPointer(net.AccessScope),
-			),
-		},
+		Replicas:   postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(&replVal),
+		Storage:    storagePayload,
+		Version:    conversion.StringValueToPointer(model.Version),
+		Encryption: encryptionPayload,
+		Network:    networkPayload,
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel) (*postgresflex.UpdateInstancePartiallyRequestPayload, error) {
+func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, network *networkModel) (*postgresflex.UpdateInstancePartiallyRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if acl == nil {
-		return nil, fmt.Errorf("nil acl")
-	}
+	// if acl == nil {
+	//	return nil, fmt.Errorf("nil acl")
+	// }
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
@@ -224,7 +243,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}, nil
 }
 
-func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, flavor *flavorModel) error {
+func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, flavor *flavorModel, storage *storageModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
 	}
@@ -239,31 +258,136 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}
+	nodeType := conversion.StringValueToPointer(flavor.NodeType)
+	if nodeType == nil {
+		return fmt.Errorf("nil NodeType")
+	}
+	storageClass := conversion.StringValueToPointer(storage.Class)
+	if storageClass == nil {
+		return fmt.Errorf("nil StorageClass")
+	}
+	storageSize := conversion.Int64ValueToPointer(storage.Size)
+	if storageSize == nil {
+		return fmt.Errorf("nil StorageSize")
+	}
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-	res, err := client.GetFlavorsRequestExecute(ctx, projectId, region)
+
+	flavorList, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
-		return fmt.Errorf("listing postgresflex flavors: %w", err)
+		return err
 	}
 
 	avl := ""
-	if res.Flavors == nil {
-		return fmt.Errorf("finding flavors for project %s", projectId)
-	}
-	for _, f := range *res.Flavors {
+	foundFlavorCount := 0
+	for _, f := range flavorList {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}
+		if !strings.EqualFold(*f.NodeType, *nodeType) {
+			continue
+		}
 		if *f.Cpu == *cpu && *f.Memory == *ram {
+			var useSc *postgresflex.FlavorStorageClassesStorageClass
+			for _, sc := range *f.StorageClasses {
+				if *sc.Class != *storageClass {
+					continue
+				}
+				if *storageSize < *f.MinGB || *storageSize > *f.MaxGB {
+					return fmt.Errorf("storage size %d out of bounds (min: %d - max: %d)", *storageSize, *f.MinGB, *f.MaxGB)
+				}
+				useSc = &sc
+			}
+			if useSc == nil {
+				return fmt.Errorf("no storage class found for %s", *storageClass)
+			}
+
 			flavor.Id = types.StringValue(*f.Id)
 			flavor.Description = types.StringValue(*f.Description)
+			foundFlavorCount++
+		}
+		for _, cls := range *f.StorageClasses {
+			avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM, storage %s (min: %d - max: %d)", avl, *f.Cpu, *f.Memory, *cls.Class, *f.MinGB, *f.MaxGB)
+		}
+	}
+	if foundFlavorCount > 1 {
+		return fmt.Errorf("multiple flavors found: %d flavors", foundFlavorCount)
+	}
+	if flavor.Id.ValueString() == "" {
+		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
+	}
+
+	return nil
+}
+
+func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, region string) ([]postgresflex.ListFlavors, error) {
+	if projectId == "" || region == "" {
+		return nil, fmt.Errorf("listing postgresflex flavors: projectId and region are required")
+	}
+	var flavorList []postgresflex.ListFlavors
+
+	page := int64(1)
+	size := int64(10)
+	for {
+		sort := postgresflex.FLAVORSORT_INDEX_ASC
+		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, &sort)
+		if err != nil {
+			return nil, fmt.Errorf("listing postgresflex flavors: %w", err)
+		}
+		if res.Flavors == nil {
+			return nil, fmt.Errorf("finding flavors for project %s", projectId)
+		}
+		pagination := res.GetPagination()
+		flavorList = append(flavorList, *res.Flavors...)
+
+		if *pagination.TotalRows == int64(len(flavorList)) {
+			break
+		}
+		page++
+	}
+	return flavorList, nil
+}
+
+func getFlavorModelById(ctx context.Context, client postgresflexClient, model *Model, flavor *flavorModel) error {
+	if model == nil {
+		return fmt.Errorf("nil model")
+	}
+	if flavor == nil {
+		return fmt.Errorf("nil flavor")
+	}
+	id := conversion.StringValueToPointer(flavor.Id)
+	if id == nil {
+		return fmt.Errorf("nil flavor ID")
+	}
+
+	flavor.Id = types.StringValue("")
+
+	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
+
+	flavorList, err := getAllFlavors(ctx, client, projectId, region)
+	if err != nil {
+		return err
+	}
+
+	avl := ""
+	for _, f := range flavorList {
+		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
+			continue
+		}
+		if *f.Id == *id {
+			flavor.Id = types.StringValue(*f.Id)
+			flavor.Description = types.StringValue(*f.Description)
+			flavor.CPU = types.Int64Value(*f.Cpu)
+			flavor.RAM = types.Int64Value(*f.Memory)
+			flavor.NodeType = types.StringValue(*f.NodeType)
 			break
 		}
 		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
 	}
 	if flavor.Id.ValueString() == "" {
-		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
+		return fmt.Errorf("couldn't find flavor, available specs are: %s", avl)
 	}
 
 	return nil

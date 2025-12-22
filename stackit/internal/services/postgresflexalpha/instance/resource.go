@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	//postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -46,7 +46,6 @@ type Model struct {
 	InstanceId     types.String `tfsdk:"instance_id"`
 	ProjectId      types.String `tfsdk:"project_id"`
 	Name           types.String `tfsdk:"name"`
-	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Flavor         types.Object `tfsdk:"flavor"`
 	Replicas       types.Int64  `tfsdk:"replicas"`
@@ -91,6 +90,7 @@ type flavorModel struct {
 	Description types.String `tfsdk:"description"`
 	CPU         types.Int64  `tfsdk:"cpu"`
 	RAM         types.Int64  `tfsdk:"ram"`
+	NodeType    types.String `tfsdk:"node_type"`
 }
 
 // Types corresponding to flavorModel
@@ -99,6 +99,7 @@ var flavorTypes = map[string]attr.Type{
 	"description": basetypes.StringType{},
 	"cpu":         basetypes.Int64Type{},
 	"ram":         basetypes.Int64Type{},
+	"node_type":   basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Storage
@@ -178,17 +179,18 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id": "ID of the PostgresFlex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acl":         "The Access Control List (ACL) for the PostgresFlex instance.",
-		"region":      "The resource region. If not defined, the provider region is used.",
-		"encryption":  "The encryption block.",
-		"key_id":      "Key ID of the encryption key.",
-		// TODO @mhenselin - do the rest
+		"backup_schedule": "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
+		"main":            "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":     "ID of the PostgresFlex instance.",
+		"project_id":      "STACKIT project ID to which the instance is associated.",
+		"name":            "Instance name.",
+		"acl":             "The Access Control List (ACL) for the PostgresFlex instance.",
+		"region":          "The resource region. If not defined, the provider region is used.",
+		"encryption":      "The encryption block.",
+		"key_id":          "Key ID of the encryption key.",
 	}
+	// TODO @mhenselin - do the rest
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
@@ -234,11 +236,6 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					),
 				},
 			},
-			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Required:    true,
-			},
 			"backup_schedule": schema.StringAttribute{
 				Required: true,
 			},
@@ -247,8 +244,10 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
+						Optional: true,
 						PlanModifiers: []planmodifier.String{
 							UseStateForUnknownIfFlavorUnchanged(req),
+							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"description": schema.StringAttribute{
@@ -350,14 +349,19 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"access_scope": schema.StringAttribute{
+						Default: stringdefault.StaticString(
+							"PUBLIC",
+						),
 						Description: descriptions["access_scope"],
-						Required:    true,
+						Computed:    true,
+						Optional:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 							stringplanmodifier.UseStateForUnknown(),
 						},
 						Validators: []validator.String{
 							validate.NoSeparator(),
+							stringvalidator.OneOf("SNA", "PUBLIC"),
 						},
 					},
 					"acl": schema.ListAttribute{
@@ -371,6 +375,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					"instance_address": schema.StringAttribute{
 						Description: descriptions["instance_address"],
 						Computed:    true,
+						Optional:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
@@ -378,6 +383,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					"router_address": schema.StringAttribute{
 						Description: descriptions["router_address"],
 						Computed:    true,
+						Optional:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
@@ -409,27 +415,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var acl []string
-	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
-		diags = model.ACL.ElementsAs(ctx, &acl, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-			return
-		}
-	}
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -437,6 +422,42 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	}
+
+	var flavor = &flavorModel{}
+	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
+			return
+		}
+	}
+
+	if flavor.Id.IsNull() || flavor.Id.IsUnknown() {
+		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
+		if err != nil {
+			resp.Diagnostics.AddError(err.Error(), err.Error())
+			return
+		}
+		flavorValues := map[string]attr.Value{
+			"id":          flavor.Id,
+			"description": flavor.Description,
+			"cpu":         flavor.CPU,
+			"ram":         flavor.RAM,
+			"node_type":   flavor.NodeType,
+		}
+		var flavorObject basetypes.ObjectValue
+		flavorObject, diags = types.ObjectValue(flavorTypes, flavorValues)
+		resp.Diagnostics.Append(diags...)
+		if diags.HasError() {
+			return
+		}
+		model.Flavor = flavorObject
 	}
 
 	var encryption = &encryptionModel{}
@@ -457,8 +478,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
+	var acl []string
+	if !(network.ACL.IsNull() || network.ACL.IsUnknown()) {
+		diags = network.ACL.ElementsAs(ctx, &acl, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model, acl, flavor, storage, encryption, network)
+	payload, err := toCreatePayload(&model, flavor, storage, encryption, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -487,7 +517,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, network, region)
+	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -545,6 +575,15 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
+	var encryption = &encryptionModel{}
+	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	instanceResp, err := r.client.GetInstanceRequest(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
@@ -564,7 +603,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, network, region)
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -597,27 +636,15 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var acl []string
-	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
-		diags = model.ACL.ElementsAs(ctx, &acl, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-			return
-		}
-	}
+	//var acl []string
+	//if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+	//	diags = model.ACL.ElementsAs(ctx, &acl, false)
+	//	resp.Diagnostics.Append(diags...)
+	//	if resp.Diagnostics.HasError() {
+	//		return
+	//	}
+	//}
+
 	var storage = &storageModel{}
 	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -627,8 +654,40 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
+	var flavor = &flavorModel{}
+	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
+			return
+		}
+	}
+
+	var network = &networkModel{}
+	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	var encryption = &encryptionModel{}
+	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, acl, flavor, storage)
+	payload, err := toUpdatePayload(&model, flavor, storage, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -648,17 +707,8 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	var network = &networkModel{}
-	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
-		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, network, region)
+	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
