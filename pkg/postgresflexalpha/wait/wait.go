@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -68,6 +69,14 @@ func CreateInstanceWaitHandler(
 				case InstanceStateProgressing:
 					return false, nil, nil
 				case InstanceStateSuccess:
+					if s.Network.InstanceAddress == nil {
+						tflog.Info(ctx, "Waiting for instance_address")
+						return false, nil, nil
+					}
+					if s.Network.RouterAddress == nil {
+						tflog.Info(ctx, "Waiting for router_address")
+						return false, nil, nil
+					}
 					instanceCreated = true
 					instanceGetResponse = s
 				case InstanceStateFailed:

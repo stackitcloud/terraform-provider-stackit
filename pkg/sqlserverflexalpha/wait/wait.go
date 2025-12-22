@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sqlserverflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/sqlserverflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
@@ -40,8 +41,14 @@ func CreateInstanceWaitHandler(ctx context.Context, a APIClientInstanceInterface
 		}
 		switch strings.ToLower(string(*s.Status)) {
 		case strings.ToLower(InstanceStateSuccess):
-			// if no instance address - return false
-			// if no router address - return false
+			if s.Network.InstanceAddress == nil {
+				tflog.Info(ctx, "Waiting for instance_address")
+				return false, nil, nil
+			}
+			if s.Network.RouterAddress == nil {
+				tflog.Info(ctx, "Waiting for router_address")
+				return false, nil, nil
+			}
 			return true, s, nil
 		case strings.ToLower(InstanceStateUnknown), strings.ToLower(InstanceStateFailed):
 			return true, s, fmt.Errorf("create failed for instance with id %s", instanceId)

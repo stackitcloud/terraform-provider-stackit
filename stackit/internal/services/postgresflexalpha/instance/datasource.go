@@ -1,4 +1,4 @@
-package postgresflexa
+package postgresflexalpha
 
 import (
 	"context"
@@ -145,6 +145,51 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Optional:    true,
 				Description: descriptions["region"],
 			},
+			"encryption": schema.SingleNestedAttribute{
+				Required: true,
+				Attributes: map[string]schema.Attribute{
+					"key_id": schema.StringAttribute{
+						Description: descriptions["key_id"],
+						Computed:    true,
+					},
+					"key_version": schema.StringAttribute{
+						Description: descriptions["key_version"],
+						Computed:    true,
+					},
+					"keyring_id": schema.StringAttribute{
+						Description: descriptions["keyring_id"],
+						Computed:    true,
+					},
+					"service_account": schema.StringAttribute{
+						Description: descriptions["service_account"],
+						Computed:    true,
+					},
+				},
+				Description: descriptions["encryption"],
+			},
+			"network": schema.SingleNestedAttribute{
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"access_scope": schema.StringAttribute{
+						Description: descriptions["access_scope"],
+						Computed:    true,
+					},
+					"acl": schema.ListAttribute{
+						Description: descriptions["acl"],
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"instance_address": schema.StringAttribute{
+						Description: descriptions["instance_address"],
+						Computed:    true,
+					},
+					"router_address": schema.StringAttribute{
+						Description: descriptions["router_address"],
+						Computed:    true,
+					},
+				},
+				Description: descriptions["network"],
+			},
 		},
 	}
 }
@@ -207,7 +252,16 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, region)
+	var network = &networkModel{}
+	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	err = mapFields(ctx, instanceResp, &model, flavor, storage, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

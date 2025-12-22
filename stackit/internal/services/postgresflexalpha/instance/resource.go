@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	//postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
@@ -341,11 +342,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 						},
 					},
 				},
-				//Blocks:              nil,
-				//CustomType:          nil,
 				Description: descriptions["encryption"],
-				//MarkdownDescription: "",
-				//DeprecationMessage:  "",
 				//Validators:          nil,
 				PlanModifiers: []planmodifier.Object{},
 			},
@@ -357,17 +354,37 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.UseStateForUnknown(),
 						},
 						Validators: []validator.String{
 							validate.NoSeparator(),
 						},
 					},
+					"acl": schema.ListAttribute{
+						Description: descriptions["acl"],
+						ElementType: types.StringType,
+						Required:    true,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"instance_address": schema.StringAttribute{
+						Description: descriptions["instance_address"],
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"router_address": schema.StringAttribute{
+						Description: descriptions["router_address"],
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
 				},
-				//Blocks:              nil,
-				//CustomType:          nil,
 				Description: descriptions["network"],
 				//MarkdownDescription: "",
-				//DeprecationMessage:  "",
 				//Validators:          nil,
 				PlanModifiers: []planmodifier.Object{},
 			},

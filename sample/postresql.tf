@@ -26,3 +26,13 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
   }
   version = 14
 }
+
+data "stackitprivatepreview_postgresflexalpha_instance" "datapsql" {
+  project_id = var.project_id
+  instance_id = "e0c028e0-a201-4b75-8ee5-50a0ad17b0d7"
+  region = "eu01"
+}
+
+output "sample_psqlinstance" {
+  value = data.stackitprivatepreview_postgresflexalpha_instance.datapsql
+}
