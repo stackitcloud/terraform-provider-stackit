@@ -144,15 +144,16 @@ func TestCreateInstanceWaitHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			instanceId := "foo-bar"
+		t.Run(
+			tt.desc, func(t *testing.T) {
+				instanceId := "foo-bar"
 
-			apiClient := &apiClientInstanceMocked{
-				instanceId:          instanceId,
-				instanceState:       tt.instanceState,
-				instanceGetFails:    tt.instanceGetFails,
-				usersGetErrorStatus: tt.usersGetErrorStatus,
-			}
+				apiClient := &apiClientInstanceMocked{
+					instanceId:          instanceId,
+					instanceState:       tt.instanceState,
+					instanceGetFails:    tt.instanceGetFails,
+					usersGetErrorStatus: tt.usersGetErrorStatus,
+				}
 
 			var wantRes *postgresflex.GetInstanceResponse
 			if tt.wantResp {
@@ -220,14 +221,15 @@ func TestUpdateInstanceWaitHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			instanceId := "foo-bar"
+		t.Run(
+			tt.desc, func(t *testing.T) {
+				instanceId := "foo-bar"
 
-			apiClient := &apiClientInstanceMocked{
-				instanceId:       instanceId,
-				instanceState:    tt.instanceState,
-				instanceGetFails: tt.instanceGetFails,
-			}
+				apiClient := &apiClientInstanceMocked{
+					instanceId:       instanceId,
+					instanceState:    tt.instanceState,
+					instanceGetFails: tt.instanceGetFails,
+				}
 
 			var wantRes *postgresflex.GetInstanceResponse
 			if tt.wantResp {
@@ -376,13 +378,13 @@ func TestDeleteUserWaitHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			userId := int64(1001)
+			userId := "foo-bar"
 
-			apiClient := &apiClientUserMocked{
-				getFails:      tt.getFails,
-				userId:        userId,
-				isUserDeleted: !tt.deleteFails,
-			}
+				apiClient := &apiClientUserMocked{
+					getFails:      tt.getFails,
+					userId:        userId,
+					isUserDeleted: !tt.deleteFails,
+				}
 
 				handler := DeleteUserWaitHandler(context.Background(), apiClient, "", "", "", userId)
 
