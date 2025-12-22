@@ -16,8 +16,9 @@ elif [ "$action" = "tools" ]; then
 
     go mod download
 
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.7.2
     # go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.0
+    go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2
+
     # go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.21.0
     go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@v0.24.0
 else
