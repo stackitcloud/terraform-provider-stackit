@@ -1,5 +1,3 @@
-# Copyright (c) STACKIT
-
 variable "project_id" {}
 variable "name" {}
 variable "flavor_cpu" {}

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Copyright (c) STACKIT
-
 # Pre-requisites: tfplugindocs
 set -eo pipefail
 

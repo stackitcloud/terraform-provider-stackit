@@ -439,7 +439,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 					},
 					"keyring_id": schema.StringAttribute{
-						Description: descriptions["key_ring_id"],
+						Description: descriptions["keyring_id"],
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),

@@ -13,8 +13,6 @@ Postgres Flex user data source schema. Must have a `region` specified in the pro
 ## Example Usage
 
 ```terraform
-# Copyright (c) STACKIT
-
 data "stackitprivatepreview_postgresflexalpha_user" "example" {
   project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

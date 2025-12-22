@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Copyright (c) STACKIT
-
 # Add replace directives to local files to go.work
 set -eo pipefail
 

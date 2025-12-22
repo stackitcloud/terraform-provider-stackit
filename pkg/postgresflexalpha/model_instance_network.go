@@ -12,7 +12,6 @@ package postgresflexalpha
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // checks if the InstanceNetwork type satisfies the MappedNullable interface at compile time
@@ -22,111 +21,7 @@ var _ MappedNullable = &InstanceNetwork{}
 	types and functions for accessScope
 */
 
-// isEnum
-
-// InstanceNetworkAccessScope The access scope of the instance. It defines if the instance is public or airgapped.
-// value type for enums
-type InstanceNetworkAccessScope string
-
-// List of AccessScope
-const (
-	INSTANCENETWORKACCESS_SCOPE_PUBLIC InstanceNetworkAccessScope = "PUBLIC"
-	INSTANCENETWORKACCESS_SCOPE_SNA    InstanceNetworkAccessScope = "SNA"
-)
-
-// All allowed values of InstanceNetwork enum
-var AllowedInstanceNetworkAccessScopeEnumValues = []InstanceNetworkAccessScope{
-	"PUBLIC",
-	"SNA",
-}
-
-func (v *InstanceNetworkAccessScope) UnmarshalJSON(src []byte) error {
-	// use a type alias to prevent infinite recursion during unmarshal,
-	// see https://biscuit.ninja/posts/go-avoid-an-infitine-loop-with-custom-json-unmarshallers
-	type TmpJson InstanceNetworkAccessScope
-	var value TmpJson
-	err := json.Unmarshal(src, &value)
-	if err != nil {
-		return err
-	}
-	// Allow unmarshalling zero value for testing purposes
-	var zeroValue TmpJson
-	if value == zeroValue {
-		return nil
-	}
-	enumTypeValue := InstanceNetworkAccessScope(value)
-	for _, existing := range AllowedInstanceNetworkAccessScopeEnumValues {
-		if existing == enumTypeValue {
-			*v = enumTypeValue
-			return nil
-		}
-	}
-
-	return fmt.Errorf("%+v is not a valid InstanceNetwork", value)
-}
-
-// NewInstanceNetworkAccessScopeFromValue returns a pointer to a valid InstanceNetworkAccessScope
-// for the value passed as argument, or an error if the value passed is not allowed by the enum
-func NewInstanceNetworkAccessScopeFromValue(v InstanceNetworkAccessScope) (*InstanceNetworkAccessScope, error) {
-	ev := InstanceNetworkAccessScope(v)
-	if ev.IsValid() {
-		return &ev, nil
-	} else {
-		return nil, fmt.Errorf("invalid value '%v' for InstanceNetworkAccessScope: valid values are %v", v, AllowedInstanceNetworkAccessScopeEnumValues)
-	}
-}
-
-// IsValid return true if the value is valid for the enum, false otherwise
-func (v InstanceNetworkAccessScope) IsValid() bool {
-	for _, existing := range AllowedInstanceNetworkAccessScopeEnumValues {
-		if existing == v {
-			return true
-		}
-	}
-	return false
-}
-
-// Ptr returns reference to AccessScopeAccessScope value
-func (v InstanceNetworkAccessScope) Ptr() *InstanceNetworkAccessScope {
-	return &v
-}
-
-type NullableInstanceNetworkAccessScope struct {
-	value *InstanceNetworkAccessScope
-	isSet bool
-}
-
-func (v NullableInstanceNetworkAccessScope) Get() *InstanceNetworkAccessScope {
-	return v.value
-}
-
-func (v *NullableInstanceNetworkAccessScope) Set(val *InstanceNetworkAccessScope) {
-	v.value = val
-	v.isSet = true
-}
-
-func (v NullableInstanceNetworkAccessScope) IsSet() bool {
-	return v.isSet
-}
-
-func (v *NullableInstanceNetworkAccessScope) Unset() {
-	v.value = nil
-	v.isSet = false
-}
-
-func NewNullableInstanceNetworkAccessScope(val *InstanceNetworkAccessScope) *NullableInstanceNetworkAccessScope {
-	return &NullableInstanceNetworkAccessScope{value: val, isSet: true}
-}
-
-func (v NullableInstanceNetworkAccessScope) MarshalJSON() ([]byte, error) {
-	return json.Marshal(v.value)
-}
-
-func (v *NullableInstanceNetworkAccessScope) UnmarshalJSON(src []byte) error {
-	v.isSet = true
-	return json.Unmarshal(src, &v.value)
-}
-
+// isEnumRef
 type InstanceNetworkGetAccessScopeAttributeType = *InstanceNetworkAccessScope
 type InstanceNetworkGetAccessScopeArgType = InstanceNetworkAccessScope
 type InstanceNetworkGetAccessScopeRetType = InstanceNetworkAccessScope
@@ -142,11 +37,76 @@ func setInstanceNetworkGetAccessScopeAttributeType(arg *InstanceNetworkGetAccess
 	*arg = &val
 }
 
-// InstanceNetwork The network configuration of the instance.  ⚠️ **Note:** This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.
+/*
+	types and functions for acl
+*/
+
+// isArray
+type InstanceNetworkGetAclAttributeType = *[]string
+type InstanceNetworkGetAclArgType = []string
+type InstanceNetworkGetAclRetType = []string
+
+func getInstanceNetworkGetAclAttributeTypeOk(arg InstanceNetworkGetAclAttributeType) (ret InstanceNetworkGetAclRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setInstanceNetworkGetAclAttributeType(arg *InstanceNetworkGetAclAttributeType, val InstanceNetworkGetAclRetType) {
+	*arg = &val
+}
+
+/*
+	types and functions for instanceAddress
+*/
+
+// isNotNullableString
+type InstanceNetworkGetInstanceAddressAttributeType = *string
+
+func getInstanceNetworkGetInstanceAddressAttributeTypeOk(arg InstanceNetworkGetInstanceAddressAttributeType) (ret InstanceNetworkGetInstanceAddressRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setInstanceNetworkGetInstanceAddressAttributeType(arg *InstanceNetworkGetInstanceAddressAttributeType, val InstanceNetworkGetInstanceAddressRetType) {
+	*arg = &val
+}
+
+type InstanceNetworkGetInstanceAddressArgType = string
+type InstanceNetworkGetInstanceAddressRetType = string
+
+/*
+	types and functions for routerAddress
+*/
+
+// isNotNullableString
+type InstanceNetworkGetRouterAddressAttributeType = *string
+
+func getInstanceNetworkGetRouterAddressAttributeTypeOk(arg InstanceNetworkGetRouterAddressAttributeType) (ret InstanceNetworkGetRouterAddressRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setInstanceNetworkGetRouterAddressAttributeType(arg *InstanceNetworkGetRouterAddressAttributeType, val InstanceNetworkGetRouterAddressRetType) {
+	*arg = &val
+}
+
+type InstanceNetworkGetRouterAddressArgType = string
+type InstanceNetworkGetRouterAddressRetType = string
+
+// InstanceNetwork The access configuration of the instance
 type InstanceNetwork struct {
-	// The access scope of the instance. It defines if the instance is public or airgapped.
+	AccessScope InstanceNetworkGetAccessScopeAttributeType `json:"accessScope,omitempty"`
+	// List of IPV4 cidr.
 	// REQUIRED
-	AccessScope InstanceNetworkGetAccessScopeAttributeType `json:"accessScope" required:"true"`
+	Acl             InstanceNetworkGetAclAttributeType             `json:"acl" required:"true"`
+	InstanceAddress InstanceNetworkGetInstanceAddressAttributeType `json:"instanceAddress,omitempty"`
+	RouterAddress   InstanceNetworkGetRouterAddressAttributeType   `json:"routerAddress,omitempty"`
 }
 
 type _InstanceNetwork InstanceNetwork
@@ -155,9 +115,9 @@ type _InstanceNetwork InstanceNetwork
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewInstanceNetwork(accessScope InstanceNetworkGetAccessScopeArgType) *InstanceNetwork {
+func NewInstanceNetwork(acl InstanceNetworkGetAclArgType) *InstanceNetwork {
 	this := InstanceNetwork{}
-	setInstanceNetworkGetAccessScopeAttributeType(&this.AccessScope, accessScope)
+	setInstanceNetworkGetAclAttributeType(&this.Acl, acl)
 	return &this
 }
 
@@ -166,32 +126,110 @@ func NewInstanceNetwork(accessScope InstanceNetworkGetAccessScopeArgType) *Insta
 // but it doesn't guarantee that properties required by API are set
 func NewInstanceNetworkWithDefaults() *InstanceNetwork {
 	this := InstanceNetwork{}
-	var accessScope InstanceNetworkAccessScope = "PUBLIC"
+	var accessScope InstanceNetworkAccessScope = INSTANCENETWORKACCESSSCOPE_PUBLIC
 	this.AccessScope = &accessScope
 	return &this
 }
 
-// GetAccessScope returns the AccessScope field value
-func (o *InstanceNetwork) GetAccessScope() (ret InstanceNetworkGetAccessScopeRetType) {
-	ret, _ = o.GetAccessScopeOk()
-	return ret
+// GetAccessScope returns the AccessScope field value if set, zero value otherwise.
+func (o *InstanceNetwork) GetAccessScope() (res InstanceNetworkGetAccessScopeRetType) {
+	res, _ = o.GetAccessScopeOk()
+	return
 }
 
-// GetAccessScopeOk returns a tuple with the AccessScope field value
+// GetAccessScopeOk returns a tuple with the AccessScope field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *InstanceNetwork) GetAccessScopeOk() (ret InstanceNetworkGetAccessScopeRetType, ok bool) {
 	return getInstanceNetworkGetAccessScopeAttributeTypeOk(o.AccessScope)
 }
 
-// SetAccessScope sets field value
+// HasAccessScope returns a boolean if a field has been set.
+func (o *InstanceNetwork) HasAccessScope() bool {
+	_, ok := o.GetAccessScopeOk()
+	return ok
+}
+
+// SetAccessScope gets a reference to the given InstanceNetworkAccessScope and assigns it to the AccessScope field.
 func (o *InstanceNetwork) SetAccessScope(v InstanceNetworkGetAccessScopeRetType) {
 	setInstanceNetworkGetAccessScopeAttributeType(&o.AccessScope, v)
+}
+
+// GetAcl returns the Acl field value
+func (o *InstanceNetwork) GetAcl() (ret InstanceNetworkGetAclRetType) {
+	ret, _ = o.GetAclOk()
+	return ret
+}
+
+// GetAclOk returns a tuple with the Acl field value
+// and a boolean to check if the value has been set.
+func (o *InstanceNetwork) GetAclOk() (ret InstanceNetworkGetAclRetType, ok bool) {
+	return getInstanceNetworkGetAclAttributeTypeOk(o.Acl)
+}
+
+// SetAcl sets field value
+func (o *InstanceNetwork) SetAcl(v InstanceNetworkGetAclRetType) {
+	setInstanceNetworkGetAclAttributeType(&o.Acl, v)
+}
+
+// GetInstanceAddress returns the InstanceAddress field value if set, zero value otherwise.
+func (o *InstanceNetwork) GetInstanceAddress() (res InstanceNetworkGetInstanceAddressRetType) {
+	res, _ = o.GetInstanceAddressOk()
+	return
+}
+
+// GetInstanceAddressOk returns a tuple with the InstanceAddress field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InstanceNetwork) GetInstanceAddressOk() (ret InstanceNetworkGetInstanceAddressRetType, ok bool) {
+	return getInstanceNetworkGetInstanceAddressAttributeTypeOk(o.InstanceAddress)
+}
+
+// HasInstanceAddress returns a boolean if a field has been set.
+func (o *InstanceNetwork) HasInstanceAddress() bool {
+	_, ok := o.GetInstanceAddressOk()
+	return ok
+}
+
+// SetInstanceAddress gets a reference to the given string and assigns it to the InstanceAddress field.
+func (o *InstanceNetwork) SetInstanceAddress(v InstanceNetworkGetInstanceAddressRetType) {
+	setInstanceNetworkGetInstanceAddressAttributeType(&o.InstanceAddress, v)
+}
+
+// GetRouterAddress returns the RouterAddress field value if set, zero value otherwise.
+func (o *InstanceNetwork) GetRouterAddress() (res InstanceNetworkGetRouterAddressRetType) {
+	res, _ = o.GetRouterAddressOk()
+	return
+}
+
+// GetRouterAddressOk returns a tuple with the RouterAddress field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *InstanceNetwork) GetRouterAddressOk() (ret InstanceNetworkGetRouterAddressRetType, ok bool) {
+	return getInstanceNetworkGetRouterAddressAttributeTypeOk(o.RouterAddress)
+}
+
+// HasRouterAddress returns a boolean if a field has been set.
+func (o *InstanceNetwork) HasRouterAddress() bool {
+	_, ok := o.GetRouterAddressOk()
+	return ok
+}
+
+// SetRouterAddress gets a reference to the given string and assigns it to the RouterAddress field.
+func (o *InstanceNetwork) SetRouterAddress(v InstanceNetworkGetRouterAddressRetType) {
+	setInstanceNetworkGetRouterAddressAttributeType(&o.RouterAddress, v)
 }
 
 func (o InstanceNetwork) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if val, ok := getInstanceNetworkGetAccessScopeAttributeTypeOk(o.AccessScope); ok {
 		toSerialize["AccessScope"] = val
+	}
+	if val, ok := getInstanceNetworkGetAclAttributeTypeOk(o.Acl); ok {
+		toSerialize["Acl"] = val
+	}
+	if val, ok := getInstanceNetworkGetInstanceAddressAttributeTypeOk(o.InstanceAddress); ok {
+		toSerialize["InstanceAddress"] = val
+	}
+	if val, ok := getInstanceNetworkGetRouterAddressAttributeTypeOk(o.RouterAddress); ok {
+		toSerialize["RouterAddress"] = val
 	}
 	return toSerialize, nil
 }

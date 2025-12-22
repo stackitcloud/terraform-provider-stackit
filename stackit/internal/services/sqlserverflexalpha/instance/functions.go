@@ -15,7 +15,7 @@ import (
 )
 
 type sqlserverflexClient interface {
-	GetFlavorsRequestExecute(ctx context.Context, projectId, region string, page, size *int64, sort sqlserverflex.FlavorSort) (*sqlserverflex.GetFlavorsResponse, error)
+	GetFlavorsRequestExecute(ctx context.Context, projectId, region string, page, size *int64, sort *sqlserverflex.FlavorSort) (*sqlserverflex.GetFlavorsResponse, error)
 }
 
 func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, encryption *encryptionModel, network *networkModel, region string) error {
@@ -289,7 +289,8 @@ func getAllFlavors(ctx context.Context, client sqlserverflexClient, projectId, r
 	page := int64(1)
 	size := int64(10)
 	for {
-		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, sqlserverflex.FLAVORSORT_INDEX_ASC)
+		sort := sqlserverflex.FLAVORSORT_INDEX_ASC
+		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, &sort)
 		if err != nil {
 			return nil, fmt.Errorf("listing sqlserverflex flavors: %w", err)
 		}

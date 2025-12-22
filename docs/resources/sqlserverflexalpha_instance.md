@@ -13,8 +13,6 @@ SQLServer Flex ALPHA instance resource schema. Must have a `region` specified in
 ## Example Usage
 
 ```terraform
-# Copyright (c) STACKIT
-
 resource "stackitprivatepreview_sqlserverflexalpha_instance" "example" {
   project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name            = "example-instance"
@@ -73,7 +71,7 @@ Required:
 
 - `key_id` (String) STACKIT KMS - Key ID of the encryption key to use.
 - `key_version` (String) STACKIT KMS - Key version to use in the encryption key.
-- `keyring_id` (String)
+- `keyring_id` (String) STACKIT KMS - KeyRing ID of the encryption key to use.
 - `service_account` (String)
 
 

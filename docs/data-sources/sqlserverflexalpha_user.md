@@ -13,8 +13,6 @@ SQLServer Flex user data source schema. Must have a `region` specified in the pr
 ## Example Usage
 
 ```terraform
-# Copyright (c) STACKIT
-
 data "stackitprivatepreview_sqlserverflexalpha_user" "example" {
   project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

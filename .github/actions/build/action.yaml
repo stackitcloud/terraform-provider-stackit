@@ -1,5 +1,3 @@
-# Copyright (c) STACKIT
-
 name: Build
 description: "Build pipeline"
 inputs:

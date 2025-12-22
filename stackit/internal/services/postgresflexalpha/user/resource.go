@@ -62,7 +62,7 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client       *postgresflexalpha.APIClient
+	client       *postgresflex.APIClient
 	providerData core.ProviderData
 }
 
@@ -113,7 +113,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	apiClient := postgresflexalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

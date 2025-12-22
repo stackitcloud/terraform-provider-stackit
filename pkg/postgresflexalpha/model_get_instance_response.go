@@ -18,26 +18,6 @@ import (
 var _ MappedNullable = &GetInstanceResponse{}
 
 /*
-	types and functions for acl
-*/
-
-// isArray
-type GetInstanceResponseGetAclAttributeType = *[]string
-type GetInstanceResponseGetAclArgType = []string
-type GetInstanceResponseGetAclRetType = []string
-
-func getGetInstanceResponseGetAclAttributeTypeOk(arg GetInstanceResponseGetAclAttributeType) (ret GetInstanceResponseGetAclRetType, ok bool) {
-	if arg == nil {
-		return ret, false
-	}
-	return *arg, true
-}
-
-func setGetInstanceResponseGetAclAttributeType(arg *GetInstanceResponseGetAclAttributeType, val GetInstanceResponseGetAclRetType) {
-	*arg = &val
-}
-
-/*
 	types and functions for backupSchedule
 */
 
@@ -142,6 +122,26 @@ type GetInstanceResponseGetNameArgType = string
 type GetInstanceResponseGetNameRetType = string
 
 /*
+	types and functions for network
+*/
+
+// isModel
+type GetInstanceResponseGetNetworkAttributeType = *InstanceNetwork
+type GetInstanceResponseGetNetworkArgType = InstanceNetwork
+type GetInstanceResponseGetNetworkRetType = InstanceNetwork
+
+func getGetInstanceResponseGetNetworkAttributeTypeOk(arg GetInstanceResponseGetNetworkAttributeType) (ret GetInstanceResponseGetNetworkRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setGetInstanceResponseGetNetworkAttributeType(arg *GetInstanceResponseGetNetworkAttributeType, val GetInstanceResponseGetNetworkRetType) {
+	*arg = &val
+}
+
+/*
 	types and functions for replicas
 */
 
@@ -244,9 +244,6 @@ type GetInstanceResponseGetVersionRetType = string
 
 // GetInstanceResponse struct for GetInstanceResponse
 type GetInstanceResponse struct {
-	// List of IPV4 cidr.
-	// REQUIRED
-	Acl GetInstanceResponseGetAclAttributeType `json:"acl" required:"true"`
 	// The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.
 	// REQUIRED
 	BackupSchedule GetInstanceResponseGetBackupScheduleAttributeType `json:"backupSchedule" required:"true"`
@@ -262,6 +259,8 @@ type GetInstanceResponse struct {
 	// The name of the instance.
 	// REQUIRED
 	Name GetInstanceResponseGetNameAttributeType `json:"name" required:"true"`
+	// REQUIRED
+	Network GetInstanceResponseGetNetworkAttributeType `json:"network" required:"true"`
 	// REQUIRED
 	Replicas GetInstanceResponseGetReplicasAttributeType `json:"replicas" required:"true"`
 	// How long backups are retained. The value can only be between 32 and 365 days.
@@ -283,14 +282,14 @@ type _GetInstanceResponse GetInstanceResponse
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewGetInstanceResponse(acl GetInstanceResponseGetAclArgType, backupSchedule GetInstanceResponseGetBackupScheduleArgType, flavorId GetInstanceResponseGetFlavorIdArgType, id GetInstanceResponseGetIdArgType, isDeletable GetInstanceResponsegetIsDeletableArgType, name GetInstanceResponseGetNameArgType, replicas GetInstanceResponseGetReplicasArgType, retentionDays GetInstanceResponseGetRetentionDaysArgType, status GetInstanceResponseGetStatusArgType, storage GetInstanceResponseGetStorageArgType, version GetInstanceResponseGetVersionArgType) *GetInstanceResponse {
+func NewGetInstanceResponse(backupSchedule GetInstanceResponseGetBackupScheduleArgType, flavorId GetInstanceResponseGetFlavorIdArgType, id GetInstanceResponseGetIdArgType, isDeletable GetInstanceResponsegetIsDeletableArgType, name GetInstanceResponseGetNameArgType, network GetInstanceResponseGetNetworkArgType, replicas GetInstanceResponseGetReplicasArgType, retentionDays GetInstanceResponseGetRetentionDaysArgType, status GetInstanceResponseGetStatusArgType, storage GetInstanceResponseGetStorageArgType, version GetInstanceResponseGetVersionArgType) *GetInstanceResponse {
 	this := GetInstanceResponse{}
-	setGetInstanceResponseGetAclAttributeType(&this.Acl, acl)
 	setGetInstanceResponseGetBackupScheduleAttributeType(&this.BackupSchedule, backupSchedule)
 	setGetInstanceResponseGetFlavorIdAttributeType(&this.FlavorId, flavorId)
 	setGetInstanceResponseGetIdAttributeType(&this.Id, id)
 	setGetInstanceResponsegetIsDeletableAttributeType(&this.IsDeletable, isDeletable)
 	setGetInstanceResponseGetNameAttributeType(&this.Name, name)
+	setGetInstanceResponseGetNetworkAttributeType(&this.Network, network)
 	setGetInstanceResponseGetReplicasAttributeType(&this.Replicas, replicas)
 	setGetInstanceResponseGetRetentionDaysAttributeType(&this.RetentionDays, retentionDays)
 	setGetInstanceResponseGetStatusAttributeType(&this.Status, status)
@@ -305,23 +304,6 @@ func NewGetInstanceResponse(acl GetInstanceResponseGetAclArgType, backupSchedule
 func NewGetInstanceResponseWithDefaults() *GetInstanceResponse {
 	this := GetInstanceResponse{}
 	return &this
-}
-
-// GetAcl returns the Acl field value
-func (o *GetInstanceResponse) GetAcl() (ret GetInstanceResponseGetAclRetType) {
-	ret, _ = o.GetAclOk()
-	return ret
-}
-
-// GetAclOk returns a tuple with the Acl field value
-// and a boolean to check if the value has been set.
-func (o *GetInstanceResponse) GetAclOk() (ret GetInstanceResponseGetAclRetType, ok bool) {
-	return getGetInstanceResponseGetAclAttributeTypeOk(o.Acl)
-}
-
-// SetAcl sets field value
-func (o *GetInstanceResponse) SetAcl(v GetInstanceResponseGetAclRetType) {
-	setGetInstanceResponseGetAclAttributeType(&o.Acl, v)
 }
 
 // GetBackupSchedule returns the BackupSchedule field value
@@ -407,6 +389,23 @@ func (o *GetInstanceResponse) GetNameOk() (ret GetInstanceResponseGetNameRetType
 // SetName sets field value
 func (o *GetInstanceResponse) SetName(v GetInstanceResponseGetNameRetType) {
 	setGetInstanceResponseGetNameAttributeType(&o.Name, v)
+}
+
+// GetNetwork returns the Network field value
+func (o *GetInstanceResponse) GetNetwork() (ret GetInstanceResponseGetNetworkRetType) {
+	ret, _ = o.GetNetworkOk()
+	return ret
+}
+
+// GetNetworkOk returns a tuple with the Network field value
+// and a boolean to check if the value has been set.
+func (o *GetInstanceResponse) GetNetworkOk() (ret GetInstanceResponseGetNetworkRetType, ok bool) {
+	return getGetInstanceResponseGetNetworkAttributeTypeOk(o.Network)
+}
+
+// SetNetwork sets field value
+func (o *GetInstanceResponse) SetNetwork(v GetInstanceResponseGetNetworkRetType) {
+	setGetInstanceResponseGetNetworkAttributeType(&o.Network, v)
 }
 
 // GetReplicas returns the Replicas field value
@@ -496,9 +495,6 @@ func (o *GetInstanceResponse) SetVersion(v GetInstanceResponseGetVersionRetType)
 
 func (o GetInstanceResponse) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if val, ok := getGetInstanceResponseGetAclAttributeTypeOk(o.Acl); ok {
-		toSerialize["Acl"] = val
-	}
 	if val, ok := getGetInstanceResponseGetBackupScheduleAttributeTypeOk(o.BackupSchedule); ok {
 		toSerialize["BackupSchedule"] = val
 	}
@@ -513,6 +509,9 @@ func (o GetInstanceResponse) ToMap() (map[string]interface{}, error) {
 	}
 	if val, ok := getGetInstanceResponseGetNameAttributeTypeOk(o.Name); ok {
 		toSerialize["Name"] = val
+	}
+	if val, ok := getGetInstanceResponseGetNetworkAttributeTypeOk(o.Network); ok {
+		toSerialize["Network"] = val
 	}
 	if val, ok := getGetInstanceResponseGetReplicasAttributeTypeOk(o.Replicas); ok {
 		toSerialize["Replicas"] = val
