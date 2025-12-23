@@ -1,4 +1,4 @@
-package postgresflexa
+package postgresflexalpha
 
 import (
 	"context"
@@ -36,12 +36,20 @@ type databaseDataSource struct {
 }
 
 // Metadata returns the data source type name.
-func (r *databaseDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (r *databaseDataSource) Metadata(
+	_ context.Context,
+	req datasource.MetadataRequest,
+	resp *datasource.MetadataResponse,
+) {
 	resp.TypeName = req.ProviderTypeName + "_postgresflexalpha_database"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *databaseDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (r *databaseDataSource) Configure(
+	ctx context.Context,
+	req datasource.ConfigureRequest,
+	resp *datasource.ConfigureResponse,
+) {
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
@@ -117,7 +125,11 @@ func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *databaseDataSource) Read(
+	ctx context.Context,
+	req datasource.ReadRequest,
+	resp *datasource.ReadResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -129,7 +141,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	databaseId := model.DatabaseId.ValueString()
+	databaseId := model.DatabaseId.ValueInt64()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -143,7 +155,12 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 			&resp.Diagnostics,
 			err,
 			"Reading database",
-			fmt.Sprintf("Database with ID %q or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
+			fmt.Sprintf(
+				"Database with ID %q or instance with ID %q does not exist in project %q.",
+				databaseId,
+				instanceId,
+				projectId,
+			),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -157,7 +174,12 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	// Map response body to schema and populate Computed attribute values
 	err = mapFields(databaseResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading database",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 

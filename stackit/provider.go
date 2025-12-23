@@ -21,6 +21,7 @@ import (
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 
+	postgresFlexAlphaDatabase "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/database"
 	postgresFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance"
 	postgresFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/user"
 	sqlServerFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/instance"
@@ -361,7 +362,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setStringField(
-		providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
+		providerConfig.Region, func(v string) { providerData.Region = v },
+	) // nolint:staticcheck // preliminary handling of deprecated attribute
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
 	setStringField(
@@ -486,6 +488,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		postgresFlexAlphaDatabase.NewDatabaseDataSource,
 		postgresFlexAlphaInstance.NewInstanceDataSource,
 		postgresFlexAlphaUser.NewUserDataSource,
 		sqlServerFlexAlphaInstance.NewInstanceDataSource,
@@ -496,6 +499,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
+		postgresFlexAlphaDatabase.NewDatabaseResource,
 		postgresFlexAlphaInstance.NewInstanceResource,
 		postgresFlexAlphaUser.NewUserResource,
 		sqlServerFlexAlphaInstance.NewInstanceResource,
