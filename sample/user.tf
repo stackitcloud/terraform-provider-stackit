@@ -8,8 +8,8 @@ resource "stackitprivatepreview_postgresflexalpha_user" "ptlsdbuser" {
   project_id  = stackitprivatepreview_postgresflexalpha_instance.ptlsdbsrv.project_id
   instance_id = stackitprivatepreview_postgresflexalpha_instance.ptlsdbsrv.instance_id
   username    = var.db_username
-  # roles       = ["createdb", "login", "createrole"]
   roles       = ["createdb", "login"]
+  # roles     = ["createdb", "login", "createrole"]
 }
 
 resource "stackitprivatepreview_sqlserverflexalpha_user" "ptlsdbuser" {

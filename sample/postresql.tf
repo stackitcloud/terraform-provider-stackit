@@ -14,13 +14,13 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
   encryption = {
     #    key_id = stackit_kms_key.key.key_id
     #    keyring_id = stackit_kms_keyring.keyring.keyring_id
-    key_id = var.key_id
-    keyring_id = var.keyring_id
-    key_version = var.key_version
+    key_id          = var.key_id
+    keyring_id      = var.keyring_id
+    key_version     = var.key_version
     service_account = var.sa_email
   }
   network = {
-    acl             = ["0.0.0.0/0", "193.148.160.0/19"]
+    acl          = ["0.0.0.0/0", "193.148.160.0/19"]
     access_scope = "SNA"
   }
   version = 14
