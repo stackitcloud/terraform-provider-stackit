@@ -101,7 +101,7 @@ func mapFields(
 	}
 
 	var flavorValues map[string]attr.Value
-	if instance.FlavorId == nil {
+	if instance.FlavorId == nil || *instance.FlavorId == "" {
 		return fmt.Errorf("instance has no flavor id")
 	}
 	if !flavor.Id.IsUnknown() && !flavor.Id.IsNull() {
@@ -110,12 +110,28 @@ func mapFields(
 		}
 	}
 	if model.Flavor.IsNull() || model.Flavor.IsUnknown() {
+		var nodeType string
+		if flavor.NodeType.IsUnknown() || flavor.NodeType.IsNull() {
+			if instance.Replicas == nil {
+				return fmt.Errorf("instance has no replicas setting")
+			}
+			switch *instance.Replicas {
+			case 1:
+				nodeType = "Single"
+			case 3:
+				nodeType = "Replicas"
+			default:
+				return fmt.Errorf("could not determine replicas settings")
+			}
+		} else {
+			nodeType = flavor.NodeType.ValueString()
+		}
 		flavorValues = map[string]attr.Value{
 			"id":          flavor.Id,
 			"description": flavor.Description,
 			"cpu":         flavor.CPU,
 			"ram":         flavor.RAM,
-			"node_type":   flavor.NodeType,
+			"node_type":   types.StringValue(nodeType),
 		}
 	} else {
 		flavorValues = model.Flavor.Attributes()
@@ -143,6 +159,11 @@ func mapFields(
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
+	if instance.Replicas == nil {
+		diags.AddError("error mapping fields", "replicas is nil")
+		return fmt.Errorf("replicas is nil")
+	}
+
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
@@ -159,7 +180,13 @@ func mapFields(
 	return nil
 }
 
-func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, enc *encryptionModel, net *networkModel) (*postgresflex.CreateInstanceRequestPayload, error) {
+func toCreatePayload(
+	model *Model,
+	flavor *flavorModel,
+	storage *storageModel,
+	enc *encryptionModel,
+	net *networkModel,
+) (*postgresflex.CreateInstanceRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -170,10 +197,13 @@ func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, e
 		return nil, fmt.Errorf("nil storage")
 	}
 
-	if model.Replicas.ValueInt64() > math.MaxInt32 {
-		return nil, fmt.Errorf("replica count too big: %d", model.Replicas.ValueInt64())
+	var replVal int32
+	if !model.Replicas.IsNull() && !model.Replicas.IsUnknown() {
+		if model.Replicas.ValueInt64() > math.MaxInt32 {
+			return nil, fmt.Errorf("replica count too big: %d", model.Replicas.ValueInt64())
+		}
+		replVal = int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
 	}
-	replVal := int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
 
 	storagePayload := &postgresflex.CreateInstanceRequestPayloadGetStorageArgType{
 		PerformanceClass: conversion.StringValueToPointer(storage.Class),
@@ -197,11 +227,28 @@ func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, e
 		}
 	}
 
+	if len(aclElements) < 1 {
+		return nil, fmt.Errorf("no acl elements found")
+	}
+
 	networkPayload := &postgresflex.CreateInstanceRequestPayloadGetNetworkArgType{}
 	if net != nil {
 		networkPayload = &postgresflex.CreateInstanceRequestPayloadGetNetworkArgType{
 			AccessScope: postgresflex.InstanceNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(net.AccessScope)),
 			Acl:         &aclElements,
+		}
+	}
+
+	if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
+		if !flavor.NodeType.IsNull() && !flavor.NodeType.IsUnknown() {
+			switch strings.ToLower(flavor.NodeType.ValueString()) {
+			case "single":
+				replVal = int32(1)
+			case "replica":
+				replVal = int32(3)
+			default:
+				return nil, fmt.Errorf("flavor has invalid replica attribute")
+			}
 		}
 	}
 
@@ -259,10 +306,22 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}
+
 	nodeType := conversion.StringValueToPointer(flavor.NodeType)
 	if nodeType == nil {
-		return fmt.Errorf("nil NodeType")
+		if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
+			return fmt.Errorf("nil NodeType")
+		}
+		switch model.Replicas.ValueInt64() {
+		case 1:
+			nodeType = conversion.StringValueToPointer(types.StringValue("Single"))
+		case 3:
+			nodeType = conversion.StringValueToPointer(types.StringValue("Replicas"))
+		default:
+			return fmt.Errorf("unknown Replicas value: %d", model.Replicas.ValueInt64())
+		}
 	}
+
 	storageClass := conversion.StringValueToPointer(storage.Class)
 	if storageClass == nil {
 		return fmt.Errorf("nil StorageClass")

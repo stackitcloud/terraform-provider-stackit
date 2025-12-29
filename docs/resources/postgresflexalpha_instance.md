@@ -44,13 +44,13 @@ import {
 
 - `backup_schedule` (String)
 - `encryption` (Attributes) The encryption block. (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor` (Attributes) The block that defines the flavor data. (see [below for nested schema](#nestedatt--flavor))
 - `name` (String) Instance name.
-- `network` (Attributes) (see [below for nested schema](#nestedatt--network))
+- `network` (Attributes) The network block configuration. (see [below for nested schema](#nestedatt--network))
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 - `replicas` (Number)
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
-- `version` (String)
+- `version` (String) The database version used.
 
 ### Optional
 
@@ -67,9 +67,9 @@ import {
 Required:
 
 - `key_id` (String) Key ID of the encryption key.
-- `key_version` (String)
-- `keyring_id` (String)
-- `service_account` (String)
+- `key_version` (String) Key version of the encryption key.
+- `keyring_id` (String) KeyRing ID of the encryption key.
+- `service_account` (String) The service account ID of the service account.
 
 
 <a id="nestedatt--flavor"></a>
@@ -77,16 +77,17 @@ Required:
 
 Required:
 
-- `cpu` (Number)
-- `ram` (Number)
+- `cpu` (Number) The CPU count of the flavor.
+- `ram` (Number) The RAM count of the flavor.
 
 Optional:
 
-- `id` (String)
+- `id` (String) The ID of the flavor.
+- `node_type` (String) The node type of the flavor. (Single or Replicas)
 
 Read-Only:
 
-- `description` (String)
+- `description` (String) The flavor detailed flavor name.
 
 
 <a id="nestedatt--network"></a>
@@ -98,9 +99,9 @@ Required:
 
 Optional:
 
-- `access_scope` (String)
-- `instance_address` (String)
-- `router_address` (String)
+- `access_scope` (String) The access scope. (Either SNA or PUBLIC)
+- `instance_address` (String) The returned instance address.
+- `router_address` (String) The returned router address.
 
 
 <a id="nestedatt--storage"></a>
@@ -108,5 +109,5 @@ Optional:
 
 Required:
 
-- `class` (String)
-- `size` (Number)
+- `class` (String) The storage class used.
+- `size` (Number) The disk size of the storage.

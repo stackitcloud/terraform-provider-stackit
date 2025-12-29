@@ -58,7 +58,6 @@ type databaseResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *databaseResource) ModifyPlan(
 	ctx context.Context,
-	// TODO - make it pointer
 	req resource.ModifyPlanRequest,
 	resp *resource.ModifyPlanResponse,
 ) { // nolint:gocritic // function signature required by Terraform
@@ -201,7 +200,6 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 // Create creates the resource and sets the initial Terraform state.
 func (r *databaseResource) Create(
 	ctx context.Context,
-	// TODO - make it pointer
 	req resource.CreateRequest,
 	resp *resource.CreateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
@@ -292,7 +290,6 @@ func (r *databaseResource) Create(
 // Read refreshes the Terraform state with the latest data.
 func (r *databaseResource) Read(
 	ctx context.Context,
-	// TODO - make it pointer
 	req resource.ReadRequest,
 	resp *resource.ReadResponse,
 ) { // nolint:gocritic // function signature required by Terraform

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
@@ -35,84 +36,12 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &instanceResource{}
-	_ resource.ResourceWithConfigure   = &instanceResource{}
-	_ resource.ResourceWithImportState = &instanceResource{}
-	_ resource.ResourceWithModifyPlan  = &instanceResource{}
+	_ resource.Resource                   = &instanceResource{}
+	_ resource.ResourceWithConfigure      = &instanceResource{}
+	_ resource.ResourceWithImportState    = &instanceResource{}
+	_ resource.ResourceWithModifyPlan     = &instanceResource{}
+	_ resource.ResourceWithValidateConfig = &instanceResource{}
 )
-
-type Model struct {
-	Id             types.String `tfsdk:"id"` // needed by TF
-	InstanceId     types.String `tfsdk:"instance_id"`
-	ProjectId      types.String `tfsdk:"project_id"`
-	Name           types.String `tfsdk:"name"`
-	BackupSchedule types.String `tfsdk:"backup_schedule"`
-	Flavor         types.Object `tfsdk:"flavor"`
-	Replicas       types.Int64  `tfsdk:"replicas"`
-	Storage        types.Object `tfsdk:"storage"`
-	Version        types.String `tfsdk:"version"`
-	Region         types.String `tfsdk:"region"`
-	Encryption     types.Object `tfsdk:"encryption"`
-	Network        types.Object `tfsdk:"network"`
-}
-
-type encryptionModel struct {
-	KeyRingId      types.String `tfsdk:"keyring_id"`
-	KeyId          types.String `tfsdk:"key_id"`
-	KeyVersion     types.String `tfsdk:"key_version"`
-	ServiceAccount types.String `tfsdk:"service_account"`
-}
-
-var encryptionTypes = map[string]attr.Type{
-	"keyring_id":      basetypes.StringType{},
-	"key_id":          basetypes.StringType{},
-	"key_version":     basetypes.StringType{},
-	"service_account": basetypes.StringType{},
-}
-
-type networkModel struct {
-	ACL             types.List   `tfsdk:"acl"`
-	AccessScope     types.String `tfsdk:"access_scope"`
-	InstanceAddress types.String `tfsdk:"instance_address"`
-	RouterAddress   types.String `tfsdk:"router_address"`
-}
-
-var networkTypes = map[string]attr.Type{
-	"acl":              basetypes.ListType{ElemType: types.StringType},
-	"access_scope":     basetypes.StringType{},
-	"instance_address": basetypes.StringType{},
-	"router_address":   basetypes.StringType{},
-}
-
-// Struct corresponding to Model.Flavor
-type flavorModel struct {
-	Id          types.String `tfsdk:"id"`
-	Description types.String `tfsdk:"description"`
-	CPU         types.Int64  `tfsdk:"cpu"`
-	RAM         types.Int64  `tfsdk:"ram"`
-	NodeType    types.String `tfsdk:"node_type"`
-}
-
-// Types corresponding to flavorModel
-var flavorTypes = map[string]attr.Type{
-	"id":          basetypes.StringType{},
-	"description": basetypes.StringType{},
-	"cpu":         basetypes.Int64Type{},
-	"ram":         basetypes.Int64Type{},
-	"node_type":   basetypes.StringType{},
-}
-
-// Struct corresponding to Model.Storage
-type storageModel struct {
-	Class types.String `tfsdk:"class"`
-	Size  types.Int64  `tfsdk:"size"`
-}
-
-// Types corresponding to storageModel
-var storageTypes = map[string]attr.Type{
-	"class": basetypes.StringType{},
-	"size":  basetypes.Int64Type{},
-}
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
 func NewInstanceResource() resource.Resource {
@@ -123,6 +52,24 @@ func NewInstanceResource() resource.Resource {
 type instanceResource struct {
 	client       *postgresflex.APIClient
 	providerData core.ProviderData
+}
+
+func (r *instanceResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.Replicas.IsNull() || data.Replicas.IsUnknown() {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("replicas"),
+			"Missing Attribute Configuration",
+			"Expected replicas to be configured. "+
+				"The resource may return unexpected results.",
+		)
+	}
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -179,18 +126,35 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"backup_schedule": "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
-		"main":            "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id":     "ID of the PostgresFlex instance.",
-		"project_id":      "STACKIT project ID to which the instance is associated.",
-		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the PostgresFlex instance.",
-		"region":          "The resource region. If not defined, the provider region is used.",
-		"encryption":      "The encryption block.",
-		"key_id":          "Key ID of the encryption key.",
+		"main":               "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":                 "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":        "ID of the PostgresFlex instance.",
+		"project_id":         "STACKIT project ID to which the instance is associated.",
+		"name":               "Instance name.",
+		"backup_schedule":    "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
+		"flavor":             "The block that defines the flavor data.",
+		"flavor_id":          "The ID of the flavor.",
+		"flavor_description": "The flavor detailed flavor name.",
+		"flavor_cpu":         "The CPU count of the flavor.",
+		"flavor_ram":         "The RAM count of the flavor.",
+		"flavor_node_type":   "The node type of the flavor. (Single or Replicas)",
+		"replicas":           "The number of replicas.",
+		"storage":            "The block of the storage configuration.",
+		"storage_class":      "The storage class used.",
+		"storage_size":       "The disk size of the storage.",
+		"region":             "The resource region. If not defined, the provider region is used.",
+		"version":            "The database version used.",
+		"encryption":         "The encryption block.",
+		"keyring_id":         "KeyRing ID of the encryption key.",
+		"key_id":             "Key ID of the encryption key.",
+		"key_version":        "Key version of the encryption key.",
+		"service_account":    "The service account ID of the service account.",
+		"network":            "The network block configuration.",
+		"access_scope":       "The access scope. (Either SNA or PUBLIC)",
+		"acl":                "The Access Control List (ACL) for the PostgresFlex instance.",
+		"instance_address":   "The returned instance address.",
+		"router_address":     "The returned router address.",
 	}
-	// TODO @mhenselin - do the rest
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
@@ -240,44 +204,64 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Required: true,
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Required: true,
+				Required:    true,
+				Description: descriptions["flavor"],
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
-						Computed: true,
-						Optional: true,
+						Description: descriptions["flavor_id"],
+						Computed:    true,
+						Optional:    true,
 						PlanModifiers: []planmodifier.String{
 							UseStateForUnknownIfFlavorUnchanged(req),
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"description": schema.StringAttribute{
-						Computed: true,
+						Computed:    true,
+						Description: descriptions["flavor_description"],
 						PlanModifiers: []planmodifier.String{
 							UseStateForUnknownIfFlavorUnchanged(req),
 						},
 					},
 					"cpu": schema.Int64Attribute{
-						Required: true,
+						Description: descriptions["flavor_cpu"],
+						Required:    true,
 					},
 					"ram": schema.Int64Attribute{
-						Required: true,
+						Description: descriptions["flavor_ram"],
+						Required:    true,
+					},
+					"node_type": schema.StringAttribute{
+						Description: descriptions["flavor_node_type"],
+						Computed:    true,
+						Optional:    true,
+						PlanModifiers: []planmodifier.String{
+							// TODO @mhenselin anschauen
+							UseStateForUnknownIfFlavorUnchanged(req),
+							stringplanmodifier.RequiresReplace(),
+						},
 					},
 				},
 			},
 			"replicas": schema.Int64Attribute{
 				Required: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.RequiresReplace(),
+				},
 			},
 			"storage": schema.SingleNestedAttribute{
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: descriptions["storage_class"],
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"size": schema.Int64Attribute{
-						Required: true,
+						Description: descriptions["storage_size"],
+						Required:    true,
 						// PlanModifiers: []planmodifier.Int64{
 						// TODO - req replace if new size smaller than state size
 						// int64planmodifier.RequiresReplaceIf(),
@@ -286,7 +270,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"version": schema.StringAttribute{
-				Required: true,
+				Description: descriptions["version"],
+				Required:    true,
 			},
 			"region": schema.StringAttribute{
 				Optional: true,
@@ -399,7 +384,11 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Create(
+	ctx context.Context,
+	req resource.CreateRequest,
+	resp *resource.CreateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)

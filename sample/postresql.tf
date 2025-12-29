@@ -6,7 +6,7 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
     cpu = 2
     ram = 4
   }
-  replicas = 3
+  replicas = 1
   storage = {
     class = "premium-perf2-stackit"
     size  = 5
@@ -26,12 +26,12 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
   version = 14
 }
 
-data "stackitprivatepreview_postgresflexalpha_instance" "datapsql" {
-  project_id = var.project_id
-  instance_id = "fdb6573e-2dea-4e1d-a638-9157cf90c3ba"
-  region = "eu01"
-}
-
-output "sample_psqlinstance" {
-  value = data.stackitprivatepreview_postgresflexalpha_instance.datapsql
-}
+# data "stackitprivatepreview_postgresflexalpha_instance" "datapsql" {
+#   project_id = var.project_id
+#   instance_id = "fdb6573e-2dea-4e1d-a638-9157cf90c3ba"
+#   region = "eu01"
+# }
+#
+# output "sample_psqlinstance" {
+#   value = data.stackitprivatepreview_postgresflexalpha_instance.datapsql
+# }
