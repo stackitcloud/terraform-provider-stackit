@@ -36,7 +36,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := CreateDatabaseResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -93,7 +96,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := CreateInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -151,7 +157,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := CreateUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -374,7 +383,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetBackupResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -433,7 +445,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetCollationsResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -493,7 +508,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetDatabaseResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -550,7 +568,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetFlavorsResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -610,7 +631,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -668,7 +692,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetStoragesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -728,7 +755,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -785,7 +815,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetVersionsResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -842,7 +875,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListBackupResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -900,7 +936,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListCompatibilityResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -958,7 +997,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListCurrentRunningRestoreJobs{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1016,7 +1058,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListDatabasesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1072,7 +1117,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListInstancesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1129,7 +1177,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListRolesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1187,7 +1238,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1245,7 +1299,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ProtectInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1306,7 +1363,10 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ResetUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
