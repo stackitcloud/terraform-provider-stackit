@@ -931,7 +931,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListRolesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -989,7 +992,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1047,7 +1053,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := RecoveryResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1105,7 +1114,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ProtectInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1166,7 +1178,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ResetUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1282,7 +1297,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := UpdateDatabasePartiallyResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1344,7 +1362,10 @@ func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := UpdateDatabaseResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			err := json.NewEncoder(w).Encode(data)
+			if err != nil {
+				return
+			}
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
