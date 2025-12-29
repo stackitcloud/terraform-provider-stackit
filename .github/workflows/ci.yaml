@@ -43,6 +43,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.7
+          args: --config=golang-ci.yaml --allow-parallel-runners --timeout=5m
 
       - name: Lint
         run: make lint
