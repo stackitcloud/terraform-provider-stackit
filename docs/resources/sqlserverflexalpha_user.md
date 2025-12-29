@@ -49,4 +49,4 @@ import {
 - `password` (String, Sensitive) Password of the user account.
 - `port` (Number)
 - `status` (String)
-- `user_id` (String) User ID.
+- `user_id` (Number) User ID.

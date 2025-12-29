@@ -1,6 +1,7 @@
 package tools
 
 // Generate copyright headers
+// nolint:misspell // copywrite is correct here
 //go:generate go run github.com/hashicorp/copywrite headers -d .. --config ../.copywrite.hcl
 
 // Format Terraform code for use in documentation.

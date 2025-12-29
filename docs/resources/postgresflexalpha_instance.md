@@ -42,7 +42,6 @@ import {
 
 ### Required
 
-- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
 - `backup_schedule` (String)
 - `encryption` (Attributes) The encryption block. (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
@@ -81,10 +80,13 @@ Required:
 - `cpu` (Number)
 - `ram` (Number)
 
+Optional:
+
+- `id` (String)
+
 Read-Only:
 
 - `description` (String)
-- `id` (String)
 
 
 <a id="nestedatt--network"></a>
@@ -92,7 +94,13 @@ Read-Only:
 
 Required:
 
+- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
+
+Optional:
+
 - `access_scope` (String)
+- `instance_address` (String)
+- `router_address` (String)
 
 
 <a id="nestedatt--storage"></a>

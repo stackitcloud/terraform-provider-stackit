@@ -5,23 +5,22 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
 		description string
-		input       *postgresflexalpha.ListDatabase
+		input       *postgresflex.ListDatabase
 		region      string
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&postgresflexalpha.ListDatabase{
+			&postgresflex.ListDatabase{
 				Id: utils.Ptr(int64(1)),
 			},
 			testRegion,
@@ -38,7 +37,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&postgresflexalpha.ListDatabase{
+			&postgresflex.ListDatabase{
 				Id:    utils.Ptr(int64(1)),
 				Name:  utils.Ptr("dbname"),
 				Owner: utils.Ptr("username"),
@@ -57,7 +56,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
-			&postgresflexalpha.ListDatabase{
+			&postgresflex.ListDatabase{
 				Id:    utils.Ptr(int64(1)),
 				Name:  utils.Ptr(""),
 				Owner: utils.Ptr(""),
@@ -83,14 +82,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"empty_response",
-			&postgresflexalpha.ListDatabase{},
+			&postgresflex.ListDatabase{},
 			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			&postgresflexalpha.ListDatabase{
+			&postgresflex.ListDatabase{
 				Id:    utils.Ptr(int64(0)),
 				Name:  utils.Ptr("dbname"),
 				Owner: utils.Ptr("username"),
@@ -129,7 +128,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *postgresflex.CreateDatabasePayload
+		expected    *postgresflex.CreateDatabaseRequestPayload
 		isValid     bool
 	}{
 		{
@@ -138,11 +137,9 @@ func TestToCreatePayload(t *testing.T) {
 				Name:  types.StringValue("dbname"),
 				Owner: types.StringValue("username"),
 			},
-			&postgresflex.CreateDatabasePayload{
-				Name: utils.Ptr("dbname"),
-				Options: &map[string]string{
-					"owner": "username",
-				},
+			&postgresflex.CreateDatabaseRequestPayload{
+				Name:  utils.Ptr("dbname"),
+				Owner: utils.Ptr("username"),
 			},
 			true,
 		},
@@ -152,11 +149,9 @@ func TestToCreatePayload(t *testing.T) {
 				Name:  types.StringNull(),
 				Owner: types.StringNull(),
 			},
-			&postgresflex.CreateDatabasePayload{
-				Name: nil,
-				Options: &map[string]string{
-					"owner": "",
-				},
+			&postgresflex.CreateDatabaseRequestPayload{
+				Name:  nil,
+				Owner: nil,
 			},
 			true,
 		},

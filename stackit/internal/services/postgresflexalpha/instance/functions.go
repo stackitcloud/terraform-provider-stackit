@@ -3,6 +3,7 @@ package postgresflexalpha
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -169,7 +170,10 @@ func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, e
 		return nil, fmt.Errorf("nil storage")
 	}
 
-	replVal := int32(model.Replicas.ValueInt64())
+	if model.Replicas.ValueInt64() > math.MaxInt32 {
+		return nil, fmt.Errorf("replica count too big: %d", model.Replicas.ValueInt64())
+	}
+	replVal := int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
 
 	storagePayload := &postgresflex.CreateInstanceRequestPayloadGetStorageArgType{
 		PerformanceClass: conversion.StringValueToPointer(storage.Class),
@@ -185,7 +189,7 @@ func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, e
 	}
 
 	var aclElements []string
-	if net != nil && !(net.ACL.IsNull() || net.ACL.IsUnknown()) {
+	if net != nil && !net.ACL.IsNull() && !net.ACL.IsUnknown() {
 		aclElements = make([]string, 0, len(net.ACL.Elements()))
 		diags := net.ACL.ElementsAs(context.TODO(), &aclElements, false)
 		if diags.HasError() {
@@ -214,13 +218,10 @@ func toCreatePayload(model *Model, flavor *flavorModel, storage *storageModel, e
 	}, nil
 }
 
-func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, network *networkModel) (*postgresflex.UpdateInstancePartiallyRequestPayload, error) {
+func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, _ *networkModel) (*postgresflex.UpdateInstancePartiallyRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	// if acl == nil {
-	//	return nil, fmt.Errorf("nil acl")
-	// }
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
@@ -229,13 +230,13 @@ func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, n
 	}
 
 	return &postgresflex.UpdateInstancePartiallyRequestPayload{
-		//Acl: postgresflexalpha.UpdateInstancePartiallyRequestPayloadGetAclAttributeType{
+		// Acl: postgresflexalpha.UpdateInstancePartiallyRequestPayloadGetAclAttributeType{
 		//	Items: &acl,
-		//},
+		// },
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		//Replicas:       conversion.Int64ValueToPointer(model.Replicas),
+		// Replicas:       conversion.Int64ValueToPointer(model.Replicas),
 		Storage: &postgresflex.StorageUpdate{
 			Size: conversion.Int64ValueToPointer(storage.Size),
 		},

@@ -13,7 +13,8 @@ import (
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 )
 
 const (

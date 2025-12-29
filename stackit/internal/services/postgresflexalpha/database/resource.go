@@ -58,6 +58,7 @@ type databaseResource struct {
 // Use the modifier to set the effective region in the current plan.
 func (r *databaseResource) ModifyPlan(
 	ctx context.Context,
+	// TODO - make it pointer
 	req resource.ModifyPlanRequest,
 	resp *resource.ModifyPlanResponse,
 ) { // nolint:gocritic // function signature required by Terraform
@@ -200,6 +201,7 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 // Create creates the resource and sets the initial Terraform state.
 func (r *databaseResource) Create(
 	ctx context.Context,
+	// TODO - make it pointer
 	req resource.CreateRequest,
 	resp *resource.CreateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
@@ -290,6 +292,7 @@ func (r *databaseResource) Create(
 // Read refreshes the Terraform state with the latest data.
 func (r *databaseResource) Read(
 	ctx context.Context,
+	// TODO - make it pointer
 	req resource.ReadRequest,
 	resp *resource.ReadResponse,
 ) { // nolint:gocritic // function signature required by Terraform
@@ -314,7 +317,7 @@ func (r *databaseResource) Read(
 	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, databaseNotFoundErr) {
+		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -452,7 +455,7 @@ func mapFields(databaseResp *postgresflexalpha.ListDatabase, model *Model, regio
 
 	ownerStr, err := mapOwner(databaseResp)
 	if err != nil {
-		return fmt.Errorf("error mapping owner: %v", err)
+		return fmt.Errorf("error mapping owner: %w", err)
 	}
 
 	model.Owner = types.StringPointerValue(ownerStr)
@@ -487,7 +490,7 @@ func toCreatePayload(model *Model) (*postgresflexalpha.CreateDatabaseRequestPayl
 	}, nil
 }
 
-var databaseNotFoundErr = errors.New("database not found")
+var errDatabaseNotFound = errors.New("database not found")
 
 // The API does not have a GetDatabase endpoint, only ListDatabases
 func getDatabase(
@@ -508,5 +511,5 @@ func getDatabase(
 			return &database, nil
 		}
 	}
-	return nil, databaseNotFoundErr
+	return nil, errDatabaseNotFound
 }

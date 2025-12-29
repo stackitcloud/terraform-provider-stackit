@@ -17,6 +17,7 @@ import (
 type apiClientInstanceMocked struct {
 	instanceId             string
 	instanceState          string
+	instanceNetwork        postgresflex.InstanceNetwork
 	instanceIsForceDeleted bool
 	instanceGetFails       bool
 	usersGetErrorStatus    int
@@ -36,8 +37,9 @@ func (a *apiClientInstanceMocked) GetInstanceRequestExecute(_ context.Context, _
 	}
 
 	return &postgresflex.GetInstanceResponse{
-		Id:     &a.instanceId,
-		Status: postgresflex.GetInstanceResponseGetStatusAttributeType(&a.instanceState),
+		Id:      &a.instanceId,
+		Status:  postgresflex.GetInstanceResponseGetStatusAttributeType(&a.instanceState),
+		Network: postgresflex.GetInstanceResponseGetNetworkAttributeType(&a.instanceNetwork),
 	}, nil
 }
 
@@ -87,59 +89,136 @@ func TestCreateInstanceWaitHandler(t *testing.T) {
 		desc                string
 		instanceGetFails    bool
 		instanceState       string
+		instanceNetwork     postgresflex.InstanceNetwork
 		usersGetErrorStatus int
 		wantErr             bool
-		wantResp            bool
+		wantRes             *postgresflex.GetInstanceResponse
 	}{
 		{
 			desc:             "create_succeeded",
 			instanceGetFails: false,
 			instanceState:    InstanceStateSuccess,
-			wantErr:          false,
-			wantResp:         true,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: false,
+			wantRes: &postgresflex.GetInstanceResponse{
+				Id:     utils.Ptr("foo-bar"),
+				Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(InstanceStateSuccess)),
+				Network: &postgresflex.InstanceNetwork{
+					AccessScope:     nil,
+					Acl:             nil,
+					InstanceAddress: utils.Ptr("10.0.0.1"),
+					RouterAddress:   utils.Ptr("10.0.0.1"),
+				},
+			},
 		},
 		{
 			desc:             "create_failed",
 			instanceGetFails: false,
 			instanceState:    InstanceStateFailed,
-			wantErr:          true,
-			wantResp:         true,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: &postgresflex.GetInstanceResponse{
+				Id:     utils.Ptr("foo-bar"),
+				Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(InstanceStateFailed)),
+				Network: &postgresflex.InstanceNetwork{
+					AccessScope:     nil,
+					Acl:             nil,
+					InstanceAddress: utils.Ptr("10.0.0.1"),
+					RouterAddress:   utils.Ptr("10.0.0.1"),
+				},
+			},
 		},
 		{
 			desc:             "create_failed_2",
 			instanceGetFails: false,
 			instanceState:    InstanceStateEmpty,
-			wantErr:          true,
-			wantResp:         false,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: nil,
 		},
 		{
 			desc:             "instance_get_fails",
 			instanceGetFails: true,
 			wantErr:          true,
-			wantResp:         false,
+			wantRes:          nil,
 		},
 		{
-			desc:                "users_get_fails",
-			instanceGetFails:    false,
-			instanceState:       InstanceStateSuccess,
+			desc:             "users_get_fails",
+			instanceGetFails: false,
+			instanceState:    InstanceStateSuccess,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
 			usersGetErrorStatus: 500,
 			wantErr:             true,
-			wantResp:            false,
+			wantRes:             nil,
 		},
 		{
-			desc:                "users_get_fails_2",
-			instanceGetFails:    false,
-			instanceState:       InstanceStateSuccess,
+			desc:             "users_get_fails_2",
+			instanceGetFails: false,
+			instanceState:    InstanceStateSuccess,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
 			usersGetErrorStatus: 400,
 			wantErr:             true,
-			wantResp:            true,
+			wantRes: &postgresflex.GetInstanceResponse{
+				Id:     utils.Ptr("foo-bar"),
+				Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(InstanceStateSuccess)),
+				Network: &postgresflex.InstanceNetwork{
+					AccessScope:     nil,
+					Acl:             nil,
+					InstanceAddress: utils.Ptr("10.0.0.1"),
+					RouterAddress:   utils.Ptr("10.0.0.1"),
+				},
+			},
+		},
+		{
+			desc:             "fail when response has no instance address",
+			instanceGetFails: false,
+			instanceState:    InstanceStateSuccess,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     postgresflex.InstanceNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+				Acl:             nil,
+				InstanceAddress: nil,
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: nil,
 		},
 		{
 			desc:             "timeout",
 			instanceGetFails: false,
 			instanceState:    InstanceStateProgressing,
-			wantErr:          true,
-			wantResp:         false,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     postgresflex.InstanceNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -149,27 +228,20 @@ func TestCreateInstanceWaitHandler(t *testing.T) {
 			apiClient := &apiClientInstanceMocked{
 				instanceId:          instanceId,
 				instanceState:       tt.instanceState,
+				instanceNetwork:     tt.instanceNetwork,
 				instanceGetFails:    tt.instanceGetFails,
 				usersGetErrorStatus: tt.usersGetErrorStatus,
 			}
 
-			var wantRes *postgresflex.GetInstanceResponse
-			if tt.wantResp {
-				wantRes = &postgresflex.GetInstanceResponse{
-					Id:     &instanceId,
-					Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(tt.instanceState)),
-				}
+			handler := CreateInstanceWaitHandler(context.Background(), apiClient, "", "", instanceId)
 
-				handler := CreateInstanceWaitHandler(context.Background(), apiClient, "", "", instanceId)
+			gotRes, err := handler.SetTimeout(10 * time.Millisecond).SetSleepBeforeWait(1 * time.Millisecond).WaitWithContext(context.Background())
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("handler error = %v, wantErr %v", err, tt.wantErr)
+			}
 
-				gotRes, err := handler.SetTimeout(10 * time.Millisecond).SetSleepBeforeWait(1 * time.Millisecond).WaitWithContext(context.Background())
-
-				if (err != nil) != tt.wantErr {
-					t.Fatalf("handler error = %v, wantErr %v", err, tt.wantErr)
-				}
-				if !cmp.Equal(gotRes, wantRes) {
-					t.Fatalf("handler gotRes = %v, want %v", gotRes, wantRes)
-				}
+			if !cmp.Equal(gotRes, tt.wantRes) {
+				t.Fatalf("handler gotRes = %v, want %v", gotRes, tt.wantRes)
 			}
 		})
 	}
@@ -180,42 +252,85 @@ func TestUpdateInstanceWaitHandler(t *testing.T) {
 		desc             string
 		instanceGetFails bool
 		instanceState    string
+		instanceNetwork  postgresflex.InstanceNetwork
 		wantErr          bool
-		wantResp         bool
+		wantRes          *postgresflex.GetInstanceResponse
 	}{
 		{
 			desc:             "update_succeeded",
 			instanceGetFails: false,
 			instanceState:    InstanceStateSuccess,
-			wantErr:          false,
-			wantResp:         true,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: false,
+			wantRes: &postgresflex.GetInstanceResponse{
+				Id:     utils.Ptr("foo-bar"),
+				Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(InstanceStateSuccess)),
+				Network: &postgresflex.InstanceNetwork{
+					AccessScope:     nil,
+					Acl:             nil,
+					InstanceAddress: utils.Ptr("10.0.0.1"),
+					RouterAddress:   utils.Ptr("10.0.0.1"),
+				},
+			},
 		},
 		{
 			desc:             "update_failed",
 			instanceGetFails: false,
 			instanceState:    InstanceStateFailed,
-			wantErr:          true,
-			wantResp:         true,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: &postgresflex.GetInstanceResponse{
+				Id:     utils.Ptr("foo-bar"),
+				Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(InstanceStateFailed)),
+				Network: &postgresflex.InstanceNetwork{
+					AccessScope:     nil,
+					Acl:             nil,
+					InstanceAddress: utils.Ptr("10.0.0.1"),
+					RouterAddress:   utils.Ptr("10.0.0.1"),
+				},
+			},
 		},
 		{
 			desc:             "update_failed_2",
 			instanceGetFails: false,
 			instanceState:    InstanceStateEmpty,
-			wantErr:          true,
-			wantResp:         false,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: nil,
 		},
 		{
 			desc:             "get_fails",
 			instanceGetFails: true,
 			wantErr:          true,
-			wantResp:         false,
+			wantRes:          nil,
 		},
 		{
 			desc:             "timeout",
 			instanceGetFails: false,
 			instanceState:    InstanceStateProgressing,
-			wantErr:          true,
-			wantResp:         false,
+			instanceNetwork: postgresflex.InstanceNetwork{
+				AccessScope:     nil,
+				Acl:             nil,
+				InstanceAddress: utils.Ptr("10.0.0.1"),
+				RouterAddress:   utils.Ptr("10.0.0.1"),
+			},
+			wantErr: true,
+			wantRes: nil,
 		},
 	}
 	for _, tt := range tests {
@@ -225,26 +340,19 @@ func TestUpdateInstanceWaitHandler(t *testing.T) {
 			apiClient := &apiClientInstanceMocked{
 				instanceId:       instanceId,
 				instanceState:    tt.instanceState,
+				instanceNetwork:  tt.instanceNetwork,
 				instanceGetFails: tt.instanceGetFails,
 			}
 
-			var wantRes *postgresflex.GetInstanceResponse
-			if tt.wantResp {
-				wantRes = &postgresflex.GetInstanceResponse{
-					Id:     &instanceId,
-					Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(tt.instanceState)),
-				}
+			handler := PartialUpdateInstanceWaitHandler(context.Background(), apiClient, "", "", instanceId)
 
-				handler := PartialUpdateInstanceWaitHandler(context.Background(), apiClient, "", "", instanceId)
+			gotRes, err := handler.SetTimeout(10 * time.Millisecond).WaitWithContext(context.Background())
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("handler error = %v, wantErr %v", err, tt.wantErr)
+			}
 
-				gotRes, err := handler.SetTimeout(10 * time.Millisecond).WaitWithContext(context.Background())
-
-				if (err != nil) != tt.wantErr {
-					t.Fatalf("handler error = %v, wantErr %v", err, tt.wantErr)
-				}
-				if !cmp.Equal(gotRes, wantRes) {
-					t.Fatalf("handler gotRes = %v, want %v", gotRes, wantRes)
-				}
+			if !cmp.Equal(gotRes, tt.wantRes) {
+				t.Fatalf("handler gotRes = %v, want %v", gotRes, tt.wantRes)
 			}
 		})
 	}

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/sqlserverflexalpha"
+	sqlserverflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/sqlserverflexalpha"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 
@@ -37,7 +37,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *sqlserverflexalpha.APIClient
+		expected *sqlserverflex.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -46,8 +46,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *sqlserverflexalpha.APIClient {
-				apiClient, err := sqlserverflexalpha.NewAPIClient(
+			expected: func() *sqlserverflex.APIClient {
+				apiClient, err := sqlserverflex.NewAPIClient(
 					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
@@ -66,8 +66,8 @@ func TestConfigureClient(t *testing.T) {
 					SQLServerFlexCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *sqlserverflexalpha.APIClient {
-				apiClient, err := sqlserverflexalpha.NewAPIClient(
+			expected: func() *sqlserverflex.APIClient {
+				apiClient, err := sqlserverflex.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)

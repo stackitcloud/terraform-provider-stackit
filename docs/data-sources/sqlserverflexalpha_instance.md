@@ -3,12 +3,12 @@
 page_title: "stackitprivatepreview_sqlserverflexalpha_instance Data Source - stackitprivatepreview"
 subcategory: ""
 description: |-
-  SQLServer Flex instance data source schema. Must have a region specified in the provider configuration.
+  SQLServer Flex ALPHA instance resource schema. Must have a region specified in the provider configuration.
 ---
 
 # stackitprivatepreview_sqlserverflexalpha_instance (Data Source)
 
-SQLServer Flex instance data source schema. Must have a `region` specified in the provider configuration.
+SQLServer Flex ALPHA instance resource schema. Must have a `region` specified in the provider configuration.
 
 ## Example Usage
 
@@ -33,13 +33,14 @@ data "stackitprivatepreview_sqlserverflexalpha_instance" "example" {
 
 ### Read-Only
 
-- `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
+- `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")
 - `edition` (String)
-- `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
+- `encryption` (Attributes) The encryption block. (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
+- `is_deletable` (Boolean)
 - `name` (String) Instance name.
-- `network` (Attributes) (see [below for nested schema](#nestedatt--network))
+- `network` (Attributes) The network block. (see [below for nested schema](#nestedatt--network))
 - `replicas` (Number)
 - `retention_days` (Number)
 - `status` (String)
@@ -51,9 +52,9 @@ data "stackitprivatepreview_sqlserverflexalpha_instance" "example" {
 
 Read-Only:
 
-- `key_id` (String)
-- `key_version` (String)
-- `keyring_id` (String)
+- `key_id` (String) STACKIT KMS - Key ID of the encryption key to use.
+- `key_version` (String) STACKIT KMS - Key version to use in the encryption key.
+- `keyring_id` (String) STACKIT KMS - KeyRing ID of the encryption key to use.
 - `service_account` (String)
 
 
@@ -65,6 +66,7 @@ Read-Only:
 - `cpu` (Number)
 - `description` (String)
 - `id` (String)
+- `node_type` (String)
 - `ram` (Number)
 
 
@@ -73,10 +75,10 @@ Read-Only:
 
 Read-Only:
 
-- `access_scope` (String)
+- `access_scope` (String) The access scope of the instance. (e.g. SNA)
 - `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
-- `instance_address` (String)
-- `router_address` (String)
+- `instance_address` (String) The returned instance IP address of the SQLServer Flex instance.
+- `router_address` (String) The returned router IP address of the SQLServer Flex instance.
 
 
 <a id="nestedatt--storage"></a>

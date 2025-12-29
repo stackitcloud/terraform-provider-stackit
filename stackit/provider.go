@@ -362,8 +362,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setStringField(
-		providerConfig.Region, func(v string) { providerData.Region = v },
-	) // nolint:staticcheck // preliminary handling of deprecated attribute
+		providerConfig.Region, func(v string) { providerData.Region = v }, // nolint:staticcheck // preliminary handling of deprecated attribute
+	)
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
 	setStringField(
@@ -438,7 +438,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		func(v string) { providerData.SQLServerFlexCustomEndpoint = v },
 	)
 
-	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
+	if !providerConfig.Experiments.IsUnknown() && !providerConfig.Experiments.IsNull() {
 		var experimentValues []string
 		diags := providerConfig.Experiments.ElementsAs(ctx, &experimentValues, false)
 		if diags.HasError() {

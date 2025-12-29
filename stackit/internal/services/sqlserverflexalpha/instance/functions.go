@@ -3,6 +3,7 @@ package sqlserverflex
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -200,7 +201,7 @@ func toCreatePayload(model *Model, storage *storageModel, encryption *encryption
 	}
 
 	flavorId := ""
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		modelValues := model.Flavor.Attributes()
 		if _, ok := modelValues["id"]; !ok {
 			return nil, fmt.Errorf("flavor has not yet been created")
@@ -210,7 +211,7 @@ func toCreatePayload(model *Model, storage *storageModel, encryption *encryption
 	}
 
 	var aclElements []string
-	if network != nil && !(network.ACL.IsNull() || network.ACL.IsUnknown()) {
+	if network != nil && !network.ACL.IsNull() && !network.ACL.IsUnknown() {
 		aclElements = make([]string, 0, len(network.ACL.Elements()))
 		diags := network.ACL.ElementsAs(context.TODO(), &aclElements, false)
 		if diags.HasError() {
@@ -261,7 +262,7 @@ func toUpdatePayload(model *Model, storage *storageModel, network *networkModel)
 	}
 
 	var aclElements []string
-	if network != nil && !(network.ACL.IsNull() || network.ACL.IsUnknown()) {
+	if network != nil && !network.ACL.IsNull() && !network.ACL.IsUnknown() {
 		aclElements = make([]string, 0, len(network.ACL.Elements()))
 		diags := network.ACL.ElementsAs(context.TODO(), &aclElements, false)
 		if diags.HasError() {
@@ -270,7 +271,10 @@ func toUpdatePayload(model *Model, storage *storageModel, network *networkModel)
 	}
 
 	// TODO - implement network.ACL as soon as it becomes available
-	replCount := int32(model.Replicas.ValueInt64())
+	if model.Replicas.ValueInt64() > math.MaxInt32 {
+		return nil, fmt.Errorf("replica count too big: %d", model.Replicas.ValueInt64())
+	}
+	replCount := int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
 	flavorId := flavorMdl.Id.ValueString()
 	return &sqlserverflex.UpdateInstancePartiallyRequestPayload{
 		Acl:            &aclElements,

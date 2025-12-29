@@ -246,7 +246,7 @@ func (r *userResource) Create(
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var roles []sqlserverflexalpha.UserRole
-	if !(model.Roles.IsNull() || model.Roles.IsUnknown()) {
+	if !model.Roles.IsNull() && !model.Roles.IsUnknown() {
 		diags = model.Roles.ElementsAs(ctx, &roles, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {

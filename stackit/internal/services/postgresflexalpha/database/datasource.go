@@ -127,6 +127,7 @@ func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (r *databaseDataSource) Read(
 	ctx context.Context,
+	// TODO - make it pointer
 	req datasource.ReadRequest,
 	resp *datasource.ReadResponse,
 ) { // nolint:gocritic // function signature required by Terraform

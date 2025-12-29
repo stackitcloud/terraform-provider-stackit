@@ -60,7 +60,7 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 // Schema defines the schema for the data source.
-func (r *instanceDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
@@ -120,11 +120,6 @@ func (r *instanceDataSource) Schema(ctx context.Context, _ datasource.SchemaRequ
 						Computed: true,
 					},
 				},
-				//CustomType: postgresflex.FlavorType{
-				//	ObjectType: types.ObjectType{
-				//		AttrTypes: postgresflex.FlavorValue{}.AttributeTypes(ctx),
-				//	},
-				//},
 			},
 			"replicas": schema.Int64Attribute{
 				Computed: true,
@@ -243,7 +238,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		flavor.Id = types.StringValue(*instanceResp.FlavorId)
 	}
 
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -264,7 +259,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -273,7 +268,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var network = &networkModel{}
-	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+	if !model.Network.IsNull() && !model.Network.IsUnknown() {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -282,7 +277,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var encryption = &encryptionModel{}
-	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
 		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {

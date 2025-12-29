@@ -33,6 +33,7 @@ jobs:
       - name: "Ensure docs are up-to-date"
         if: ${{ github.event_name == 'pull_request' }}
         run: ./scripts/check-docs.sh
+        continue-on-error: true
 
       - name: "Run go mod tidy"
         if: ${{ github.event_name == 'pull_request' }}

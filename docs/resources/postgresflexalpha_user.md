@@ -50,4 +50,4 @@ import {
 - `port` (Number)
 - `status` (String)
 - `uri` (String, Sensitive)
-- `user_id` (String) User ID.
+- `user_id` (Number) User ID.

@@ -32,7 +32,7 @@ func (t FlavorType) String() string {
 	return "FlavorType"
 }
 
-func (t FlavorType) ValueFromObject(ctx context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
+func (t FlavorType) ValueFromObject(_ context.Context, in basetypes.ObjectValue) (basetypes.ObjectValuable, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	attributes := in.Attributes()
@@ -331,7 +331,7 @@ func (t FlavorType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (a
 	return NewFlavorValueMust(FlavorValue{}.AttributeTypes(ctx), attributes), nil
 }
 
-func (t FlavorType) ValueType(ctx context.Context) attr.Value {
+func (t FlavorType) ValueType(_ context.Context) attr.Value {
 	return FlavorValue{}
 }
 
@@ -420,7 +420,7 @@ func (v FlavorValue) String() string {
 	return "FlavorValue"
 }
 
-func (v FlavorValue) ToObjectValue(ctx context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
+func (v FlavorValue) ToObjectValue(_ context.Context) (basetypes.ObjectValue, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	attributeTypes := map[string]attr.Type{
@@ -492,7 +492,7 @@ func (v FlavorValue) Type(ctx context.Context) attr.Type {
 	}
 }
 
-func (v FlavorValue) AttributeTypes(ctx context.Context) map[string]attr.Type {
+func (v FlavorValue) AttributeTypes(_ context.Context) map[string]attr.Type {
 	return map[string]attr.Type{
 		"cpu":         basetypes.Int64Type{},
 		"description": basetypes.StringType{},

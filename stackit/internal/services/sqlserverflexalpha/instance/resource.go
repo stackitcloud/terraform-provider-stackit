@@ -522,7 +522,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -531,7 +531,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	var encryption = &encryptionModel{}
-	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
 		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -540,7 +540,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	var network = &networkModel{}
-	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+	if !model.Network.IsNull() && !model.Network.IsUnknown() {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -549,7 +549,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	flavor := &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -673,7 +673,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -694,7 +694,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -703,7 +703,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	var encryption = &encryptionModel{}
-	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
 		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -712,7 +712,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	var network = &networkModel{}
-	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+	if !model.Network.IsNull() && !model.Network.IsUnknown() {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -769,7 +769,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -778,7 +778,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	var encryption = &encryptionModel{}
-	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
 		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -787,7 +787,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	var network = &networkModel{}
-	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+	if !model.Network.IsNull() && !model.Network.IsUnknown() {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -796,7 +796,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	flavor := &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {

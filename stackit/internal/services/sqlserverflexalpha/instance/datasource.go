@@ -270,7 +270,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
+	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -279,7 +279,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var encryption = &encryptionModel{}
-	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
 		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -288,7 +288,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	var network = &networkModel{}
-	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+	if !model.Network.IsNull() && !model.Network.IsUnknown() {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {

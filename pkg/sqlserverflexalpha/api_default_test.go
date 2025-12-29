@@ -586,7 +586,8 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 
 		page := int64(1)
 		size := int64(10)
-		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region, &page, &size, FLAVORSORT_ID_DESC).Execute()
+		sort := FLAVORSORT_ID_DESC
+		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region, &page, &size, &sort).Execute()
 
 		if reqErr != nil {
 			t.Fatalf("error in call: %v", reqErr)

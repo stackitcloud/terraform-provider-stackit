@@ -69,7 +69,7 @@ func CreateInstanceWaitHandler(
 				case InstanceStateProgressing:
 					return false, nil, nil
 				case InstanceStateSuccess:
-					if s.Network.InstanceAddress == nil {
+					if s.Network == nil || s.Network.InstanceAddress == nil {
 						tflog.Info(ctx, "Waiting for instance_address")
 						return false, nil, nil
 					}
