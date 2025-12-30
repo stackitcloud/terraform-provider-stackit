@@ -37,17 +37,43 @@ func setCreateInstanceRequestPayloadNetworkGetAccessScopeAttributeType(arg *Crea
 	*arg = &val
 }
 
+/*
+	types and functions for acl
+*/
+
+// isArray
+type CreateInstanceRequestPayloadNetworkGetAclAttributeType = *[]string
+type CreateInstanceRequestPayloadNetworkGetAclArgType = []string
+type CreateInstanceRequestPayloadNetworkGetAclRetType = []string
+
+func getCreateInstanceRequestPayloadNetworkGetAclAttributeTypeOk(arg CreateInstanceRequestPayloadNetworkGetAclAttributeType) (ret CreateInstanceRequestPayloadNetworkGetAclRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setCreateInstanceRequestPayloadNetworkGetAclAttributeType(arg *CreateInstanceRequestPayloadNetworkGetAclAttributeType, val CreateInstanceRequestPayloadNetworkGetAclRetType) {
+	*arg = &val
+}
+
 // CreateInstanceRequestPayloadNetwork the network configuration of the instance.
 type CreateInstanceRequestPayloadNetwork struct {
 	AccessScope CreateInstanceRequestPayloadNetworkGetAccessScopeAttributeType `json:"accessScope,omitempty"`
+	// List of IPV4 cidr.
+	// REQUIRED
+	Acl CreateInstanceRequestPayloadNetworkGetAclAttributeType `json:"acl" required:"true"`
 }
+
+type _CreateInstanceRequestPayloadNetwork CreateInstanceRequestPayloadNetwork
 
 // NewCreateInstanceRequestPayloadNetwork instantiates a new CreateInstanceRequestPayloadNetwork object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCreateInstanceRequestPayloadNetwork() *CreateInstanceRequestPayloadNetwork {
+func NewCreateInstanceRequestPayloadNetwork(acl CreateInstanceRequestPayloadNetworkGetAclArgType) *CreateInstanceRequestPayloadNetwork {
 	this := CreateInstanceRequestPayloadNetwork{}
+	setCreateInstanceRequestPayloadNetworkGetAclAttributeType(&this.Acl, acl)
 	return &this
 }
 
@@ -84,10 +110,30 @@ func (o *CreateInstanceRequestPayloadNetwork) SetAccessScope(v CreateInstanceReq
 	setCreateInstanceRequestPayloadNetworkGetAccessScopeAttributeType(&o.AccessScope, v)
 }
 
+// GetAcl returns the Acl field value
+func (o *CreateInstanceRequestPayloadNetwork) GetAcl() (ret CreateInstanceRequestPayloadNetworkGetAclRetType) {
+	ret, _ = o.GetAclOk()
+	return ret
+}
+
+// GetAclOk returns a tuple with the Acl field value
+// and a boolean to check if the value has been set.
+func (o *CreateInstanceRequestPayloadNetwork) GetAclOk() (ret CreateInstanceRequestPayloadNetworkGetAclRetType, ok bool) {
+	return getCreateInstanceRequestPayloadNetworkGetAclAttributeTypeOk(o.Acl)
+}
+
+// SetAcl sets field value
+func (o *CreateInstanceRequestPayloadNetwork) SetAcl(v CreateInstanceRequestPayloadNetworkGetAclRetType) {
+	setCreateInstanceRequestPayloadNetworkGetAclAttributeType(&o.Acl, v)
+}
+
 func (o CreateInstanceRequestPayloadNetwork) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if val, ok := getCreateInstanceRequestPayloadNetworkGetAccessScopeAttributeTypeOk(o.AccessScope); ok {
 		toSerialize["AccessScope"] = val
+	}
+	if val, ok := getCreateInstanceRequestPayloadNetworkGetAclAttributeTypeOk(o.Acl); ok {
+		toSerialize["Acl"] = val
 	}
 	return toSerialize, nil
 }

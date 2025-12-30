@@ -18,26 +18,6 @@ import (
 var _ MappedNullable = &CreateInstanceRequestPayload{}
 
 /*
-	types and functions for acl
-*/
-
-// isArray
-type CreateInstanceRequestPayloadGetAclAttributeType = *[]string
-type CreateInstanceRequestPayloadGetAclArgType = []string
-type CreateInstanceRequestPayloadGetAclRetType = []string
-
-func getCreateInstanceRequestPayloadGetAclAttributeTypeOk(arg CreateInstanceRequestPayloadGetAclAttributeType) (ret CreateInstanceRequestPayloadGetAclRetType, ok bool) {
-	if arg == nil {
-		return ret, false
-	}
-	return *arg, true
-}
-
-func setCreateInstanceRequestPayloadGetAclAttributeType(arg *CreateInstanceRequestPayloadGetAclAttributeType, val CreateInstanceRequestPayloadGetAclRetType) {
-	*arg = &val
-}
-
-/*
 	types and functions for backupSchedule
 */
 
@@ -202,9 +182,6 @@ func setCreateInstanceRequestPayloadGetVersionAttributeType(arg *CreateInstanceR
 
 // CreateInstanceRequestPayload struct for CreateInstanceRequestPayload
 type CreateInstanceRequestPayload struct {
-	//  Deprecated: List of IPV4 cidr.
-	// REQUIRED
-	Acl CreateInstanceRequestPayloadGetAclAttributeType `json:"acl" required:"true"`
 	// The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.
 	// REQUIRED
 	BackupSchedule CreateInstanceRequestPayloadGetBackupScheduleAttributeType `json:"backupSchedule" required:"true"`
@@ -214,8 +191,9 @@ type CreateInstanceRequestPayload struct {
 	FlavorId CreateInstanceRequestPayloadGetFlavorIdAttributeType `json:"flavorId" required:"true"`
 	// The name of the instance.
 	// REQUIRED
-	Name    CreateInstanceRequestPayloadGetNameAttributeType    `json:"name" required:"true"`
-	Network CreateInstanceRequestPayloadGetNetworkAttributeType `json:"network,omitempty"`
+	Name CreateInstanceRequestPayloadGetNameAttributeType `json:"name" required:"true"`
+	// REQUIRED
+	Network CreateInstanceRequestPayloadGetNetworkAttributeType `json:"network" required:"true"`
 	// The days for how long the backup files should be stored before cleaned up. 30 to 365
 	// Can be cast to int32 without loss of precision.
 	// REQUIRED
@@ -232,12 +210,12 @@ type _CreateInstanceRequestPayload CreateInstanceRequestPayload
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCreateInstanceRequestPayload(acl CreateInstanceRequestPayloadGetAclArgType, backupSchedule CreateInstanceRequestPayloadGetBackupScheduleArgType, flavorId CreateInstanceRequestPayloadGetFlavorIdArgType, name CreateInstanceRequestPayloadGetNameArgType, retentionDays CreateInstanceRequestPayloadGetRetentionDaysArgType, storage CreateInstanceRequestPayloadGetStorageArgType, version CreateInstanceRequestPayloadGetVersionArgType) *CreateInstanceRequestPayload {
+func NewCreateInstanceRequestPayload(backupSchedule CreateInstanceRequestPayloadGetBackupScheduleArgType, flavorId CreateInstanceRequestPayloadGetFlavorIdArgType, name CreateInstanceRequestPayloadGetNameArgType, network CreateInstanceRequestPayloadGetNetworkArgType, retentionDays CreateInstanceRequestPayloadGetRetentionDaysArgType, storage CreateInstanceRequestPayloadGetStorageArgType, version CreateInstanceRequestPayloadGetVersionArgType) *CreateInstanceRequestPayload {
 	this := CreateInstanceRequestPayload{}
-	setCreateInstanceRequestPayloadGetAclAttributeType(&this.Acl, acl)
 	setCreateInstanceRequestPayloadGetBackupScheduleAttributeType(&this.BackupSchedule, backupSchedule)
 	setCreateInstanceRequestPayloadGetFlavorIdAttributeType(&this.FlavorId, flavorId)
 	setCreateInstanceRequestPayloadGetNameAttributeType(&this.Name, name)
+	setCreateInstanceRequestPayloadGetNetworkAttributeType(&this.Network, network)
 	setCreateInstanceRequestPayloadGetRetentionDaysAttributeType(&this.RetentionDays, retentionDays)
 	setCreateInstanceRequestPayloadGetStorageAttributeType(&this.Storage, storage)
 	setCreateInstanceRequestPayloadGetVersionAttributeType(&this.Version, version)
@@ -250,26 +228,6 @@ func NewCreateInstanceRequestPayload(acl CreateInstanceRequestPayloadGetAclArgTy
 func NewCreateInstanceRequestPayloadWithDefaults() *CreateInstanceRequestPayload {
 	this := CreateInstanceRequestPayload{}
 	return &this
-}
-
-// GetAcl returns the Acl field value
-// Deprecated
-func (o *CreateInstanceRequestPayload) GetAcl() (ret CreateInstanceRequestPayloadGetAclRetType) {
-	ret, _ = o.GetAclOk()
-	return ret
-}
-
-// GetAclOk returns a tuple with the Acl field value
-// and a boolean to check if the value has been set.
-// Deprecated
-func (o *CreateInstanceRequestPayload) GetAclOk() (ret CreateInstanceRequestPayloadGetAclRetType, ok bool) {
-	return getCreateInstanceRequestPayloadGetAclAttributeTypeOk(o.Acl)
-}
-
-// SetAcl sets field value
-// Deprecated
-func (o *CreateInstanceRequestPayload) SetAcl(v CreateInstanceRequestPayloadGetAclRetType) {
-	setCreateInstanceRequestPayloadGetAclAttributeType(&o.Acl, v)
 }
 
 // GetBackupSchedule returns the BackupSchedule field value
@@ -346,25 +304,19 @@ func (o *CreateInstanceRequestPayload) SetName(v CreateInstanceRequestPayloadGet
 	setCreateInstanceRequestPayloadGetNameAttributeType(&o.Name, v)
 }
 
-// GetNetwork returns the Network field value if set, zero value otherwise.
-func (o *CreateInstanceRequestPayload) GetNetwork() (res CreateInstanceRequestPayloadGetNetworkRetType) {
-	res, _ = o.GetNetworkOk()
-	return
+// GetNetwork returns the Network field value
+func (o *CreateInstanceRequestPayload) GetNetwork() (ret CreateInstanceRequestPayloadGetNetworkRetType) {
+	ret, _ = o.GetNetworkOk()
+	return ret
 }
 
-// GetNetworkOk returns a tuple with the Network field value if set, nil otherwise
+// GetNetworkOk returns a tuple with the Network field value
 // and a boolean to check if the value has been set.
 func (o *CreateInstanceRequestPayload) GetNetworkOk() (ret CreateInstanceRequestPayloadGetNetworkRetType, ok bool) {
 	return getCreateInstanceRequestPayloadGetNetworkAttributeTypeOk(o.Network)
 }
 
-// HasNetwork returns a boolean if a field has been set.
-func (o *CreateInstanceRequestPayload) HasNetwork() bool {
-	_, ok := o.GetNetworkOk()
-	return ok
-}
-
-// SetNetwork gets a reference to the given CreateInstanceRequestPayloadNetwork and assigns it to the Network field.
+// SetNetwork sets field value
 func (o *CreateInstanceRequestPayload) SetNetwork(v CreateInstanceRequestPayloadGetNetworkRetType) {
 	setCreateInstanceRequestPayloadGetNetworkAttributeType(&o.Network, v)
 }
@@ -422,9 +374,6 @@ func (o *CreateInstanceRequestPayload) SetVersion(v CreateInstanceRequestPayload
 
 func (o CreateInstanceRequestPayload) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if val, ok := getCreateInstanceRequestPayloadGetAclAttributeTypeOk(o.Acl); ok {
-		toSerialize["Acl"] = val
-	}
 	if val, ok := getCreateInstanceRequestPayloadGetBackupScheduleAttributeTypeOk(o.BackupSchedule); ok {
 		toSerialize["BackupSchedule"] = val
 	}

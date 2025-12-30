@@ -114,7 +114,7 @@ type Error struct {
 	TraceId ErrorGetTraceIdAttributeType `json:"traceId" required:"true" validate:"required,traceID"`
 	// Describes in which state the api was when the error happened.
 	// REQUIRED
-	Type ErrorGetTypeAttributeType `json:"type" required:"true" validate:"required,errorType"`
+	Type ErrorGetTypeAttributeType `json:"type" required:"true"`
 }
 
 type _Error Error

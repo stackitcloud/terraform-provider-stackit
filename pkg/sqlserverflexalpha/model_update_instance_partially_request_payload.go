@@ -18,26 +18,6 @@ import (
 var _ MappedNullable = &UpdateInstancePartiallyRequestPayload{}
 
 /*
-	types and functions for acl
-*/
-
-// isArray
-type UpdateInstancePartiallyRequestPayloadGetAclAttributeType = *[]string
-type UpdateInstancePartiallyRequestPayloadGetAclArgType = []string
-type UpdateInstancePartiallyRequestPayloadGetAclRetType = []string
-
-func getUpdateInstancePartiallyRequestPayloadGetAclAttributeTypeOk(arg UpdateInstancePartiallyRequestPayloadGetAclAttributeType) (ret UpdateInstancePartiallyRequestPayloadGetAclRetType, ok bool) {
-	if arg == nil {
-		return ret, false
-	}
-	return *arg, true
-}
-
-func setUpdateInstancePartiallyRequestPayloadGetAclAttributeType(arg *UpdateInstancePartiallyRequestPayloadGetAclAttributeType, val UpdateInstancePartiallyRequestPayloadGetAclRetType) {
-	*arg = &val
-}
-
-/*
 	types and functions for backupSchedule
 */
 
@@ -99,6 +79,26 @@ func setUpdateInstancePartiallyRequestPayloadGetNameAttributeType(arg *UpdateIns
 
 type UpdateInstancePartiallyRequestPayloadGetNameArgType = string
 type UpdateInstancePartiallyRequestPayloadGetNameRetType = string
+
+/*
+	types and functions for network
+*/
+
+// isModel
+type UpdateInstancePartiallyRequestPayloadGetNetworkAttributeType = *UpdateInstancePartiallyRequestPayloadNetwork
+type UpdateInstancePartiallyRequestPayloadGetNetworkArgType = UpdateInstancePartiallyRequestPayloadNetwork
+type UpdateInstancePartiallyRequestPayloadGetNetworkRetType = UpdateInstancePartiallyRequestPayloadNetwork
+
+func getUpdateInstancePartiallyRequestPayloadGetNetworkAttributeTypeOk(arg UpdateInstancePartiallyRequestPayloadGetNetworkAttributeType) (ret UpdateInstancePartiallyRequestPayloadGetNetworkRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setUpdateInstancePartiallyRequestPayloadGetNetworkAttributeType(arg *UpdateInstancePartiallyRequestPayloadGetNetworkAttributeType, val UpdateInstancePartiallyRequestPayloadGetNetworkRetType) {
+	*arg = &val
+}
 
 /*
 	types and functions for replicas
@@ -182,14 +182,13 @@ func setUpdateInstancePartiallyRequestPayloadGetVersionAttributeType(arg *Update
 
 // UpdateInstancePartiallyRequestPayload struct for UpdateInstancePartiallyRequestPayload
 type UpdateInstancePartiallyRequestPayload struct {
-	// List of IPV4 cidr.
-	Acl UpdateInstancePartiallyRequestPayloadGetAclAttributeType `json:"acl,omitempty"`
 	// The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.
 	BackupSchedule UpdateInstancePartiallyRequestPayloadGetBackupScheduleAttributeType `json:"backupSchedule,omitempty"`
 	// The id of the instance flavor.
 	FlavorId UpdateInstancePartiallyRequestPayloadGetFlavorIdAttributeType `json:"flavorId,omitempty"`
 	// The name of the instance.
 	Name     UpdateInstancePartiallyRequestPayloadGetNameAttributeType     `json:"name,omitempty"`
+	Network  UpdateInstancePartiallyRequestPayloadGetNetworkAttributeType  `json:"network,omitempty"`
 	Replicas UpdateInstancePartiallyRequestPayloadGetReplicasAttributeType `json:"replicas,omitempty"`
 	// Can be cast to int32 without loss of precision.
 	RetentionDays UpdateInstancePartiallyRequestPayloadGetRetentionDaysAttributeType `json:"retentionDays,omitempty"`
@@ -212,29 +211,6 @@ func NewUpdateInstancePartiallyRequestPayload() *UpdateInstancePartiallyRequestP
 func NewUpdateInstancePartiallyRequestPayloadWithDefaults() *UpdateInstancePartiallyRequestPayload {
 	this := UpdateInstancePartiallyRequestPayload{}
 	return &this
-}
-
-// GetAcl returns the Acl field value if set, zero value otherwise.
-func (o *UpdateInstancePartiallyRequestPayload) GetAcl() (res UpdateInstancePartiallyRequestPayloadGetAclRetType) {
-	res, _ = o.GetAclOk()
-	return
-}
-
-// GetAclOk returns a tuple with the Acl field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *UpdateInstancePartiallyRequestPayload) GetAclOk() (ret UpdateInstancePartiallyRequestPayloadGetAclRetType, ok bool) {
-	return getUpdateInstancePartiallyRequestPayloadGetAclAttributeTypeOk(o.Acl)
-}
-
-// HasAcl returns a boolean if a field has been set.
-func (o *UpdateInstancePartiallyRequestPayload) HasAcl() bool {
-	_, ok := o.GetAclOk()
-	return ok
-}
-
-// SetAcl gets a reference to the given []string and assigns it to the Acl field.
-func (o *UpdateInstancePartiallyRequestPayload) SetAcl(v UpdateInstancePartiallyRequestPayloadGetAclRetType) {
-	setUpdateInstancePartiallyRequestPayloadGetAclAttributeType(&o.Acl, v)
 }
 
 // GetBackupSchedule returns the BackupSchedule field value if set, zero value otherwise.
@@ -304,6 +280,29 @@ func (o *UpdateInstancePartiallyRequestPayload) HasName() bool {
 // SetName gets a reference to the given string and assigns it to the Name field.
 func (o *UpdateInstancePartiallyRequestPayload) SetName(v UpdateInstancePartiallyRequestPayloadGetNameRetType) {
 	setUpdateInstancePartiallyRequestPayloadGetNameAttributeType(&o.Name, v)
+}
+
+// GetNetwork returns the Network field value if set, zero value otherwise.
+func (o *UpdateInstancePartiallyRequestPayload) GetNetwork() (res UpdateInstancePartiallyRequestPayloadGetNetworkRetType) {
+	res, _ = o.GetNetworkOk()
+	return
+}
+
+// GetNetworkOk returns a tuple with the Network field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UpdateInstancePartiallyRequestPayload) GetNetworkOk() (ret UpdateInstancePartiallyRequestPayloadGetNetworkRetType, ok bool) {
+	return getUpdateInstancePartiallyRequestPayloadGetNetworkAttributeTypeOk(o.Network)
+}
+
+// HasNetwork returns a boolean if a field has been set.
+func (o *UpdateInstancePartiallyRequestPayload) HasNetwork() bool {
+	_, ok := o.GetNetworkOk()
+	return ok
+}
+
+// SetNetwork gets a reference to the given UpdateInstancePartiallyRequestPayloadNetwork and assigns it to the Network field.
+func (o *UpdateInstancePartiallyRequestPayload) SetNetwork(v UpdateInstancePartiallyRequestPayloadGetNetworkRetType) {
+	setUpdateInstancePartiallyRequestPayloadGetNetworkAttributeType(&o.Network, v)
 }
 
 // GetReplicas returns the Replicas field value if set, zero value otherwise.
@@ -400,9 +399,6 @@ func (o *UpdateInstancePartiallyRequestPayload) SetVersion(v UpdateInstanceParti
 
 func (o UpdateInstancePartiallyRequestPayload) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if val, ok := getUpdateInstancePartiallyRequestPayloadGetAclAttributeTypeOk(o.Acl); ok {
-		toSerialize["Acl"] = val
-	}
 	if val, ok := getUpdateInstancePartiallyRequestPayloadGetBackupScheduleAttributeTypeOk(o.BackupSchedule); ok {
 		toSerialize["BackupSchedule"] = val
 	}
@@ -411,6 +407,9 @@ func (o UpdateInstancePartiallyRequestPayload) ToMap() (map[string]interface{}, 
 	}
 	if val, ok := getUpdateInstancePartiallyRequestPayloadGetNameAttributeTypeOk(o.Name); ok {
 		toSerialize["Name"] = val
+	}
+	if val, ok := getUpdateInstancePartiallyRequestPayloadGetNetworkAttributeTypeOk(o.Network); ok {
+		toSerialize["Network"] = val
 	}
 	if val, ok := getUpdateInstancePartiallyRequestPayloadGetReplicasAttributeTypeOk(o.Replicas); ok {
 		toSerialize["Replicas"] = val
