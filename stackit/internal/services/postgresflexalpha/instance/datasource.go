@@ -19,7 +19,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -227,11 +226,11 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.InstanceStateDeleted {
-		resp.State.RemoveResource(ctx)
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
-		return
-	}
+	//if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.InstanceStateDeleted {
+	//	resp.State.RemoveResource(ctx)
+	//	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
+	//	return
+	//}
 
 	var flavor = &flavorModel{}
 	if instanceResp != nil && instanceResp.FlavorId != nil {

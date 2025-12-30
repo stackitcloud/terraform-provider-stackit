@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
@@ -41,6 +42,7 @@ var (
 	_ resource.ResourceWithImportState    = &instanceResource{}
 	_ resource.ResourceWithModifyPlan     = &instanceResource{}
 	_ resource.ResourceWithValidateConfig = &instanceResource{}
+	_ resource.ResourceWithIdentity       = &instanceResource{}
 )
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -388,6 +390,16 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 	}
 }
 
+func (r *instanceResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"id": identityschema.StringAttribute{
+				RequiredForImport: true, // must be set during import by the practitioner
+			},
+		},
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(
 	ctx context.Context,
@@ -495,18 +507,24 @@ func (r *instanceResource) Create(
 	}
 
 	ctx = core.LogResponse(ctx)
-
 	instanceId := *createResp.Id
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"instance_id": instanceId,
-	})
+
+	model.InstanceId = types.StringValue(instanceId)
+	model.Id = utils.BuildInternalTerraformId(projectId, region, instanceId)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Set data returned by API in identity
+	identity := IdentityModel{
+		ID: utils.BuildInternalTerraformId(projectId, region, instanceId),
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
+
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait handler error: %v", err))
 		return
 	}
 
@@ -530,6 +548,13 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Read identity data
+	var identityData IdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -591,10 +616,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.InstanceStateDeleted {
-		resp.State.RemoveResource(ctx)
-		return
-	}
+	//if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.InstanceStateDeleted {
+	//	resp.State.RemoveResource(ctx)
+	//	return
+	//}
 
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
@@ -602,12 +627,19 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	// Set refreshed state
-	diags = resp.State.Set(ctx, model)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	identityData.ID = model.Id
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identityData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Info(ctx, "Postgres Flex instance read")
 }
 

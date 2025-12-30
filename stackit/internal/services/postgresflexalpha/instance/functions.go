@@ -253,6 +253,7 @@ func toCreatePayload(
 	}
 
 	return &postgresflex.CreateInstanceRequestPayload{
+		Acl:            &aclElements,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		Encryption:     encryptionPayload,
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),

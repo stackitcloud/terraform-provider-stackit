@@ -18,6 +18,26 @@ import (
 var _ MappedNullable = &CreateInstanceRequestPayload{}
 
 /*
+	types and functions for acl
+*/
+
+// isArray
+type CreateInstanceRequestPayloadGetAclAttributeType = *[]string
+type CreateInstanceRequestPayloadGetAclArgType = []string
+type CreateInstanceRequestPayloadGetAclRetType = []string
+
+func getCreateInstanceRequestPayloadGetAclAttributeTypeOk(arg CreateInstanceRequestPayloadGetAclAttributeType) (ret CreateInstanceRequestPayloadGetAclRetType, ok bool) {
+	if arg == nil {
+		return ret, false
+	}
+	return *arg, true
+}
+
+func setCreateInstanceRequestPayloadGetAclAttributeType(arg *CreateInstanceRequestPayloadGetAclAttributeType, val CreateInstanceRequestPayloadGetAclRetType) {
+	*arg = &val
+}
+
+/*
 	types and functions for backupSchedule
 */
 
@@ -203,6 +223,7 @@ type CreateInstanceRequestPayloadGetVersionRetType = string
 
 // CreateInstanceRequestPayload struct for CreateInstanceRequestPayload
 type CreateInstanceRequestPayload struct {
+	Acl CreateInstanceRequestPayloadGetAclAttributeType `json:"acl" required:"true"`
 	// The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.
 	// REQUIRED
 	BackupSchedule CreateInstanceRequestPayloadGetBackupScheduleAttributeType `json:"backupSchedule" required:"true"`
