@@ -132,6 +132,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"project_id":         "STACKIT project ID to which the instance is associated.",
 		"name":               "Instance name.",
 		"backup_schedule":    "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
+		"retention_days":     "The days of the retention period.",
 		"flavor":             "The block that defines the flavor data.",
 		"flavor_id":          "The ID of the flavor.",
 		"flavor_description": "The flavor detailed flavor name.",
@@ -202,6 +203,10 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 			},
 			"backup_schedule": schema.StringAttribute{
 				Required: true,
+			},
+			"retention_days": schema.Int64Attribute{
+				Description: descriptions["retention_days"],
+				Required:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required:    true,

@@ -49,6 +49,7 @@ import {
 - `network` (Attributes) The network block configuration. (see [below for nested schema](#nestedatt--network))
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 - `replicas` (Number)
+- `retention_days` (Number) The days of the retention period.
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String) The database version used.
 

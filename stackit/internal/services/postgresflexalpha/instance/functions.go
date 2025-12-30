@@ -254,14 +254,14 @@ func toCreatePayload(
 
 	return &postgresflex.CreateInstanceRequestPayload{
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
+		Encryption:     encryptionPayload,
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		// TODO - verify working
-		Replicas:   postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(&replVal),
-		Storage:    storagePayload,
-		Version:    conversion.StringValueToPointer(model.Version),
-		Encryption: encryptionPayload,
-		Network:    networkPayload,
+		Network:        networkPayload,
+		Replicas:       postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(&replVal),
+		RetentionDays:  conversion.Int64ValueToPointer(model.RetentionDays),
+		Storage:        storagePayload,
+		Version:        conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
@@ -298,25 +298,25 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.Int64ValueToPointer(flavor.CPU)
-	if cpu == nil {
+	cpu := flavor.CPU.ValueInt64()
+	if cpu == 0 {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.Int64ValueToPointer(flavor.RAM)
-	if ram == nil {
+	ram := flavor.RAM.ValueInt64()
+	if ram == 0 {
 		return fmt.Errorf("nil RAM")
 	}
 
-	nodeType := conversion.StringValueToPointer(flavor.NodeType)
-	if nodeType == nil {
+	nodeType := flavor.NodeType.ValueString()
+	if nodeType == "" {
 		if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
 			return fmt.Errorf("nil NodeType")
 		}
 		switch model.Replicas.ValueInt64() {
 		case 1:
-			nodeType = conversion.StringValueToPointer(types.StringValue("Single"))
+			nodeType = "Single"
 		case 3:
-			nodeType = conversion.StringValueToPointer(types.StringValue("Replicas"))
+			nodeType = "Replica"
 		default:
 			return fmt.Errorf("unknown Replicas value: %d", model.Replicas.ValueInt64())
 		}
@@ -341,14 +341,15 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 
 	avl := ""
 	foundFlavorCount := 0
+	var foundFlavors []string
 	for _, f := range flavorList {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}
-		if !strings.EqualFold(*f.NodeType, *nodeType) {
+		if !strings.EqualFold(*f.NodeType, nodeType) {
 			continue
 		}
-		if *f.Cpu == *cpu && *f.Memory == *ram {
+		if *f.Cpu == cpu && *f.Memory == ram {
 			var useSc *postgresflex.FlavorStorageClassesStorageClass
 			for _, sc := range *f.StorageClasses {
 				if *sc.Class != *storageClass {
@@ -365,6 +366,7 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 
 			flavor.Id = types.StringValue(*f.Id)
 			flavor.Description = types.StringValue(*f.Description)
+			foundFlavors = append(foundFlavors, fmt.Sprintf("%s (%d/%d - %s)", *f.Id, *f.Cpu, *f.Memory, *f.NodeType))
 			foundFlavorCount++
 		}
 		for _, cls := range *f.StorageClasses {
@@ -372,7 +374,12 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 		}
 	}
 	if foundFlavorCount > 1 {
-		return fmt.Errorf("multiple flavors found: %d flavors", foundFlavorCount)
+		return fmt.Errorf(
+			"number of flavors returned: %d\nmultiple flavors found: %d flavors\n  %s\n",
+			len(flavorList),
+			foundFlavorCount,
+			strings.Join(foundFlavors, "\n  "),
+		)
 	}
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
@@ -390,6 +397,7 @@ func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, re
 	page := int64(1)
 	size := int64(10)
 	sort := postgresflex.FLAVORSORT_INDEX_ASC
+	counter := 0
 	for {
 		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, &sort)
 		if err != nil {
@@ -399,12 +407,28 @@ func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, re
 			return nil, fmt.Errorf("finding flavors for project %s", projectId)
 		}
 		pagination := res.GetPagination()
-		flavorList = append(flavorList, *res.Flavors...)
+		flavors := res.GetFlavors()
+		for _, flavor := range flavors {
+			flavorList = append(flavorList, flavor)
+		}
 
-		if *pagination.TotalRows <= int64(len(flavorList)) {
+		if *pagination.TotalRows < int64(len(flavorList)) {
+			return nil, fmt.Errorf("total rows is smaller than current accumulated list - that should not happen")
+		}
+		if *pagination.TotalRows == int64(len(flavorList)) {
 			break
 		}
 		page++
+
+		if page > *pagination.TotalPages {
+			break
+		}
+
+		// implement a breakpoint
+		counter++
+		if counter > 1000 {
+			panic("too many pagination results")
+		}
 	}
 	return flavorList, nil
 }

@@ -2526,6 +2526,9 @@ func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, reg
 		ctx:        ctx,
 		projectId:  projectId,
 		region:     region,
+		page:       page,
+		size:       size,
+		sort:       sort,
 	}
 }
 
@@ -2535,6 +2538,9 @@ func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId stri
 		ctx:        ctx,
 		projectId:  projectId,
 		region:     region,
+		page:       page,
+		size:       size,
+		sort:       sort,
 	}
 	return r.Execute()
 }

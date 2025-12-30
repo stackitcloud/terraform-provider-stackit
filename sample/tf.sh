@@ -8,12 +8,18 @@ TERRAFORM_CONFIG=$(pwd)/sample.tfrc
 export TERRAFORM_CONFIG
 
 parsed_options=$(
-  getopt -n "$0" -o l -- "$@"
+  getopt -n "$0" -o dil -- "$@"
 ) || exit
 eval "set -- $parsed_options"
 while [ "$#" -gt 0 ]; do
   case $1 in
-    (-l) TF_LOG=TRACE
+    (-d) TF_LOG=DEBUG
+         export TF_LOG
+         shift;;
+    (-i) TF_LOG=INFO
+         export TF_LOG
+         shift;;
+    (-t) TF_LOG=TRACE
          export TF_LOG
          shift;;
     (--) shift; break;;

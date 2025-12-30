@@ -14,6 +14,7 @@ type Model struct {
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Flavor         types.Object `tfsdk:"flavor"`
 	Replicas       types.Int64  `tfsdk:"replicas"`
+	RetentionDays  types.Int64  `tfsdk:"retention_days"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
 	Region         types.String `tfsdk:"region"`
