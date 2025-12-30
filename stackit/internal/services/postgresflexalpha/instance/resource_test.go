@@ -241,6 +241,7 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&postgresflex.CreateInstanceRequestPayload{
+				Acl:        &[]string{"0.0.0.0/0"},
 				Storage:    postgresflex.CreateInstanceRequestPayloadGetStorageAttributeType(&postgresflex.Storage{}),
 				Encryption: &postgresflex.InstanceEncryption{},
 				Network: &postgresflex.InstanceNetwork{
@@ -253,7 +254,9 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"use flavor node_type instead of replicas",
 			&Model{},
-			[]string{},
+			[]string{
+				"0.0.0.0/0",
+			},
 			&flavorModel{
 				NodeType: types.StringValue("Single"),
 			},
@@ -265,7 +268,7 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&postgresflex.CreateInstanceRequestPayload{
-				//Acl:     &[]string{},
+				Acl:        &[]string{"0.0.0.0/0"},
 				Storage:    postgresflex.CreateInstanceRequestPayloadGetStorageAttributeType(&postgresflex.Storage{}),
 				Encryption: &postgresflex.InstanceEncryption{},
 				Network: &postgresflex.InstanceNetwork{

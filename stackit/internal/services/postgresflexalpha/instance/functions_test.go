@@ -249,12 +249,12 @@ var responseList = []testFlavor{
 	/* ......................................................... */
 	{
 		Cpu:         1,
-		Description: "flavor 1.1",
-		Id:          "flv1.1",
+		Description: "flavor 1.1 replica",
+		Id:          "flv1.1r",
 		MaxGB:       500,
 		Memory:      1,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -263,12 +263,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         1,
-		Description: "flavor 1.2",
-		Id:          "flv1.2",
+		Description: "flavor 1.2 replica",
+		Id:          "flv1.2r",
 		MaxGB:       500,
 		Memory:      2,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -277,12 +277,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         1,
-		Description: "flavor 1.3",
-		Id:          "flv1.3",
+		Description: "flavor 1.3 replica",
+		Id:          "flv1.3r",
 		MaxGB:       500,
 		Memory:      3,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -291,12 +291,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         1,
-		Description: "flavor 1.4",
-		Id:          "flv1.4",
+		Description: "flavor 1.4 replica",
+		Id:          "flv1.4r",
 		MaxGB:       500,
 		Memory:      4,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -305,12 +305,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         1,
-		Description: "flavor 1.5",
-		Id:          "flv1.5",
+		Description: "flavor 1.5 replica",
+		Id:          "flv1.5r",
 		MaxGB:       500,
 		Memory:      5,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -319,12 +319,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         1,
-		Description: "flavor 1.6",
-		Id:          "flv1.6",
+		Description: "flavor 1.6 replica",
+		Id:          "flv1.6r",
 		MaxGB:       500,
 		Memory:      6,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -334,12 +334,12 @@ var responseList = []testFlavor{
 	/* ......................................................... */
 	{
 		Cpu:         2,
-		Description: "flavor 2.1",
-		Id:          "flv2.1",
+		Description: "flavor 2.1 replica",
+		Id:          "flv2.1r",
 		MaxGB:       500,
 		Memory:      1,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -348,12 +348,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         2,
-		Description: "flavor 2.2",
-		Id:          "flv2.2",
+		Description: "flavor 2.2 replica",
+		Id:          "flv2.2r",
 		MaxGB:       500,
 		Memory:      2,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -362,12 +362,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         2,
-		Description: "flavor 2.3",
-		Id:          "flv2.3",
+		Description: "flavor 2.3 replica",
+		Id:          "flv2.3r",
 		MaxGB:       500,
 		Memory:      3,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -376,12 +376,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         2,
-		Description: "flavor 2.4",
-		Id:          "flv2.4",
+		Description: "flavor 2.4 replica",
+		Id:          "flv2.4r",
 		MaxGB:       500,
 		Memory:      4,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -390,12 +390,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         2,
-		Description: "flavor 2.5",
-		Id:          "flv2.5",
+		Description: "flavor 2.5 replica",
+		Id:          "flv2.5r",
 		MaxGB:       500,
 		Memory:      5,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -404,12 +404,12 @@ var responseList = []testFlavor{
 	},
 	{
 		Cpu:         2,
-		Description: "flavor 2.6",
-		Id:          "flv2.6",
+		Description: "flavor 2.6 replica",
+		Id:          "flv2.6r",
 		MaxGB:       500,
 		Memory:      6,
 		MinGB:       5,
-		NodeType:    "replica",
+		NodeType:    "Replica",
 		StorageClasses: []testFlavorStorageClass{
 			{Class: "sc1", MaxIoPerSec: 0, MaxThroughInMb: 0},
 			{Class: "sc2", MaxIoPerSec: 0, MaxThroughInMb: 0},
@@ -478,11 +478,12 @@ func (c postgresFlexClientMocked) GetFlavorsRequestExecute(
 	}
 
 	res.Flavors = &resFlavors
+	totPages := (int64(len(myList))-1) / *size + 1
 	res.Pagination = &postgresflex.Pagination{
 		Page:       page,
 		Size:       size,
 		Sort:       utils.Ptr("id.asc"),
-		TotalPages: utils.Ptr(int64(1)),
+		TotalPages: utils.Ptr(int64(totPages)),
 		TotalRows:  utils.Ptr(int64(len(myList))),
 	}
 
@@ -545,11 +546,9 @@ func Test_getAllFlavors(t *testing.T) {
 				region:    "region",
 			},
 			firstItem: 0,
-			// we take care of max value at another place
-			lastItem: 20000,
-			// 0 indexed therefore we want :21
-			want:    testFlavorListToResponseFlavorList(responseList),
-			wantErr: false,
+			lastItem:  len(responseList),
+			want:      testFlavorListToResponseFlavorList(responseList),
+			wantErr:   false,
 		},
 	}
 	for _, tt := range tests {
@@ -673,7 +672,32 @@ func Test_loadFlavorId(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name: "find a replicas flavor",
+			name: "find a replicas flavor lower case",
+			args: args{
+				ctx: context.Background(),
+				model: &Model{
+					ProjectId: basetypes.NewStringValue("project"),
+					Region:    basetypes.NewStringValue("region"),
+				},
+				flavor: &flavorModel{
+					CPU:      basetypes.NewInt64Value(1),
+					RAM:      basetypes.NewInt64Value(1),
+					NodeType: basetypes.NewStringValue("replica"),
+				},
+				storage: &storageModel{
+					Class: basetypes.NewStringValue("sc1"),
+					Size:  basetypes.NewInt64Value(100),
+				},
+			},
+			firstItem: 0,
+			lastItem:  len(responseList) - 1,
+			want: []postgresflex.ListFlavors{
+				testFlavorToResponseFlavor(responseList[16]),
+			},
+			wantErr: false,
+		},
+		{
+			name: "find a replicas flavor CamelCase",
 			args: args{
 				ctx: context.Background(),
 				model: &Model{
@@ -693,7 +717,7 @@ func Test_loadFlavorId(t *testing.T) {
 			firstItem: 0,
 			lastItem:  len(responseList) - 1,
 			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[11]),
+				testFlavorToResponseFlavor(responseList[16]),
 			},
 			wantErr: false,
 		},
@@ -718,7 +742,7 @@ func Test_loadFlavorId(t *testing.T) {
 			firstItem: 0,
 			lastItem:  len(responseList) - 1,
 			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[11]),
+				testFlavorToResponseFlavor(responseList[16]),
 			},
 			wantErr: false,
 		},
