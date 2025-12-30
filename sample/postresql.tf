@@ -2,7 +2,7 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "ptlsdbsrv" {
   project_id      = var.project_id
   name            = "pgsql-example-instance"
   backup_schedule = "0 0 * * *"
-  retention_days = 33
+  retention_days  = 33
   flavor = {
     cpu = 2
     ram = 4
