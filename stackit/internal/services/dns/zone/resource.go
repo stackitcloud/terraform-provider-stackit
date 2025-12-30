@@ -537,10 +537,9 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	model.Active = types.BoolPointerValue(z.Active)
 	model.ContactEmail = types.StringPointerValue(z.ContactEmail)
 	model.DefaultTTL = types.Int64PointerValue(z.DefaultTTL)
-	model.DnsName = types.StringPointerValue(z.DnsName)
 	model.ExpireTime = types.Int64PointerValue(z.ExpireTime)
 	model.IsReverseZone = types.BoolPointerValue(z.IsReverseZone)
-	model.Name = types.StringPointerValue(z.Name)
+	model.DnsName = reconcileDnsName(model.DnsName, z.DnsName)
 	model.NegativeCache = types.Int64PointerValue(z.NegativeCache)
 	model.PrimaryNameServer = types.StringPointerValue(z.PrimaryNameServer)
 	model.RecordCount = types.Int64PointerValue(rc)
@@ -566,9 +565,16 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		}
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
+
+	dnsName := conversion.StringValueToPointer(model.DnsName)
+	if dnsName != nil && strings.HasSuffix(*dnsName, ".") {
+		trimmed := strings.TrimSuffix(*dnsName, ".")
+		dnsName = &trimmed
+	}
+
 	return &dns.CreateZonePayload{
 		Name:          conversion.StringValueToPointer(model.Name),
-		DnsName:       conversion.StringValueToPointer(model.DnsName),
+		DnsName:       dnsName,
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
 		Description:   conversion.StringValueToPointer(model.Description),
 		Acl:           conversion.StringValueToPointer(model.Acl),
@@ -600,4 +606,28 @@ func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
 		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
+}
+
+func reconcileDnsName(stateDnsName types.String, apiDnsName *string) types.String {
+	if apiDnsName == nil {
+		return types.StringNull()
+	}
+
+	apiValue := *apiDnsName
+
+	if stateDnsName.IsNull() || stateDnsName.IsUnknown() {
+		return types.StringValue(apiValue)
+	}
+
+	stateValue := stateDnsName.ValueString()
+
+	// If state has trailing dot, but API doesn't
+	if strings.HasSuffix(stateValue, ".") && !strings.HasSuffix(apiValue, ".") {
+		trimmedState := strings.TrimSuffix(stateValue, ".")
+		if trimmedState == apiValue {
+			return stateDnsName // Keep the state value with the dot
+		}
+	}
+
+	return types.StringValue(apiValue)
 }
