@@ -448,7 +448,12 @@ func testFlavorToResponseFlavor(f testFlavor) postgresflex.ListFlavors {
 	}
 }
 
-func (c postgresFlexClientMocked) GetFlavorsRequestExecute(_ context.Context, _, _ string, page *int64, size *int64, _ *postgresflex.FlavorSort) (*postgresflex.GetFlavorsResponse, error) {
+func (c postgresFlexClientMocked) GetFlavorsRequestExecute(
+	_ context.Context,
+	_, _ string,
+	page, size *int64,
+	_ *postgresflex.FlavorSort,
+) (*postgresflex.GetFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -457,16 +462,13 @@ func (c postgresFlexClientMocked) GetFlavorsRequestExecute(_ context.Context, _,
 	var resFlavors []postgresflex.ListFlavors
 
 	myList := responseList[c.firstItem : c.lastItem+1]
-	// fmt.Printf("list length: %d\n", len(myList))
 
 	firstItem := *page**size - *size
-	// fmt.Printf("firstItem: %d\n", firstItem)
 	if firstItem > int64(len(myList)) {
 		firstItem = int64(len(myList))
 	}
 
 	lastItem := firstItem + *size
-	// fmt.Printf("lastItem: %d\n", lastItem)
 	if lastItem > int64(len(myList)) {
 		lastItem = int64(len(myList))
 	}

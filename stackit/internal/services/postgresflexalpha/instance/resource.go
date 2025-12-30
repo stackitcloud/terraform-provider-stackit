@@ -616,11 +616,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	//if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.InstanceStateDeleted {
-	//	resp.State.RemoveResource(ctx)
-	//	return
-	//}
-
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
 	if err != nil {

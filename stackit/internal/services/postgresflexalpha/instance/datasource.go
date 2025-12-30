@@ -226,12 +226,6 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	//if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == wait.InstanceStateDeleted {
-	//	resp.State.RemoveResource(ctx)
-	//	core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
-	//	return
-	//}
-
 	var flavor = &flavorModel{}
 	if instanceResp != nil && instanceResp.FlavorId != nil {
 		flavor.Id = types.StringValue(*instanceResp.FlavorId)

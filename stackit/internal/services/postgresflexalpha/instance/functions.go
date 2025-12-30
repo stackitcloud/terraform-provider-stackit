@@ -376,7 +376,7 @@ func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, 
 	}
 	if foundFlavorCount > 1 {
 		return fmt.Errorf(
-			"number of flavors returned: %d\nmultiple flavors found: %d flavors\n  %s\n",
+			"number of flavors returned: %d\nmultiple flavors found: %d flavors\n  %s",
 			len(flavorList),
 			foundFlavorCount,
 			strings.Join(foundFlavors, "\n  "),
@@ -409,9 +409,7 @@ func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, re
 		}
 		pagination := res.GetPagination()
 		flavors := res.GetFlavors()
-		for _, flavor := range flavors {
-			flavorList = append(flavorList, flavor)
-		}
+		flavorList = append(flavorList, flavors...)
 
 		if *pagination.TotalRows < int64(len(flavorList)) {
 			return nil, fmt.Errorf("total rows is smaller than current accumulated list - that should not happen")

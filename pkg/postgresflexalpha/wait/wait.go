@@ -170,14 +170,15 @@ func DeleteInstanceWaitHandler(
 				return false, nil, nil
 			}
 			// TODO - maybe we want to validate status if no 404 error (only unknown or terminating should be valid)
-			//switch *s.Status {
-			//default:
+			// switch *s.Status {
+			// default:
 			//	return true, nil, fmt.Errorf("instance with id %s has unexpected status %s", instanceId, *s.Status)
-			//case InstanceStateSuccess:
+			// case InstanceStateSuccess:
 			//	return false, nil, nil
-			//case InstanceStateTerminating:
+			// case InstanceStateTerminating:
 			//	return false, nil, nil
-			//}
+			// }
+
 			// TODO - add tflog for ignored cases
 			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 			if !ok {
