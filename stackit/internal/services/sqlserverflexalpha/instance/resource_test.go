@@ -125,11 +125,6 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&sqlserverflex.GetInstanceResponse{
-				Acl: &[]string{
-					"ip1",
-					"ip2",
-					"",
-				},
 				BackupSchedule: utils.Ptr("schedule"),
 				FlavorId:       utils.Ptr("flavor_id"),
 				Id:             utils.Ptr("iid"),
@@ -145,6 +140,16 @@ func TestMapFields(t *testing.T) {
 				Version:       sqlserverflex.GetInstanceResponseGetVersionAttributeType(utils.Ptr("version")),
 				IsDeletable:   utils.Ptr(true),
 				Encryption:    nil,
+				Network: &sqlserverflex.InstanceNetwork{
+					AccessScope: nil,
+					Acl: &[]string{
+						"ip1",
+						"ip2",
+						"",
+					},
+					InstanceAddress: nil,
+					RouterAddress:   nil,
+				},
 			},
 			&flavorModel{
 				Id:          basetypes.NewStringValue("flavor_id"),

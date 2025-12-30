@@ -222,13 +222,10 @@ func toCreatePayload(model *Model, storage *storageModel, encryption *encryption
 	networkPayload := &sqlserverflex.CreateInstanceRequestPayloadGetNetworkArgType{}
 	if network != nil {
 		networkPayload.AccessScope = sqlserverflex.CreateInstanceRequestPayloadNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(network.AccessScope))
-		// TODO - implement as soon as exists
-		// networkPayload.ACL
+		networkPayload.Acl = &aclElements
 	}
 
 	return &sqlserverflex.CreateInstanceRequestPayload{
-		// TODO - remove as soon as exists in network
-		Acl:            &aclElements,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       &flavorId,
 		Name:           conversion.StringValueToPointer(model.Name),
@@ -270,14 +267,19 @@ func toUpdatePayload(model *Model, storage *storageModel, network *networkModel)
 		}
 	}
 
-	// TODO - implement network.ACL as soon as it becomes available
+	networkPayload := &sqlserverflex.UpdateInstancePartiallyRequestPayloadGetNetworkArgType{}
+	if network != nil {
+		networkPayload.AccessScope = sqlserverflex.UpdateInstancePartiallyRequestPayloadNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(network.AccessScope))
+		networkPayload.Acl = &aclElements
+	}
+
 	if model.Replicas.ValueInt64() > math.MaxInt32 {
 		return nil, fmt.Errorf("replica count too big: %d", model.Replicas.ValueInt64())
 	}
 	replCount := int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
 	flavorId := flavorMdl.Id.ValueString()
 	return &sqlserverflex.UpdateInstancePartiallyRequestPayload{
-		Acl:            &aclElements,
+		Network:        networkPayload,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       &flavorId,
 		Name:           conversion.StringValueToPointer(model.Name),
