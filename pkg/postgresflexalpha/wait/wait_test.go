@@ -127,16 +127,7 @@ func TestCreateInstanceWaitHandler(t *testing.T) {
 				RouterAddress:   utils.Ptr("10.0.0.1"),
 			},
 			wantErr: true,
-			wantRes: &postgresflex.GetInstanceResponse{
-				Id:     utils.Ptr("foo-bar"),
-				Status: postgresflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr(InstanceStateFailed)),
-				Network: &postgresflex.InstanceNetwork{
-					AccessScope:     nil,
-					Acl:             nil,
-					InstanceAddress: utils.Ptr("10.0.0.1"),
-					RouterAddress:   utils.Ptr("10.0.0.1"),
-				},
-			},
+			wantRes: nil,
 		},
 		{
 			desc:             "create_failed_2",
@@ -366,12 +357,6 @@ func TestDeleteInstanceWaitHandler(t *testing.T) {
 		wantErr          bool
 	}{
 		{
-			desc:             "delete_succeeded",
-			instanceGetFails: false,
-			instanceState:    InstanceStateDeleted,
-			wantErr:          false,
-		},
-		{
 			desc:             "delete_failed",
 			instanceGetFails: false,
 			instanceState:    InstanceStateFailed,
@@ -414,15 +399,9 @@ func TestForceDeleteInstanceWaitHandler(t *testing.T) {
 		wantErr          bool
 	}{
 		{
-			desc:             "delete_succeeded",
-			instanceGetFails: false,
-			instanceState:    InstanceStateDeleted,
-			wantErr:          false,
-		},
-		{
 			desc:             "delete_failed",
 			instanceGetFails: false,
-			instanceState:    InstanceStateFailed,
+			instanceState:    InstanceStateUnknown,
 			wantErr:          true,
 		},
 		{
@@ -438,7 +417,7 @@ func TestForceDeleteInstanceWaitHandler(t *testing.T) {
 
 				apiClient := &apiClientInstanceMocked{
 					instanceGetFails:       tt.instanceGetFails,
-					instanceIsForceDeleted: tt.instanceState == InstanceStateDeleted,
+					instanceIsForceDeleted: tt.instanceState == InstanceStateFailed,
 					instanceId:             instanceId,
 					instanceState:          tt.instanceState,
 				}

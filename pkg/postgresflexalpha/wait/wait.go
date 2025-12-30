@@ -139,6 +139,8 @@ func PartialUpdateInstanceWaitHandler(
 				return false, nil, nil
 			case InstanceStateUnknown:
 				return false, nil, nil
+			case InstanceStateProgressing:
+				return false, nil, nil
 			case InstanceStateTerminating:
 				return false, nil, nil
 			case InstanceStateSuccess:
