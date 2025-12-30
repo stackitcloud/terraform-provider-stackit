@@ -64,7 +64,6 @@ func TestCreateInstanceWaitHandler(t *testing.T) {
 			},
 			wantErr: false,
 			wantRes: &sqlserverflex.GetInstanceResponse{
-				Acl:            nil,
 				BackupSchedule: nil,
 				Edition:        nil,
 				Encryption:     nil,
