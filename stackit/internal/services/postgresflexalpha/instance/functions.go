@@ -389,8 +389,8 @@ func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, re
 
 	page := int64(1)
 	size := int64(10)
+	sort := postgresflex.FLAVORSORT_INDEX_ASC
 	for {
-		sort := postgresflex.FLAVORSORT_INDEX_ASC
 		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, &sort)
 		if err != nil {
 			return nil, fmt.Errorf("listing postgresflex flavors: %w", err)
@@ -401,7 +401,7 @@ func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, re
 		pagination := res.GetPagination()
 		flavorList = append(flavorList, *res.Flavors...)
 
-		if *pagination.TotalRows == int64(len(flavorList)) {
+		if *pagination.TotalRows <= int64(len(flavorList)) {
 			break
 		}
 		page++
