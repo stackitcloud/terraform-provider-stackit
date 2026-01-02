@@ -186,6 +186,40 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
+			"preserve_trailing_dot",
+			Model{
+				ProjectId: types.StringValue("pid"),
+				ZoneId:    types.StringValue("zid"),
+				DnsName:   types.StringValue("example.com."),
+			},
+			&dns.ZoneResponse{
+				Zone: &dns.Zone{
+					Id:      utils.Ptr("zid"),
+					DnsName: utils.Ptr("example.com"),
+				},
+			},
+			Model{
+				Id:                types.StringValue("pid,zid"),
+				ProjectId:         types.StringValue("pid"),
+				ZoneId:            types.StringValue("zid"),
+				Name:              types.StringNull(),
+				DnsName:           types.StringValue("example.com."),
+				Acl:               types.StringNull(),
+				DefaultTTL:        types.Int64Null(),
+				ExpireTime:        types.Int64Null(),
+				RefreshTime:       types.Int64Null(),
+				RetryTime:         types.Int64Null(),
+				SerialNumber:      types.Int64Null(),
+				NegativeCache:     types.Int64Null(),
+				Type:              types.StringValue(""),
+				State:             types.StringValue(""),
+				PrimaryNameServer: types.StringNull(),
+				Primaries:         types.ListNull(types.StringType),
+				Visibility:        types.StringValue(""),
+			},
+			true,
+		},
+		{
 			"nullable_fields_and_int_conversions_ok",
 			Model{
 				Id:        types.StringValue("pid,zid"),
@@ -344,6 +378,19 @@ func TestToCreatePayload(t *testing.T) {
 			nil,
 			nil,
 			false,
+		},
+		{
+			"with_trailing_dot",
+			&Model{
+				Name:    types.StringValue("Name"),
+				DnsName: types.StringValue("example.com."),
+			},
+			&dns.CreateZonePayload{
+				Name:      utils.Ptr("Name"),
+				DnsName:   utils.Ptr("example.com"),
+				Primaries: &[]string{},
+			},
+			true,
 		},
 	}
 	for _, tt := range tests {

@@ -83,6 +83,8 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccDnsMinResource(t *testing.T) {
+	dotDnsName := "tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha) + ".example.home."
+
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDnsDestroy,
@@ -246,6 +248,20 @@ func TestAccDnsMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMin["record_type"])),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "fqdn"),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "state")),
+			},
+			// Test trailing dot preservation
+			{
+				Config: resourceMinConfig,
+				ConfigVariables: func() config.Variables {
+					vars := maps.Clone(testConfigVarsMin)
+					vars["dns_name"] = config.StringVariable(dotDnsName)
+					return vars
+				}(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", testutil.ProjectId),
+					// Verify that the state has the trailing dot, matching the config
+					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "dns_name", dotDnsName),
+				),
 			},
 			// Deletion is done by the framework implicitly
 		},
