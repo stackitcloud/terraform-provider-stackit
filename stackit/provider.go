@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+	alb "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/applicationloadbalancer"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
@@ -138,6 +139,7 @@ type providerModel struct {
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
+	ALBCustomEndpoint               types.String `tfsdk:"alb_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
@@ -180,6 +182,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"kms_custom_endpoint":                "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
+		"alb_custom_endpoint":                "Custom endpoint for the Application Load Balancer service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":              "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":           "Custom endpoint for the RabbitMQ service",
@@ -292,6 +295,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"mongodbflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["mongodbflex_custom_endpoint"],
+			},
+			"alb_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["alb_custom_endpoint"],
 			},
 			"loadbalancer_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -426,6 +433,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.KMSCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
 	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
 	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
+	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
 	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
 	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
 	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
@@ -471,6 +479,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		alb.NewApplicationLoadBalancerDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
@@ -570,6 +579,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
 		kmsWrappingKey.NewWrappingKeyResource,
+		alb.NewApplicationLoadBalancerResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,

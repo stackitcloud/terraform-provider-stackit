@@ -11,7 +11,8 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.13.3
-	github.com/stackitcloud/stackit-sdk-go/core v0.19.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.20.0
+	github.com/stackitcloud/stackit-sdk-go/services/alb v0.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.8.0
@@ -40,6 +41,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.3.1
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.30.0
+	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 )
 
 require (

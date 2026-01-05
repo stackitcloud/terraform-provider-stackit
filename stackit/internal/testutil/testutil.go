@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ var (
 	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
+	ALBCustomEndpoint             = os.Getenv("TF_ACC_ALB_CUSTOM_ENDPOINT")
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
 	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
@@ -80,6 +82,20 @@ var (
 
 // Provider config helper functions
 
+func ALBProviderConfig() string {
+	if ALBCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			alb_custom_endpoint = "%s"
+		}`,
+		ALBCustomEndpoint,
+	)
+}
 func ObservabilityProviderConfig() string {
 	if ObservabilityCustomEndpoint == "" {
 		return `provider "stackit" {
@@ -584,12 +600,16 @@ func CreateDefaultLocalFile() os.File {
 
 func ConvertConfigVariable(variable config.Variable) string {
 	tmpByteArray, _ := variable.MarshalJSON()
-	// In case the variable is a string, the quotes should be removed
-	if tmpByteArray[0] == '"' && tmpByteArray[len(tmpByteArray)-1] == '"' {
-		result := string(tmpByteArray[1 : len(tmpByteArray)-1])
-		// Replace escaped quotes which where added MarshalJSON
-		rawString := strings.ReplaceAll(result, `\"`, `"`)
-		return rawString
+	input := string(tmpByteArray)
+
+	// If it's a JSON string (starts and ends with quotes)
+	if strings.HasPrefix(input, `"`) && strings.HasSuffix(input, `"`) {
+		// Unquote converts the "escaped" string back to a raw Go string
+		// interpreting \n as a real newline, \" as a quote, etc.
+		if unquoted, err := strconv.Unquote(input); err == nil {
+			return unquoted
+		}
 	}
-	return string(tmpByteArray)
+
+	return input
 }

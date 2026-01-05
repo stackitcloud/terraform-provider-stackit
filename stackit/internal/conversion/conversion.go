@@ -3,6 +3,7 @@ package conversion
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
@@ -134,6 +135,32 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 	}
 
 	return &listStr, nil
+}
+
+// StringSetToPointer converts basetypes.SetValue to a pointer to a list of strings.
+// It returns nil if the value is null or unknown.
+// Note: It sorts the resulting slice to ensure deterministic behavior.
+func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
+	if set.IsNull() || set.IsUnknown() {
+		return nil, nil
+	}
+
+	elements := set.Elements()
+	result := make([]string, 0, len(elements))
+
+	for i, el := range elements {
+		elStr, ok := el.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("element %d in set is not a string (type: %T)", i, el)
+		}
+		result = append(result, elStr.ValueString())
+	}
+
+	// Because Sets are unordered in Terraform, we sort here to
+	// prevent non-deterministic behavior in the provider logic or API calls.
+	sort.Strings(result)
+
+	return &result, nil
 }
 
 // ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
