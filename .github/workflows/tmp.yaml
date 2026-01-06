@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - '**' # Ejecutar en cualquier rama
+  workflow_dispatch:
 
 jobs:
   build-and-test:
