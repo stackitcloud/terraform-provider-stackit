@@ -10,6 +10,9 @@ jobs:
   build-and-test:
     name: Build Provider & Test Plan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read      # Necesario para descargar el código (actions/checkout)
+      id-token: write     # OBLIGATORIO para que 'use_oidc = true' funcione
     
     # Configura aquí las variables de entorno necesarias para la autenticación
     # Si usas OIDC, asegúrate de que GitHub Actions tenga los permisos o secretos necesarios
