@@ -23,11 +23,10 @@ var testServiceAccountKey string
 func startMockTokenServer() *httptest.Server {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := clients.TokenResponseBody{
-			AccessToken:  "mock_access_token",
-			RefreshToken: "mock_refresh_token",
-			TokenType:    "Bearer",
-			ExpiresIn:    int(time.Now().Add(time.Hour).Unix()),
-			Scope:        "mock_scope",
+			AccessToken: "mock_access_token",
+			TokenType:   "Bearer",
+			ExpiresIn:   int(time.Now().Add(time.Hour).Unix()),
+			Scope:       "mock_scope",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)

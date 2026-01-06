@@ -25,7 +25,7 @@ func NewAccessTokenEphemeralResource() ephemeral.EphemeralResource {
 }
 
 type accessTokenEphemeralResource struct {
-	keyAuthConfig config.Configuration
+	authConfig config.Configuration
 }
 
 func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
@@ -44,12 +44,15 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 		return
 	}
 
-	e.keyAuthConfig = config.Configuration{
-		ServiceAccountKey:     ephemeralProviderData.ServiceAccountKey,
-		ServiceAccountKeyPath: ephemeralProviderData.ServiceAccountKeyPath,
-		PrivateKeyPath:        ephemeralProviderData.PrivateKey,
-		PrivateKey:            ephemeralProviderData.PrivateKeyPath,
-		TokenCustomUrl:        ephemeralProviderData.TokenCustomEndpoint,
+	e.authConfig = config.Configuration{
+		ServiceAccountKey:                ephemeralProviderData.ServiceAccountKey,
+		ServiceAccountKeyPath:            ephemeralProviderData.ServiceAccountKeyPath,
+		PrivateKeyPath:                   ephemeralProviderData.PrivateKey,
+		PrivateKey:                       ephemeralProviderData.PrivateKeyPath,
+		TokenCustomUrl:                   ephemeralProviderData.TokenCustomEndpoint,
+		ServiceAccountFederatedTokenPath: ephemeralProviderData.ServiceAccountFederatedTokenPath,
+		ServiceAccountFederatedToken:     ephemeralProviderData.ServiceAccountFederatedToken,
+		ServiceAccountEmail:              ephemeralProviderData.ServiceAccountEmail,
 	}
 }
 
@@ -95,7 +98,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 		return
 	}
 
-	accessToken, err := getAccessToken(&e.keyAuthConfig)
+	accessToken, err := getAccessToken(&e.authConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", err.Error())
 		return
@@ -107,7 +110,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 
 // getAccessToken initializes authentication using the provided config and returns an access token via the KeyFlow mechanism.
 func getAccessToken(keyAuthConfig *config.Configuration) (string, error) {
-	roundTripper, err := auth.KeyAuth(keyAuthConfig)
+	roundTripper, err := auth.SetupAuth(keyAuthConfig)
 	if err != nil {
 		return "", fmt.Errorf(
 			"failed to initialize authentication: %w. "+
@@ -117,13 +120,15 @@ func getAccessToken(keyAuthConfig *config.Configuration) (string, error) {
 	}
 
 	// Type assert to access token functionality
-	client, ok := roundTripper.(*clients.KeyFlow)
-	if !ok {
-		return "", fmt.Errorf("internal error: expected *clients.KeyFlow, but received a different implementation of http.RoundTripper")
+	var accessToken string
+	switch client := roundTripper.(type) {
+	case *clients.KeyFlow:
+		accessToken, err = client.GetAccessToken()
+	case *clients.WorkloadIdentityFederationFlow:
+		accessToken, err = client.GetAccessToken()
+	default:
+		return "", fmt.Errorf("internal error: expected KeyFlow or WorkloadIdentityFlow, but received a different implementation of http.RoundTripper")
 	}
-
-	// Retrieve the access token
-	accessToken, err := client.GetAccessToken()
 	if err != nil {
 		return "", fmt.Errorf("error obtaining access token: %w", err)
 	}
