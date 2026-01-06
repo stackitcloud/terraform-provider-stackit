@@ -87,7 +87,7 @@ jobs:
 
           resource "stackit_service_account" "sa"   {
             project_id = "62675838-7758-4b99-a4eb-84b20ac8626b"
-            name       = "terraform-wif-2"
+            name       = "terraform-wif-ci"
           }
           EOF
 
@@ -101,3 +101,19 @@ jobs:
           
           # Ejecutamos plan. Si el provider carga y la API responde, esto pasará.
           terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+      # PASO RECOMENDADO: Destruye los recursos al finalizar para no dejar basura
+      # ni causar errores de "resource already exists" en el siguiente push.
+      # 'if: always()' asegura que se ejecute aunque los pasos anteriores fallen, 
+      # siempre que se haya creado algo de estado.
+      - name: Terraform Destroy
+        if: always() 
+        run: |
+          if [ -f terraform.tfstate ]; then
+            terraform destroy -auto-approve
+          else
+            echo "No state file found, skipping destroy."
+          fi
