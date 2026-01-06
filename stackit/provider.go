@@ -2,7 +2,11 @@ package stackit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -183,6 +187,8 @@ type providerModel struct {
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
+	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
 	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
 	Experiments         types.List `tfsdk:"experiments"`
@@ -200,6 +206,8 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_email":                "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
 		"use_oidc":                             "Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
+		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
+		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
 		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
@@ -273,6 +281,14 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"use_oidc": schema.BoolAttribute{
 				Optional:    true,
 				Description: descriptions["use_oidc"],
+			},
+			"oidc_request_token": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["oidc_request_token"],
+			},
+			"oidc_request_url": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["oidc_request_url"],
 			},
 			"region": schema.StringAttribute{
 				Optional:           true,
@@ -511,7 +527,17 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 
 	if sdkConfig.WorkloadIdentityFederation {
-		//
+		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
+		oidcReqURL := getEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
+		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+		if oidcReqURL != "" && oidcReqToken != "" {
+			id_token, err := githubAssertion(ctx, oidcReqURL, oidcReqToken)
+			if err != nil {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Requesting id token from Github %v", err))
+				return
+			}
+			sdkConfig.ServiceAccountFederatedToken = id_token
+		}
 	}
 
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
@@ -721,48 +747,51 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 	}
 }
 
-// func (a *GitHubOIDCAuthorizer) githubAssertion(ctx context.Context, _ *http.Request) (*string, error) {
-// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.conf.IDTokenRequestURL, http.NoBody)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("githubAssertion: failed to build request: %+v", err)
-// 	}
+func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, oidc_request_url, http.NoBody)
+	if err != nil {
+		return "", fmt.Errorf("githubAssertion: failed to build request: %+v", err)
+	}
 
-// 	query, err := url.ParseQuery(req.URL.RawQuery)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("githubAssertion: cannot parse URL query")
-// 	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oidc_request_token))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-// 	if query.Get("audience") == "" {
-// 		query.Set("audience", "api://AzureADTokenExchange")
-// 		req.URL.RawQuery = query.Encode()
-// 	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("githubAssertion: cannot request token: %v", err)
+	}
 
-// 	req.Header.Set("Accept", "application/json")
-// 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.conf.IDTokenRequestToken))
-// 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", fmt.Errorf("githubAssertion: cannot parse response: %v", err)
+	}
 
-// 	resp, err := Client.Do(req)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("githubAssertion: cannot request token: %v", err)
-// 	}
+	if c := resp.StatusCode; c < 200 || c > 299 {
+		return "", fmt.Errorf("githubAssertion: received HTTP status %d with response: %s", resp.StatusCode, body)
+	}
 
-// 	defer resp.Body.Close()
-// 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-// 	if err != nil {
-// 		return nil, fmt.Errorf("githubAssertion: cannot parse response: %v", err)
-// 	}
+	var tokenRes struct {
+		Value string `json:"value"`
+	}
+	if err := json.Unmarshal(body, &tokenRes); err != nil {
+		return "", fmt.Errorf("githubAssertion: cannot unmarshal response: %v", err)
+	}
 
-// 	if c := resp.StatusCode; c < 200 || c > 299 {
-// 		return nil, fmt.Errorf("githubAssertion: received HTTP status %d with response: %s", resp.StatusCode, body)
-// 	}
+	return tokenRes.Value, nil
+}
 
-// 	var tokenRes struct {
-// 		Count *int    `json:"count"`
-// 		Value *string `json:"value"`
-// 	}
-// 	if err := json.Unmarshal(body, &tokenRes); err != nil {
-// 		return nil, fmt.Errorf("githubAssertion: cannot unmarshal response: %v", err)
-// 	}
+// getEnvStringOrDefault takes a Framework StringValue and a corresponding Environment Variable name and returns
+// either the string value set in the StringValue if not Null / Unknown _or_ the os.GetEnv() value of the Environment
+// Variable provided. If both of these are empty, an empty string defaultValue is returned.
+func getEnvStringOrDefault(val types.String, envVar string, defaultValue string) string {
+	if val.IsNull() || val.IsUnknown() {
+		if v := os.Getenv(envVar); v != "" {
+			return os.Getenv(envVar)
+		}
+		return defaultValue
+	}
 
-// 	return tokenRes.Value, nil
-// }
+	return val.ValueString()
+}
