@@ -1,0 +1,99 @@
+name: Build and Validate Provider
+
+on:
+  push:
+    branches:
+      - '**' # Ejecutar en cualquier rama
+
+jobs:
+  build-and-test:
+    name: Build Provider & Test Plan
+    runs-on: ubuntu-latest
+    
+    # Configura aquí las variables de entorno necesarias para la autenticación
+    # Si usas OIDC, asegúrate de que GitHub Actions tenga los permisos o secretos necesarios
+    env:
+      # Ejemplo de variables que tu provider podría necesitar para autenticarse:
+      # STACKIT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.STACKIT_TOKEN }}
+      # STACKIT_SERVICE_ACCOUNT_KEY: ${{ secrets.STACKIT_KEY }}
+      GOPROXY: "https://proxy.golang.org,direct"
+
+    steps:
+      # 1. Descargar el código del repositorio
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Configurar Go (ajusta la versión según tu go.mod)
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      # 3. Compilar el Provider
+      # Es crucial que el binario tenga un nombre reconocible, aunque dev_overrides apunta al directorio.
+      - name: Build Provider
+        run: |
+          go build -o terraform-provider-stackit
+          chmod +x terraform-provider-stackit
+          echo "BINARY_PATH=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+
+      # 4. Configurar Terraform CLI para usar el binario local (Dev Overrides)
+      # Esto crea el archivo ~/.terraformrc que le dice a TF dónde buscar tu provider
+      - name: Configure Terraform Dev Overrides
+        run: |
+          cat <<EOF > ~/.terraformrc
+          provider_installation {
+            dev_overrides {
+              "stackitcloud/stackit" = "${{ env.BINARY_PATH }}"
+            }
+            # Para otros providers (random, null, etc), usa el registro normal
+            direct {}
+          }
+          EOF
+          
+          echo "Terraform RC content:"
+          cat ~/.terraformrc
+
+      # 5. Instalar Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false # Recomendado cuando se manipula la salida o config compleja
+
+      # 6. Crear el archivo main.tf con tu código de prueba
+      - name: Create Test Configuration
+        run: |
+          cat <<EOF > main.tf
+          terraform {
+            required_providers {
+              stackit = {
+                source = "stackitcloud/stackit"
+              }
+            }
+          }
+
+          provider "stackit" {
+            default_region                   = "eu01"
+            enable_beta_resources            = true
+            service_account_custom_endpoint  = "https://service-account.api.qa.stackit.cloud"
+            token_custom_endpoint            = "https://accounts.qa.stackit.cloud/oauth/v2/token"
+            service_account_email            = "test-idp-njf5pc1@sa.stackit.cloud"
+            use_oidc                         = true
+          }
+
+          resource "stackit_service_account" "sa"   {
+            project_id = "62675838-7758-4b99-a4eb-84b20ac8626b"
+            name       = "terraform-wif-2"
+          }
+          EOF
+
+      # 7. Ejecutar Terraform Plan
+      # Nota: init fallará al intentar verificar checksums de dev_overrides, eso es normal, 
+      # por eso usamos -backend=false o simplemente corremos plan directo si no requerimos estado remoto.
+      - name: Terraform Plan
+        run: |
+          # Inicializamos sin backend para pruebas rápidas
+          terraform init -backend=false
+          
+          # Ejecutamos plan. Si el provider carga y la API responde, esto pasará.
+          terraform plan -out=tfplan
