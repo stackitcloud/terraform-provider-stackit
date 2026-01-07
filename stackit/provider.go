@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -541,7 +540,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
-				return githubAssertion(ctx, oidcReqURL, oidcReqToken)
+				return githubAssertion(oidcReqURL, oidcReqToken)
 			}
 		}
 	}
@@ -730,8 +729,8 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 	}
 }
 
-func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, oidc_request_url, http.NoBody)
+func githubAssertion(oidc_request_url, oidc_request_token string) (string, error) {
+	req, err := http.NewRequest(http.MethodGet, oidc_request_url, http.NoBody)
 	if err != nil {
 		return "", fmt.Errorf("githubAssertion: failed to build request: %+v", err)
 	}
@@ -750,10 +749,7 @@ func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token s
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oidc_request_token))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	client := http.DefaultClient
-	client.Timeout = 3 * time.Second
-	defer client.CloseIdleConnections()
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("githubAssertion: cannot request token: %v", err)
 	}
