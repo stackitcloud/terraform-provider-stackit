@@ -1,7 +1,7 @@
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
-github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20251223142803-960a8fc17ae9 h1:cbSzCqmQ6SAB5vQrSMN1Zaf1DeGYh5heX3liol8XO2Q=
-github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20251223142803-960a8fc17ae9/go.mod h1:fqto7M82ynGhEnpZU6VkQKYWYoFG5goC076JWXTUPRQ=
+github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20260107172957-5e41dc32d226 h1:AgqbJ2DrS+Be2Qrgzu2cQYdCFpktG6oo3cFK6XHpBrA=
+github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20260107172957-5e41dc32d226/go.mod h1:fqto7M82ynGhEnpZU6VkQKYWYoFG5goC076JWXTUPRQ=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/ProtonMail/go-crypto v1.1.6 h1:ZcV+Ropw6Qn0AX9brlQLAUXfqLBc7Bl+f/DmNxpLfdw=

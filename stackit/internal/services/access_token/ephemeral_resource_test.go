@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 )
@@ -234,7 +235,13 @@ func TestGetAccessToken(t *testing.T) {
 
 			cfg := tt.cfgFactory()
 
-			token, err := getAccessToken(cfg)
+			roundTripper, err := auth.SetupAuth(cfg)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error generating round tripper for test case '%s'", tt.description)
+				}
+			}
+			token, err := getAccessToken(roundTripper)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error but got none for test case '%s'", tt.description)

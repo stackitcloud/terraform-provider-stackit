@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -485,8 +486,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { sdkConfig.ServiceAccountKeyPath = v })
 	setStringField(providerConfig.PrivateKey, func(v string) { sdkConfig.PrivateKey = v })
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { sdkConfig.PrivateKeyPath = v })
-	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { sdkConfig.ServiceAccountFederatedTokenPath = v })
-	setStringField(providerConfig.WifFederatedToken, func(v string) { sdkConfig.ServiceAccountFederatedToken = v })
 	setBoolField(providerConfig.UseOIDC, func(v bool) { sdkConfig.WorkloadIdentityFederation = v })
 	setStringField(providerConfig.Token, func(v string) { sdkConfig.Token = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
@@ -534,18 +533,36 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		providerData.Experiments = experimentValues
 	}
 
-	if getEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") && sdkConfig.ServiceAccountFederatedToken == "" {
+	// Workload Identity Federation via provided OIDC Token
+	oidc_token := ""
+	setStringField(providerConfig.WifFederatedToken, func(v string) { oidc_token = v })
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token != "" {
+		sdkConfig.WorkloadIdentityFederation = true
+		sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
+			return oidc_token, nil
+		}
+	}
+
+	// Workload Identity Federation via OIDC Token from file
+	oidc_token_path := ""
+	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { oidc_token_path = v })
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token_path != "" {
+		sdkConfig.WorkloadIdentityFederation = true
+		sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
+			return utils.ReadJWTFromFileSystem(oidc_token_path)
+		}
+	}
+
+	// Workload Identity Federation via provided OIDC Token from GitHub Actions
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && getEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") {
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
 		oidcReqURL := getEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
 		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
-			id_token, err := githubAssertion(ctx, oidcReqURL, oidcReqToken)
-			if err != nil {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Requesting id token from Github %v", err))
-				return
+			sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
+				return githubAssertion(ctx, oidcReqURL, oidcReqToken)
 			}
-			sdkConfig.ServiceAccountFederatedToken = id_token
 		}
 	}
 
@@ -567,13 +584,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
 	var ephemeralProviderData core.EphemeralProviderData
 	ephemeralProviderData.ProviderData = providerData
-	setStringField(providerConfig.ServiceAccountEmail, func(v string) { ephemeralProviderData.ServiceAccountEmail = v })
-	setStringField(providerConfig.ServiceAccountKey, func(v string) { ephemeralProviderData.ServiceAccountKey = v })
-	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { ephemeralProviderData.ServiceAccountKeyPath = v })
-	setStringField(providerConfig.PrivateKey, func(v string) { ephemeralProviderData.PrivateKey = v })
-	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
-	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
-	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { ephemeralProviderData.ServiceAccountFederatedTokenPath = v })
 	resp.EphemeralResourceData = ephemeralProviderData
 }
 

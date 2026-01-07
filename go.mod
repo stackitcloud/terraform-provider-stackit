@@ -44,7 +44,7 @@ require (
 	golang.org/x/mod v0.33.0
 )
 
-replace github.com/stackitcloud/stackit-sdk-go/core => github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20251223142803-960a8fc17ae9
+replace github.com/stackitcloud/stackit-sdk-go/core => github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20260107172957-5e41dc32d226
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
