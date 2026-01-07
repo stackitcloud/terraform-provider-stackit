@@ -756,7 +756,7 @@ func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token s
 
 	query, err := url.ParseQuery(req.URL.RawQuery)
 	if err != nil {
-		return nil, fmt.Errorf("githubAssertion: cannot parse URL query")
+		return "", fmt.Errorf("githubAssertion: cannot parse URL query")
 	}
 
 	if query.Get("audience") == "" {
