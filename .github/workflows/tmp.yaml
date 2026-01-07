@@ -1,9 +1,11 @@
+# Ignore this file, it is a temporary workflow for testing purposes.
+
 name: Build and Validate Provider
 
 on:
   push:
     branches:
-      - '**' # Ejecutar en cualquier rama
+      - '**' 
   workflow_dispatch:
 
 jobs:
@@ -11,38 +13,24 @@ jobs:
     name: Build Provider & Test Plan
     runs-on: ubuntu-latest
     permissions:
-      contents: read      # Necesario para descargar el código (actions/checkout)
-      id-token: write     # OBLIGATORIO para que 'use_oidc = true' funcione
-    
-    # Configura aquí las variables de entorno necesarias para la autenticación
-    # Si usas OIDC, asegúrate de que GitHub Actions tenga los permisos o secretos necesarios
-    env:
-      # Ejemplo de variables que tu provider podría necesitar para autenticarse:
-      # STACKIT_SERVICE_ACCOUNT_TOKEN: ${{ secrets.STACKIT_TOKEN }}
-      # STACKIT_SERVICE_ACCOUNT_KEY: ${{ secrets.STACKIT_KEY }}
-      GOPROXY: "https://proxy.golang.org,direct"
+      contents: read     
+      id-token: write 
 
     steps:
-      # 1. Descargar el código del repositorio
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Configurar Go (ajusta la versión según tu go.mod)
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
-      # 3. Compilar el Provider
-      # Es crucial que el binario tenga un nombre reconocible, aunque dev_overrides apunta al directorio.
       - name: Build Provider
         run: |
           go build -o terraform-provider-stackit
           chmod +x terraform-provider-stackit
           echo "BINARY_PATH=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
-      # 4. Configurar Terraform CLI para usar el binario local (Dev Overrides)
-      # Esto crea el archivo ~/.terraformrc que le dice a TF dónde buscar tu provider
       - name: Configure Terraform Dev Overrides
         run: |
           cat <<EOF > ~/.terraformrc
@@ -58,13 +46,11 @@ jobs:
           echo "Terraform RC content:"
           cat ~/.terraformrc
 
-      # 5. Instalar Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_wrapper: false # Recomendado cuando se manipula la salida o config compleja
+          terraform_wrapper: false
 
-      # 6. Crear el archivo main.tf con tu código de prueba
       - name: Create Test Configuration
         run: |
           cat <<EOF > main.tf
@@ -91,9 +77,6 @@ jobs:
           }
           EOF
 
-      # 7. Ejecutar Terraform Plan
-      # Nota: init fallará al intentar verificar checksums de dev_overrides, eso es normal, 
-      # por eso usamos -backend=false o simplemente corremos plan directo si no requerimos estado remoto.
       - name: Terraform Plan
         run: |
           # Inicializamos sin backend para pruebas rápidas
@@ -105,10 +88,6 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
-      # PASO RECOMENDADO: Destruye los recursos al finalizar para no dejar basura
-      # ni causar errores de "resource already exists" en el siguiente push.
-      # 'if: always()' asegura que se ejecute aunque los pasos anteriores fallen, 
-      # siempre que se haya creado algo de estado.
       - name: Terraform Destroy
         if: always() 
         run: |
