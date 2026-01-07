@@ -788,7 +788,7 @@ func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token s
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot request token: %v", err)
+		return "", fmt.Errorf("githubAssertion: cannot request token: %v, code: %d", err, resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
