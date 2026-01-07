@@ -52,11 +52,12 @@ import {
 - `ip_range` (String) The remote IP range which the rule should match.
 - `port_range` (Attributes) The range of ports. This should only be provided if the protocol is not ICMP. (see [below for nested schema](#nestedatt--port_range))
 - `protocol` (Attributes) The internet protocol which the rule should match. (see [below for nested schema](#nestedatt--protocol))
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `remote_security_group_id` (String) The remote security group which the rule should match.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`security_group_id`,`security_group_rule_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`security_group_id`,`security_group_rule_id`".
 - `security_group_rule_id` (String) The security group rule ID.
 
 <a id="nestedatt--icmp_parameters"></a>

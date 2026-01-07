@@ -10,7 +10,6 @@ import (
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -30,11 +29,13 @@ var (
 	_ resource.Resource                = &publicIpAssociateResource{}
 	_ resource.ResourceWithConfigure   = &publicIpAssociateResource{}
 	_ resource.ResourceWithImportState = &publicIpAssociateResource{}
+	_ resource.ResourceWithModifyPlan  = &publicIpAssociateResource{}
 )
 
 type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	ProjectId          types.String `tfsdk:"project_id"`
+	Region             types.String `tfsdk:"region"`
 	PublicIpId         types.String `tfsdk:"public_ip_id"`
 	Ip                 types.String `tfsdk:"ip"`
 	NetworkInterfaceId types.String `tfsdk:"network_interface_id"`
@@ -47,7 +48,8 @@ func NewPublicIpAssociateResource() resource.Resource {
 
 // publicIpAssociateResource is the resource implementation.
 type publicIpAssociateResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -55,14 +57,45 @@ func (r *publicIpAssociateResource) Metadata(_ context.Context, req resource.Met
 	resp.TypeName = req.ProviderTypeName + "_public_ip_associate"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *publicIpAssociateResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -88,7 +121,7 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 		Description:         fmt.Sprintf("%s\n\n%s", descriptions["main"], descriptions["warning_message"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`public_ip_id`,`network_interface_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`public_ip_id`,`network_interface_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -103,6 +136,15 @@ func (r *publicIpAssociateResource) Schema(_ context.Context, _ resource.SchemaR
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"public_ip_id": schema.StringAttribute{
@@ -151,12 +193,14 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
@@ -167,7 +211,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 	// Update existing public IP
-	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -175,7 +219,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(updatedPublicIp, &model)
+	err = mapFields(updatedPublicIp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -197,16 +241,18 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, publicIpId).Execute()
+	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -220,7 +266,7 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(publicIpResp, &model)
+	err = mapFields(publicIpResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP association", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -250,12 +296,14 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
@@ -263,7 +311,7 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 		NetworkInterface: iaas.NewNullableString(nil),
 	}
 
-	_, err := r.client.UpdatePublicIP(ctx, projectId, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	_, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP association", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -279,28 +327,25 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 func (r *publicIpAssociateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing public IP associate",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[public_ip_id],[network_interface_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[public_ip_id],[network_interface_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	publicIpId := idParts[1]
-	networkInterfaceId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
-	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":           idParts[0],
+		"region":               idParts[1],
+		"public_ip_id":         idParts[2],
+		"network_interface_id": idParts[3],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("public_ip_id"), publicIpId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_interface_id"), networkInterfaceId)...)
 	tflog.Info(ctx, "public IP state imported")
 }
 
-func mapFields(publicIpResp *iaas.PublicIp, model *Model) error {
+func mapFields(publicIpResp *iaas.PublicIp, model *Model, region string) error {
 	if publicIpResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -324,8 +369,9 @@ func mapFields(publicIpResp *iaas.PublicIp, model *Model) error {
 	}
 
 	model.Id = utils.BuildInternalTerraformId(
-		model.ProjectId.ValueString(), publicIpId, model.NetworkInterfaceId.ValueString(),
+		model.ProjectId.ValueString(), region, publicIpId, model.NetworkInterfaceId.ValueString(),
 	)
+	model.Region = types.StringValue(region)
 	model.PublicIpId = types.StringValue(publicIpId)
 	model.Ip = types.StringPointerValue(publicIpResp.Ip)
 

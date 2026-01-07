@@ -12,7 +12,6 @@ import (
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -33,11 +32,13 @@ var (
 	_ resource.Resource                = &securityGroupResource{}
 	_ resource.ResourceWithConfigure   = &securityGroupResource{}
 	_ resource.ResourceWithImportState = &securityGroupResource{}
+	_ resource.ResourceWithModifyPlan  = &securityGroupResource{}
 )
 
 type Model struct {
 	Id              types.String `tfsdk:"id"` // needed by TF
 	ProjectId       types.String `tfsdk:"project_id"`
+	Region          types.String `tfsdk:"region"`
 	SecurityGroupId types.String `tfsdk:"security_group_id"`
 	Name            types.String `tfsdk:"name"`
 	Description     types.String `tfsdk:"description"`
@@ -52,7 +53,8 @@ func NewSecurityGroupResource() resource.Resource {
 
 // securityGroupResource is the resource implementation.
 type securityGroupResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -60,14 +62,45 @@ func (r *securityGroupResource) Metadata(_ context.Context, req resource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_security_group"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *securityGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *securityGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -83,7 +116,7 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`security_group_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`security_group_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -98,6 +131,15 @@ func (r *securityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"security_group_id": schema.StringAttribute{
@@ -165,7 +207,9 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -176,7 +220,7 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	// Create new security group
 
-	securityGroup, err := r.client.CreateSecurityGroup(ctx, projectId).CreateSecurityGroupPayload(*payload).Execute()
+	securityGroup, err := r.client.CreateSecurityGroup(ctx, projectId, region).CreateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -189,7 +233,7 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	// Map response body to schema
-	err = mapFields(ctx, securityGroup, &model)
+	err = mapFields(ctx, securityGroup, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -212,14 +256,16 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_id", securityGroupId)
 
-	securityGroupResp, err := r.client.GetSecurityGroup(ctx, projectId, securityGroupId).Execute()
+	securityGroupResp, err := r.client.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -233,7 +279,7 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, securityGroupResp, &model)
+	err = mapFields(ctx, securityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -257,11 +303,13 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	// Retrieve values from state
@@ -279,7 +327,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	// Update existing security group
-	updatedSecurityGroup, err := r.client.UpdateSecurityGroup(ctx, projectId, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
+	updatedSecurityGroup, err := r.client.UpdateSecurityGroup(ctx, projectId, region, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -287,7 +335,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, updatedSecurityGroup, &model)
+	err = mapFields(ctx, updatedSecurityGroup, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -311,15 +359,17 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	// Delete existing security group
-	err := r.client.DeleteSecurityGroup(ctx, projectId, securityGroupId).Execute()
+	err := r.client.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -335,25 +385,24 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 func (r *securityGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing security group",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[security_group_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[security_group_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	securityGroupId := idParts[1]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":        idParts[0],
+		"region":            idParts[1],
+		"security_group_id": idParts[2],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("security_group_id"), securityGroupId)...)
 	tflog.Info(ctx, "security group state imported")
 }
 
-func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model *Model) error {
+func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model *Model, region string) error {
 	if securityGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -370,7 +419,8 @@ func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model
 		return fmt.Errorf("security group id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), securityGroupId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, securityGroupId)
+	model.Region = types.StringValue(region)
 
 	labels, err := iaasUtils.MapLabels(ctx, securityGroupResp.Labels, model.Labels)
 	if err != nil {

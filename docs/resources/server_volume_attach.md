@@ -22,7 +22,7 @@ resource "stackit_server_volume_attach" "attached_volume" {
 # Only use the import statement, if you want to import an existing server volume attachment
 import {
   to = stackit_server_volume_attach.import-example
-  id = "${var.project_id},${var.server_id},${var.volume_id}"
+  id = "${var.project_id},${var.region},${var.server_id},${var.volume_id}"
 }
 ```
 
@@ -35,6 +35,10 @@ import {
 - `server_id` (String) The server ID.
 - `volume_id` (String) The volume ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`,`volume_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`,`volume_id`".

@@ -7,13 +7,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -176,9 +176,36 @@ func CheckListRemoval(ctx context.Context, configModelList, planModelList types.
 }
 
 // SetAndLogStateFields writes the given map of key-value pairs to the state
-func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *tfsdk.State, values map[string]any) {
+func SetAndLogStateFields(ctx context.Context, diags *diag.Diagnostics, state *tfsdk.State, values map[string]any) context.Context {
 	for key, val := range values {
 		ctx = tflog.SetField(ctx, key, val)
 		diags.Append(state.SetAttribute(ctx, path.Root(key), val)...)
 	}
+	return ctx
+}
+
+// Coalesce returns the first defined value of a set of [attr.Value] values.
+func Coalesce[T interface {
+	IsNull() bool
+	IsUnknown() bool
+}](vals ...T) (r T) {
+	for _, t := range vals {
+		if !t.IsNull() && !t.IsUnknown() {
+			return t
+		}
+	}
+	return r
+}
+
+func Join(separator string, parts ...types.String) types.String {
+	var builder strings.Builder
+	for i, l := 0, len(parts); i < l; i++ {
+		if !IsUndefined(parts[i]) {
+			if i > 0 {
+				builder.WriteString(separator)
+			}
+			builder.WriteString(parts[i].ValueString())
+		}
+	}
+	return types.StringValue(builder.String())
 }

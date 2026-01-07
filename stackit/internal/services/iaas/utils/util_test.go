@@ -49,7 +49,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *iaas.APIClient {
 				apiClient, err := iaas.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {

@@ -42,6 +42,7 @@ var (
 	_ resource.Resource                = &serverResource{}
 	_ resource.ResourceWithConfigure   = &serverResource{}
 	_ resource.ResourceWithImportState = &serverResource{}
+	_ resource.ResourceWithModifyPlan  = &serverResource{}
 
 	supportedSourceTypes = []string{"volume", "image"}
 	desiredStatusOptions = []string{modelStateActive, modelStateInactive, modelStateDeallocated}
@@ -56,6 +57,7 @@ const (
 type Model struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
 	ProjectId         types.String `tfsdk:"project_id"`
+	Region            types.String `tfsdk:"region"`
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
@@ -100,7 +102,8 @@ func NewServerResource() resource.Resource {
 
 // serverResource is the resource implementation.
 type serverResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -108,7 +111,37 @@ func (r *serverResource) Metadata(_ context.Context, req resource.MetadataReques
 	resp.TypeName = req.ProviderTypeName + "_server"
 }
 
-func (r serverResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *serverResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r *serverResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var model Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
@@ -129,6 +162,10 @@ func (r serverResource) ValidateConfig(ctx context.Context, req resource.Validat
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring server", "You can only provide `delete_on_termination` for `source_type` `image`.")
 		}
 	}
+
+	if model.NetworkInterfaces.IsNull() || model.NetworkInterfaces.IsUnknown() || len(model.NetworkInterfaces.Elements()) < 1 {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No network interfaces configured", "You have no network interfaces configured for this server. This will be a problem when you want to (re-)create this server. Please note that modifying the network interfaces for an existing server will result in a replacement of the resource. We will provide a clear migration path soon.")
+	}
 }
 
 // ConfigValidators validates the resource configuration
@@ -147,12 +184,13 @@ func (r *serverResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 
 // Configure adds the provider configured client to the resource.
 func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -167,7 +205,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		Description:         "Server resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`server_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -182,6 +220,15 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"server_id": schema.StringAttribute{
@@ -297,7 +344,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"network_interfaces": schema.ListAttribute{
-				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.",
+				Description: "The IDs of network interfaces which should be attached to the server. Updating it will recreate the server. **Required when (re-)creating servers. Still marked as optional in the schema to not introduce breaking changes. There will be a migration path for this field soon.**",
 				Optional:    true,
 				ElementType: types.StringType,
 				Validators: []validator.List{
@@ -428,10 +475,11 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	ctx = core.InitProviderContext(ctx)
-
-	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -442,7 +490,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new server
 
-	server, err := r.client.CreateServer(ctx, projectId).CreateServerPayload(*payload).Execute()
+	server, err := r.client.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -451,7 +499,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = core.LogResponse(ctx)
 
 	serverId := *server.Id
-	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
+	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
@@ -459,7 +507,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Get Server with details
-	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	server, err = serverReq.Execute()
 	if err != nil {
@@ -467,14 +515,14 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, server, &model)
+	err = mapFields(ctx, server, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	if err := updateServerStatus(ctx, r.client, server.Status, &model); err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creting server", fmt.Sprintf("update server state: %v", err))
+	if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("update server state: %v", err))
 		return
 	}
 
@@ -491,41 +539,41 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 // client operations in [updateServerStatus]
 type serverControlClient interface {
 	wait.APIClientInterface
-	StartServerExecute(ctx context.Context, projectId string, serverId string) error
-	StopServerExecute(ctx context.Context, projectId string, serverId string) error
-	DeallocateServerExecute(ctx context.Context, projectId string, serverId string) error
+	StartServerExecute(ctx context.Context, projectId string, region string, serverId string) error
+	StopServerExecute(ctx context.Context, projectId string, region string, serverId string) error
+	DeallocateServerExecute(ctx context.Context, projectId string, region string, serverId string) error
 }
 
-func startServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
+func startServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "starting server to enter active state")
-	if err := client.StartServerExecute(ctx, projectId, serverId); err != nil {
+	if err := client.StartServerExecute(ctx, projectId, region, serverId); err != nil {
 		return fmt.Errorf("cannot start server: %w", err)
 	}
-	_, err := wait.StartServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	_, err := wait.StartServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot check started server: %w", err)
 	}
 	return nil
 }
 
-func stopServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
+func stopServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "stopping server to enter inactive state")
-	if err := client.StopServerExecute(ctx, projectId, serverId); err != nil {
+	if err := client.StopServerExecute(ctx, projectId, region, serverId); err != nil {
 		return fmt.Errorf("cannot stop server: %w", err)
 	}
-	_, err := wait.StopServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	_, err := wait.StopServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot check stopped server: %w", err)
 	}
 	return nil
 }
 
-func deallocatServer(ctx context.Context, client serverControlClient, projectId, serverId string) error {
+func deallocateServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "deallocating server to enter shelved state")
-	if err := client.DeallocateServerExecute(ctx, projectId, serverId); err != nil {
+	if err := client.DeallocateServerExecute(ctx, projectId, region, serverId); err != nil {
 		return fmt.Errorf("cannot deallocate server: %w", err)
 	}
-	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, serverId).WaitWithContext(ctx)
+	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot check deallocated server: %w", err)
 	}
@@ -533,7 +581,7 @@ func deallocatServer(ctx context.Context, client serverControlClient, projectId,
 }
 
 // updateServerStatus applies the appropriate server state changes for the actual current and the intended state
-func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model *Model) error {
+func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model *Model, region string) error {
 	if currentState == nil {
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return nil
@@ -542,52 +590,52 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 	case wait.ServerActiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerInactiveStatus:
-			if err := stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := stopServer(ctx, client, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 
 		case wait.ServerDeallocatedStatus:
 
-			if err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := deallocateServer(ctx, client, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		}
 	case wait.ServerInactiveStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerActiveStatus:
-			if err := startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := startServer(ctx, client, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		case wait.ServerDeallocatedStatus:
-			if err := deallocatServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := deallocateServer(ctx, client, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		}
 	case wait.ServerDeallocatedStatus:
 		switch strings.ToUpper(model.DesiredStatus.ValueString()) {
 		case wait.ServerActiveStatus:
-			if err := startServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := startServer(ctx, client, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 
 		case wait.ServerInactiveStatus:
-			if err := stopServer(ctx, client, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if err := stopServer(ctx, client, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
 				return err
 			}
 		}
@@ -598,7 +646,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 	return nil
 }
 
-// // Read refreshes the Terraform state with the latest data.
+// Read refreshes the Terraform state with the latest data.
 func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -607,14 +655,16 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
@@ -630,7 +680,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, serverResp, &model)
+	err = mapFields(ctx, serverResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -644,7 +694,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	tflog.Info(ctx, "server read")
 }
 
-func (r *serverResource) updateServerAttributes(ctx context.Context, model, stateModel *Model) (*iaas.Server, error) {
+func (r *serverResource) updateServerAttributes(ctx context.Context, model, stateModel *Model, region string) (*iaas.Server, error) {
 	// Generate API request body from model
 	payload, err := toUpdatePayload(ctx, model, stateModel.Labels)
 	if err != nil {
@@ -655,7 +705,7 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 
 	var updatedServer *iaas.Server
 	// Update existing server
-	updatedServer, err = r.client.UpdateServer(ctx, projectId, serverId).UpdateServerPayload(*payload).Execute()
+	updatedServer, err = r.client.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("Calling API: %w", err)
 	}
@@ -666,12 +716,12 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 		payload := iaas.ResizeServerPayload{
 			MachineType: modelMachineType,
 		}
-		err := r.client.ResizeServer(ctx, projectId, serverId).ResizeServerPayload(payload).Execute()
+		err := r.client.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
 			return nil, fmt.Errorf("Resizing the server, calling API: %w", err)
 		}
 
-		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
+		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("server resize waiting: %w", err)
 		}
@@ -691,11 +741,13 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Retrieve values from state
@@ -710,14 +762,14 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		server *iaas.Server
 		err    error
 	)
-	if server, err = r.client.GetServer(ctx, model.ProjectId.ValueString(), model.ServerId.ValueString()).Execute(); err != nil {
+	if server, err = r.client.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
 
 	if model.DesiredStatus.ValueString() == modelStateDeallocated {
 		// if the target state is "deallocated", we have to perform the server update first
 		// and then shelve it afterwards. A shelved server cannot be updated
-		_, err = r.updateServerAttributes(ctx, &model, &stateModel)
+		_, err = r.updateServerAttributes(ctx, &model, &stateModel, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
@@ -725,18 +777,18 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 		ctx = core.LogResponse(ctx)
 
-		if err := updateServerStatus(ctx, r.client, server.Status, &model); err != nil {
+		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
 	} else {
 		// potentially unfreeze first and update afterwards
-		if err := updateServerStatus(ctx, r.client, server.Status, &model); err != nil {
+		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
 
-		_, err = r.updateServerAttributes(ctx, &model, &stateModel)
+		_, err = r.updateServerAttributes(ctx, &model, &stateModel, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
@@ -746,7 +798,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Re-fetch the server data, to get the details values.
-	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	updatedServer, err := serverReq.Execute()
 	if err != nil {
@@ -754,7 +806,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	err = mapFields(ctx, updatedServer, &model)
+	err = mapFields(ctx, updatedServer, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -779,15 +831,17 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Delete existing server
-	err := r.client.DeleteServer(ctx, projectId, serverId).Execute()
+	err := r.client.DeleteServer(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -795,7 +849,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, serverId).WaitWithContext(ctx)
+	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))
 		return
@@ -809,25 +863,24 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 func (r *serverResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing server",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[server_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	serverId := idParts[1]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "server_id", serverId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"server_id":  idParts[2],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), serverId)...)
 	tflog.Info(ctx, "server state imported")
 }
 
-func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error {
+func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, region string) error {
 	if serverResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -844,7 +897,8 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model) error
 		return fmt.Errorf("server id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), serverId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, serverId)
+	model.Region = types.StringValue(region)
 
 	labels, err := iaasUtils.MapLabels(ctx, serverResp.Labels, model.Labels)
 	if err != nil {
@@ -981,9 +1035,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	var bootVolumePayload *iaas.CreateServerPayloadBootVolume
+	var bootVolumePayload *iaas.ServerBootVolume
 	if !bootVolume.SourceId.IsNull() && !bootVolume.SourceType.IsNull() {
-		bootVolumePayload = &iaas.CreateServerPayloadBootVolume{
+		bootVolumePayload = &iaas.ServerBootVolume{
 			PerformanceClass: conversion.StringValueToPointer(bootVolume.PerformanceClass),
 			Size:             conversion.Int64ValueToPointer(bootVolume.Size),
 			Source: &iaas.BootVolumeSource{
@@ -1005,22 +1059,22 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		userData = &encodedUserData
 	}
 
-	var network *iaas.CreateServerPayloadNetworking
-	if !model.NetworkInterfaces.IsNull() && !model.NetworkInterfaces.IsUnknown() {
-		var nicIds []string
-		for _, nic := range model.NetworkInterfaces.Elements() {
-			nicString, ok := nic.(types.String)
-			if !ok {
-				return nil, fmt.Errorf("type assertion failed")
-			}
-			nicIds = append(nicIds, nicString.ValueString())
+	if model.NetworkInterfaces.IsNull() || model.NetworkInterfaces.IsUnknown() {
+		return nil, fmt.Errorf("nil network interfaces")
+	}
+	var nicIds []string
+	for _, nic := range model.NetworkInterfaces.Elements() {
+		nicString, ok := nic.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("type assertion failed")
 		}
+		nicIds = append(nicIds, nicString.ValueString())
+	}
 
-		network = &iaas.CreateServerPayloadNetworking{
-			CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-				NicIds: &nicIds,
-			},
-		}
+	network := &iaas.CreateServerPayloadAllOfNetworking{
+		CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
+			NicIds: &nicIds,
+		},
 	}
 
 	return &iaas.CreateServerPayload{

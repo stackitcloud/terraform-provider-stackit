@@ -10,7 +10,6 @@ import (
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -30,11 +29,13 @@ var (
 	_ resource.Resource                = &publicIpResource{}
 	_ resource.ResourceWithConfigure   = &publicIpResource{}
 	_ resource.ResourceWithImportState = &publicIpResource{}
+	_ resource.ResourceWithModifyPlan  = &publicIpResource{}
 )
 
 type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	ProjectId          types.String `tfsdk:"project_id"`
+	Region             types.String `tfsdk:"region"`
 	PublicIpId         types.String `tfsdk:"public_ip_id"`
 	Ip                 types.String `tfsdk:"ip"`
 	NetworkInterfaceId types.String `tfsdk:"network_interface_id"`
@@ -48,7 +49,8 @@ func NewPublicIpResource() resource.Resource {
 
 // publicIpResource is the resource implementation.
 type publicIpResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -56,14 +58,45 @@ func (r *publicIpResource) Metadata(_ context.Context, req resource.MetadataRequ
 	resp.TypeName = req.ProviderTypeName + "_public_ip"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *publicIpResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *publicIpResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -79,7 +112,7 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`public_ip_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`public_ip_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -94,6 +127,15 @@ func (r *publicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"public_ip_id": schema.StringAttribute{
@@ -148,7 +190,9 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -159,7 +203,7 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Create new public IP
 
-	publicIp, err := r.client.CreatePublicIP(ctx, projectId).CreatePublicIPPayload(*payload).Execute()
+	publicIp, err := r.client.CreatePublicIP(ctx, projectId, region).CreatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -170,7 +214,7 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "public_ip_id", *publicIp.Id)
 
 	// Map response body to schema
-	err = mapFields(ctx, publicIp, &model)
+	err = mapFields(ctx, publicIp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -193,14 +237,16 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
-	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, publicIpId).Execute()
+	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -214,7 +260,7 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, publicIpResp, &model)
+	err = mapFields(ctx, publicIpResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading public IP", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -238,11 +284,13 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
 	// Retrieve values from state
@@ -260,7 +308,7 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing public IP
-	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -268,7 +316,7 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, updatedPublicIp, &model)
+	err = mapFields(ctx, updatedPublicIp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -292,15 +340,17 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	publicIpId := model.PublicIpId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
 	// Delete existing publicIp
-	err := r.client.DeletePublicIP(ctx, projectId, publicIpId).Execute()
+	err := r.client.DeletePublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -316,25 +366,24 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 func (r *publicIpResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing public IP",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[public_ip_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[public_ip_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	publicIpId := idParts[1]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":   idParts[0],
+		"region":       idParts[1],
+		"public_ip_id": idParts[2],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("public_ip_id"), publicIpId)...)
 	tflog.Info(ctx, "public IP state imported")
 }
 
-func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model) error {
+func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model, region string) error {
 	if publicIpResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -351,7 +400,8 @@ func mapFields(ctx context.Context, publicIpResp *iaas.PublicIp, model *Model) e
 		return fmt.Errorf("public IP id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), publicIpId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, publicIpId)
+	model.Region = types.StringValue(region)
 
 	labels, err := iaasUtils.MapLabels(ctx, publicIpResp.Labels, model.Labels)
 	if err != nil {

@@ -15,7 +15,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -40,11 +39,13 @@ var (
 	_ resource.Resource                = &imageResource{}
 	_ resource.ResourceWithConfigure   = &imageResource{}
 	_ resource.ResourceWithImportState = &imageResource{}
+	_ resource.ResourceWithModifyPlan  = &imageResource{}
 )
 
 type Model struct {
 	Id            types.String `tfsdk:"id"` // needed by TF
 	ProjectId     types.String `tfsdk:"project_id"`
+	Region        types.String `tfsdk:"region"`
 	ImageId       types.String `tfsdk:"image_id"`
 	Name          types.String `tfsdk:"name"`
 	DiskFormat    types.String `tfsdk:"disk_format"`
@@ -111,7 +112,8 @@ func NewImageResource() resource.Resource {
 
 // imageResource is the resource implementation.
 type imageResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -119,14 +121,45 @@ func (r *imageResource) Metadata(_ context.Context, req resource.MetadataRequest
 	resp.TypeName = req.ProviderTypeName + "_image"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *imageResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *imageResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -140,7 +173,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		Description: "Image resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`image_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`image_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -155,6 +188,15 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"image_id": schema.StringAttribute{
@@ -378,10 +420,11 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	ctx = core.InitProviderContext(ctx)
-
-	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -391,7 +434,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new image
-	imageCreateResp, err := r.client.CreateImage(ctx, projectId).CreateImagePayload(*payload).Execute()
+	imageCreateResp, err := r.client.CreateImage(ctx, projectId, region).CreateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -401,15 +444,15 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = tflog.SetField(ctx, "image_id", *imageCreateResp.Id)
 
-	// Get the image object, as the create response does not contain all fields
-	image, err := r.client.GetImage(ctx, projectId, *imageCreateResp.Id).Execute()
+	// Get the image object, as the creation response does not contain all fields
+	image, err := r.client.GetImage(ctx, projectId, region, *imageCreateResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, image, &model)
+	err = mapFields(ctx, image, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -430,7 +473,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Wait for image to become available
-	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, *imageCreateResp.Id)
+	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, region, *imageCreateResp.Id)
 	waiter = waiter.SetTimeout(7 * 24 * time.Hour) // Set timeout to one week, to make the timeout useless
 	waitResp, err := waiter.WaitWithContext(ctx)
 	if err != nil {
@@ -439,7 +482,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -454,7 +497,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	tflog.Info(ctx, "Image created")
 }
 
-// // Read refreshes the Terraform state with the latest data.
+// Read refreshes the Terraform state with the latest data.
 func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -462,15 +505,18 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	imageId := model.ImageId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
-	imageResp, err := r.client.GetImage(ctx, projectId, imageId).Execute()
+	imageResp, err := r.client.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -484,7 +530,7 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, imageResp, &model)
+	err = mapFields(ctx, imageResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading image", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -507,12 +553,15 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	imageId := model.ImageId.ValueString()
 
 	ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
 	// Retrieve values from state
@@ -530,7 +579,7 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	// Update existing image
-	updatedImage, err := r.client.UpdateImage(ctx, projectId, imageId).UpdateImagePayload(*payload).Execute()
+	updatedImage, err := r.client.UpdateImage(ctx, projectId, region, imageId).UpdateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -538,7 +587,7 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, updatedImage, &model)
+	err = mapFields(ctx, updatedImage, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -563,14 +612,15 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	projectId := model.ProjectId.ValueString()
 	imageId := model.ImageId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "image_id", imageId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	ctx = core.InitProviderContext(ctx)
 
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "image_id", imageId)
-
 	// Delete existing image
-	err := r.client.DeleteImage(ctx, projectId, imageId).Execute()
+	err := r.client.DeleteImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -578,7 +628,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteImageWaitHandler(ctx, r.client, projectId, imageId).WaitWithContext(ctx)
+	_, err = wait.DeleteImageWaitHandler(ctx, r.client, projectId, region, imageId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("image deletion waiting: %v", err))
 		return
@@ -588,29 +638,28 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,image_id
+// The expected format of the resource import identifier is: project_id,region,image_id
 func (r *imageResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing image",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[image_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[image_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	imageId := idParts[1]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "image_id", imageId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"image_id":   idParts[2],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("image_id"), imageId)...)
 	tflog.Info(ctx, "Image state imported")
 }
 
-func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model) error {
+func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region string) error {
 	if imageResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -627,7 +676,8 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model) error {
 		return fmt.Errorf("image id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), imageId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, imageId)
+	model.Region = types.StringValue(region)
 
 	// Map config
 	var configModel = &configModel{}
