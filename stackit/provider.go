@@ -771,7 +771,7 @@ func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token s
 		query.Set("audience", "sts.accounts.stackit.cloud")
 		req.URL.RawQuery = query.Encode()
 	}
-	
+
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oidc_request_token))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -824,7 +824,7 @@ func getEnvStringOrDefault(val types.String, envVar string, defaultValue string)
 func getEnvBoolIfValueAbsent(val types.Bool, envVar string) bool {
 	if val.IsNull() || val.IsUnknown() {
 		v := os.Getenv(envVar)
-		if strings.EqualFold(v, "true") || strings.EqualFold(v, "1") || v == "" {
+		if strings.EqualFold(v, "true") || strings.EqualFold(v, "1") {
 			return true
 		}
 	}
