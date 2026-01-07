@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -786,9 +787,12 @@ func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token s
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oidc_request_token))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	client := http.DefaultClient
+	client.Timeout = 3 * time.Second
+	defer client.CloseIdleConnections()
+	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot request token: %v, code: %d", err, resp.StatusCode)
+		return "", fmt.Errorf("githubAssertion: cannot request token: %v", err)
 	}
 
 	defer resp.Body.Close()
