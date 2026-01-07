@@ -769,7 +769,7 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 func githubAssertion(oidc_request_url, oidc_request_token string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, oidc_request_url, http.NoBody)
 	if err != nil {
-		return "", fmt.Errorf("githubAssertion: failed to build request: %+v", err)
+		return "", fmt.Errorf("githubAssertion: failed to build request: %w", err)
 	}
 
 	query, err := url.ParseQuery(req.URL.RawQuery)
@@ -788,13 +788,15 @@ func githubAssertion(oidc_request_url, oidc_request_token string) (string, error
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot request token: %v", err)
+		return "", fmt.Errorf("githubAssertion: cannot request token: %w", err)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot parse response: %v", err)
+		return "", fmt.Errorf("githubAssertion: cannot parse response: %w", err)
 	}
 
 	if c := resp.StatusCode; c < 200 || c > 299 {
@@ -805,7 +807,7 @@ func githubAssertion(oidc_request_url, oidc_request_token string) (string, error
 		Value string `json:"value"`
 	}
 	if err := json.Unmarshal(body, &tokenRes); err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot unmarshal response: %v", err)
+		return "", fmt.Errorf("githubAssertion: cannot unmarshal response: %w", err)
 	}
 
 	return tokenRes.Value, nil
@@ -814,7 +816,7 @@ func githubAssertion(oidc_request_url, oidc_request_token string) (string, error
 // getEnvStringOrDefault takes a Framework StringValue and a corresponding Environment Variable name and returns
 // either the string value set in the StringValue if not Null / Unknown _or_ the os.GetEnv() value of the Environment
 // Variable provided. If both of these are empty, an empty string defaultValue is returned.
-func getEnvStringOrDefault(val types.String, envVar string, defaultValue string) string {
+func getEnvStringOrDefault(val types.String, envVar, defaultValue string) string {
 	if val.IsNull() || val.IsUnknown() {
 		if v := os.Getenv(envVar); v != "" {
 			return os.Getenv(envVar)

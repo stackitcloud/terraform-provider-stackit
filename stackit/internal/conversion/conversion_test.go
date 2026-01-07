@@ -309,7 +309,7 @@ func TestParseProviderData(t *testing.T) {
 
 func TestParseEphemeralProviderData(t *testing.T) {
 	var randomRoundTripper http.RoundTripper = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
 	}
 	type args struct {
 		providerData any
