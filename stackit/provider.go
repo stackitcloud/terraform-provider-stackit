@@ -151,6 +151,7 @@ type providerModel struct {
 	PrivateKeyPath        types.String `tfsdk:"private_key_path"`
 	Token                 types.String `tfsdk:"service_account_token"`
 	WifFederatedTokenPath types.String `tfsdk:"service_account_federated_token_path"`
+	WifFederatedToken     types.String `tfsdk:"service_account_federated_token"`
 	UseOIDC               types.Bool   `tfsdk:"use_oidc"`
 
 	// Deprecated: Use DefaultRegion instead
@@ -206,6 +207,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"private_key":                          "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
 		"service_account_email":                "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
+		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
 		"use_oidc":                             "Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
 		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
@@ -278,6 +280,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"service_account_federated_token_path": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["service_account_federated_token_path"],
+			},
+			"service_account_federated_token": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_federated_token"],
 			},
 			"use_oidc": schema.BoolAttribute{
 				Optional:    true,
@@ -480,6 +486,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.PrivateKey, func(v string) { sdkConfig.PrivateKey = v })
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { sdkConfig.PrivateKeyPath = v })
 	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { sdkConfig.ServiceAccountFederatedTokenPath = v })
+	setStringField(providerConfig.WifFederatedToken, func(v string) { sdkConfig.ServiceAccountFederatedToken = v })
 	setBoolField(providerConfig.UseOIDC, func(v bool) { sdkConfig.WorkloadIdentityFederation = v })
 	setStringField(providerConfig.Token, func(v string) { sdkConfig.Token = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
@@ -527,7 +534,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		providerData.Experiments = experimentValues
 	}
 
-	if sdkConfig.WorkloadIdentityFederation {
+	if getEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") && sdkConfig.ServiceAccountFederatedToken == "" {
+		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
 		oidcReqURL := getEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
 		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
@@ -805,4 +813,21 @@ func getEnvStringOrDefault(val types.String, envVar string, defaultValue string)
 	}
 
 	return val.ValueString()
+}
+
+// getEnvBoolIfValueAbsent takes a Framework BoolValue and a corresponding Environment Variable name and returns
+// one of the following in priority order:
+// 1 - the Boolean value set in the BoolValue if this is not Null / Unknown.
+// 2 - the boolean representation of the os.GetEnv() value of the Environment Variable provided (where anything but
+// 'true' or '1' is 'false').
+// 3 - `false` in all other cases.
+func getEnvBoolIfValueAbsent(val types.Bool, envVar string) bool {
+	if val.IsNull() || val.IsUnknown() {
+		v := os.Getenv(envVar)
+		if strings.EqualFold(v, "true") || strings.EqualFold(v, "1") || v == "" {
+			return true
+		}
+	}
+
+	return val.ValueBool()
 }
