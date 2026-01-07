@@ -29,15 +29,6 @@ const (
 
 type EphemeralProviderData struct {
 	ProviderData
-
-	PrivateKey                       string
-	PrivateKeyPath                   string
-	ServiceAccountKey                string
-	ServiceAccountKeyPath            string
-	ServiceAccountFederatedTokenPath string
-	ServiceAccountFederatedToken     string
-	ServiceAccountEmail              string
-	TokenCustomEndpoint              string
 }
 
 type ProviderData struct {

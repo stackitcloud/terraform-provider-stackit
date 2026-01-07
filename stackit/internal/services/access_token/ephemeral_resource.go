@@ -3,13 +3,12 @@ package access_token
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/clients"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -25,7 +24,7 @@ func NewAccessTokenEphemeralResource() ephemeral.EphemeralResource {
 }
 
 type accessTokenEphemeralResource struct {
-	authConfig config.Configuration
+	roundTripper http.RoundTripper
 }
 
 func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
@@ -44,16 +43,7 @@ func (e *accessTokenEphemeralResource) Configure(ctx context.Context, req epheme
 		return
 	}
 
-	e.authConfig = config.Configuration{
-		ServiceAccountKey:                ephemeralProviderData.ServiceAccountKey,
-		ServiceAccountKeyPath:            ephemeralProviderData.ServiceAccountKeyPath,
-		PrivateKeyPath:                   ephemeralProviderData.PrivateKey,
-		PrivateKey:                       ephemeralProviderData.PrivateKeyPath,
-		TokenCustomUrl:                   ephemeralProviderData.TokenCustomEndpoint,
-		ServiceAccountFederatedTokenPath: ephemeralProviderData.ServiceAccountFederatedTokenPath,
-		ServiceAccountFederatedToken:     ephemeralProviderData.ServiceAccountFederatedToken,
-		ServiceAccountEmail:              ephemeralProviderData.ServiceAccountEmail,
-	}
+	e.roundTripper = ephemeralProviderData.RoundTripper
 }
 
 type ephemeralTokenModel struct {
@@ -98,7 +88,7 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 		return
 	}
 
-	accessToken, err := getAccessToken(&e.authConfig)
+	accessToken, err := getAccessToken(e.roundTripper)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Access token generation failed", err.Error())
 		return
@@ -108,30 +98,17 @@ func (e *accessTokenEphemeralResource) Open(ctx context.Context, req ephemeral.O
 	resp.Diagnostics.Append(resp.Result.Set(ctx, model)...)
 }
 
-// getAccessToken initializes authentication using the provided config and returns an access token via the KeyFlow mechanism.
-func getAccessToken(keyAuthConfig *config.Configuration) (string, error) {
-	roundTripper, err := auth.SetupAuth(keyAuthConfig)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to initialize authentication: %w. "+
-				"Make sure service account credentials are configured either in the provider configuration or via environment variables",
-			err,
-		)
+// getAccessToken initializes authentication using the provided config
+func getAccessToken(roundTripper http.RoundTripper) (string, error) {
+	// Type assert to access token functionality
+	client, ok := roundTripper.(clients.AuthFlow)
+	if !ok {
+		return "", fmt.Errorf("internal error: expected *clients.AuthFlow, but received a different implementation of http.RoundTripper")
 	}
 
-	// Type assert to access token functionality
-	var accessToken string
-	switch client := roundTripper.(type) {
-	case *clients.KeyFlow:
-		accessToken, err = client.GetAccessToken()
-	case *clients.WorkloadIdentityFederationFlow:
-		accessToken, err = client.GetAccessToken()
-	default:
-		return "", fmt.Errorf("internal error: expected KeyFlow or WorkloadIdentityFlow, but received a different implementation of http.RoundTripper")
-	}
+	accessToken, err := client.GetAccessToken()
 	if err != nil {
 		return "", fmt.Errorf("error obtaining access token: %w", err)
 	}
-
 	return accessToken, nil
 }
