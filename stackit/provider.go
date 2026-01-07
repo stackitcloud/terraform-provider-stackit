@@ -753,6 +753,16 @@ func githubAssertion(ctx context.Context, oidc_request_url, oidc_request_token s
 		return "", fmt.Errorf("githubAssertion: failed to build request: %+v", err)
 	}
 
+	query, err := url.ParseQuery(req.URL.RawQuery)
+	if err != nil {
+		return nil, fmt.Errorf("githubAssertion: cannot parse URL query")
+	}
+
+	if query.Get("audience") == "" {
+		query.Set("audience", "sts.accounts.stackit.cloud")
+		req.URL.RawQuery = query.Encode()
+	}
+	
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oidc_request_token))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
