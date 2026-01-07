@@ -51,9 +51,7 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Create Test Configuration
-        env:
-          STACKIT_USE_OIDC: "true"
+      - name: Create Test Configuration        
         run: |
           cat <<EOF > main.tf
           terraform {
