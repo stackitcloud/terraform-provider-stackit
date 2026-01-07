@@ -172,6 +172,8 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
 - `observability_custom_endpoint` (String) Custom endpoint for the Observability service
+- `oidc_request_token` (String) The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.
+- `oidc_request_url` (String) The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.
 - `opensearch_custom_endpoint` (String) Custom endpoint for the OpenSearch service
 - `postgresflex_custom_endpoint` (String) Custom endpoint for the PostgresFlex service
 - `private_key` (String) Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
@@ -185,7 +187,9 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
 - `server_update_custom_endpoint` (String) Custom endpoint for the Server Update service
 - `service_account_custom_endpoint` (String) Custom endpoint for the Service Account service
-- `service_account_email` (String, Deprecated) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
+- `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
+- `service_account_federated_token` (String) The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.
+- `service_account_federated_token_path` (String) Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String, Deprecated) Token used for authentication. If set, the token flow will be used to authenticate all operations.
@@ -194,3 +198,4 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
+- `use_oidc` (Boolean) Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
