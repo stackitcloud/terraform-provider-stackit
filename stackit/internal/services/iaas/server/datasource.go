@@ -35,6 +35,7 @@ type DataSourceModel struct {
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
+	Agent             types.Object `tfsdk:"agent"`
 	AvailabilityZone  types.String `tfsdk:"availability_zone"`
 	BootVolume        types.Object `tfsdk:"boot_volume"`
 	ImageId           types.String `tfsdk:"image_id"`
@@ -51,6 +52,10 @@ type DataSourceModel struct {
 var bootVolumeDataTypes = map[string]attr.Type{
 	"id":                    basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
+}
+
+var agentDataTypes = map[string]attr.Type{
+	"provisioned": basetypes.BoolType{},
 }
 
 // NewServerDataSource is a helper function to simplify the provider implementation.
@@ -123,6 +128,16 @@ func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"machine_type": schema.StringAttribute{
 				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)",
 				Computed:            true,
+			},
+			"agent": schema.SingleNestedAttribute{
+				Description: "STACKIT Server Agent as setup on the server",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"provisioned": schema.BoolAttribute{
+						Description: "Whether a STACKIT Server Agent is provisioned at the server",
+						Computed:    true,
+					},
+				},
 			},
 			"availability_zone": schema.StringAttribute{
 				Description: "The availability zone of the server.",
@@ -304,6 +319,18 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	} else {
 		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)
 	}
+
+	agentProvisioned := types.BoolNull()
+	if serverResp.Agent != nil && serverResp.Agent.Provisioned != nil {
+		agentProvisioned = types.BoolPointerValue(serverResp.Agent.Provisioned)
+	}
+	agent, diags := types.ObjectValue(agentDataTypes, map[string]attr.Value{
+		"provisioned": agentProvisioned,
+	})
+	if diags.HasError() {
+		return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+	}
+	model.Agent = agent
 
 	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
 		model.UserData = types.StringValue(string(*serverResp.UserData))
