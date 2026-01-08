@@ -34,6 +34,7 @@ data "stackit_server" "example" {
 ### Read-Only
 
 - `affinity_group` (String) The affinity group the server is assigned to.
+- `agent` (Attributes) STACKIT Server Agent as setup on the server (see [below for nested schema](#nestedatt--agent))
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
 - `created_at` (String) Date-time when the server was created
@@ -47,6 +48,14 @@ data "stackit_server" "example" {
 - `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.
 - `updated_at` (String) Date-time when the server was updated
 - `user_data` (String) User data that is passed via cloud-init to the server.
+
+<a id="nestedatt--agent"></a>
+### Nested Schema for `agent`
+
+Read-Only:
+
+- `provisioned` (Boolean) Whether a STACKIT Server Agent is provisioned at the server
+
 
 <a id="nestedatt--boot_volume"></a>
 ### Nested Schema for `boot_volume`
