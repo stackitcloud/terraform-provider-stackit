@@ -47,9 +47,9 @@ Read-Only:
 - `created_at` (String) Date-time when the routing table was created
 - `default` (Boolean) When true this is the default routing table for this network area. It can't be deleted and is used if the user does not specify it otherwise.
 - `description` (String) Description of the routing table.
+- `dynamic_routes` (Boolean) This controls whether dynamic routes are propagated to this routing table
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the routing table.
 - `routing_table_id` (String) The routing tables ID.
 - `system_routes` (Boolean) This controls whether the routes for project-to-project communication are created automatically or not.
-- `dynamic_routes` (Boolean) This controls whether dynamic routes are propagated to this routing table
 - `updated_at` (String) Date-time when the routing table was updated
