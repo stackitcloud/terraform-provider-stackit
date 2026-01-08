@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
@@ -172,7 +173,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreatePayload(tt.model)
+			got, err := toCreatePayload(t.Context(), diag.Diagnostics{}, tt.model)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -224,7 +225,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toUpdatePayload(tt.model)
+			got, err := toUpdatePayload(t.Context(), diag.Diagnostics{}, tt.model)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}

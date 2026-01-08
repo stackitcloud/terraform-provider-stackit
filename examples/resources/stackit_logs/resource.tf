@@ -1,11 +1,11 @@
-resource "stackit_logs_instance" "git" {
+resource "stackit_logs_instance" "logs" {
   project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region         = "eu01"
   display_name   = "logs-instance-example"
   retention_days = 30
 }
 
-resource "stackit_logs_instance" "logs" {
+resource "stackit_logs_instance" "logs2" {
   project_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region         = "eu01"
   display_name   = "logs-instance-example"
@@ -16,7 +16,7 @@ resource "stackit_logs_instance" "logs" {
   description = "Example description"
 }
 
-# Only use the import statement, if you want to import an existing git resource
+# Only use the import statement, if you want to import an existing logs instance
 import {
   to = stackit_logs_instance.import-example
   id = "${var.project_id},${var.region},${var.logs_instance_id}"

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -52,8 +53,8 @@ func (d *logsInstanceDataSource) Configure(ctx context.Context, req datasource.C
 
 func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Logs instance resource schema.", core.Resource),
-		Description:         fmt.Sprintf("Logs instance resource schema. %s", core.ResourceRegionFallbackDocstring),
+		MarkdownDescription: features.AddBetaDescription("Logs instance data source schema.", core.Resource),
+		Description:         fmt.Sprintf("Logs instance resource schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],
@@ -62,7 +63,10 @@ func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"instance_id": schema.StringAttribute{
 				Description: schemaDescriptions["instance_id"],
 				Required:    true,
-				Validators:  []validator.String{validate.UUID()},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
@@ -73,6 +77,10 @@ func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
 				Required:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 			},
 			"acl": schema.ListAttribute{
 				Description: schemaDescriptions["acl"],
@@ -94,6 +102,7 @@ func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Computed:    true,
+				Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
 			},
 			"ingest_otlp_url": schema.StringAttribute{
 				Description: schemaDescriptions["ingest_otlp_url"],
@@ -152,6 +161,7 @@ func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading logs instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, instanceResponse, &model)
 	if err != nil {
@@ -163,5 +173,7 @@ func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance read")
+	tflog.Info(ctx, "Logs Instance read", map[string]interface{}{
+		"instance_id": instanceID,
+	})
 }

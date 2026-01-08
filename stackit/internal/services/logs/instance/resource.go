@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
 	"github.com/stackitcloud/stackit-sdk-go/services/logs/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -38,9 +39,9 @@ var schemaDescriptions = map[string]string{
 	"id":              "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 	"instance_id":     "The Logs instance ID",
 	"region":          "STACKIT region name the resource is located in. If not defined, the provider region is used.",
-	"project_id":      "STACKIT project ID associated with the logs instance",
-	"acl":             "ACL entries for the logs instance",
-	"created":         "Time when the distribution was created",
+	"project_id":      "STACKIT project ID associated with the Logs instance",
+	"acl":             "The access control list entries for the Logs instance",
+	"created":         "The date and time the creation of the Logs instance was initiated",
 	"datasource_url":  "Logs instance datasource URL, can be used in Grafana as datasource URL",
 	"description":     "The description of the Logs instance",
 	"display_name":    "The displayed name of the Logs instance",
@@ -49,25 +50,28 @@ var schemaDescriptions = map[string]string{
 	"query_range_url": "The Logs instance's query range URL",
 	"query_url":       "The Logs instance's query URL",
 	"retention_days":  "The log retention time in days",
-	"status":          "The status of the Logs instance",
+	"status": fmt.Sprintf(
+		"The status of the Logs instance, possible values: %s",
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(logs.AllowedLogsInstanceStatusEnumValues)...),
+	),
 }
 
 type Model struct {
-	ID            types.String `tfsdk:"id"`              // Required by Terraform
-	InstanceID    types.String `tfsdk:"instance_id"`     // The Logs instance ID
-	Region        types.String `tfsdk:"region"`          // STACKIT region name the resource is located in
-	ProjectID     types.String `tfsdk:"project_id"`      // ProjectID associated with the logs instance
-	ACL           types.List   `tfsdk:"acl"`             // ACL entries for the logs instance
-	Created       types.String `tfsdk:"created"`         // When the instance was created
-	DatasourceURL types.String `tfsdk:"datasource_url"`  // Logs instance datasource URL, can be used in Grafana as datasource URL
-	Description   types.String `tfsdk:"description"`     // The description of the Logs instance
-	DisplayName   types.String `tfsdk:"display_name"`    // The displayed name of the Logs instance
-	IngestOTLPURL types.String `tfsdk:"ingest_otlp_url"` // The Logs instance's ingest logs via OTLP URL
-	IngestURL     types.String `tfsdk:"ingest_url"`      // The logs instance's ingest logs URL
-	QueryRangeURL types.String `tfsdk:"query_range_url"` // The Logs instance's query range URL
-	QueryURL      types.String `tfsdk:"query_url"`       // The Logs instance's query URL
-	RetentionDays types.Int64  `tfsdk:"retention_days"`  // The log retention time in days
-	Status        types.String `tfsdk:"status"`          // The status of the Logs instance
+	ID            types.String `tfsdk:"id"` // Required by Terraform
+	InstanceID    types.String `tfsdk:"instance_id"`
+	Region        types.String `tfsdk:"region"`
+	ProjectID     types.String `tfsdk:"project_id"`
+	ACL           types.List   `tfsdk:"acl"`
+	Created       types.String `tfsdk:"created"`
+	DatasourceURL types.String `tfsdk:"datasource_url"`
+	Description   types.String `tfsdk:"description"`
+	DisplayName   types.String `tfsdk:"display_name"`
+	IngestOTLPURL types.String `tfsdk:"ingest_otlp_url"`
+	IngestURL     types.String `tfsdk:"ingest_url"`
+	QueryRangeURL types.String `tfsdk:"query_range_url"`
+	QueryURL      types.String `tfsdk:"query_url"`
+	RetentionDays types.Int64  `tfsdk:"retention_days"`
+	Status        types.String `tfsdk:"status"`
 }
 
 type logsInstanceResource struct {
@@ -138,11 +142,17 @@ func (r *logsInstanceResource) Schema(_ context.Context, _ resource.SchemaReques
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Description: schemaDescriptions["instance_id"],
 				Computed:    true,
-				Validators:  []validator.String{validate.UUID()},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -161,6 +171,10 @@ func (r *logsInstanceResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
 				},
 			},
 			"acl": schema.ListAttribute{
@@ -227,7 +241,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -291,6 +305,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading logs instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, instanceResponse, &model)
 	if err != nil {
@@ -302,7 +317,9 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance read")
+	tflog.Info(ctx, "Logs Instance read", map[string]interface{}{
+		"instance_id": instanceID,
+	})
 }
 
 func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
@@ -323,7 +340,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, resp.Diagnostics, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs Instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -348,7 +365,9 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance updated")
+	tflog.Info(ctx, "Logs Instance updated", map[string]interface{}{
+		"instance_id": instanceID,
+	})
 }
 
 func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
@@ -398,29 +417,24 @@ func (r *logsInstanceResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "Logs Instance state imported")
 }
 
-func toCreatePayload(model *Model) (*logs.CreateLogsInstancePayload, error) {
+func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *Model) (*logs.CreateLogsInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
 	}
 
-	var acls []string
-	for i, acl := range model.ACL.Elements() {
-		aclString, ok := acl.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("expected acl at index %d to be of type %T, got %T", i, types.String{}, acl)
-		}
-		acls = append(acls, aclString.ValueString())
-	}
-	var payloadACLs *[]string
-	if len(acls) > 0 {
-		payloadACLs = &acls
-	}
-
 	payload := &logs.CreateLogsInstancePayload{
-		Acl:           payloadACLs,
 		Description:   conversion.StringValueToPointer(model.Description),
 		DisplayName:   conversion.StringValueToPointer(model.DisplayName),
 		RetentionDays: conversion.Int64ValueToPointer(model.RetentionDays),
+	}
+
+	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+		var acl []string
+		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
+		diagnostics.Append(aclDiags...)
+		if !aclDiags.HasError() {
+			payload.Acl = &acl
+		}
 	}
 
 	return payload, nil
@@ -474,29 +488,24 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	return nil
 }
 
-func toUpdatePayload(model *Model) (*logs.UpdateLogsInstancePayload, error) {
+func toUpdatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *Model) (*logs.UpdateLogsInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
 	}
 
-	var acls []string
-	for i, acl := range model.ACL.Elements() {
-		aclString, ok := acl.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("expected acl at index %d to be of type %T, got %T", i, types.String{}, acl)
-		}
-		acls = append(acls, aclString.ValueString())
-	}
-	var payloadACLs *[]string
-	if len(acls) > 0 {
-		payloadACLs = &acls
-	}
-
 	payload := &logs.UpdateLogsInstancePayload{
-		Acl:           payloadACLs,
 		Description:   conversion.StringValueToPointer(model.Description),
 		DisplayName:   conversion.StringValueToPointer(model.DisplayName),
 		RetentionDays: conversion.Int64ValueToPointer(model.RetentionDays),
+	}
+
+	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+		var acl []string
+		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
+		diagnostics.Append(aclDiags...)
+		if !aclDiags.HasError() {
+			payload.Acl = &acl
+		}
 	}
 
 	return payload, nil
