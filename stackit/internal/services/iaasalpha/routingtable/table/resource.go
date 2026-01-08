@@ -208,7 +208,7 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"dynamic_routes": schema.BoolAttribute{
-				Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
+				Description: "This controls whether dynamic routes are propagated to this routing table",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),

@@ -210,8 +210,8 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
 			Computed:    true,
 		},
-		"dynamic_ro": schema.BoolAttribute{
-			Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
+		"dynamic_routes": schema.BoolAttribute{
+			Description: "This controls whether dynamic routes are propagated to this routing table",
 			Computed:    true,
 		},
 		"created_at": schema.StringAttribute{
