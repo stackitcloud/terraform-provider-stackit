@@ -3,13 +3,13 @@
 page_title: "stackit_logs_instance Data Source - stackit"
 subcategory: ""
 description: |-
-  Logs instance resource schema.
+  Logs instance data source schema.
   ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_logs_instance (Data Source)
 
-Logs instance resource schema.
+Logs instance data source schema.
 
 ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
@@ -21,7 +21,7 @@ Logs instance resource schema.
 ### Required
 
 - `instance_id` (String) The Logs instance ID
-- `project_id` (String) STACKIT project ID associated with the logs instance
+- `project_id` (String) STACKIT project ID associated with the Logs instance
 
 ### Optional
 
@@ -29,8 +29,8 @@ Logs instance resource schema.
 
 ### Read-Only
 
-- `acl` (List of String) ACL entries for the logs instance
-- `created` (String) Time when the distribution was created
+- `acl` (List of String) The access control list entries for the Logs instance
+- `created` (String) The date and time the creation of the Logs instance was initiated
 - `datasource_url` (String) Logs instance datasource URL, can be used in Grafana as datasource URL
 - `description` (String) The description of the Logs instance
 - `display_name` (String) The displayed name of the Logs instance
@@ -40,4 +40,4 @@ Logs instance resource schema.
 - `query_range_url` (String) The Logs instance's query range URL
 - `query_url` (String) The Logs instance's query URL
 - `retention_days` (Number) The log retention time in days
-- `status` (String) The status of the Logs instance
+- `status` (String) The status of the Logs instance, possible values: Possible values are: `active`, `deleting`, `reconciling`.

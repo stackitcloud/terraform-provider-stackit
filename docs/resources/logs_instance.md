@@ -21,18 +21,18 @@ Logs instance resource schema.
 ### Required
 
 - `display_name` (String) The displayed name of the Logs instance
-- `project_id` (String) STACKIT project ID associated with the logs instance
+- `project_id` (String) STACKIT project ID associated with the Logs instance
 - `retention_days` (Number) The log retention time in days
 
 ### Optional
 
-- `acl` (List of String) ACL entries for the logs instance
+- `acl` (List of String) The access control list entries for the Logs instance
 - `description` (String) The description of the Logs instance
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
 
-- `created` (String) Time when the distribution was created
+- `created` (String) The date and time the creation of the Logs instance was initiated
 - `datasource_url` (String) Logs instance datasource URL, can be used in Grafana as datasource URL
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
 - `ingest_otlp_url` (String) The Logs instance's ingest logs via OTLP URL
@@ -40,4 +40,4 @@ Logs instance resource schema.
 - `instance_id` (String) The Logs instance ID
 - `query_range_url` (String) The Logs instance's query range URL
 - `query_url` (String) The Logs instance's query URL
-- `status` (String) The status of the Logs instance
+- `status` (String) The status of the Logs instance, possible values: Possible values are: `active`, `deleting`, `reconciling`.
