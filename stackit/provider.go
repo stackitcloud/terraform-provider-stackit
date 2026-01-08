@@ -483,6 +483,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Make round tripper and custom endpoints available during DataSource and Resource
 	// type Configure methods.
 	providerData.RoundTripper = roundTripper
+
+	providerData.Version = p.version
+
 	resp.DataSourceData = providerData
 	resp.ResourceData = providerData
 
@@ -495,8 +498,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
 	resp.EphemeralResourceData = ephemeralProviderData
-
-	providerData.Version = p.version
 }
 
 // DataSources defines the data sources implemented in the provider.
