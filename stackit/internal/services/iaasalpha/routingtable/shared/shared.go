@@ -26,6 +26,7 @@ type RoutingTableReadModel struct {
 	UpdatedAt      types.String `tfsdk:"updated_at"`
 	Default        types.Bool   `tfsdk:"default"`
 	SystemRoutes   types.Bool   `tfsdk:"system_routes"`
+	DynamicRoutes  types.Bool   `tfsdk:"dynamic_routes"`
 }
 
 func RoutingTableReadModelTypes() map[string]attr.Type {
@@ -38,6 +39,7 @@ func RoutingTableReadModelTypes() map[string]attr.Type {
 		"updated_at":       types.StringType,
 		"default":          types.BoolType,
 		"system_routes":    types.BoolType,
+		"dynamic_routes":   types.BoolType,
 	}
 }
 
@@ -208,6 +210,10 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 			Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
 			Computed:    true,
 		},
+		"dynamic_ro": schema.BoolAttribute{
+			Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
+			Computed:    true,
+		},
 		"created_at": schema.StringAttribute{
 			Description: "Date-time when the routing table was created",
 			Computed:    true,
@@ -257,6 +263,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.Routi
 	model.Description = types.StringPointerValue(routingTable.Description)
 	model.Default = types.BoolPointerValue(routingTable.Default)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
+	model.DynamicRoutes = types.BoolPointerValue(routingTable.DynamicRoutes)
 	model.Labels = labels
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF

@@ -45,4 +45,5 @@ data "stackit_routing_table" "example" {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the routing table.
 - `system_routes` (Boolean) This controls whether the routes for project-to-project communication are created automatically or not.
+- `dynamic_routes` (Boolean) This controls whether dynamic routes are propagated to this routing table
 - `updated_at` (String) Date-time when the routing table was updated

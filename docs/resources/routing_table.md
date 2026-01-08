@@ -47,6 +47,7 @@ import {
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `region` (String) The resource region. If not defined, the provider region is used.
 - `system_routes` (Boolean) This controls whether the routes for project-to-project communication are created automatically or not.
+- `dynamic_routes` (Boolean) This controls whether dynamic routes are propagated to this routing table
 
 ### Read-Only
 

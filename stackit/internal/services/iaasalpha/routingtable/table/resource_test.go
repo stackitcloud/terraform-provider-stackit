@@ -132,7 +132,8 @@ func TestToCreatePayload(t *testing.T) {
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
 					"key": types.StringValue("value"),
 				}),
-				SystemRoutes: types.BoolValue(true),
+				SystemRoutes:  types.BoolValue(true),
+				DynamicRoutes: types.BoolValue(true),
 			},
 			expected: &iaasalpha.AddRoutingTableToAreaPayload{
 				Description: utils.Ptr("Description"),
@@ -140,7 +141,8 @@ func TestToCreatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
-				SystemRoutes: utils.Ptr(true),
+				SystemRoutes:  utils.Ptr(true),
+				DynamicRoutes: utils.Ptr(true),
 			},
 			isValid: true,
 		},

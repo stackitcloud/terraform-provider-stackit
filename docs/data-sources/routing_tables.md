@@ -51,4 +51,5 @@ Read-Only:
 - `name` (String) The name of the routing table.
 - `routing_table_id` (String) The routing tables ID.
 - `system_routes` (Boolean) This controls whether the routes for project-to-project communication are created automatically or not.
+- `dynamic_routes` (Boolean) This controls whether dynamic routes are propagated to this routing table
 - `updated_at` (String) Date-time when the routing table was updated

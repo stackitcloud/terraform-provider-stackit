@@ -48,6 +48,7 @@ type Model struct {
 	Labels         types.Map    `tfsdk:"labels"`
 	Region         types.String `tfsdk:"region"`
 	SystemRoutes   types.Bool   `tfsdk:"system_routes"`
+	DynamicRoutes  types.Bool   `tfsdk:"dynamic_routes"`
 	CreatedAt      types.String `tfsdk:"created_at"`
 	UpdatedAt      types.String `tfsdk:"updated_at"`
 }
@@ -198,6 +199,15 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"system_routes": schema.BoolAttribute{
+				Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+			},
+			"dynamic_routes": schema.BoolAttribute{
 				Description: "This controls whether the routes for project-to-project communication are created automatically or not.",
 				Optional:    true,
 				Computed:    true,
@@ -485,6 +495,7 @@ func mapFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model 
 	model.Labels = labels
 	model.Region = types.StringValue(region)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)
+	model.DynamicRoutes = types.BoolPointerValue(routingTable.DynamicRoutes)
 	model.CreatedAt = createdAtTF
 	model.UpdatedAt = updatedAtTF
 	return nil
@@ -501,10 +512,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.AddRoutingTa
 	}
 
 	return &iaasalpha.AddRoutingTableToAreaPayload{
-		Description:  conversion.StringValueToPointer(model.Description),
-		Name:         conversion.StringValueToPointer(model.Name),
-		Labels:       &labels,
-		SystemRoutes: conversion.BoolValueToPointer(model.SystemRoutes),
+		Description:   conversion.StringValueToPointer(model.Description),
+		Name:          conversion.StringValueToPointer(model.Name),
+		Labels:        &labels,
+		SystemRoutes:  conversion.BoolValueToPointer(model.SystemRoutes),
+		DynamicRoutes: conversion.BoolValueToPointer(model.DynamicRoutes),
 	}, nil
 }
 
