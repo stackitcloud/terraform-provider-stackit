@@ -212,9 +212,6 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
 			},
 			"created_at": schema.StringAttribute{
 				Description: "Date-time when the routing table was created",
@@ -531,8 +528,9 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}
 
 	return &iaasalpha.UpdateRoutingTableOfAreaPayload{
-		Description: conversion.StringValueToPointer(model.Description),
-		Name:        conversion.StringValueToPointer(model.Name),
-		Labels:      &labels,
+		Description:   conversion.StringValueToPointer(model.Description),
+		Name:          conversion.StringValueToPointer(model.Name),
+		Labels:        &labels,
+		DynamicRoutes: conversion.BoolValueToPointer(model.DynamicRoutes),
 	}, nil
 }
