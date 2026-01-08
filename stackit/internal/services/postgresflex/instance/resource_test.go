@@ -482,7 +482,6 @@ func TestToUpdatePayload(t *testing.T) {
 				Acl: &postgresflex.ACL{
 					Items: &[]string{},
 				},
-				Storage: &postgresflex.Storage{},
 			},
 			true,
 		},
@@ -516,11 +515,7 @@ func TestToUpdatePayload(t *testing.T) {
 				FlavorId:       utils.Ptr("flavor_id"),
 				Name:           utils.Ptr("name"),
 				Replicas:       utils.Ptr(int64(12)),
-				Storage: &postgresflex.Storage{
-					Class: utils.Ptr("class"),
-					Size:  utils.Ptr(int64(34)),
-				},
-				Version: utils.Ptr("version"),
+				Version:        utils.Ptr("version"),
 			},
 			true,
 		},
@@ -552,11 +547,7 @@ func TestToUpdatePayload(t *testing.T) {
 				FlavorId:       nil,
 				Name:           nil,
 				Replicas:       utils.Ptr(int64(2123456789)),
-				Storage: &postgresflex.Storage{
-					Class: nil,
-					Size:  nil,
-				},
-				Version: nil,
+				Version:        nil,
 			},
 			true,
 		},

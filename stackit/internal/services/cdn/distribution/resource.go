@@ -812,13 +812,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	}
 
 	payload := &cdn.CreateDistributionPayload{
-		IntentId:             cdn.PtrString(uuid.NewString()),
-		OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
-		Regions:              cfg.Regions,
-		BlockedCountries:     cfg.BlockedCountries,
-		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
-		Geofencing:           cfg.Backend.HttpBackend.Geofencing,
-		Optimizer:            optimizer,
+		IntentId:         cdn.PtrString(uuid.NewString()),
+		Regions:          cfg.Regions,
+		BlockedCountries: cfg.BlockedCountries,
+		Optimizer:        optimizer,
 	}
 
 	return payload, nil
