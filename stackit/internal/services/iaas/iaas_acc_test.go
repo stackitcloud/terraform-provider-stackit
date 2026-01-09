@@ -804,7 +804,7 @@ func TestAccNetworkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "region", testutil.Region),
 					resource.TestCheckNoResourceAttr("data.stackit_routing_table.routing_table", "description"),
 					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "system_routes", "true"),
-					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", "true"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "dynamic_routes", "true"),
 					resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "created_at"),
 					resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "updated_at"),
 				),
