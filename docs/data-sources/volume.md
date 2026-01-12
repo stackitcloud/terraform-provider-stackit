@@ -35,6 +35,7 @@ data "stackit_volume" "example" {
 
 - `availability_zone` (String) The availability zone of the volume.
 - `description` (String) The description of the volume.
+- `encrypted` (Boolean) Indicates if the volume is encrypted.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`volume_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the volume.
