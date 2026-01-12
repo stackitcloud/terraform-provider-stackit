@@ -761,9 +761,9 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 
 	if model.EncryptionParameters != nil {
 		var keyPayload *[]byte
-		if !model.EncryptionParameters.KeyPayloadBase64WriteOnly.IsNull() && !model.EncryptionParameters.KeyPayloadBase64WriteOnly.IsUnknown() {
+		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
 			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString()))
-		} else if !model.EncryptionParameters.KeyPayloadBase64.IsNull() && !model.EncryptionParameters.KeyPayloadBase64.IsUnknown() {
+		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
 			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64.ValueString()))
 		}
 
