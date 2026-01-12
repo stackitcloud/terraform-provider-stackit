@@ -74,6 +74,7 @@ var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
+	updatedConfig["dynamic_routes"] = config.BoolVariable(true)
 	return updatedConfig
 }()
 
