@@ -72,7 +72,8 @@ resource "stackit_volume" "volume_encrypted_no_key_payload" {
   }
 }
 
-resource "stackit_volume" "volume_encrypted_with_key_payload" {
+# use the regular "key_payload_base64" field
+resource "stackit_volume" "volume_encrypted_with_regular_key_payload" {
   project_id        = var.project_id
   availability_zone = var.availability_zone
   name              = var.name
@@ -89,5 +90,27 @@ resource "stackit_volume" "volume_encrypted_with_key_payload" {
     kek_keyring_id     = stackit_kms_keyring.keyring.keyring_id
     key_payload_base64 = var.key_payload_base64
     service_account    = var.service_account_mail
+  }
+}
+
+# use the write-only "key_payload_base64_wo" field instead
+resource "stackit_volume" "volume_encrypted_with_write_only_key_payload" {
+  project_id        = var.project_id
+  availability_zone = var.availability_zone
+  name              = var.name
+  size              = var.size
+  description       = var.description
+  performance_class = var.performance_class
+  labels = {
+    "acc-test" : var.label
+  }
+
+  encryption_parameters = {
+    kek_key_id                    = stackit_kms_key.key.key_id
+    kek_key_version               = 1
+    kek_keyring_id                = stackit_kms_keyring.keyring.keyring_id
+    key_payload_base64_wo         = var.key_payload_base64
+    key_payload_base64_wo_version = 1
+    service_account               = var.service_account_mail
   }
 }
