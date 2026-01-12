@@ -2,11 +2,7 @@ package stackit
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
@@ -22,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -538,7 +534,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.WifFederatedToken, func(v string) { oidc_token = v })
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token != "" {
 		sdkConfig.WorkloadIdentityFederation = true
-		sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
+		sdkConfig.ServiceAccountFederatedTokenFunc = func(context.Context) (string, error) {
 			return oidc_token, nil
 		}
 	}
@@ -548,9 +544,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { oidc_token_path = v })
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token_path != "" {
 		sdkConfig.WorkloadIdentityFederation = true
-		sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
-			return utils.ReadJWTFromFileSystem(oidc_token_path)
-		}
+		sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.ReadJWTFromFileSystem(oidc_token_path)
 	}
 
 	// Workload Identity Federation via provided OIDC Token from GitHub Actions
@@ -560,9 +554,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		oidcReqURL := getEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
 		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
-			sdkConfig.ServiceAccountFederatedTokenFunc = func() (string, error) {
-				return githubAssertion(oidcReqURL, oidcReqToken)
-			}
+			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)
 		}
 	}
 
@@ -764,53 +756,6 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 	return []func() ephemeral.EphemeralResource{
 		access_token.NewAccessTokenEphemeralResource,
 	}
-}
-
-func githubAssertion(oidc_request_url, oidc_request_token string) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, oidc_request_url, http.NoBody)
-	if err != nil {
-		return "", fmt.Errorf("githubAssertion: failed to build request: %w", err)
-	}
-
-	query, err := url.ParseQuery(req.URL.RawQuery)
-	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot parse URL query")
-	}
-
-	if query.Get("audience") == "" {
-		query.Set("audience", "sts.accounts.stackit.cloud")
-		req.URL.RawQuery = query.Encode()
-	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", oidc_request_token))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot request token: %w", err)
-	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot parse response: %w", err)
-	}
-
-	if c := resp.StatusCode; c < 200 || c > 299 {
-		return "", fmt.Errorf("githubAssertion: received HTTP status %d with response: %s", resp.StatusCode, body)
-	}
-
-	var tokenRes struct {
-		Value string `json:"value"`
-	}
-	if err := json.Unmarshal(body, &tokenRes); err != nil {
-		return "", fmt.Errorf("githubAssertion: cannot unmarshal response: %w", err)
-	}
-
-	return tokenRes.Value, nil
 }
 
 // getEnvStringOrDefault takes a Framework StringValue and a corresponding Environment Variable name and returns
