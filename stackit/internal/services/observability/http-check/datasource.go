@@ -103,6 +103,7 @@ func (d *httpCheckDataSource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	httpCheckId := model.HttpCheckId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "http_check_id", httpCheckId)

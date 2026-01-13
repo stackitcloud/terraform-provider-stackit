@@ -103,6 +103,7 @@ func (d *certCheckDataSource) Read(ctx context.Context, req datasource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	certCheckId := model.CertCheckId.ValueString()
+	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "cert_check_id", certCheckId)
