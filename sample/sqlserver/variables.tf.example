@@ -1,0 +1,11 @@
+variable "project_id" {
+  default = "<PROJECT ID UUID>"
+}
+
+variable "sa_email" {
+  default = "<SERVICE ACCOUNT EMAIL>"
+}
+
+variable "db_username" {
+  default = "<DB USERNAME>"
+}

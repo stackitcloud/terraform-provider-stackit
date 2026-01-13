@@ -42,7 +42,7 @@ import {
 ### Required
 
 - `encryption` (Attributes) The encryption block. (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String)
 - `name` (String) Instance name.
 - `network` (Attributes) The network block. (see [below for nested schema](#nestedatt--network))
 - `project_id` (String) STACKIT project ID to which the instance is associated.
@@ -75,30 +75,12 @@ Required:
 - `service_account` (String)
 
 
-<a id="nestedatt--flavor"></a>
-### Nested Schema for `flavor`
-
-Required:
-
-- `cpu` (Number)
-- `node_type` (String)
-- `ram` (Number)
-
-Optional:
-
-- `id` (String)
-
-Read-Only:
-
-- `description` (String)
-
-
 <a id="nestedatt--network"></a>
 ### Nested Schema for `network`
 
 Required:
 
-- `access_scope` (String) The access scope of the instance. (e.g. SNA)
+- `access_scope` (String) The access scope of the instance. (SNA | PUBLIC)
 - `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
 
 Read-Only:

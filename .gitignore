@@ -15,9 +15,9 @@ bin/
 **/terraform.tfstate**
 .terraform.lock.hcl
 .terraform.tfstate.lock.info
-main.tf
-example.tf
-index.tf
+**/config.tfrc
+**/variables.tf
+**/service_account.json
 
 # Test binary, built with `go test -c`
 *.test

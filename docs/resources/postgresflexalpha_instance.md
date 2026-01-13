@@ -44,7 +44,7 @@ import {
 
 - `backup_schedule` (String)
 - `encryption` (Attributes) The encryption block. (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) The block that defines the flavor data. (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String)
 - `name` (String) Instance name.
 - `network` (Attributes) The network block configuration. (see [below for nested schema](#nestedatt--network))
 - `project_id` (String) STACKIT project ID to which the instance is associated.
@@ -71,24 +71,6 @@ Required:
 - `key_version` (String) Key version of the encryption key.
 - `keyring_id` (String) KeyRing ID of the encryption key.
 - `service_account` (String) The service account ID of the service account.
-
-
-<a id="nestedatt--flavor"></a>
-### Nested Schema for `flavor`
-
-Required:
-
-- `cpu` (Number) The CPU count of the flavor.
-- `ram` (Number) The RAM count of the flavor.
-
-Optional:
-
-- `id` (String) The ID of the flavor.
-- `node_type` (String) The node type of the flavor. (Single or Replicas)
-
-Read-Only:
-
-- `description` (String) The flavor detailed flavor name.
 
 
 <a id="nestedatt--network"></a>

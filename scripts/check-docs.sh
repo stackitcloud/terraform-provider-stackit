@@ -9,7 +9,7 @@ ROOT_DIR=$(git rev-parse --show-toplevel)
 before_hash=$(find docs -type f -exec sha256sum {} \; | sort | sha256sum | awk '{print $1}')
 
 # re-generate the docs
-$ROOT_DIR/scripts/tfplugindocs.sh
+"${ROOT_DIR}/scripts/tfplugindocs.sh"
 
 after_hash=$(find docs -type f -exec sha256sum {} \; | sort | sha256sum | awk '{print $1}')
 

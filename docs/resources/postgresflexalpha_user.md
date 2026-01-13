@@ -44,10 +44,7 @@ import {
 ### Read-Only
 
 - `connection_string` (String)
-- `host` (String)
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`,`user_id`".
 - `password` (String, Sensitive)
-- `port` (Number)
 - `status` (String)
-- `uri` (String, Sensitive)
 - `user_id` (Number) User ID.

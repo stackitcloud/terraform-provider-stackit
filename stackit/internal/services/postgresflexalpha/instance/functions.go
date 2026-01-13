@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -20,9 +19,9 @@ type postgresflexClient interface {
 
 func mapFields(
 	ctx context.Context,
+	client postgresflexClient,
 	resp *postgresflex.GetInstanceResponse,
 	model *Model,
-	flavor *flavorModel,
 	storage *storageModel,
 	encryption *encryptionModel,
 	network *networkModel,
@@ -80,66 +79,16 @@ func mapFields(
 			return fmt.Errorf("creating network (acl list): %w", core.DiagsToError(diags))
 		}
 
-		var routerAddress string
-		if instance.Network.RouterAddress != nil {
-			routerAddress = *instance.Network.RouterAddress
-			diags.AddWarning("field missing while mapping fields", "router_address was empty in API response")
-		}
-		if instance.Network.InstanceAddress == nil {
-			return fmt.Errorf("creating network: no instance address returned")
-		}
 		networkValues = map[string]attr.Value{
 			"acl":              aclList,
-			"access_scope":     types.StringValue(string(*instance.Network.AccessScope)),
-			"instance_address": types.StringValue(*instance.Network.InstanceAddress),
-			"router_address":   types.StringValue(routerAddress),
+			"access_scope":     types.StringPointerValue((*string)(instance.Network.AccessScope)),
+			"instance_address": types.StringPointerValue(instance.Network.InstanceAddress),
+			"router_address":   types.StringPointerValue(instance.Network.RouterAddress),
 		}
 	}
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating network: %w", core.DiagsToError(diags))
-	}
-
-	var flavorValues map[string]attr.Value
-	if instance.FlavorId == nil || *instance.FlavorId == "" {
-		return fmt.Errorf("instance has no flavor id")
-	}
-	if !flavor.Id.IsUnknown() && !flavor.Id.IsNull() {
-		if *instance.FlavorId != flavor.Id.ValueString() {
-			return fmt.Errorf("instance has different flavor id %s - %s", *instance.FlavorId, flavor.Id.ValueString())
-		}
-	}
-	if model.Flavor.IsNull() || model.Flavor.IsUnknown() {
-		var nodeType string
-		if flavor.NodeType.IsUnknown() || flavor.NodeType.IsNull() {
-			if instance.Replicas == nil {
-				return fmt.Errorf("instance has no replicas setting")
-			}
-			switch *instance.Replicas {
-			case 1:
-				nodeType = "Single"
-			case 3:
-				nodeType = "Replicas"
-			default:
-				return fmt.Errorf("could not determine replicas settings")
-			}
-		} else {
-			nodeType = flavor.NodeType.ValueString()
-		}
-		flavorValues = map[string]attr.Value{
-			"id":          flavor.Id,
-			"description": flavor.Description,
-			"cpu":         flavor.CPU,
-			"ram":         flavor.RAM,
-			"node_type":   types.StringValue(nodeType),
-		}
-	} else {
-		flavorValues = model.Flavor.Attributes()
-	}
-
-	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
-	if diags.HasError() {
-		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 
 	var storageValues map[string]attr.Value
@@ -167,10 +116,8 @@ func mapFields(
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
-	model.Network = networkObject
 	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
-	model.Flavor = flavorObject
-	// TODO - verify working
+	model.FlavorId = types.StringPointerValue(instance.FlavorId)
 	model.Replicas = types.Int64Value(int64(*instance.Replicas))
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
@@ -182,16 +129,12 @@ func mapFields(
 
 func toCreatePayload(
 	model *Model,
-	flavor *flavorModel,
 	storage *storageModel,
 	enc *encryptionModel,
 	net *networkModel,
 ) (*postgresflex.CreateInstanceRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
-	}
-	if flavor == nil {
-		return nil, fmt.Errorf("nil flavor")
 	}
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
@@ -239,24 +182,11 @@ func toCreatePayload(
 		}
 	}
 
-	if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
-		if !flavor.NodeType.IsNull() && !flavor.NodeType.IsUnknown() {
-			switch strings.ToLower(flavor.NodeType.ValueString()) {
-			case "single":
-				replVal = int32(1)
-			case "replica":
-				replVal = int32(3)
-			default:
-				return nil, fmt.Errorf("flavor has invalid replica attribute")
-			}
-		}
-	}
-
 	return &postgresflex.CreateInstanceRequestPayload{
 		Acl:            &aclElements,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		Encryption:     encryptionPayload,
-		FlavorId:       conversion.StringValueToPointer(flavor.Id),
+		FlavorId:       conversion.StringValueToPointer(model.FlavorId),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Network:        networkPayload,
 		Replicas:       postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(&replVal),
@@ -266,12 +196,13 @@ func toCreatePayload(
 	}, nil
 }
 
-func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, _ *networkModel) (*postgresflex.UpdateInstancePartiallyRequestPayload, error) {
+func toUpdatePayload(
+	model *Model,
+	storage *storageModel,
+	_ *networkModel,
+) (*postgresflex.UpdateInstancePartiallyRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
-	}
-	if flavor == nil {
-		return nil, fmt.Errorf("nil flavor")
 	}
 	if storage == nil {
 		return nil, fmt.Errorf("nil storage")
@@ -282,7 +213,7 @@ func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, _
 		//	Items: &acl,
 		// },
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       conversion.StringValueToPointer(flavor.Id),
+		FlavorId:       conversion.StringValueToPointer(model.FlavorId),
 		Name:           conversion.StringValueToPointer(model.Name),
 		// Replicas:       conversion.Int64ValueToPointer(model.Replicas),
 		Storage: &postgresflex.StorageUpdate{
@@ -290,188 +221,4 @@ func toUpdatePayload(model *Model, flavor *flavorModel, storage *storageModel, _
 		},
 		Version: conversion.StringValueToPointer(model.Version),
 	}, nil
-}
-
-func loadFlavorId(ctx context.Context, client postgresflexClient, model *Model, flavor *flavorModel, storage *storageModel) error {
-	if model == nil {
-		return fmt.Errorf("nil model")
-	}
-	if flavor == nil {
-		return fmt.Errorf("nil flavor")
-	}
-	cpu := flavor.CPU.ValueInt64()
-	if cpu == 0 {
-		return fmt.Errorf("nil CPU")
-	}
-	ram := flavor.RAM.ValueInt64()
-	if ram == 0 {
-		return fmt.Errorf("nil RAM")
-	}
-
-	nodeType := flavor.NodeType.ValueString()
-	if nodeType == "" {
-		if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
-			return fmt.Errorf("nil NodeType")
-		}
-		switch model.Replicas.ValueInt64() {
-		case 1:
-			nodeType = "Single"
-		case 3:
-			nodeType = "Replica"
-		default:
-			return fmt.Errorf("unknown Replicas value: %d", model.Replicas.ValueInt64())
-		}
-	}
-
-	storageClass := conversion.StringValueToPointer(storage.Class)
-	if storageClass == nil {
-		return fmt.Errorf("nil StorageClass")
-	}
-	storageSize := conversion.Int64ValueToPointer(storage.Size)
-	if storageSize == nil {
-		return fmt.Errorf("nil StorageSize")
-	}
-
-	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
-
-	flavorList, err := getAllFlavors(ctx, client, projectId, region)
-	if err != nil {
-		return err
-	}
-
-	avl := ""
-	foundFlavorCount := 0
-	var foundFlavors []string
-	for _, f := range flavorList {
-		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
-			continue
-		}
-		if !strings.EqualFold(*f.NodeType, nodeType) {
-			continue
-		}
-		if *f.Cpu == cpu && *f.Memory == ram {
-			var useSc *postgresflex.FlavorStorageClassesStorageClass
-			for _, sc := range *f.StorageClasses {
-				if *sc.Class != *storageClass {
-					continue
-				}
-				if *storageSize < *f.MinGB || *storageSize > *f.MaxGB {
-					return fmt.Errorf("storage size %d out of bounds (min: %d - max: %d)", *storageSize, *f.MinGB, *f.MaxGB)
-				}
-				useSc = &sc
-			}
-			if useSc == nil {
-				return fmt.Errorf("no storage class found for %s", *storageClass)
-			}
-
-			flavor.Id = types.StringValue(*f.Id)
-			flavor.Description = types.StringValue(*f.Description)
-			foundFlavors = append(foundFlavors, fmt.Sprintf("%s (%d/%d - %s)", *f.Id, *f.Cpu, *f.Memory, *f.NodeType))
-			foundFlavorCount++
-		}
-		for _, cls := range *f.StorageClasses {
-			avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM, storage %s (min: %d - max: %d)", avl, *f.Cpu, *f.Memory, *cls.Class, *f.MinGB, *f.MaxGB)
-		}
-	}
-	if foundFlavorCount > 1 {
-		return fmt.Errorf(
-			"number of flavors returned: %d\nmultiple flavors found: %d flavors\n  %s",
-			len(flavorList),
-			foundFlavorCount,
-			strings.Join(foundFlavors, "\n  "),
-		)
-	}
-	if flavor.Id.ValueString() == "" {
-		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
-	}
-
-	return nil
-}
-
-func getAllFlavors(ctx context.Context, client postgresflexClient, projectId, region string) ([]postgresflex.ListFlavors, error) {
-	if projectId == "" || region == "" {
-		return nil, fmt.Errorf("listing postgresflex flavors: projectId and region are required")
-	}
-	var flavorList []postgresflex.ListFlavors
-
-	page := int64(1)
-	size := int64(10)
-	sort := postgresflex.FLAVORSORT_INDEX_ASC
-	counter := 0
-	for {
-		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, &sort)
-		if err != nil {
-			return nil, fmt.Errorf("listing postgresflex flavors: %w", err)
-		}
-		if res.Flavors == nil {
-			return nil, fmt.Errorf("finding flavors for project %s", projectId)
-		}
-		pagination := res.GetPagination()
-		flavors := res.GetFlavors()
-		flavorList = append(flavorList, flavors...)
-
-		if *pagination.TotalRows < int64(len(flavorList)) {
-			return nil, fmt.Errorf("total rows is smaller than current accumulated list - that should not happen")
-		}
-		if *pagination.TotalRows == int64(len(flavorList)) {
-			break
-		}
-		page++
-
-		if page > *pagination.TotalPages {
-			break
-		}
-
-		// implement a breakpoint
-		counter++
-		if counter > 1000 {
-			panic("too many pagination results")
-		}
-	}
-	return flavorList, nil
-}
-
-func getFlavorModelById(ctx context.Context, client postgresflexClient, model *Model, flavor *flavorModel) error {
-	if model == nil {
-		return fmt.Errorf("nil model")
-	}
-	if flavor == nil {
-		return fmt.Errorf("nil flavor")
-	}
-	id := conversion.StringValueToPointer(flavor.Id)
-	if id == nil {
-		return fmt.Errorf("nil flavor ID")
-	}
-
-	flavor.Id = types.StringValue("")
-
-	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
-
-	flavorList, err := getAllFlavors(ctx, client, projectId, region)
-	if err != nil {
-		return err
-	}
-
-	avl := ""
-	for _, f := range flavorList {
-		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
-			continue
-		}
-		if *f.Id == *id {
-			flavor.Id = types.StringValue(*f.Id)
-			flavor.Description = types.StringValue(*f.Description)
-			flavor.CPU = types.Int64Value(*f.Cpu)
-			flavor.RAM = types.Int64Value(*f.Memory)
-			flavor.NodeType = types.StringValue(*f.NodeType)
-			break
-		}
-		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
-	}
-	if flavor.Id.ValueString() == "" {
-		return fmt.Errorf("couldn't find flavor, available specs are: %s", avl)
-	}
-
-	return nil
 }

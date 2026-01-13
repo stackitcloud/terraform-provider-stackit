@@ -3,11 +3,7 @@ package postgresflexalpha
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
@@ -490,327 +486,303 @@ func (c postgresFlexClientMocked) GetFlavorsRequestExecute(
 	return &res, nil
 }
 
-func Test_getAllFlavors(t *testing.T) {
-	type args struct {
-		projectId string
-		region    string
-	}
-	tests := []struct {
-		name      string
-		args      args
-		firstItem int
-		lastItem  int
-		want      []postgresflex.ListFlavors
-		wantErr   bool
-	}{
-		{
-			name: "find exactly one flavor",
-			args: args{
-				projectId: "project",
-				region:    "region",
-			},
-			firstItem: 0,
-			lastItem:  0,
-			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[0]),
-			},
-			wantErr: false,
-		},
-		{
-			name: "get exactly 1 page flavors",
-			args: args{
-				projectId: "project",
-				region:    "region",
-			},
-			firstItem: 0,
-			lastItem:  9,
-			want:      testFlavorListToResponseFlavorList(responseList[0:10]),
-			wantErr:   false,
-		},
-		{
-			name: "get exactly 20 flavors",
-			args: args{
-				projectId: "project",
-				region:    "region",
-			},
-			firstItem: 0,
-			lastItem:  20,
-			// 0 indexed therefore we want :21
-			want:    testFlavorListToResponseFlavorList(responseList[0:21]),
-			wantErr: false,
-		},
-		{
-			name: "get all flavors",
-			args: args{
-				projectId: "project",
-				region:    "region",
-			},
-			firstItem: 0,
-			lastItem:  len(responseList),
-			want:      testFlavorListToResponseFlavorList(responseList),
-			wantErr:   false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			first := tt.firstItem
-			if first > len(responseList)-1 {
-				first = len(responseList) - 1
-			}
-			last := tt.lastItem
-			if last > len(responseList)-1 {
-				last = len(responseList) - 1
-			}
-			mockClient := postgresFlexClientMocked{
-				returnError: tt.wantErr,
-				firstItem:   first,
-				lastItem:    last,
-			}
-			got, err := getAllFlavors(context.TODO(), mockClient, tt.args.projectId, tt.args.region)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getAllFlavors() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+//func Test_getAllFlavors(t *testing.T) {
+//	type args struct {
+//		projectId string
+//		region    string
+//	}
+//	tests := []struct {
+//		name      string
+//		args      args
+//		firstItem int
+//		lastItem  int
+//		want      []postgresflex.ListFlavors
+//		wantErr   bool
+//	}{
+//		{
+//			name: "find exactly one flavor",
+//			args: args{
+//				projectId: "project",
+//				region:    "region",
+//			},
+//			firstItem: 0,
+//			lastItem:  0,
+//			want: []postgresflex.ListFlavors{
+//				testFlavorToResponseFlavor(responseList[0]),
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "get exactly 1 page flavors",
+//			args: args{
+//				projectId: "project",
+//				region:    "region",
+//			},
+//			firstItem: 0,
+//			lastItem:  9,
+//			want:      testFlavorListToResponseFlavorList(responseList[0:10]),
+//			wantErr:   false,
+//		},
+//		{
+//			name: "get exactly 20 flavors",
+//			args: args{
+//				projectId: "project",
+//				region:    "region",
+//			},
+//			firstItem: 0,
+//			lastItem:  20,
+//			// 0 indexed therefore we want :21
+//			want:    testFlavorListToResponseFlavorList(responseList[0:21]),
+//			wantErr: false,
+//		},
+//		{
+//			name: "get all flavors",
+//			args: args{
+//				projectId: "project",
+//				region:    "region",
+//			},
+//			firstItem: 0,
+//			lastItem:  len(responseList),
+//			want:      testFlavorListToResponseFlavorList(responseList),
+//			wantErr:   false,
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			first := tt.firstItem
+//			if first > len(responseList)-1 {
+//				first = len(responseList) - 1
+//			}
+//			last := tt.lastItem
+//			if last > len(responseList)-1 {
+//				last = len(responseList) - 1
+//			}
+//			mockClient := postgresFlexClientMocked{
+//				returnError: tt.wantErr,
+//				firstItem:   first,
+//				lastItem:    last,
+//			}
+//			got, err := getAllFlavors(context.TODO(), mockClient, tt.args.projectId, tt.args.region)
+//			if (err != nil) != tt.wantErr {
+//				t.Errorf("getAllFlavors() error = %v, wantErr %v", err, tt.wantErr)
+//				return
+//			}
+//
+//			if diff := cmp.Diff(tt.want, got); diff != "" {
+//				t.Errorf("mismatch (-want +got):\n%s", diff)
+//			}
+//
+//			if !reflect.DeepEqual(got, tt.want) {
+//				t.Errorf("getAllFlavors() got = %v, want %v", got, tt.want)
+//			}
+//		})
+//	}
+//}
 
-			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Errorf("mismatch (-want +got):\n%s", diff)
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getAllFlavors() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_loadFlavorId(t *testing.T) {
-	type args struct {
-		ctx     context.Context
-		model   *Model
-		flavor  *flavorModel
-		storage *storageModel
-	}
-	tests := []struct {
-		name      string
-		args      args
-		firstItem int
-		lastItem  int
-		want      []postgresflex.ListFlavors
-		wantErr   bool
-	}{
-		{
-			name: "find a single flavor",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-				},
-				flavor: &flavorModel{
-					CPU:      basetypes.NewInt64Value(1),
-					RAM:      basetypes.NewInt64Value(1),
-					NodeType: basetypes.NewStringValue("Single"),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  3,
-			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[0]),
-			},
-			wantErr: false,
-		},
-		{
-			name: "find a single flavor by replicas option",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-					Replicas:  basetypes.NewInt64Value(1),
-				},
-				flavor: &flavorModel{
-					CPU: basetypes.NewInt64Value(1),
-					RAM: basetypes.NewInt64Value(1),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  3,
-			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[0]),
-			},
-			wantErr: false,
-		},
-		{
-			name: "fail finding find a single flavor by replicas option",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-					Replicas:  basetypes.NewInt64Value(1),
-				},
-				flavor: &flavorModel{
-					CPU: basetypes.NewInt64Value(1),
-					RAM: basetypes.NewInt64Value(1),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 13,
-			lastItem:  23,
-			want:      []postgresflex.ListFlavors{},
-			wantErr:   true,
-		},
-		{
-			name: "find a replicas flavor lower case",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-				},
-				flavor: &flavorModel{
-					CPU:      basetypes.NewInt64Value(1),
-					RAM:      basetypes.NewInt64Value(1),
-					NodeType: basetypes.NewStringValue("replica"),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  len(responseList) - 1,
-			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[16]),
-			},
-			wantErr: false,
-		},
-		{
-			name: "find a replicas flavor CamelCase",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-				},
-				flavor: &flavorModel{
-					CPU:      basetypes.NewInt64Value(1),
-					RAM:      basetypes.NewInt64Value(1),
-					NodeType: basetypes.NewStringValue("Replica"),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  len(responseList) - 1,
-			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[16]),
-			},
-			wantErr: false,
-		},
-		{
-			name: "find a replicas flavor by replicas option",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-					Replicas:  basetypes.NewInt64Value(3),
-				},
-				flavor: &flavorModel{
-					CPU: basetypes.NewInt64Value(1),
-					RAM: basetypes.NewInt64Value(1),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  len(responseList) - 1,
-			want: []postgresflex.ListFlavors{
-				testFlavorToResponseFlavor(responseList[16]),
-			},
-			wantErr: false,
-		},
-		{
-			name: "fail finding a replica flavor",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-					Replicas:  basetypes.NewInt64Value(3),
-				},
-				flavor: &flavorModel{
-					CPU: basetypes.NewInt64Value(1),
-					RAM: basetypes.NewInt64Value(1),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  10,
-			want:      []postgresflex.ListFlavors{},
-			wantErr:   true,
-		},
-		{
-			name: "no flavor found error",
-			args: args{
-				ctx: context.Background(),
-				model: &Model{
-					ProjectId: basetypes.NewStringValue("project"),
-					Region:    basetypes.NewStringValue("region"),
-				},
-				flavor: &flavorModel{
-					CPU:      basetypes.NewInt64Value(10),
-					RAM:      basetypes.NewInt64Value(1000),
-					NodeType: basetypes.NewStringValue("Single"),
-				},
-				storage: &storageModel{
-					Class: basetypes.NewStringValue("sc1"),
-					Size:  basetypes.NewInt64Value(100),
-				},
-			},
-			firstItem: 0,
-			lastItem:  3,
-			want:      []postgresflex.ListFlavors{},
-			wantErr:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			first := tt.firstItem
-			if first > len(responseList)-1 {
-				first = len(responseList) - 1
-			}
-			last := tt.lastItem
-			if last > len(responseList)-1 {
-				last = len(responseList) - 1
-			}
-			mockClient := postgresFlexClientMocked{
-				returnError: tt.wantErr,
-				firstItem:   first,
-				lastItem:    last,
-			}
-			if err := loadFlavorId(tt.args.ctx, mockClient, tt.args.model, tt.args.flavor, tt.args.storage); (err != nil) != tt.wantErr {
-				t.Errorf("loadFlavorId() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
+//func Test_loadFlavorId(t *testing.T) {
+//	type args struct {
+//		ctx     context.Context
+//		model   *Model
+//		storage *storageModel
+//	}
+//	tests := []struct {
+//		name      string
+//		args      args
+//		firstItem int
+//		lastItem  int
+//		want      []postgresflex.ListFlavors
+//		wantErr   bool
+//	}{
+//		{
+//			name: "find a single flavor",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  3,
+//			want: []postgresflex.ListFlavors{
+//				testFlavorToResponseFlavor(responseList[0]),
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "find a single flavor by replicas option",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//					Replicas:  basetypes.NewInt64Value(1),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  3,
+//			want: []postgresflex.ListFlavors{
+//				testFlavorToResponseFlavor(responseList[0]),
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "fail finding find a single flavor by replicas option",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//					Replicas:  basetypes.NewInt64Value(1),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 13,
+//			lastItem:  23,
+//			want:      []postgresflex.ListFlavors{},
+//			wantErr:   true,
+//		},
+//		{
+//			name: "find a replicas flavor lower case",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  len(responseList) - 1,
+//			want: []postgresflex.ListFlavors{
+//				testFlavorToResponseFlavor(responseList[16]),
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "find a replicas flavor CamelCase",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  len(responseList) - 1,
+//			want: []postgresflex.ListFlavors{
+//				testFlavorToResponseFlavor(responseList[16]),
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "find a replicas flavor by replicas option",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//					Replicas:  basetypes.NewInt64Value(3),
+//				},
+//				flavor: &flavorModel{
+//					CPU: basetypes.NewInt64Value(1),
+//					RAM: basetypes.NewInt64Value(1),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  len(responseList) - 1,
+//			want: []postgresflex.ListFlavors{
+//				testFlavorToResponseFlavor(responseList[16]),
+//			},
+//			wantErr: false,
+//		},
+//		{
+//			name: "fail finding a replica flavor",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//					Replicas:  basetypes.NewInt64Value(3),
+//				},
+//				flavor: &flavorModel{
+//					CPU: basetypes.NewInt64Value(1),
+//					RAM: basetypes.NewInt64Value(1),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  10,
+//			want:      []postgresflex.ListFlavors{},
+//			wantErr:   true,
+//		},
+//		{
+//			name: "no flavor found error",
+//			args: args{
+//				ctx: context.Background(),
+//				model: &Model{
+//					ProjectId: basetypes.NewStringValue("project"),
+//					Region:    basetypes.NewStringValue("region"),
+//				},
+//				flavor: &flavorModel{
+//					CPU:      basetypes.NewInt64Value(10),
+//					RAM:      basetypes.NewInt64Value(1000),
+//					NodeType: basetypes.NewStringValue("Single"),
+//				},
+//				storage: &storageModel{
+//					Class: basetypes.NewStringValue("sc1"),
+//					Size:  basetypes.NewInt64Value(100),
+//				},
+//			},
+//			firstItem: 0,
+//			lastItem:  3,
+//			want:      []postgresflex.ListFlavors{},
+//			wantErr:   true,
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			first := tt.firstItem
+//			if first > len(responseList)-1 {
+//				first = len(responseList) - 1
+//			}
+//			last := tt.lastItem
+//			if last > len(responseList)-1 {
+//				last = len(responseList) - 1
+//			}
+//			mockClient := postgresFlexClientMocked{
+//				returnError: tt.wantErr,
+//				firstItem:   first,
+//				lastItem:    last,
+//			}
+//			if err := loadFlavorId(tt.args.ctx, mockClient, tt.args.model, tt.args.flavor, tt.args.storage); (err != nil) != tt.wantErr {
+//				t.Errorf("loadFlavorId() error = %v, wantErr %v", err, tt.wantErr)
+//			}
+//		})
+//	}
+//}

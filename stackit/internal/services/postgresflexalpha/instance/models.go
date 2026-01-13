@@ -12,7 +12,7 @@ type Model struct {
 	ProjectId      types.String `tfsdk:"project_id"`
 	Name           types.String `tfsdk:"name"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
-	Flavor         types.Object `tfsdk:"flavor"`
+	FlavorId       types.String `tfsdk:"flavor_id"`
 	Replicas       types.Int64  `tfsdk:"replicas"`
 	RetentionDays  types.Int64  `tfsdk:"retention_days"`
 	Storage        types.Object `tfsdk:"storage"`
@@ -22,9 +22,11 @@ type Model struct {
 	Network        types.Object `tfsdk:"network"`
 }
 
-type IdentityModel struct {
-	ID types.String `tfsdk:"id"`
-}
+//type IdentityModel struct {
+//	InstanceId types.String `tfsdk:"instance_id"`
+//	Region     types.String `tfsdk:"region"`
+//	ProjectId  types.String `tfsdk:"project_id"`
+//}
 
 type encryptionModel struct {
 	KeyRingId      types.String `tfsdk:"keyring_id"`
@@ -52,24 +54,6 @@ var networkTypes = map[string]attr.Type{
 	"access_scope":     basetypes.StringType{},
 	"instance_address": basetypes.StringType{},
 	"router_address":   basetypes.StringType{},
-}
-
-// Struct corresponding to Model.Flavor
-type flavorModel struct {
-	Id          types.String `tfsdk:"id"`
-	Description types.String `tfsdk:"description"`
-	CPU         types.Int64  `tfsdk:"cpu"`
-	RAM         types.Int64  `tfsdk:"ram"`
-	NodeType    types.String `tfsdk:"node_type"`
-}
-
-// Types corresponding to flavorModel
-var flavorTypes = map[string]attr.Type{
-	"id":          basetypes.StringType{},
-	"description": basetypes.StringType{},
-	"cpu":         basetypes.Int64Type{},
-	"ram":         basetypes.Int64Type{},
-	"node_type":   basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Storage

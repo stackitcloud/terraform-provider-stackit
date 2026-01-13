@@ -253,22 +253,6 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	var flavor = &flavorModel{}
-	if model.Flavor.IsNull() || model.Flavor.IsUnknown() {
-		flavor.Id = types.StringValue(*instanceResp.FlavorId)
-		if flavor.Id.IsNull() || flavor.Id.IsUnknown() || flavor.Id.String() == "" {
-			panic("WTF FlavorId can not be null or empty string")
-		}
-		err = getFlavorModelById(ctx, r.client, &model, flavor)
-		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-		if flavor.CPU.IsNull() || flavor.CPU.IsUnknown() || flavor.CPU.String() == "" {
-			panic("WTF FlavorId can not be null or empty string")
-		}
-	}
-
 	var storage = &storageModel{}
 	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -296,7 +280,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, instanceResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

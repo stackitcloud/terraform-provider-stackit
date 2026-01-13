@@ -41,16 +41,16 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	UserId           types.Int64  `tfsdk:"user_id"`
-	InstanceId       types.String `tfsdk:"instance_id"`
-	ProjectId        types.String `tfsdk:"project_id"`
-	Username         types.String `tfsdk:"username"`
-	Roles            types.Set    `tfsdk:"roles"`
-	Password         types.String `tfsdk:"password"`
-	Host             types.String `tfsdk:"host"`
-	Port             types.Int64  `tfsdk:"port"`
-	Uri              types.String `tfsdk:"uri"`
+	Id         types.String `tfsdk:"id"` // needed by TF
+	UserId     types.Int64  `tfsdk:"user_id"`
+	InstanceId types.String `tfsdk:"instance_id"`
+	ProjectId  types.String `tfsdk:"project_id"`
+	Username   types.String `tfsdk:"username"`
+	Roles      types.Set    `tfsdk:"roles"`
+	Password   types.String `tfsdk:"password"`
+	//Host             types.String `tfsdk:"host"`
+	//Port             types.Int64  `tfsdk:"port"`
+	//Uri              types.String `tfsdk:"uri"`
 	Region           types.String `tfsdk:"region"`
 	Status           types.String `tfsdk:"status"`
 	ConnectionString types.String `tfsdk:"connection_string"`
@@ -124,6 +124,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	// rolesOptions := []string{"login", "createdb", "createrole"}
 	rolesOptions := []string{"login", "createdb"}
 
 	descriptions := map[string]string{
@@ -181,9 +182,9 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"username": schema.StringAttribute{
-				Required: true,
+				Required:      true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					// stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"roles": schema.SetAttribute{
@@ -192,7 +193,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Required:    true,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf("login", "createdb"),
+						stringvalidator.OneOf(rolesOptions...),
 					),
 				},
 			},
@@ -200,16 +201,16 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed:  true,
 				Sensitive: true,
 			},
-			"host": schema.StringAttribute{
-				Computed: true,
-			},
-			"port": schema.Int64Attribute{
-				Computed: true,
-			},
-			"uri": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
-			},
+			//"host": schema.StringAttribute{
+			//	Computed: true,
+			//},
+			//"port": schema.Int64Attribute{
+			//	Computed: true,
+			//},
+			//"uri": schema.StringAttribute{
+			//	Computed:  true,
+			//	Sensitive: true,
+			//},
 			"region": schema.StringAttribute{
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
@@ -375,7 +376,6 @@ func (r *userResource) Update(
 	req resource.UpdateRequest,
 	resp *resource.UpdateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -466,7 +466,6 @@ func (r *userResource) Delete(
 	req resource.DeleteRequest,
 	resp *resource.DeleteResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -581,9 +580,10 @@ func mapFieldsCreate(
 		model.Roles = rolesSet
 	}
 
-	model.Password = types.StringValue(*user.Password)
+	model.Password = types.StringPointerValue(user.Password)
 	model.Region = types.StringValue(region)
 	model.Status = types.StringPointerValue(user.Status)
+	//model.Host = types.StringPointerValue()
 	model.ConnectionString = types.StringPointerValue(user.ConnectionString)
 
 	return nil
@@ -625,8 +625,8 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region stri
 		}
 		model.Roles = rolesSet
 	}
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
+	//model.Host = types.StringPointerValue(user.Host)
+	//model.Port = types.Int64PointerValue(user.Port)
 	model.Region = types.StringValue(region)
 	model.Status = types.StringPointerValue(user.Status)
 	model.ConnectionString = types.StringPointerValue(user.ConnectionString)
@@ -667,6 +667,7 @@ func toUpdatePayload(model *Model, roles *[]string) (
 	}
 
 	return &postgresflex.UpdateUserRequestPayload{
+		Name:  conversion.StringValueToPointer(model.Username),
 		Roles: toPayloadRoles(roles),
 	}, nil
 }

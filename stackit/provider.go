@@ -18,14 +18,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/features"
-	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
-
 	postgresFlexAlphaDatabase "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/database"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/flavor"
 	postgresFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance"
 	postgresFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/user"
+	sqlserverFlexAlphaFlavor "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/flavor"
 	sqlServerFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/instance"
 	sqlserverFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/user"
+	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -488,9 +489,13 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		postgresFlexAlphaFlavor.NewFlavorDataSource,
+		//postgresFlexAlphaFlavor.NewFlavorListDataSource,
 		postgresFlexAlphaDatabase.NewDatabaseDataSource,
 		postgresFlexAlphaInstance.NewInstanceDataSource,
 		postgresFlexAlphaUser.NewUserDataSource,
+
+		sqlserverFlexAlphaFlavor.NewFlavorDataSource,
 		sqlServerFlexAlphaInstance.NewInstanceDataSource,
 		sqlserverFlexAlphaUser.NewUserDataSource,
 	}

@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/testutil"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
+	coreconfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
@@ -28,6 +28,7 @@ var (
 	//go:embed testdata/resource-min.tf
 	resourceMinConfig string
 )
+
 var testConfigVarsMin = config.Variables{
 	"project_id":         config.StringVariable(testutil.ProjectId),
 	"name":               config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
@@ -440,7 +441,7 @@ func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 		client, err = sqlserverflex.NewAPIClient()
 	} else {
 		client, err = sqlserverflex.NewAPIClient(
-			core_config.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
+			coreconfig.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
 		)
 	}
 	if err != nil {

@@ -1,0 +1,79 @@
+package postgresFlexAlphaFlavor
+
+import (
+	"context"
+
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha"
+	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
+
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
+)
+
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ datasource.DataSource = &flavorListDataSource{}
+)
+
+// NewFlavorListDataSource is a helper function to simplify the provider implementation.
+func NewFlavorListDataSource() datasource.DataSource {
+	return &flavorListDataSource{}
+}
+
+// flavorDataSource is the data source implementation.
+type flavorListDataSource struct {
+	client       *postgresflexalpha.APIClient
+	providerData core.ProviderData
+}
+
+// Metadata returns the data source type name.
+func (r *flavorListDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_postgresflexalpha_flavorlist"
+}
+
+// Configure adds the provider configured client to the data source.
+func (r *flavorListDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	r.client = apiClient
+	tflog.Info(ctx, "Postgres Flex flavors client configured")
+}
+
+func (r *flavorListDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = postgresflex.FlavorDataSourceSchema(ctx)
+}
+
+func (r *flavorListDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var model postgresflex.FlavorModel
+	diags := req.Config.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	// Set refreshed state
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Postgres Flex flavors read")
+}

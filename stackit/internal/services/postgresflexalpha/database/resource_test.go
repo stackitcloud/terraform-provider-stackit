@@ -1,6 +1,7 @@
 package postgresflexalpha
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -180,5 +181,52 @@ func TestToCreatePayload(t *testing.T) {
 				}
 			},
 		)
+	}
+}
+
+func Test_cleanString(t *testing.T) {
+	type args struct {
+		s *string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *string
+	}{
+		{
+			name: "simple_value",
+			args: args{
+				s: utils.Ptr("mytest"),
+			},
+			want: utils.Ptr("mytest"),
+		},
+		{
+			name: "simple_value_with_quotes",
+			args: args{
+				s: utils.Ptr("\"mytest\""),
+			},
+			want: utils.Ptr("mytest"),
+		},
+		{
+			name: "simple_values_with_quotes",
+			args: args{
+				s: utils.Ptr("\"my test here\""),
+			},
+			want: utils.Ptr("my test here"),
+		},
+		{
+			name: "simple_values",
+			args: args{
+				s: utils.Ptr("my test here"),
+			},
+			want: utils.Ptr("my test here"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := cleanString(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("cleanString() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

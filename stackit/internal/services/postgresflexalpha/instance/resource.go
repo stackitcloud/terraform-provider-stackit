@@ -6,16 +6,13 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -42,7 +39,7 @@ var (
 	_ resource.ResourceWithImportState    = &instanceResource{}
 	_ resource.ResourceWithModifyPlan     = &instanceResource{}
 	_ resource.ResourceWithValidateConfig = &instanceResource{}
-	_ resource.ResourceWithIdentity       = &instanceResource{}
+	//_ resource.ResourceWithIdentity       = &instanceResource{}
 )
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -128,35 +125,30 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":               "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":                 "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id":        "ID of the PostgresFlex instance.",
-		"project_id":         "STACKIT project ID to which the instance is associated.",
-		"name":               "Instance name.",
-		"backup_schedule":    "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
-		"retention_days":     "The days of the retention period.",
-		"flavor":             "The block that defines the flavor data.",
-		"flavor_id":          "The ID of the flavor.",
-		"flavor_description": "The flavor detailed flavor name.",
-		"flavor_cpu":         "The CPU count of the flavor.",
-		"flavor_ram":         "The RAM count of the flavor.",
-		"flavor_node_type":   "The node type of the flavor. (Single or Replicas)",
-		"replicas":           "The number of replicas.",
-		"storage":            "The block of the storage configuration.",
-		"storage_class":      "The storage class used.",
-		"storage_size":       "The disk size of the storage.",
-		"region":             "The resource region. If not defined, the provider region is used.",
-		"version":            "The database version used.",
-		"encryption":         "The encryption block.",
-		"keyring_id":         "KeyRing ID of the encryption key.",
-		"key_id":             "Key ID of the encryption key.",
-		"key_version":        "Key version of the encryption key.",
-		"service_account":    "The service account ID of the service account.",
-		"network":            "The network block configuration.",
-		"access_scope":       "The access scope. (Either SNA or PUBLIC)",
-		"acl":                "The Access Control List (ACL) for the PostgresFlex instance.",
-		"instance_address":   "The returned instance address.",
-		"router_address":     "The returned router address.",
+		"main":             "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":               "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":      "ID of the PostgresFlex instance.",
+		"project_id":       "STACKIT project ID to which the instance is associated.",
+		"name":             "Instance name.",
+		"backup_schedule":  "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
+		"retention_days":   "The days of the retention period.",
+		"flavor_id":        "The ID of the flavor.",
+		"replicas":         "The number of replicas.",
+		"storage":          "The block of the storage configuration.",
+		"storage_class":    "The storage class used.",
+		"storage_size":     "The disk size of the storage.",
+		"region":           "The resource region. If not defined, the provider region is used.",
+		"version":          "The database version used.",
+		"encryption":       "The encryption block.",
+		"keyring_id":       "KeyRing ID of the encryption key.",
+		"key_id":           "Key ID of the encryption key.",
+		"key_version":      "Key version of the encryption key.",
+		"service_account":  "The service account ID of the service account.",
+		"network":          "The network block configuration.",
+		"access_scope":     "The access scope. (Either SNA or PUBLIC)",
+		"acl":              "The Access Control List (ACL) for the PostgresFlex instance.",
+		"instance_address": "The returned instance address.",
+		"router_address":   "The returned router address.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -210,45 +202,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Description: descriptions["retention_days"],
 				Required:    true,
 			},
-			"flavor": schema.SingleNestedAttribute{
-				Required:    true,
-				Description: descriptions["flavor"],
-				Attributes: map[string]schema.Attribute{
-					"id": schema.StringAttribute{
-						Description: descriptions["flavor_id"],
-						Computed:    true,
-						Optional:    true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-					"description": schema.StringAttribute{
-						Computed:    true,
-						Description: descriptions["flavor_description"],
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-						},
-					},
-					"cpu": schema.Int64Attribute{
-						Description: descriptions["flavor_cpu"],
-						Required:    true,
-					},
-					"ram": schema.Int64Attribute{
-						Description: descriptions["flavor_ram"],
-						Required:    true,
-					},
-					"node_type": schema.StringAttribute{
-						Description: descriptions["flavor_node_type"],
-						Computed:    true,
-						Optional:    true,
-						PlanModifiers: []planmodifier.String{
-							// TODO @mhenselin anschauen
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-				},
+			"flavor_id": schema.StringAttribute{
+				Required: true,
 			},
 			"replicas": schema.Int64Attribute{
 				Required: true,
@@ -390,15 +345,21 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 	}
 }
 
-func (r *instanceResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		Attributes: map[string]identityschema.Attribute{
-			"id": identityschema.StringAttribute{
-				RequiredForImport: true, // must be set during import by the practitioner
-			},
-		},
-	}
-}
+//func (r *instanceResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+//	resp.IdentitySchema = identityschema.Schema{
+//		Attributes: map[string]identityschema.Attribute{
+//			"project_id": identityschema.StringAttribute{
+//				RequiredForImport: true, // must be set during import by the practitioner
+//			},
+//			"region": identityschema.StringAttribute{
+//				RequiredForImport: true, // must be set during import by the practitioner
+//			},
+//			"instance_id": identityschema.StringAttribute{
+//				RequiredForImport: true, // must be set during import by the practitioner
+//			},
+//		},
+//	}
+//}
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(
@@ -406,7 +367,6 @@ func (r *instanceResource) Create(
 	req resource.CreateRequest,
 	resp *resource.CreateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -428,42 +388,6 @@ func (r *instanceResource) Create(
 		if resp.Diagnostics.HasError() {
 			return
 		}
-	}
-
-	var flavor = &flavorModel{}
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-			return
-		}
-	}
-
-	if flavor.Id.IsNull() || flavor.Id.IsUnknown() {
-		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
-		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-		flavorValues := map[string]attr.Value{
-			"id":          flavor.Id,
-			"description": flavor.Description,
-			"cpu":         flavor.CPU,
-			"ram":         flavor.RAM,
-			"node_type":   flavor.NodeType,
-		}
-		var flavorObject basetypes.ObjectValue
-		flavorObject, diags = types.ObjectValue(flavorTypes, flavorValues)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
-		model.Flavor = flavorObject
 	}
 
 	var encryption = &encryptionModel{}
@@ -494,7 +418,7 @@ func (r *instanceResource) Create(
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model, flavor, storage, encryption, network)
+	payload, err := toCreatePayload(&model, storage, encryption, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -516,11 +440,13 @@ func (r *instanceResource) Create(
 		return
 	}
 
-	// Set data returned by API in identity
-	identity := IdentityModel{
-		ID: utils.BuildInternalTerraformId(projectId, region, instanceId),
-	}
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
+	//// Set data returned by API in identity
+	//identity := IdentityModel{
+	//	InstanceId: types.StringValue(instanceId),
+	//	Region:     types.StringValue(region),
+	//	ProjectId:  types.StringValue(projectId),
+	//}
+	//resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
@@ -529,7 +455,7 @@ func (r *instanceResource) Create(
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, r.client, waitResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -552,12 +478,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// Read identity data
-	var identityData IdentityModel
-	resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	//// Read identity data
+	//var identityData IdentityModel
+	//resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
+	//if resp.Diagnostics.HasError() {
+	//	return
+	//}
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -568,35 +494,27 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var flavor = &flavorModel{}
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-	var storage = &storageModel{}
+	var storage = storageModel{}
 	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
-		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
+		diags = model.Storage.As(ctx, &storage, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	var network = &networkModel{}
+	var network = networkModel{}
 	if !model.Network.IsNull() && !model.Network.IsUnknown() {
-		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
+		diags = model.Network.As(ctx, &network, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 	}
 
-	var encryption = &encryptionModel{}
+	var encryption = encryptionModel{}
 	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
-		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
+		diags = model.Encryption.As(ctx, &encryption, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -617,7 +535,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, r.client, instanceResp, &model, &storage, &encryption, &network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -629,18 +547,19 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	identityData.ID = model.Id
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, identityData)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	//identityData.InstanceId = model.InstanceId
+	//identityData.Region = model.Region
+	//identityData.ProjectId = model.ProjectId
+	//resp.Diagnostics.Append(resp.Identity.Set(ctx, identityData)...)
+	//if resp.Diagnostics.HasError() {
+	//	return
+	//}
 
 	tflog.Info(ctx, "Postgres Flex instance read")
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -676,20 +595,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	var flavor = &flavorModel{}
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
-			return
-		}
-	}
-
 	var network = &networkModel{}
 	if !model.Network.IsNull() && !model.Network.IsUnknown() {
 		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
@@ -709,7 +614,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, flavor, storage, network)
+	payload, err := toUpdatePayload(&model, storage, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -730,7 +635,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, r.client, waitResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -745,7 +650,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -771,11 +675,22 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
+	//_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
+	//if err != nil {
+	//	core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
+	//	return
+	//}
+
+	_, err = r.client.GetInstanceRequest(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
-		return
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode != http.StatusNotFound {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", err.Error())
+			return
+		}
 	}
+
+	resp.State.RemoveResource(ctx)
 	tflog.Info(ctx, "Postgres Flex instance deleted")
 }
 

@@ -100,25 +100,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"backup_schedule": schema.StringAttribute{
 				Computed: true,
 			},
-			"flavor": schema.SingleNestedAttribute{
+			"retention_days": schema.Int64Attribute{
 				Computed: true,
-				Attributes: map[string]schema.Attribute{
-					"id": schema.StringAttribute{
-						Computed: true,
-					},
-					"description": schema.StringAttribute{
-						Computed: true,
-					},
-					"cpu": schema.Int64Attribute{
-						Computed: true,
-					},
-					"ram": schema.Int64Attribute{
-						Computed: true,
-					},
-					"node_type": schema.StringAttribute{
-						Computed: true,
-					},
-				},
+			},
+			"flavor_id": schema.StringAttribute{
+				Computed: true,
 			},
 			"replicas": schema.Int64Attribute{
 				Computed: true,
@@ -226,31 +212,6 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	var flavor = &flavorModel{}
-	if instanceResp != nil && instanceResp.FlavorId != nil {
-		flavor.Id = types.StringValue(*instanceResp.FlavorId)
-	}
-
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		err := getFlavorModelById(ctx, r.client, &model, flavor)
-		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	var storage = &storageModel{}
 	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
 		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
@@ -278,7 +239,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, r.client, instanceResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

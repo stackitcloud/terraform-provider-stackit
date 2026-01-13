@@ -32,7 +32,6 @@ func TestMapFields(t *testing.T) {
 		description string
 		state       Model
 		input       *postgresflex.GetInstanceResponse
-		flavor      *flavorModel
 		storage     *storageModel
 		encryption  *encryptionModel
 		network     *networkModel
@@ -51,9 +50,6 @@ func TestMapFields(t *testing.T) {
 				FlavorId: utils.Ptr("flavor_id"),
 				Replicas: postgresflex.GetInstanceResponseGetReplicasAttributeType(utils.Ptr(int32(1))),
 			},
-			&flavorModel{
-				NodeType: types.StringValue("Single"),
-			},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{
@@ -67,16 +63,10 @@ func TestMapFields(t *testing.T) {
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Name:       types.StringNull(),
+				FlavorId:   types.StringValue("flavor_id"),
 				//ACL:            types.ListNull(types.StringType),
 				BackupSchedule: types.StringNull(),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringNull(),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
-					"node_type":   types.StringValue("Single"),
-				}),
-				Replicas: types.Int64Value(1),
+				Replicas:       types.Int64Value(1),
 				Encryption: types.ObjectValueMust(encryptionTypes, map[string]attr.Value{
 					"keyring_id":      types.StringNull(),
 					"key_id":          types.StringNull(),
@@ -171,7 +161,6 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			nil,
-			&flavorModel{},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{},
@@ -186,7 +175,6 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&postgresflex.GetInstanceResponse{},
-			&flavorModel{},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{},
@@ -197,7 +185,21 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.encryption, tt.network, tt.region)
+			client := postgresFlexClientMocked{
+				returnError: false,
+				firstItem:   0,
+				lastItem:    0,
+			}
+			err := mapFields(
+				context.Background(),
+				client,
+				tt.input,
+				&tt.state,
+				tt.storage,
+				tt.encryption,
+				tt.network,
+				tt.region,
+			)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -219,7 +221,6 @@ func TestToCreatePayload(t *testing.T) {
 		description     string
 		input           *Model
 		inputAcl        []string
-		inputFlavor     *flavorModel
 		inputStorage    *storageModel
 		inputEncryption *encryptionModel
 		inputNetwork    *networkModel
@@ -232,34 +233,6 @@ func TestToCreatePayload(t *testing.T) {
 				Replicas: types.Int64Value(1),
 			},
 			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			&encryptionModel{},
-			&networkModel{
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("0.0.0.0/0"),
-				}),
-			},
-			&postgresflex.CreateInstanceRequestPayload{
-				Acl:        &[]string{"0.0.0.0/0"},
-				Storage:    postgresflex.CreateInstanceRequestPayloadGetStorageAttributeType(&postgresflex.Storage{}),
-				Encryption: &postgresflex.InstanceEncryption{},
-				Network: &postgresflex.InstanceNetwork{
-					Acl: &[]string{"0.0.0.0/0"},
-				},
-				Replicas: postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(utils.Ptr(int32(1))),
-			},
-			true,
-		},
-		{
-			"use flavor node_type instead of replicas",
-			&Model{},
-			[]string{
-				"0.0.0.0/0",
-			},
-			&flavorModel{
-				NodeType: types.StringValue("Single"),
-			},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{
@@ -282,7 +255,6 @@ func TestToCreatePayload(t *testing.T) {
 			"nil_model",
 			nil,
 			[]string{},
-			&flavorModel{},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{},
@@ -293,7 +265,6 @@ func TestToCreatePayload(t *testing.T) {
 			"nil_acl",
 			&Model{},
 			nil,
-			&flavorModel{},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{},
@@ -304,7 +275,6 @@ func TestToCreatePayload(t *testing.T) {
 			"nil_flavor",
 			&Model{},
 			[]string{},
-			nil,
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{},
@@ -315,7 +285,6 @@ func TestToCreatePayload(t *testing.T) {
 			"nil_storage",
 			&Model{},
 			[]string{},
-			&flavorModel{},
 			nil,
 			&encryptionModel{},
 			&networkModel{},
@@ -325,7 +294,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputFlavor, tt.inputStorage, tt.inputEncryption, tt.inputNetwork)
+			output, err := toCreatePayload(tt.input, tt.inputStorage, tt.inputEncryption, tt.inputNetwork)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

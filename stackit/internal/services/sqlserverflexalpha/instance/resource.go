@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	sqlserverflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/utils"
@@ -57,7 +56,7 @@ type Model struct {
 	ProjectId      types.String `tfsdk:"project_id"`
 	Name           types.String `tfsdk:"name"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
-	Flavor         types.Object `tfsdk:"flavor"`
+	FlavorId       types.String `tfsdk:"flavor_id"`
 	Encryption     types.Object `tfsdk:"encryption"`
 	IsDeletable    types.Bool   `tfsdk:"is_deletable"`
 	Storage        types.Object `tfsdk:"storage"`
@@ -96,24 +95,6 @@ var networkTypes = map[string]attr.Type{
 	"access_scope":     basetypes.StringType{},
 	"instance_address": basetypes.StringType{},
 	"router_address":   basetypes.StringType{},
-}
-
-// Struct corresponding to Model.FlavorId
-type flavorModel struct {
-	Id          types.String `tfsdk:"id"`
-	Description types.String `tfsdk:"description"`
-	CPU         types.Int64  `tfsdk:"cpu"`
-	RAM         types.Int64  `tfsdk:"ram"`
-	NodeType    types.String `tfsdk:"node_type"`
-}
-
-// Types corresponding to flavorModel
-var flavorTypes = map[string]attr.Type{
-	"id":          basetypes.StringType{},
-	"description": basetypes.StringType{},
-	"cpu":         basetypes.Int64Type{},
-	"ram":         basetypes.Int64Type{},
-	"node_type":   basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Storage
@@ -198,11 +179,13 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"instance_id":      "ID of the SQLServer Flex instance.",
 		"project_id":       "STACKIT project ID to which the instance is associated.",
 		"name":             "Instance name.",
-		"access_scope":     "The access scope of the instance. (e.g. SNA)",
+		"access_scope":     "The access scope of the instance. (SNA | PUBLIC)",
+		"flavor_id":        "The flavor ID of the instance.",
 		"acl":              "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule":  `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
 		"region":           "The resource region. If not defined, the provider region is used.",
 		"encryption":       "The encryption block.",
+		"replicas":         "The number of replicas of the SQLServer Flex instance.",
 		"network":          "The network block.",
 		"keyring_id":       "STACKIT KMS - KeyRing ID of the encryption key to use.",
 		"key_id":           "STACKIT KMS - Key ID of the encryption key to use.",
@@ -271,78 +254,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
-			// TODO - make it either flavor_id or ram, cpu and node_type
-			"flavor": schema.SingleNestedAttribute{
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
-					objectplanmodifier.UseStateForUnknown(),
+			"flavor_id": schema.StringAttribute{
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"id": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"description": schema.StringAttribute{
-						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"node_type": schema.StringAttribute{
-						Required: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-							stringplanmodifier.UseStateForUnknown(),
-						},
-						Validators: []validator.String{
-							stringvalidator.ConflictsWith([]path.Expression{
-								path.MatchRelative().AtParent().AtName("id"),
-							}...),
-							stringvalidator.OneOfCaseInsensitive(validNodeTypes...),
-							stringvalidator.AlsoRequires([]path.Expression{
-								path.MatchRelative().AtParent().AtName("cpu"),
-								path.MatchRelative().AtParent().AtName("ram"),
-							}...),
-						},
-					},
-					"cpu": schema.Int64Attribute{
-						Required: true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.RequiresReplace(),
-							int64planmodifier.UseStateForUnknown(),
-						},
-						Validators: []validator.Int64{
-							int64validator.ConflictsWith([]path.Expression{
-								path.MatchRelative().AtParent().AtName("id"),
-							}...),
-							int64validator.AlsoRequires([]path.Expression{
-								path.MatchRelative().AtParent().AtName("node_type"),
-								path.MatchRelative().AtParent().AtName("ram"),
-							}...),
-						},
-					},
-					"ram": schema.Int64Attribute{
-						Required: true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.RequiresReplace(),
-							int64planmodifier.UseStateForUnknown(),
-						},
-						Validators: []validator.Int64{
-							int64validator.ConflictsWith([]path.Expression{
-								path.MatchRelative().AtParent().AtName("id"),
-							}...),
-							int64validator.AlsoRequires([]path.Expression{
-								path.MatchRelative().AtParent().AtName("node_type"),
-								path.MatchRelative().AtParent().AtName("cpu"),
-							}...),
-						},
-					},
-				},
 			},
 			"replicas": schema.Int64Attribute{
 				Computed: true,
@@ -506,7 +423,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -548,37 +464,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
-	flavor := &flavorModel{}
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	if flavor.Id.IsNull() || flavor.Id.IsUnknown() {
-		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
-		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-		flavorValues := map[string]attr.Value{
-			"id":          flavor.Id,
-			"description": flavor.Description,
-			"cpu":         flavor.CPU,
-			"ram":         flavor.RAM,
-			"node_type":   flavor.NodeType,
-		}
-		var flavorObject basetypes.ObjectValue
-		flavorObject, diags = types.ObjectValue(flavorTypes, flavorValues)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
-		model.Flavor = flavorObject
-	}
-
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model, storage, encryption, network)
 	if err != nil {
@@ -596,6 +481,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	instanceId := *createResp.Id
 	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"id":          utils.BuildInternalTerraformId(projectId, region, instanceId),
 		"instance_id": instanceId,
 	})
 	if resp.Diagnostics.HasError() {
@@ -615,25 +501,8 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	if *waitResp.FlavorId != flavor.Id.ValueString() {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating instance",
-			fmt.Sprintf("Instance creation waiting: returned flavor id differs (expected: %s, current: %s)", flavor.Id.ValueString(), *waitResp.FlavorId),
-		)
-		return
-	}
-
-	if flavor.CPU.IsNull() || flavor.CPU.IsUnknown() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Instance creation waiting: flavor cpu is null or unknown")
-	}
-	if flavor.RAM.IsNull() || flavor.RAM.IsUnknown() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Instance creation waiting: flavor ram is null or unknown")
-	}
-
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, waitResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -671,27 +540,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
-
-	var flavor = &flavorModel{}
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		err := getFlavorModelById(ctx, r.client, &model, flavor)
-		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
 
 	var storage = &storageModel{}
 	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
@@ -734,7 +582,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, instanceResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -795,37 +643,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	flavor := &flavorModel{}
-	if !model.Flavor.IsNull() && !model.Flavor.IsUnknown() {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	if flavor.Id.IsNull() || flavor.Id.IsUnknown() {
-		err := loadFlavorId(ctx, r.client, &model, flavor, storage)
-		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-		flavorValues := map[string]attr.Value{
-			"id":          flavor.Id,
-			"description": flavor.Description,
-			"cpu":         flavor.CPU,
-			"ram":         flavor.RAM,
-			"node_type":   flavor.NodeType,
-		}
-		var flavorObject basetypes.ObjectValue
-		flavorObject, diags = types.ObjectValue(flavorTypes, flavorValues)
-		resp.Diagnostics.Append(diags...)
-		if diags.HasError() {
-			return
-		}
-		model.Flavor = flavorObject
-	}
-
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model, storage, network)
 	if err != nil {
@@ -833,7 +650,8 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.UpdateInstancePartiallyRequest(ctx, projectId, region, instanceId).UpdateInstancePartiallyRequestPayload(*payload).Execute()
+	err = r.client.UpdateInstanceRequest(ctx, projectId, region, instanceId).UpdateInstanceRequestPayload(*payload).Execute()
+	// err = r.client.UpdateInstancePartiallyRequest(ctx, projectId, region, instanceId).UpdateInstancePartiallyRequestPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -848,7 +666,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, encryption, network, region)
+	err = mapFields(ctx, waitResp, &model, storage, encryption, network, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

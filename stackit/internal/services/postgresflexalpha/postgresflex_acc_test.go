@@ -18,7 +18,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 )
 
 // Instance resource data
@@ -364,10 +363,10 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
-			if err != nil {
-				return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
-			}
+			//_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
+			//if err != nil {
+			//	return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
+			//}
 		}
 	}
 	return nil

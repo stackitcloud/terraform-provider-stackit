@@ -35,11 +35,12 @@ data "stackitprivatepreview_postgresflexalpha_instance" "example" {
 
 - `backup_schedule` (String)
 - `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String)
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `name` (String) Instance name.
 - `network` (Attributes) (see [below for nested schema](#nestedatt--network))
 - `replicas` (Number)
+- `retention_days` (Number)
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 
@@ -52,18 +53,6 @@ Read-Only:
 - `key_version` (String)
 - `keyring_id` (String)
 - `service_account` (String)
-
-
-<a id="nestedatt--flavor"></a>
-### Nested Schema for `flavor`
-
-Read-Only:
-
-- `cpu` (Number)
-- `description` (String)
-- `id` (String)
-- `node_type` (String)
-- `ram` (Number)
 
 
 <a id="nestedatt--network"></a>

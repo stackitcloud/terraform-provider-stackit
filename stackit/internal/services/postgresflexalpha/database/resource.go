@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -90,7 +93,7 @@ func (r *databaseResource) ModifyPlan(
 
 // Metadata returns the resource type name.
 func (r *databaseResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_postgresflex_database"
+	resp.TypeName = req.ProviderTypeName + "_postgresflexalpha_database"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -136,15 +139,13 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"database_id": schema.StringAttribute{
+			"database_id": schema.Int64Attribute{
 				Description: descriptions["database_id"],
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
-				Validators: []validator.String{
-					validate.NoSeparator(),
-				},
+				Validators: []validator.Int64{},
 			},
 			"instance_id": schema.StringAttribute{
 				Description: descriptions["instance_id"],
@@ -171,18 +172,20 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: descriptions["name"],
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+				Description:   descriptions["name"],
+				Required:      true,
+				PlanModifiers: []planmodifier.String{},
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile("^[a-z]([a-z0-9]*)?$"),
+						"must start with a letter, must have lower case letters or numbers",
+					),
 				},
 			},
 			"owner": schema.StringAttribute{
-				Description: descriptions["owner"],
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Description:   descriptions["owner"],
+				Required:      true,
+				PlanModifiers: []planmodifier.String{},
 			},
 			"region": schema.StringAttribute{
 				Optional: true,
@@ -348,11 +351,86 @@ func (r *databaseResource) Read(
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *databaseResource) Update(
 	ctx context.Context,
-	_ resource.UpdateRequest,
+	req resource.UpdateRequest,
 	resp *resource.UpdateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", "Database can't be updated")
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	databaseId := model.DatabaseId.ValueInt64()
+	region := model.Region.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	// Retrieve values from state
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	modified := false
+	var payload postgresflexalpha.UpdateDatabasePartiallyRequestPayload
+	if stateModel.Name != model.Name {
+		payload.Name = model.Name.ValueStringPointer()
+		modified = true
+	}
+
+	if stateModel.Owner != model.Owner {
+		payload.Owner = model.Owner.ValueStringPointer()
+		modified = true
+	}
+
+	if !modified {
+		tflog.Info(ctx, "no modification detected")
+		return
+	}
+
+	// Update existing database
+	res, err := r.client.UpdateDatabasePartiallyRequest(
+		ctx,
+		projectId,
+		region,
+		instanceId,
+		databaseId,
+	).UpdateDatabasePartiallyRequestPayload(payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "error updating database", err.Error())
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	// Map response body to schema
+	err = mapFieldsUpdatePartially(res, &model, region)
+	if err != nil {
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating database",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
+		return
+	}
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Postgres Flex database updated")
+
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -361,7 +439,6 @@ func (r *databaseResource) Delete(
 	req resource.DeleteRequest,
 	resp *resource.DeleteResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	// Retrieve values from plan
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -424,11 +501,11 @@ func (r *databaseResource) ImportState(
 	tflog.Info(ctx, "Postgres Flex database state imported")
 }
 
-func mapFields(databaseResp *postgresflexalpha.ListDatabase, model *Model, region string) error {
-	if databaseResp == nil {
+func mapFields(resp *postgresflexalpha.ListDatabase, model *Model, region string) error {
+	if resp == nil {
 		return fmt.Errorf("response is nil")
 	}
-	if databaseResp.Id == nil || *databaseResp.Id == 0 {
+	if resp.Id == nil || *resp.Id == 0 {
 		return fmt.Errorf("id not present")
 	}
 	if model == nil {
@@ -438,8 +515,8 @@ func mapFields(databaseResp *postgresflexalpha.ListDatabase, model *Model, regio
 	var databaseId int64
 	if model.DatabaseId.ValueInt64() != 0 {
 		databaseId = model.DatabaseId.ValueInt64()
-	} else if databaseResp.Id != nil {
-		databaseId = *databaseResp.Id
+	} else if resp.Id != nil {
+		databaseId = *resp.Id
 	} else {
 		return fmt.Errorf("database id not present")
 	}
@@ -447,33 +524,32 @@ func mapFields(databaseResp *postgresflexalpha.ListDatabase, model *Model, regio
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), strconv.FormatInt(databaseId, 10),
 	)
 	model.DatabaseId = types.Int64Value(databaseId)
-	model.Name = types.StringPointerValue(databaseResp.Name)
+	model.Name = types.StringPointerValue(resp.Name)
 	model.Region = types.StringValue(region)
-
-	ownerStr, err := mapOwner(databaseResp)
-	if err != nil {
-		return fmt.Errorf("error mapping owner: %w", err)
-	}
-
-	model.Owner = types.StringPointerValue(ownerStr)
+	model.Owner = types.StringPointerValue(cleanString(resp.Owner))
 	return nil
 }
 
-func mapOwner(databaseResp *postgresflexalpha.ListDatabase) (*string, error) {
-	if databaseResp == nil {
-		return nil, fmt.Errorf("response is nil")
+func mapFieldsUpdate(res *postgresflexalpha.UpdateDatabaseResponse, model *Model, region string) error {
+	if res == nil {
+		return fmt.Errorf("response is nil")
 	}
+	return mapFields(res.Database, model, region)
+}
 
-	if databaseResp.Owner == nil {
-		return nil, nil
+func mapFieldsUpdatePartially(res *postgresflexalpha.UpdateDatabasePartiallyResponse, model *Model, region string) error {
+	if res == nil {
+		return fmt.Errorf("response is nil")
 	}
-	ownerStr := *databaseResp.Owner
+	return mapFields(res.Database, model, region)
+}
 
-	// If the field is returned between with quotes, we trim them to prevent an inconsistent result after apply
-	ownerStr = strings.TrimPrefix(ownerStr, `"`)
-	ownerStr = strings.TrimSuffix(ownerStr, `"`)
-
-	return &ownerStr, nil
+func cleanString(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	res := strings.Trim(*s, "\"")
+	return &res
 }
 
 func toCreatePayload(model *Model) (*postgresflexalpha.CreateDatabaseRequestPayload, error) {
@@ -496,6 +572,7 @@ func getDatabase(
 	projectId, region, instanceId string,
 	databaseId int64,
 ) (*postgresflexalpha.ListDatabase, error) {
+	// TODO - implement pagination handling
 	resp, err := client.ListDatabasesRequestExecute(ctx, projectId, region, instanceId)
 	if err != nil {
 		return nil, err

@@ -34,7 +34,6 @@ func TestMapFields(t *testing.T) {
 		description string
 		state       Model
 		input       *sqlserverflex.GetInstanceResponse
-		flavor      *flavorModel
 		storage     *storageModel
 		encryption  *encryptionModel
 		network     *networkModel
@@ -53,13 +52,6 @@ func TestMapFields(t *testing.T) {
 				Edition:       types.StringValue("edition 1"),
 				Status:        types.StringValue("status"),
 				IsDeletable:   types.BoolValue(true),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringValue("flavor_id"),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
-					"node_type":   types.StringNull(),
-				}),
 			},
 			&sqlserverflex.GetInstanceResponse{
 				FlavorId:      utils.Ptr("flavor_id"),
@@ -69,9 +61,6 @@ func TestMapFields(t *testing.T) {
 				Edition:       sqlserverflex.GetInstanceResponseGetEditionAttributeType(utils.Ptr("edition 1")),
 				Status:        sqlserverflex.GetInstanceResponseGetStatusAttributeType(utils.Ptr("status")),
 				IsDeletable:   utils.Ptr(true),
-			},
-			&flavorModel{
-				Id: types.StringValue("flavor_id"),
 			},
 			&storageModel{},
 			&encryptionModel{},
@@ -85,14 +74,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:      types.StringValue("pid"),
 				Name:           types.StringNull(),
 				BackupSchedule: types.StringNull(),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringValue("flavor_id"),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
-					"node_type":   types.StringNull(),
-				}),
-				Replicas: types.Int64Value(1),
+				Replicas:       types.Int64Value(1),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringNull(),
 					"size":  types.Int64Null(),
@@ -151,13 +133,6 @@ func TestMapFields(t *testing.T) {
 					RouterAddress:   nil,
 				},
 			},
-			&flavorModel{
-				Id:          basetypes.NewStringValue("flavor_id"),
-				Description: basetypes.NewStringValue("description"),
-				CPU:         basetypes.NewInt64Value(12),
-				RAM:         basetypes.NewInt64Value(34),
-				NodeType:    basetypes.NewStringValue("node_type"),
-			},
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{
@@ -174,14 +149,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:      types.StringValue("pid"),
 				Name:           types.StringValue("name"),
 				BackupSchedule: types.StringValue("schedule"),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringValue("flavor_id"),
-					"description": types.StringValue("description"),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
-					"node_type":   types.StringValue("node_type"),
-				}),
-				Replicas: types.Int64Value(56),
+				Replicas:       types.Int64Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -380,7 +348,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.encryption, tt.network, tt.region)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.storage, tt.encryption, tt.network, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
