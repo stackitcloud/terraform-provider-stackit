@@ -98,6 +98,18 @@ var (
 
 	//go:embed testdata/datasource-machinetype.tf
 	dataSourceMachineTypeConfig string
+
+	//go:embed testdata/resource-routingtable-min.tf
+	resourceRoutingTableMinConfig string
+
+	//go:embed testdata/resource-routingtable-max.tf
+	resourceRoutingTableMaxConfig string
+
+	//go:embed testdata/resource-routingtable-route-min.tf
+	resourceRoutingTableRouteMinConfig string
+
+	//go:embed testdata/resource-routingtable-route-max.tf
+	resourceRoutingTableRouteMaxConfig string
 )
 
 const (
@@ -291,7 +303,7 @@ var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 
 var testConfigNetworkAreaVarsMin = config.Variables{
 	"organization_id": config.StringVariable(testutil.OrganizationId),
-	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"name":            config.StringVariable(fmt.Sprintf("GGK-tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
 }
 
 var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
@@ -307,7 +319,7 @@ var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
 
 var testConfigNetworkAreaVarsMax = config.Variables{
 	"organization_id":         config.StringVariable(testutil.OrganizationId),
-	"name":                    config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"name":                    config.StringVariable(fmt.Sprintf("GGK-tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
 	"transfer_network":        config.StringVariable("10.1.2.0/24"),
 	"network_ranges_prefix":   config.StringVariable("10.0.0.0/16"),
 	"default_nameservers":     config.StringVariable("1.1.1.1"),
@@ -551,6 +563,75 @@ var testConfigKeyPairMaxUpdated = func() config.Variables {
 var testConfigMachineTypeVars = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 }
+
+var testConfigRoutingTableMin = config.Variables{
+	"organization_id": config.StringVariable(testutil.OrganizationId),
+	"name":            config.StringVariable(fmt.Sprintf("GGK-acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+}
+
+var testConfigRoutingTableMinUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigRoutingTableMin)
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
+	return updatedConfig
+}()
+
+var testConfigRoutingTableMax = config.Variables{
+	"organization_id": config.StringVariable(testutil.OrganizationId),
+	"name":            config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"description":     config.StringVariable("This is the description of the routing table."),
+	"label":           config.StringVariable("routing-table-label-01"),
+	"system_routes":   config.BoolVariable(false),
+	"dynamic_routes":  config.BoolVariable(false),
+	"region":          config.StringVariable(testutil.Region),
+}
+
+var testConfigRoutingTableMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	for k, v := range testConfigRoutingTableMax {
+		updatedConfig[k] = v
+	}
+	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
+	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
+	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
+	updatedConfig["dynamic_routes"] = config.BoolVariable(true)
+	return updatedConfig
+}()
+
+var testConfigRoutingTableRouteMin = config.Variables{
+	"organization_id":    config.StringVariable(testutil.OrganizationId),
+	"name":               config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"routing_table_name": config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"destination_type":   config.StringVariable("cidrv4"),
+	"destination_value":  config.StringVariable("192.168.178.0/24"),
+	"next_hop_type":      config.StringVariable("ipv4"),
+	"next_hop_value":     config.StringVariable("192.168.178.1"),
+}
+
+var testConfigRoutingTableRouteMinUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigRoutingTableRouteMin)
+	// nothing possible to update of the required attributes...
+	return updatedConfig
+}()
+
+var testConfigRoutingTableRouteMax = config.Variables{
+	"organization_id":    config.StringVariable(testutil.OrganizationId),
+	"name":               config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"routing_table_name": config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"destination_type":   config.StringVariable("cidrv4"), // TODO: use cidrv6 once it's supported as we already test cidrv4 in the min test
+	"destination_value":  config.StringVariable("192.168.178.0/24"),
+	"next_hop_type":      config.StringVariable("ipv4"), // TODO: use ipv6, internet or blackhole once they are supported as we already test ipv4 in the min test
+	"next_hop_value":     config.StringVariable("192.168.178.1"),
+	"label":              config.StringVariable("route-label-01"),
+}
+
+var testConfigRoutingTableRouteMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigRoutingTableRouteMax)
+	updatedConfig["label"] = config.StringVariable("route-updated-label-01")
+	return updatedConfig
+}()
 
 // if no local file is provided the test should create a default file and work with this instead of failing
 var localFileForIaasImage os.File
@@ -4604,6 +4685,748 @@ func TestAccMachineType(t *testing.T) {
 	})
 }
 
+func TestAccRoutingTableMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigRoutingTableMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network Area
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_network_area_region.network_area_region", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.transfer_network", "10.1.2.0/24"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.prefix", "10.0.0.0/16"),
+					resource.TestCheckResourceAttrSet("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.network_range_id"),
+					resource.TestCheckNoResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_nameservers.#"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_prefix_length", "25"), // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.min_prefix_length", "24"),     // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.max_prefix_length", "29"),     // default value
+
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
+
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableMin["name"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "labels.%", "0"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.Region),
+					resource.TestCheckNoResourceAttr("stackit_routing_table.routing_table", "description"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", "true"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", "true"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
+				),
+			},
+			// Data sources
+			{
+				ConfigVariables: testConfigRoutingTableMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+			
+					# single routing table
+					data "stackit_routing_table" "routing_table" {
+						organization_id  = stackit_routing_table.routing_table.organization_id
+						network_area_id  = stackit_network_area.network_area.network_area_id
+						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
+					}
+			
+					# all routing tables in network area
+					data "stackit_routing_tables" "routing_tables" {
+						organization_id  = stackit_routing_table.routing_table.organization_id
+						network_area_id  = stackit_network_area.network_area.network_area_id
+					}
+					`,
+					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_routing_table.routing_table", "network_area_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"data.stackit_routing_table.routing_table", "routing_table_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "labels.%", "0"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "region", testutil.Region),
+					resource.TestCheckNoResourceAttr("data.stackit_routing_table.routing_table", "description"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "system_routes", "true"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "dynamic_routes", "true"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "default", "false"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "updated_at"),
+
+					// Routing tables
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_routing_tables.routing_tables", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "region", testutil.Region),
+					// there will be always two routing tables because of the main routing table of the network area
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.#", "2"),
+
+					// default routing table
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.0.default", "true"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.0.created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.0.updated_at"),
+
+					// second routing table managed via terraform
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"data.stackit_routing_tables.routing_tables", "items.1.routing_table_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.name", testutil.ConvertConfigVariable(testConfigRoutingTableMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.labels.%", "0"),
+					resource.TestCheckNoResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.description"),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.system_routes", "true"),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.dynamic_routes", "true"),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.default", "false"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.updated_at"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigRoutingTableMinUpdated,
+				ResourceName:    "stackit_routing_table.routing_table",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_routing_table.routing_table"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_routing_table.routing_table")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute routing_table_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigRoutingTableMinUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMinUpdated["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_routing_table.routing_table", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableMinUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "labels.%", "0"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.Region),
+					resource.TestCheckNoResourceAttr("stackit_routing_table.routing_table", "description"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", "true"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", "true"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccRoutingTableMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigRoutingTableMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network Area
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_network_area_region.network_area_region", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.transfer_network", "10.1.2.0/24"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.prefix", "10.0.0.0/16"),
+					resource.TestCheckResourceAttrSet("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.network_range_id"),
+					resource.TestCheckNoResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_nameservers.#"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_prefix_length", "25"), // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.min_prefix_length", "24"),     // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.max_prefix_length", "29"),     // default value
+
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableMax["name"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableMax["label"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMax["region"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "description", testutil.ConvertConfigVariable(testConfigRoutingTableMax["description"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["system_routes"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["dynamic_routes"])),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
+				),
+			},
+			// Data sources
+			{
+				ConfigVariables: testConfigRoutingTableMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+					
+					# single routing table
+					data "stackit_routing_table" "routing_table" {
+						organization_id  = stackit_routing_table.routing_table.organization_id
+						network_area_id  = stackit_routing_table.routing_table.network_area_id
+						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
+					}
+					
+					# all routing tables in network area
+					data "stackit_routing_tables" "routing_tables" {
+						organization_id  = stackit_routing_table.routing_table.organization_id
+						network_area_id  = stackit_routing_table.routing_table.network_area_id
+					}
+					`,
+					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_routing_table.routing_table", "network_area_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"data.stackit_routing_table.routing_table", "routing_table_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableMax["label"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMax["region"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "description", testutil.ConvertConfigVariable(testConfigRoutingTableMax["description"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["system_routes"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["dynamic_routes"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "default", "false"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "updated_at"),
+
+					// Routing tables
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_routing_tables.routing_tables", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMax["region"])),
+					// there will be always two routing tables because of the main routing table of the network area
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.#", "2"),
+
+					// default routing table
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.0.default", "true"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.0.created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.0.updated_at"),
+
+					// second routing table managed via terraform
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"data.stackit_routing_tables.routing_tables", "items.1.routing_table_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.name", testutil.ConvertConfigVariable(testConfigRoutingTableMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableMax["label"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.description", testutil.ConvertConfigVariable(testConfigRoutingTableMax["description"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["system_routes"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["dynamic_routes"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.default", "false"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.updated_at"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigRoutingTableMaxUpdated,
+				ResourceName:    "stackit_routing_table.routing_table",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_routing_table.routing_table"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_routing_table.routing_table")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute routing_table_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigRoutingTableMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_routing_table.routing_table", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["name"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["label"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["region"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "description", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["description"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["system_routes"])),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["dynamic_routes"])),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccRoutingTableRouteMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigRoutingTableRouteMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network Area
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_network_area_region.network_area_region", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.transfer_network", "10.1.2.0/24"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.prefix", "10.0.0.0/16"),
+					resource.TestCheckResourceAttrSet("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.network_range_id"),
+					resource.TestCheckNoResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_nameservers.#"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_prefix_length", "25"), // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.min_prefix_length", "24"),     // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.max_prefix_length", "29"),     // default value
+
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["routing_table_name"])),
+
+					// Routing table route
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "routing_table_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"stackit_routing_table_route.route", "routing_table_id",
+					),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["destination_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["destination_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.%", "0"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "updated_at"),
+				),
+			},
+			// Data sources
+			{
+				ConfigVariables: testConfigRoutingTableRouteMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+					
+					# single routing table route
+					data "stackit_routing_table_route" "route" {
+						organization_id  = stackit_routing_table_route.route.organization_id
+						network_area_id  = stackit_routing_table_route.route.network_area_id
+						routing_table_id = stackit_routing_table_route.route.routing_table_id
+						route_id         = stackit_routing_table_route.route.route_id
+					}
+					
+					# all routing table routes in routing table
+					data "stackit_routing_table_routes" "routes" {
+						organization_id  = stackit_routing_table_route.route.organization_id
+						network_area_id  = stackit_routing_table_route.route.network_area_id
+						routing_table_id = stackit_routing_table_route.route.routing_table_id
+					}
+					`,
+					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table route
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "network_area_id",
+						"data.stackit_routing_table_route.route", "network_area_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "routing_table_id",
+						"data.stackit_routing_table_route.route", "routing_table_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "route_id",
+						"data.stackit_routing_table_route.route", "route_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["destination_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["destination_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["next_hop_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["next_hop_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "labels.%", "0"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_route.route", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_route.route", "updated_at"),
+
+					// Routing table routes
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_routing_table_routes.routes", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "routing_table_id",
+						"data.stackit_routing_table_routes.routes", "routing_table_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "route_id",
+						"data.stackit_routing_table_routes.routes", "routes.0.route_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["destination_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["destination_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["next_hop_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["next_hop_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.labels.%", "0"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_routes.routes", "routes.0.created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_routes.routes", "routes.0.updated_at"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigRoutingTableRouteMinUpdated,
+				ResourceName:    "stackit_routing_table_route.route",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_routing_table_route.route"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_routing_table_route.route")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute routing_table_id")
+					}
+					routeId, ok := r.Primary.Attributes["route_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute route_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId, routeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigRoutingTableRouteMinUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_routing_table.routing_table", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["routing_table_name"])),
+
+					// Routing table route
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "routing_table_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"stackit_routing_table_route.route", "routing_table_id",
+					),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["destination_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["destination_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.%", "0"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "updated_at"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccRoutingTableRouteMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigRoutingTableRouteMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network Area
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_network_area_region.network_area_region", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.transfer_network", "10.1.2.0/24"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.#", "2"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.prefix", "10.0.0.0/16"),
+					resource.TestCheckResourceAttrSet("stackit_network_area_region.network_area_region", "ipv4.network_ranges.0.network_range_id"),
+					resource.TestCheckNoResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_nameservers.#"),
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.default_prefix_length", "25"), // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.min_prefix_length", "24"),     // default value
+					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "ipv4.max_prefix_length", "29"),     // default value
+
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["routing_table_name"])),
+
+					// Routing table route
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "routing_table_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"stackit_routing_table_route.route", "routing_table_id",
+					),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["destination_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["destination_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["label"])),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "updated_at"),
+				),
+			},
+			// Data sources
+			{
+				ConfigVariables: testConfigRoutingTableRouteMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+					
+					# single routing table route
+					data "stackit_routing_table_route" "route" {
+						organization_id  = stackit_routing_table_route.route.organization_id
+						network_area_id  = stackit_routing_table_route.route.network_area_id
+						routing_table_id = stackit_routing_table_route.route.routing_table_id
+						route_id         = stackit_routing_table_route.route.route_id
+					}
+					
+					# all routing table routes in routing table
+					data "stackit_routing_table_routes" "routes" {
+						organization_id  = stackit_routing_table_route.route.organization_id
+						network_area_id  = stackit_routing_table_route.route.network_area_id
+						routing_table_id = stackit_routing_table_route.route.routing_table_id
+					}
+					`,
+					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table route
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "network_area_id",
+						"data.stackit_routing_table_route.route", "network_area_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "routing_table_id",
+						"data.stackit_routing_table_route.route", "routing_table_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "route_id",
+						"data.stackit_routing_table_route.route", "route_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["destination_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["destination_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["next_hop_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["next_hop_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_route.route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["label"])),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_route.route", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_route.route", "updated_at"),
+
+					// Routing table routes
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"data.stackit_routing_table_routes.routes", "network_area_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.#", "1"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "routing_table_id",
+						"data.stackit_routing_table_routes.routes", "routing_table_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "route_id",
+						"data.stackit_routing_table_routes.routes", "routes.0.route_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["destination_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["destination_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["next_hop_type"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["next_hop_value"])),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_routing_table_routes.routes", "routes.0.labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["label"])),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_routes.routes", "routes.0.created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_routing_table_routes.routes", "routes.0.updated_at"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigRoutingTableRouteMaxUpdated,
+				ResourceName:    "stackit_routing_table_route.route",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_routing_table_route.route"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_routing_table_route.route")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					networkAreaId, ok := r.Primary.Attributes["network_area_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_area_id")
+					}
+					routingTableId, ok := r.Primary.Attributes["routing_table_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute routing_table_id")
+					}
+					routeId, ok := r.Primary.Attributes["route_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute route_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.OrganizationId, region, networkAreaId, routingTableId, routeId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigRoutingTableRouteMaxUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Routing table
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network_area.network_area", "network_area_id",
+						"stackit_routing_table.routing_table", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "routing_table_id"),
+					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "name", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["routing_table_name"])),
+
+					// Routing table route
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["organization_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table_route.route", "network_area_id",
+						"stackit_network_area.network_area", "network_area_id",
+					),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "routing_table_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_routing_table.routing_table", "routing_table_id",
+						"stackit_routing_table_route.route", "routing_table_id",
+					),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["destination_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "destination.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["destination_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.type", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["next_hop_type"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "next_hop.value", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["next_hop_value"])),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_routing_table_route.route", "labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["label"])),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_routing_table_route.route", "updated_at"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
 		testAccCheckIaaSVolumeDestroy,
@@ -4617,6 +5440,8 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckNetworkInterfaceDestroy,
 		testAccCheckNetworkAreaRegionDestroy,
 		testAccCheckNetworkAreaDestroy,
+		testAccCheckRoutingTableDestroy,
+		testAccCheckRoutingTableRouteDestroy,
 	}
 	var errs []error
 
@@ -5161,4 +5986,84 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAccCheckRoutingTableDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaas.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaas.NewAPIClient()
+	} else {
+		client, err = iaas.NewAPIClient(
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var errs []error
+	// routing tables
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_routing_table" {
+			continue
+		}
+		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
+		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+		err := client.DeleteRoutingTableFromAreaExecute(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId)
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) {
+				if oapiErr.StatusCode == http.StatusNotFound {
+					continue
+				}
+			}
+			errs = append(errs, fmt.Errorf("cannot trigger routing table deletion %q: %w", routingTableId, err))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	var client *iaas.APIClient
+	var err error
+	if testutil.IaaSCustomEndpoint == "" {
+		client, err = iaas.NewAPIClient()
+	} else {
+		client, err = iaas.NewAPIClient(
+			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var errs []error
+	// routes
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_routing_table_route" {
+			continue
+		}
+		routingTableRouteId := strings.Split(rs.Primary.ID, core.Separator)[4]
+		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
+		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+
+		err := client.DeleteRouteFromRoutingTableExecute(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId, routingTableRouteId)
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) {
+				if oapiErr.StatusCode == http.StatusNotFound {
+					continue
+				}
+			}
+			errs = append(errs, fmt.Errorf("cannot trigger routing table route deletion %q: %w", routingTableId, err))
+		}
+	}
+
+	return errors.Join(errs...)
 }
