@@ -40,7 +40,7 @@ resource "stackit_routing_table" "routing_table" {
 
 resource "stackit_routing_table_route" "route" {
   organization_id  = var.organization_id
-  network_area_id = stackit_network_area.network_area.network_area_id
+  network_area_id  = stackit_network_area.network_area.network_area_id
   routing_table_id = stackit_routing_table.routing_table.routing_table_id
   destination = {
     type  = var.destination_type
