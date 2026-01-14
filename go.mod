@@ -14,6 +14,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.3
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.2.0
@@ -30,7 +31,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.3
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.2
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.13.3
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.4
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.3
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.3
@@ -45,7 +46,7 @@ require (
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	golang.org/x/telemetry v0.0.0-20251203150158-8fff8a5912fc // indirect
+	golang.org/x/telemetry v0.0.0-20260109210033-bd525da824e2 // indirect
 )
 
 require (
@@ -87,12 +88,12 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.17.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 	google.golang.org/grpc v1.75.1 // indirect
