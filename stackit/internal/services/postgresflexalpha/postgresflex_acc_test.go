@@ -4,6 +4,7 @@ package postgresflex_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"testing"
@@ -18,6 +19,11 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
+)
+
+var (
+	//go:embed testdata/resource-complete.tf
+	resourceSecurityGroupMinConfig string
 )
 
 // Instance resource data

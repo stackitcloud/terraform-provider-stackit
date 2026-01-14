@@ -51,22 +51,23 @@ resource "stackitprivatepreview_postgresflexalpha_user" "ptlsdbuser" {
 }
 
 resource "stackitprivatepreview_postgresflexalpha_database" "example" {
+  count = 25
   depends_on = [stackitprivatepreview_postgresflexalpha_user.ptlsdbadminuser]
   project_id  = var.project_id
   instance_id = stackitprivatepreview_postgresflexalpha_instance.msh-sna-pe-example.instance_id
-  name        = var.db_name
+  name        = "${var.db_name}${count.index}"
   owner       = var.db_admin_username
 }
 
-data "stackitprivatepreview_postgresflexalpha_instance" "datapsql" {
-  project_id = var.project_id
-  instance_id = var.instance_id
-  region = "eu01"
-}
+# data "stackitprivatepreview_postgresflexalpha_instance" "datapsql" {
+#   project_id = var.project_id
+#   instance_id = var.instance_id
+#   region = "eu01"
+# }
 
-output "psql_instance_id" {
-  value = data.stackitprivatepreview_postgresflexalpha_instance.datapsql.instance_id
-}
+# output "psql_instance_id" {
+#   value = data.stackitprivatepreview_postgresflexalpha_instance.datapsql.instance_id
+# }
 
 output "psql_user_password" {
   value = stackitprivatepreview_postgresflexalpha_user.ptlsdbuser.password

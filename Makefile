@@ -1,5 +1,6 @@
 ROOT_DIR              ?= $(shell git rev-parse --show-toplevel)
 SCRIPTS_BASE          ?= $(ROOT_DIR)/scripts
+VERSION               ?= ${VER}
 
 # SETUP AND TOOL INITIALIZATION TASKS
 project-help:
@@ -57,3 +58,11 @@ test-acceptance-tf:
 	TF_ACC_REGION=$(TF_ACC_REGION) \
 	go test ./... -count=1 -timeout=30m && \
 	cd $(ROOT_DIR)
+
+publish: build
+ifeq ($(strip $(VERSION)),)
+	@echo "please call like this: VER=0.1.0 make publish"
+else
+	@echo "version: $(VERSION)"
+endif
+
