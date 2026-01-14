@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -23,8 +24,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
-	waitAlpha "github.com/stackitcloud/stackit-sdk-go/services/iaasalpha/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -5463,12 +5462,12 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaasalpha.APIClient
+	var client *iaas.APIClient
 	var err error
 	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaasalpha.NewAPIClient()
+		client, err = iaas.NewAPIClient()
 	} else {
-		client, err = iaasalpha.NewAPIClient(
+		client, err = iaas.NewAPIClient(
 			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
 		)
 	}
@@ -5494,7 +5493,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 			}
 			errs = append(errs, fmt.Errorf("cannot trigger network deletion %q: %w", networkId, err))
 		}
-		_, err = waitAlpha.DeleteNetworkWaitHandler(ctx, client, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
+		_, err = wait.DeleteNetworkWaitHandler(ctx, client, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot delete network %q: %w", networkId, err))
 		}
