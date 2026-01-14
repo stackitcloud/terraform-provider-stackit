@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -13,11 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -42,7 +42,7 @@ func NewRoutingTablesDataSource() datasource.DataSource {
 
 // routingTableDataSource is the data source implementation.
 type routingTablesDataSource struct {
-	client       *iaasalpha.APIClient
+	client       *iaas.APIClient
 	providerData core.ProviderData
 }
 
@@ -63,7 +63,7 @@ func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -163,7 +163,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	tflog.Info(ctx, "Routing table read")
 }
 
-func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaasalpha.RoutingTableListResponse, model *DataSourceModelTables, region string) error {
+func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.RoutingTableListResponse, model *DataSourceModelTables, region string) error {
 	if routingTables == nil {
 		return fmt.Errorf("response input is nil")
 	}

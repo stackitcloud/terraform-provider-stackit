@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 func TestMapFields(t *testing.T) {
@@ -18,7 +18,7 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *iaasalpha.RoutingTable
+		input       *iaas.RoutingTable
 		expected    Model
 		isValid     bool
 	}{
@@ -28,7 +28,7 @@ func TestMapFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("aid"),
 			},
-			&iaasalpha.RoutingTable{
+			&iaas.RoutingTable{
 				Id:   utils.Ptr("rtid"),
 				Name: utils.Ptr("default_values"),
 			},
@@ -49,7 +49,7 @@ func TestMapFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("aid"),
 			},
-			&iaasalpha.RoutingTable{
+			&iaas.RoutingTable{
 				Id:          utils.Ptr("rtid"),
 				Name:        utils.Ptr("values_ok"),
 				Description: utils.Ptr("Description"),
@@ -74,7 +74,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"response_fields_nil_fail",
 			Model{},
-			&iaasalpha.RoutingTable{
+			&iaas.RoutingTable{
 				Id: nil,
 			},
 			Model{},
@@ -93,7 +93,7 @@ func TestMapFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 			},
-			&iaasalpha.RoutingTable{},
+			&iaas.RoutingTable{},
 			Model{},
 			false,
 		},
@@ -121,7 +121,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.AddRoutingTableToAreaPayload
+		expected    *iaas.AddRoutingTableToAreaPayload
 		isValid     bool
 	}{
 		{
@@ -135,7 +135,7 @@ func TestToCreatePayload(t *testing.T) {
 				SystemRoutes:  types.BoolValue(true),
 				DynamicRoutes: types.BoolValue(true),
 			},
-			expected: &iaasalpha.AddRoutingTableToAreaPayload{
+			expected: &iaas.AddRoutingTableToAreaPayload{
 				Description: utils.Ptr("Description"),
 				Name:        utils.Ptr("default_ok"),
 				Labels: &map[string]interface{}{
@@ -170,7 +170,7 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *iaasalpha.UpdateRoutingTableOfAreaPayload
+		expected    *iaas.UpdateRoutingTableOfAreaPayload
 		isValid     bool
 	}{
 		{
@@ -184,7 +184,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				DynamicRoutes: types.BoolValue(false),
 			},
-			&iaasalpha.UpdateRoutingTableOfAreaPayload{
+			&iaas.UpdateRoutingTableOfAreaPayload{
 				Description: utils.Ptr("Description"),
 				Name:        utils.Ptr("default_ok"),
 				Labels: &map[string]interface{}{
@@ -206,7 +206,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaasalpha.NullableString{}))
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(iaas.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

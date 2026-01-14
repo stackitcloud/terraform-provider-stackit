@@ -11,12 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
-	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
+	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -41,7 +41,7 @@ func NewRoutingTableRoutesDataSource() datasource.DataSource {
 
 // routingTableDataSource is the data source implementation.
 type routingTableRoutesDataSource struct {
-	client       *iaasalpha.APIClient
+	client       *iaas.APIClient
 	providerData core.ProviderData
 }
 
@@ -62,7 +62,7 @@ func (d *routingTableRoutesDataSource) Configure(ctx context.Context, req dataso
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -131,7 +131,7 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 	tflog.Info(ctx, "Routing table routes read")
 }
 
-func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaasalpha.RouteListResponse, model *RoutingTableRoutesDataSourceModel, region string) error {
+func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaas.RouteListResponse, model *RoutingTableRoutesDataSourceModel, region string) error {
 	if routes == nil {
 		return fmt.Errorf("response input is nil")
 	}

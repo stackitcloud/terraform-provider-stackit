@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
 const (
@@ -29,7 +29,7 @@ var (
 
 func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 	type args struct {
-		routes *iaasalpha.RouteListResponse
+		routes *iaas.RouteListResponse
 		model  *RoutingTableRoutesDataSourceModel
 		region string
 	}
@@ -43,8 +43,8 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 			name: "model is nil",
 			args: args{
 				model: nil,
-				routes: &iaasalpha.RouteListResponse{
-					Items: &[]iaasalpha.Route{},
+				routes: &iaas.RouteListResponse{
+					Items: &[]iaas.Route{},
 				},
 			},
 			wantErr: true,
@@ -61,7 +61,7 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 			name: "response items is nil",
 			args: args{
 				model: nil,
-				routes: &iaasalpha.RouteListResponse{
+				routes: &iaas.RouteListResponse{
 					Items: nil,
 				},
 			},
@@ -76,8 +76,8 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 					RoutingTableId: types.StringValue(testRoutingTableId),
 					Region:         types.StringValue(testRegion),
 				},
-				routes: &iaasalpha.RouteListResponse{
-					Items: &[]iaasalpha.Route{},
+				routes: &iaas.RouteListResponse{
+					Items: &[]iaas.Route{},
 				},
 				region: testRegion,
 			},
@@ -102,15 +102,15 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 					RoutingTableId: types.StringValue(testRoutingTableId),
 					Region:         types.StringValue(testRegion),
 				},
-				routes: &iaasalpha.RouteListResponse{
-					Items: &[]iaasalpha.Route{
+				routes: &iaas.RouteListResponse{
+					Items: &[]iaas.Route{
 						{
 							Id: utils.Ptr(testRouteId1),
-							Destination: utils.Ptr(iaasalpha.DestinationCIDRv4AsRouteDestination(
-								iaasalpha.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
+							Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+								iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 							)),
-							Nexthop: utils.Ptr(iaasalpha.NexthopIPv4AsRouteNexthop(
-								iaasalpha.NewNexthopIPv4("ipv4", "10.20.42.2"),
+							Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+								iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
 							)),
 							Labels: &map[string]interface{}{
 								"foo": "bar",
@@ -120,11 +120,11 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 						},
 						{
 							Id: utils.Ptr(testRouteId2),
-							Destination: utils.Ptr(iaasalpha.DestinationCIDRv6AsRouteDestination(
-								iaasalpha.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
+							Destination: utils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(
+								iaas.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
 							)),
-							Nexthop: utils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(
-								iaasalpha.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
+							Nexthop: utils.Ptr(iaas.NexthopIPv6AsRouteNexthop(
+								iaas.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
 							)),
 							Labels: &map[string]interface{}{
 								"key": "value",

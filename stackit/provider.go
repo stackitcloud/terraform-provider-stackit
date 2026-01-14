@@ -41,16 +41,16 @@ import (
 	iaasPublicIp "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicip"
 	iaasPublicIpAssociate "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipassociate"
 	iaasPublicIpRanges "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/publicipranges"
+	iaasRoutingTableRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/route"
+	iaasRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/routes"
+	iaasRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/table"
+	iaasRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/tables"
 	iaasSecurityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygroup"
 	iaasSecurityGroupRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/securitygrouprule"
 	iaasServer "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/server"
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
-	iaasalphaRoutingTableRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/route"
-	iaasalphaRoutingTableRoutes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/routes"
-	iaasalphaRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/table"
-	iaasalphaRoutingTables "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/tables"
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
 	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
 	kmsWrappingKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/wrapping-key"
@@ -524,10 +524,10 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasKeyPair.NewKeyPairDataSource,
 		iaasServer.NewServerDataSource,
 		iaasSecurityGroup.NewSecurityGroupDataSource,
-		iaasalphaRoutingTable.NewRoutingTableDataSource,
-		iaasalphaRoutingTableRoute.NewRoutingTableRouteDataSource,
-		iaasalphaRoutingTables.NewRoutingTablesDataSource,
-		iaasalphaRoutingTableRoutes.NewRoutingTableRoutesDataSource,
+		iaasRoutingTable.NewRoutingTableDataSource,
+		iaasRoutingTableRoute.NewRoutingTableRouteDataSource,
+		iaasRoutingTables.NewRoutingTablesDataSource,
+		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
@@ -603,8 +603,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasServer.NewServerResource,
 		iaasSecurityGroup.NewSecurityGroupResource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
-		iaasalphaRoutingTable.NewRoutingTableResource,
-		iaasalphaRoutingTableRoute.NewRoutingTableRouteResource,
+		iaasRoutingTable.NewRoutingTableResource,
+		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
 		kmsWrappingKey.NewWrappingKeyResource,

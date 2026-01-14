@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
 const (
@@ -27,7 +27,7 @@ var (
 
 func Test_MapRouteNextHop(t *testing.T) {
 	type args struct {
-		routeResp *iaasalpha.Route
+		routeResp *iaas.Route
 	}
 	tests := []struct {
 		name     string
@@ -38,7 +38,7 @@ func Test_MapRouteNextHop(t *testing.T) {
 		{
 			name: "nexthop is nil",
 			args: args{
-				routeResp: &iaasalpha.Route{
+				routeResp: &iaas.Route{
 					Nexthop: nil,
 				},
 			},
@@ -48,8 +48,8 @@ func Test_MapRouteNextHop(t *testing.T) {
 		{
 			name: "nexthop is empty",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Nexthop: &iaasalpha.RouteNexthop{},
+				routeResp: &iaas.Route{
+					Nexthop: &iaas.RouteNexthop{},
 				},
 			},
 			wantErr: true,
@@ -57,9 +57,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 		{
 			name: "nexthop ipv4",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Nexthop: utils.Ptr(iaasalpha.NexthopIPv4AsRouteNexthop(
-						iaasalpha.NewNexthopIPv4("ipv4", "10.20.42.2"),
+				routeResp: &iaas.Route{
+					Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+						iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
 					)),
 				},
 			},
@@ -72,9 +72,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 		{
 			name: "nexthop ipv6",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Nexthop: utils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(
-						iaasalpha.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
+				routeResp: &iaas.Route{
+					Nexthop: utils.Ptr(iaas.NexthopIPv6AsRouteNexthop(
+						iaas.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
 					)),
 				},
 			},
@@ -87,9 +87,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 		{
 			name: "nexthop internet",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Nexthop: utils.Ptr(iaasalpha.NexthopInternetAsRouteNexthop(
-						iaasalpha.NewNexthopInternet("internet"),
+				routeResp: &iaas.Route{
+					Nexthop: utils.Ptr(iaas.NexthopInternetAsRouteNexthop(
+						iaas.NewNexthopInternet("internet"),
 					)),
 				},
 			},
@@ -102,9 +102,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 		{
 			name: "nexthop blackhole",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Nexthop: utils.Ptr(iaasalpha.NexthopBlackholeAsRouteNexthop(
-						iaasalpha.NewNexthopBlackhole("blackhole"),
+				routeResp: &iaas.Route{
+					Nexthop: utils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(
+						iaas.NewNexthopBlackhole("blackhole"),
 					)),
 				},
 			},
@@ -132,7 +132,7 @@ func Test_MapRouteNextHop(t *testing.T) {
 
 func Test_MapRouteDestination(t *testing.T) {
 	type args struct {
-		routeResp *iaasalpha.Route
+		routeResp *iaas.Route
 	}
 	tests := []struct {
 		name     string
@@ -144,7 +144,7 @@ func Test_MapRouteDestination(t *testing.T) {
 		{
 			name: "destination is nil",
 			args: args{
-				routeResp: &iaasalpha.Route{
+				routeResp: &iaas.Route{
 					Destination: nil,
 				},
 			},
@@ -154,8 +154,8 @@ func Test_MapRouteDestination(t *testing.T) {
 		{
 			name: "destination is empty",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Destination: &iaasalpha.RouteDestination{},
+				routeResp: &iaas.Route{
+					Destination: &iaas.RouteDestination{},
 				},
 			},
 			wantErr: true,
@@ -163,9 +163,9 @@ func Test_MapRouteDestination(t *testing.T) {
 		{
 			name: "destination cidrv4",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Destination: utils.Ptr(iaasalpha.DestinationCIDRv4AsRouteDestination(
-						iaasalpha.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
+				routeResp: &iaas.Route{
+					Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+						iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 					)),
 				},
 			},
@@ -178,9 +178,9 @@ func Test_MapRouteDestination(t *testing.T) {
 		{
 			name: "destination cidrv6",
 			args: args{
-				routeResp: &iaasalpha.Route{
-					Destination: utils.Ptr(iaasalpha.DestinationCIDRv6AsRouteDestination(
-						iaasalpha.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
+				routeResp: &iaas.Route{
+					Destination: utils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(
+						iaas.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
 					)),
 				},
 			},
@@ -211,7 +211,7 @@ func TestMapRouteModel(t *testing.T) {
 	updatedAt := time.Now().Add(5 * time.Minute)
 
 	type args struct {
-		route  *iaasalpha.Route
+		route  *iaas.Route
 		model  *RouteModel
 		region string
 	}
@@ -234,7 +234,7 @@ func TestMapRouteModel(t *testing.T) {
 			name: "model is nil",
 			args: args{
 				model:  nil,
-				route:  &iaasalpha.Route{},
+				route:  &iaas.Route{},
 				region: testRegion,
 			},
 			wantErr: true,
@@ -248,17 +248,17 @@ func TestMapRouteModel(t *testing.T) {
 					NetworkAreaId:  types.StringValue(testNetworkAreaId.String()),
 					RoutingTableId: types.StringValue(testRoutingTableId.String()),
 				},
-				route: &iaasalpha.Route{
+				route: &iaas.Route{
 					Id: utils.Ptr(testRouteId.String()),
-					Destination: utils.Ptr(iaasalpha.DestinationCIDRv4AsRouteDestination(
-						iaasalpha.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
+					Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+						iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 					)),
 					Labels: &map[string]interface{}{
 						"foo1": "bar1",
 						"foo2": "bar2",
 					},
 					Nexthop: utils.Ptr(
-						iaasalpha.NexthopIPv4AsRouteNexthop(iaasalpha.NewNexthopIPv4("ipv4", "10.20.42.2")),
+						iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", "10.20.42.2")),
 					),
 					CreatedAt: &createdAt,
 					UpdatedAt: &updatedAt,
