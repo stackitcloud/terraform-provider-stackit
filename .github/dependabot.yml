@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/" 
+    schedule:
+      interval: "daily"
+    groups:
+      internal-deps:
+        patterns:
+            - "^github.com/stackitcloud/"
+      external-deps:
+        patterns:
+            - ".*"
+        exclude-patterns:
+            # should be covered by listing internal-deps first (https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#groups--)
+            # but listing it here to be explicit
+            - "^github.com/stackitcloud/"
+        cooldown:
+          default-days: 7
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+        default-days: 7
