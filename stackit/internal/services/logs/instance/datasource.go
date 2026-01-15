@@ -30,7 +30,8 @@ func NewLogsInstanceDataSource() datasource.DataSource {
 }
 
 type logsInstanceDataSource struct {
-	client *logs.APIClient
+	client       *logs.APIClient
+	providerData core.ProviderData
 }
 
 func (d *logsInstanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -42,6 +43,7 @@ func (d *logsInstanceDataSource) Configure(ctx context.Context, req datasource.C
 	if !ok {
 		return
 	}
+	d.providerData = providerData
 
 	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -70,9 +72,8 @@ func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
-				Optional:    true,
-				// must be computed to allow for storing the override value from the provider
-				Computed: true,
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
@@ -143,7 +144,7 @@ func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = core.InitProviderContext(ctx)
 
 	projectID := model.ProjectID.ValueString()
-	region := model.Region.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceID := model.InstanceID.ValueString()
 
 	ctx = tflog.SetField(ctx, "project_id", projectID)
