@@ -14,7 +14,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.3
-	github.com/stackitcloud/stackit-sdk-go/services/edge v0.3.0
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.23-alpha
@@ -25,7 +25,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.5
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.2
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.15.1
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.3
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.25.3
