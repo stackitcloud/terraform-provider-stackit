@@ -45,6 +45,7 @@ var (
 	_ resource.ResourceWithModifyPlan  = &instanceResource{}
 )
 
+//nolint:unused // TODO: remove if not needed later
 var validNodeTypes []string = []string{
 	"Single",
 	"Replica",
@@ -126,7 +127,11 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 }
 
 // Configure adds the provider configured client to the resource.
-func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *instanceResource) Configure(
+	ctx context.Context,
+	req resource.ConfigureRequest,
+	resp *resource.ConfigureResponse,
+) {
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
@@ -143,7 +148,11 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) ModifyPlan(
+	ctx context.Context,
+	req resource.ModifyPlanRequest,
+	resp *resource.ModifyPlanResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
@@ -422,7 +431,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 }
 
 // Create creates the resource and sets the initial Terraform state.
-func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Create(
+	ctx context.Context,
+	req resource.CreateRequest,
+	resp *resource.CreateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -467,11 +480,20 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Generate API request body from model
 	payload, err := toCreatePayload(&model, storage, encryption, network)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating instance",
+			fmt.Sprintf("Creating API payload: %v", err),
+		)
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstanceRequest(ctx, projectId, region).CreateInstanceRequestPayload(*payload).Execute()
+	createResp, err := r.client.CreateInstanceRequest(
+		ctx,
+		projectId,
+		region,
+	).CreateInstanceRequestPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -480,31 +502,54 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = core.LogResponse(ctx)
 
 	instanceId := *createResp.Id
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"id":          utils.BuildInternalTerraformId(projectId, region, instanceId),
-		"instance_id": instanceId,
-	})
+	utils.SetAndLogStateFields(
+		ctx, &resp.Diagnostics, &resp.State, map[string]any{
+			"id":          utils.BuildInternalTerraformId(projectId, region, instanceId),
+			"instance_id": instanceId,
+		},
+	)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(
+		ctx,
+		r.client,
+		projectId,
+		instanceId,
+		region,
+	).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating instance",
+			fmt.Sprintf("Instance creation waiting: %v", err),
+		)
 		return
 	}
 
 	if waitResp.FlavorId == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Instance creation waiting: returned flavor id is nil")
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating instance",
+			"Instance creation waiting: returned flavor id is nil",
+		)
 		return
 	}
 
 	// Map response body to schema
 	err = mapFields(ctx, waitResp, &model, storage, encryption, network, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error creating instance",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	// Set state to fully populated data
@@ -523,7 +568,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Read(
+	ctx context.Context,
+	req resource.ReadRequest,
+	resp *resource.ReadResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -584,7 +633,12 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	// Map response body to schema
 	err = mapFields(ctx, instanceResp, &model, storage, encryption, network, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error reading instance",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	// Set refreshed state
@@ -597,7 +651,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Update(
+	ctx context.Context,
+	req resource.UpdateRequest,
+	resp *resource.UpdateResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -646,12 +704,21 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	// Generate API request body from model
 	payload, err := toUpdatePayload(&model, storage, network)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating instance",
+			fmt.Sprintf("Creating API payload: %v", err),
+		)
 		return
 	}
 	// Update existing instance
-	err = r.client.UpdateInstanceRequest(ctx, projectId, region, instanceId).UpdateInstanceRequestPayload(*payload).Execute()
-	// err = r.client.UpdateInstancePartiallyRequest(ctx, projectId, region, instanceId).UpdateInstancePartiallyRequestPayload(*payload).Execute()
+	err = r.client.UpdateInstanceRequest(
+		ctx,
+		projectId,
+		region,
+		instanceId,
+	).UpdateInstanceRequestPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -661,14 +728,24 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating instance",
+			fmt.Sprintf("Instance update waiting: %v", err),
+		)
 		return
 	}
 
 	// Map response body to schema
 	err = mapFields(ctx, waitResp, &model, storage, encryption, network, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error updating instance",
+			fmt.Sprintf("Processing API payload: %v", err),
+		)
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -680,7 +757,11 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *instanceResource) Delete(
+	ctx context.Context,
+	req resource.DeleteRequest,
+	resp *resource.DeleteResponse,
+) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
 	var model Model
 	diags := req.State.Get(ctx, &model)
@@ -709,7 +790,12 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
+		core.LogAndAddError(
+			ctx,
+			&resp.Diagnostics,
+			"Error deleting instance",
+			fmt.Sprintf("Instance deletion waiting: %v", err),
+		)
 		return
 	}
 	tflog.Info(ctx, "SQLServer Flex instance deleted")
@@ -717,11 +803,16 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id
-func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *instanceResource) ImportState(
+	ctx context.Context,
+	req resource.ImportStateRequest,
+	resp *resource.ImportStateResponse,
+) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics,
+		core.LogAndAddError(
+			ctx, &resp.Diagnostics,
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)

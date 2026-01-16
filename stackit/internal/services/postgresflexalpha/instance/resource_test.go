@@ -53,9 +53,11 @@ func TestMapFields(t *testing.T) {
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("0.0.0.0/0"),
-				}),
+				ACL: types.ListValueMust(
+					types.StringType, []attr.Value{
+						types.StringValue("0.0.0.0/0"),
+					},
+				),
 			},
 			testRegion,
 			Model{
@@ -67,24 +69,32 @@ func TestMapFields(t *testing.T) {
 				//ACL:            types.ListNull(types.StringType),
 				BackupSchedule: types.StringNull(),
 				Replicas:       types.Int64Value(1),
-				Encryption: types.ObjectValueMust(encryptionTypes, map[string]attr.Value{
-					"keyring_id":      types.StringNull(),
-					"key_id":          types.StringNull(),
-					"key_version":     types.StringNull(),
-					"service_account": types.StringNull(),
-				}),
-				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
-					"class": types.StringNull(),
-					"size":  types.Int64Null(),
-				}),
-				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl": types.ListValueMust(types.StringType, []attr.Value{
-						types.StringValue("0.0.0.0/0"),
-					}),
-					"access_scope":     types.StringNull(),
-					"instance_address": types.StringNull(),
-					"router_address":   types.StringNull(),
-				}),
+				Encryption: types.ObjectValueMust(
+					encryptionTypes, map[string]attr.Value{
+						"keyring_id":      types.StringNull(),
+						"key_id":          types.StringNull(),
+						"key_version":     types.StringNull(),
+						"service_account": types.StringNull(),
+					},
+				),
+				Storage: types.ObjectValueMust(
+					storageTypes, map[string]attr.Value{
+						"class": types.StringNull(),
+						"size":  types.Int64Null(),
+					},
+				),
+				Network: types.ObjectValueMust(
+					networkTypes, map[string]attr.Value{
+						"acl": types.ListValueMust(
+							types.StringType, []attr.Value{
+								types.StringValue("0.0.0.0/0"),
+							},
+						),
+						"access_scope":     types.StringNull(),
+						"instance_address": types.StringNull(),
+						"router_address":   types.StringNull(),
+					},
+				),
 				Version: types.StringNull(),
 				Region:  types.StringValue(testRegion),
 			},
@@ -184,35 +194,31 @@ func TestMapFields(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			client := postgresFlexClientMocked{
-				returnError: false,
-				firstItem:   0,
-				lastItem:    0,
-			}
-			err := mapFields(
-				context.Background(),
-				client,
-				tt.input,
-				&tt.state,
-				tt.storage,
-				tt.encryption,
-				tt.network,
-				tt.region,
-			)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-			if tt.isValid {
-				diff := cmp.Diff(tt.expected, tt.state)
-				if diff != "" {
-					t.Fatalf("Data does not match: %s", diff)
+		t.Run(
+			tt.description, func(t *testing.T) {
+				err := mapFields(
+					context.Background(),
+					tt.input,
+					&tt.state,
+					tt.storage,
+					tt.encryption,
+					tt.network,
+					tt.region,
+				)
+				if !tt.isValid && err == nil {
+					t.Fatalf("Should have failed")
 				}
-			}
-		})
+				if tt.isValid && err != nil {
+					t.Fatalf("Should not have failed: %v", err)
+				}
+				if tt.isValid {
+					diff := cmp.Diff(tt.expected, tt.state)
+					if diff != "" {
+						t.Fatalf("Data does not match: %s", diff)
+					}
+				}
+			},
+		)
 	}
 }
 
@@ -236,9 +242,11 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			&encryptionModel{},
 			&networkModel{
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("0.0.0.0/0"),
-				}),
+				ACL: types.ListValueMust(
+					types.StringType, []attr.Value{
+						types.StringValue("0.0.0.0/0"),
+					},
+				),
 			},
 			&postgresflex.CreateInstanceRequestPayload{
 				Acl:        &[]string{"0.0.0.0/0"},
@@ -293,21 +301,23 @@ func TestToCreatePayload(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputStorage, tt.inputEncryption, tt.inputNetwork)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-			if tt.isValid {
-				diff := cmp.Diff(tt.expected, output)
-				if diff != "" {
-					t.Fatalf("Data does not match: %s", diff)
+		t.Run(
+			tt.description, func(t *testing.T) {
+				output, err := toCreatePayload(tt.input, tt.inputStorage, tt.inputEncryption, tt.inputNetwork)
+				if !tt.isValid && err == nil {
+					t.Fatalf("Should have failed")
 				}
-			}
-		})
+				if tt.isValid && err != nil {
+					t.Fatalf("Should not have failed: %v", err)
+				}
+				if tt.isValid {
+					diff := cmp.Diff(tt.expected, output)
+					if diff != "" {
+						t.Fatalf("Data does not match: %s", diff)
+					}
+				}
+			},
+		)
 	}
 }
 
@@ -629,10 +639,12 @@ func TestNewInstanceResource(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewInstanceResource(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewInstanceResource() = %v, want %v", got, tt.want)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				if got := NewInstanceResource(); !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("NewInstanceResource() = %v, want %v", got, tt.want)
+				}
+			},
+		)
 	}
 }

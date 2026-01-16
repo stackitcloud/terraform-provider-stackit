@@ -89,6 +89,10 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 		"user_id":           "User ID.",
 		"instance_id":       "ID of the PostgresFlex instance.",
 		"project_id":        "STACKIT project ID to which the instance is associated.",
+		"username":          "The name of the user.",
+		"roles":             "The roles assigned to the user.",
+		"host":              "The host address for the user to connect to the instance.",
+		"port":              "The port number for the user to connect to the instance.",
 		"region":            "The resource region. If not defined, the provider region is used.",
 		"status":            "The current status of the user.",
 		"connection_string": "The connection string for the user to the instance.",
@@ -125,17 +129,21 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				},
 			},
 			"username": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["username"],
+				Computed:    true,
 			},
 			"roles": schema.SetAttribute{
+				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Computed:    true,
 			},
 			"host": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["host"],
+				Computed:    true,
 			},
 			"port": schema.Int64Attribute{
-				Computed: true,
+				Description: descriptions["port"],
+				Computed:    true,
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
@@ -143,10 +151,12 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Description: descriptions["region"],
 			},
 			"status": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["status"],
+				Computed:    true,
 			},
 			"connection_string": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["connection_string"],
+				Computed:    true,
 			},
 		},
 	}

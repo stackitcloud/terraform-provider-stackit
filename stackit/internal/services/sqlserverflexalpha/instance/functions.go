@@ -13,11 +13,15 @@ import (
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 )
 
-type sqlserverflexClient interface {
-	GetFlavorsRequestExecute(ctx context.Context, projectId, region string, page, size *int64, sort *sqlserverflex.FlavorSort) (*sqlserverflex.GetFlavorsResponse, error)
-}
-
-func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, storage *storageModel, encryption *encryptionModel, network *networkModel, region string) error {
+func mapFields(
+	ctx context.Context,
+	resp *sqlserverflex.GetInstanceResponse,
+	model *Model,
+	storage *storageModel,
+	encryption *encryptionModel,
+	network *networkModel,
+	region string,
+) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -155,7 +159,12 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	return nil
 }
 
-func toCreatePayload(model *Model, storage *storageModel, encryption *encryptionModel, network *networkModel) (*sqlserverflex.CreateInstanceRequestPayload, error) {
+func toCreatePayload(
+	model *Model,
+	storage *storageModel,
+	encryption *encryptionModel,
+	network *networkModel,
+) (*sqlserverflex.CreateInstanceRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -201,7 +210,12 @@ func toCreatePayload(model *Model, storage *storageModel, encryption *encryption
 	}, nil
 }
 
-func toUpdatePartiallyPayload(model *Model, storage *storageModel, network *networkModel) (*sqlserverflex.UpdateInstancePartiallyRequestPayload, error) {
+//nolint:unused // TODO: remove if not needed later
+func toUpdatePartiallyPayload(
+	model *Model,
+	storage *storageModel,
+	network *networkModel,
+) (*sqlserverflex.UpdateInstancePartiallyRequestPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -242,7 +256,12 @@ func toUpdatePartiallyPayload(model *Model, storage *storageModel, network *netw
 	}, nil
 }
 
-func toUpdatePayload(model *Model, storage *storageModel, network *networkModel) (*sqlserverflex.UpdateInstanceRequestPayload, error) {
+// TODO: check func with his args
+func toUpdatePayload(
+	_ *Model,
+	_ *storageModel,
+	_ *networkModel,
+) (*sqlserverflex.UpdateInstanceRequestPayload, error) {
 	return &sqlserverflex.UpdateInstanceRequestPayload{
 		BackupSchedule: nil,
 		FlavorId:       nil,

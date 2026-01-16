@@ -13,13 +13,8 @@ import (
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 )
 
-type postgresflexClient interface {
-	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *postgresflex.FlavorSort) (*postgresflex.GetFlavorsResponse, error)
-}
-
 func mapFields(
 	ctx context.Context,
-	client postgresflexClient,
 	resp *postgresflex.GetInstanceResponse,
 	model *Model,
 	storage *storageModel,

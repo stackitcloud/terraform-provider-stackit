@@ -142,6 +142,8 @@ func PartialUpdateInstanceWaitHandler(
 				return false, nil, nil
 			case InstanceStateProgressing:
 				return false, nil, nil
+			case InstanceStatePending:
+				return false, nil, nil
 			case InstanceStateTerminating:
 				return false, nil, nil
 			case InstanceStateSuccess:
@@ -152,98 +154,5 @@ func PartialUpdateInstanceWaitHandler(
 		},
 	)
 	handler.SetTimeout(45 * time.Minute)
-	return handler
-}
-
-//// DeleteInstanceWaitHandler will wait for instance deletion
-//func DeleteInstanceWaitHandler(
-//	ctx context.Context,
-//	a APIClientInstanceInterface,
-//	projectId, region, instanceId string,
-//) *wait.AsyncActionHandler[struct{}] {
-//	handler := wait.New(
-//		func() (waitFinished bool, response *struct{}, err error) {
-//			s, err := a.GetInstanceRequestExecute(ctx, projectId, region, instanceId)
-//			if err != nil {
-//				return false, nil, err
-//			}
-//			if s == nil || s.Id == nil || *s.Id != instanceId || s.Status == nil {
-//				return false, nil, nil
-//			}
-//			// TODO - maybe we want to validate status if no 404 error (only unknown or terminating should be valid)
-//			// switch *s.Status {
-//			// default:
-//			//	return true, nil, fmt.Errorf("instance with id %s has unexpected status %s", instanceId, *s.Status)
-//			// case InstanceStateSuccess:
-//			//	return false, nil, nil
-//			// case InstanceStateTerminating:
-//			//	return false, nil, nil
-//			// }
-//
-//			// TODO - add tflog for ignored cases
-//			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-//			if !ok {
-//				return false, nil, err
-//			}
-//			if oapiErr.StatusCode != 404 {
-//				return false, nil, err
-//			}
-//			return true, nil, nil
-//		},
-//	)
-//	handler.SetTimeout(5 * time.Minute)
-//	return handler
-//}
-//
-//// TODO - remove
-//// ForceDeleteInstanceWaitHandler will wait for instance deletion
-//func ForceDeleteInstanceWaitHandler(
-//	ctx context.Context,
-//	a APIClientInstanceInterface,
-//	projectId, region, instanceId string,
-//) *wait.AsyncActionHandler[struct{}] {
-//	handler := wait.New(
-//		func() (waitFinished bool, response *struct{}, err error) {
-//			_, err = a.GetInstanceRequestExecute(ctx, projectId, region, instanceId)
-//			if err == nil {
-//				return false, nil, nil
-//			}
-//			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-//			if !ok {
-//				return false, nil, err
-//			}
-//			if oapiErr.StatusCode != 404 {
-//				return false, nil, err
-//			}
-//			return true, nil, nil
-//		},
-//	)
-//	handler.SetTimeout(15 * time.Minute)
-//	return handler
-//}
-
-// DeleteUserWaitHandler will wait for delete
-func DeleteUserWaitHandler(
-	ctx context.Context,
-	a APIClientUserInterface,
-	projectId, region, instanceId string, userId int64,
-) *wait.AsyncActionHandler[struct{}] {
-	handler := wait.New(
-		func() (waitFinished bool, response *struct{}, err error) {
-			_, err = a.GetUserRequestExecute(ctx, projectId, region, instanceId, userId)
-			if err == nil {
-				return false, nil, nil
-			}
-			oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-			if !ok {
-				return false, nil, err
-			}
-			if oapiErr.StatusCode != 404 {
-				return false, nil, err
-			}
-			return true, nil, nil
-		},
-	)
-	handler.SetTimeout(1 * time.Minute)
 	return handler
 }

@@ -16,7 +16,7 @@ type flavorsClient interface {
 	) (*sqlserverflex.GetFlavorsResponse, error)
 }
 
-//func loadFlavorId(ctx context.Context, client flavorsClient, model *Model, flavor *flavorModel, storage *storageModel) error {
+// func loadFlavorId(ctx context.Context, client flavorsClient, model *Model, flavor *flavorModel, storage *storageModel) error {
 //	if model == nil {
 //		return fmt.Errorf("nil model")
 //	}
@@ -113,7 +113,10 @@ type flavorsClient interface {
 //	return nil
 //}
 
-func getAllFlavors(ctx context.Context, client flavorsClient, projectId, region string) ([]sqlserverflex.ListFlavors, error) {
+func getAllFlavors(ctx context.Context, client flavorsClient, projectId, region string) (
+	[]sqlserverflex.ListFlavors,
+	error,
+) {
 	if projectId == "" || region == "" {
 		return nil, fmt.Errorf("listing sqlserverflex flavors: projectId and region are required")
 	}
@@ -156,7 +159,7 @@ func getAllFlavors(ctx context.Context, client flavorsClient, projectId, region 
 	return flavorList, nil
 }
 
-//func getFlavorModelById(ctx context.Context, client flavorsClient, model *Model, flavor *flavorModel) error {
+// func getFlavorModelById(ctx context.Context, client flavorsClient, model *Model, flavor *flavorModel) error {
 //	if model == nil {
 //		return fmt.Errorf("nil model")
 //	}

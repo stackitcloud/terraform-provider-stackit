@@ -1,18 +1,11 @@
 package postgresflexalpha
 
 import (
-	"context"
-	"fmt"
-
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
-type postgresFlexClientMocked struct {
-	returnError bool
-	firstItem   int
-	lastItem    int
-}
+//nolint:unused // TODO: remove when used
 type testFlavor struct {
 	Cpu            int64
 	Description    string
@@ -24,12 +17,14 @@ type testFlavor struct {
 	StorageClasses []testFlavorStorageClass
 }
 
+//nolint:unused // TODO: remove when used
 type testFlavorStorageClass struct {
 	Class          string
 	MaxIoPerSec    int64
 	MaxThroughInMb int64
 }
 
+//nolint:unused // TODO: remove when used
 var responseList = []testFlavor{
 	{
 		Cpu:         1,
@@ -415,6 +410,7 @@ var responseList = []testFlavor{
 	/* ......................................................... */
 }
 
+//nolint:unused // TODO: remove when used
 func testFlavorListToResponseFlavorList(f []testFlavor) []postgresflex.ListFlavors {
 	result := make([]postgresflex.ListFlavors, len(f))
 	for i, flavor := range f {
@@ -423,14 +419,17 @@ func testFlavorListToResponseFlavorList(f []testFlavor) []postgresflex.ListFlavo
 	return result
 }
 
+//nolint:unused // TODO: remove when used
 func testFlavorToResponseFlavor(f testFlavor) postgresflex.ListFlavors {
 	var scList []postgresflex.FlavorStorageClassesStorageClass
 	for _, fl := range f.StorageClasses {
-		scList = append(scList, postgresflex.FlavorStorageClassesStorageClass{
-			Class:          utils.Ptr(fl.Class),
-			MaxIoPerSec:    utils.Ptr(fl.MaxIoPerSec),
-			MaxThroughInMb: utils.Ptr(fl.MaxThroughInMb),
-		})
+		scList = append(
+			scList, postgresflex.FlavorStorageClassesStorageClass{
+				Class:          utils.Ptr(fl.Class),
+				MaxIoPerSec:    utils.Ptr(fl.MaxIoPerSec),
+				MaxThroughInMb: utils.Ptr(fl.MaxThroughInMb),
+			},
+		)
 	}
 	return postgresflex.ListFlavors{
 		Cpu:            utils.Ptr(f.Cpu),
@@ -444,49 +443,7 @@ func testFlavorToResponseFlavor(f testFlavor) postgresflex.ListFlavors {
 	}
 }
 
-func (c postgresFlexClientMocked) GetFlavorsRequestExecute(
-	_ context.Context,
-	_, _ string,
-	page, size *int64,
-	_ *postgresflex.FlavorSort,
-) (*postgresflex.GetFlavorsResponse, error) {
-	if c.returnError {
-		return nil, fmt.Errorf("get flavors failed")
-	}
-
-	var res postgresflex.GetFlavorsResponse
-	var resFlavors []postgresflex.ListFlavors
-
-	myList := responseList[c.firstItem : c.lastItem+1]
-
-	firstItem := *page**size - *size
-	if firstItem > int64(len(myList)) {
-		firstItem = int64(len(myList))
-	}
-
-	lastItem := firstItem + *size
-	if lastItem > int64(len(myList)) {
-		lastItem = int64(len(myList))
-	}
-
-	for _, flv := range myList[firstItem:lastItem] {
-		resFlavors = append(resFlavors, testFlavorToResponseFlavor(flv))
-	}
-
-	res.Flavors = &resFlavors
-	totPages := (int64(len(myList))-1) / *size + 1
-	res.Pagination = &postgresflex.Pagination{
-		Page:       page,
-		Size:       size,
-		Sort:       utils.Ptr("id.asc"),
-		TotalPages: utils.Ptr(int64(totPages)),
-		TotalRows:  utils.Ptr(int64(len(myList))),
-	}
-
-	return &res, nil
-}
-
-//func Test_getAllFlavors(t *testing.T) {
+// func Test_getAllFlavors(t *testing.T) {
 //	type args struct {
 //		projectId string
 //		region    string
@@ -579,7 +536,7 @@ func (c postgresFlexClientMocked) GetFlavorsRequestExecute(
 //	}
 //}
 
-//func Test_loadFlavorId(t *testing.T) {
+// func Test_loadFlavorId(t *testing.T) {
 //	type args struct {
 //		ctx     context.Context
 //		model   *Model

@@ -22,12 +22,6 @@ type Model struct {
 	Network        types.Object `tfsdk:"network"`
 }
 
-//type IdentityModel struct {
-//	InstanceId types.String `tfsdk:"instance_id"`
-//	Region     types.String `tfsdk:"region"`
-//	ProjectId  types.String `tfsdk:"project_id"`
-//}
-
 type encryptionModel struct {
 	KeyRingId      types.String `tfsdk:"keyring_id"`
 	KeyId          types.String `tfsdk:"key_id"`

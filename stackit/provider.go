@@ -19,7 +19,7 @@ import (
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/features"
 	postgresFlexAlphaDatabase "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/database"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/flavor"
+	postgresFlexAlphaFlavor "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/flavor"
 	postgresFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance"
 	postgresFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/user"
 	sqlserverFlexAlphaFlavor "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/flavor"
@@ -363,7 +363,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setStringField(
-		providerConfig.Region, func(v string) { providerData.Region = v }, // nolint:staticcheck // preliminary handling of deprecated attribute
+		providerConfig.Region,
+		func(v string) { providerData.Region = v }, // nolint:staticcheck // preliminary handling of deprecated attribute
 	)
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
@@ -490,7 +491,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		postgresFlexAlphaFlavor.NewFlavorDataSource,
-		//postgresFlexAlphaFlavor.NewFlavorListDataSource,
+		// postgresFlexAlphaFlavor.NewFlavorListDataSource,
 		postgresFlexAlphaDatabase.NewDatabaseDataSource,
 		postgresFlexAlphaInstance.NewInstanceDataSource,
 		postgresFlexAlphaUser.NewUserDataSource,

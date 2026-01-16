@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 
@@ -84,12 +85,10 @@ func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["id"],
 				Computed:    true,
 			},
-			"database_id": schema.StringAttribute{
+			"database_id": schema.Int64Attribute{
 				Description: descriptions["database_id"],
-				Required:    true,
-				Validators: []validator.String{
-					validate.NoSeparator(),
-				},
+				Optional:    true,
+				Computed:    true,
 			},
 			"instance_id": schema.StringAttribute{
 				Description: descriptions["instance_id"],
@@ -109,7 +108,11 @@ func (r *databaseDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
+				Optional:    true,
 				Computed:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"owner": schema.StringAttribute{
 				Description: descriptions["owner"],
@@ -137,6 +140,18 @@ func (r *databaseDataSource) Read(
 		return
 	}
 
+	// validation for exactly one of database_id or name
+	isIdSet := !model.DatabaseId.IsNull() && !model.DatabaseId.IsUnknown()
+	isNameSet := !model.Name.IsNull() && !model.Name.IsUnknown()
+
+	if (isIdSet && isNameSet) || (!isIdSet && !isNameSet) {
+		core.LogAndAddError(
+			ctx, &resp.Diagnostics,
+			"Invalid configuration", "Exactly one of 'database_id' or 'name' must be specified.",
+		)
+		return
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -148,7 +163,19 @@ func (r *databaseDataSource) Read(
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	var databaseResp *postgresflexalpha.ListDatabase
+	var err error
+
+	if isIdSet {
+		databaseId := model.DatabaseId.ValueInt64()
+		ctx = tflog.SetField(ctx, "database_id", databaseId)
+		databaseResp, err = getDatabaseById(ctx, r.client, projectId, region, instanceId, databaseId)
+	} else {
+		databaseName := model.Name.ValueString()
+		ctx = tflog.SetField(ctx, "name", databaseName)
+		databaseResp, err = getDatabaseByName(ctx, r.client, projectId, region, instanceId, databaseName)
+	}
+
 	if err != nil {
 		utils.LogError(
 			ctx,

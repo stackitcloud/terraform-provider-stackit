@@ -259,7 +259,7 @@ func (r *databaseResource) Create(
 	databaseId := *databaseResp.Id
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
 
-	database, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	database, err := getDatabaseById(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -314,7 +314,7 @@ func (r *databaseResource) Read(
 	ctx = tflog.SetField(ctx, "database_id", databaseId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	databaseResp, err := getDatabaseById(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
@@ -353,7 +353,7 @@ func (r *databaseResource) Update(
 	ctx context.Context,
 	req resource.UpdateRequest,
 	resp *resource.UpdateResponse,
-) { // nolint:gocritic // function signature required by Terraform
+) {
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -430,7 +430,6 @@ func (r *databaseResource) Update(
 		return
 	}
 	tflog.Info(ctx, "Postgres Flex database updated")
-
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -530,14 +529,11 @@ func mapFields(resp *postgresflexalpha.ListDatabase, model *Model, region string
 	return nil
 }
 
-func mapFieldsUpdate(res *postgresflexalpha.UpdateDatabaseResponse, model *Model, region string) error {
-	if res == nil {
-		return fmt.Errorf("response is nil")
-	}
-	return mapFields(res.Database, model, region)
-}
-
-func mapFieldsUpdatePartially(res *postgresflexalpha.UpdateDatabasePartiallyResponse, model *Model, region string) error {
+func mapFieldsUpdatePartially(
+	res *postgresflexalpha.UpdateDatabasePartiallyResponse,
+	model *Model,
+	region string,
+) error {
 	if res == nil {
 		return fmt.Errorf("response is nil")
 	}
@@ -564,26 +560,3 @@ func toCreatePayload(model *Model) (*postgresflexalpha.CreateDatabaseRequestPayl
 }
 
 var errDatabaseNotFound = errors.New("database not found")
-
-// The API does not have a GetDatabase endpoint, only ListDatabases
-func getDatabase(
-	ctx context.Context,
-	client *postgresflexalpha.APIClient,
-	projectId, region, instanceId string,
-	databaseId int64,
-) (*postgresflexalpha.ListDatabase, error) {
-	// TODO - implement pagination handling
-	resp, err := client.ListDatabasesRequestExecute(ctx, projectId, region, instanceId)
-	if err != nil {
-		return nil, err
-	}
-	if resp == nil || resp.Databases == nil {
-		return nil, fmt.Errorf("response is nil")
-	}
-	for _, database := range *resp.Databases {
-		if database.Id != nil && *database.Id == databaseId {
-			return &database, nil
-		}
-	}
-	return nil, errDatabaseNotFound
-}

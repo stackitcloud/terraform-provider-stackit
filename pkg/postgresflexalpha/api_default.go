@@ -193,7 +193,7 @@ type DefaultApi interface {
 		@param region The region which should be addressed
 		@return ApiGetFlavorsRequestRequest
 	*/
-	GetFlavorsRequest(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) ApiGetFlavorsRequestRequest
+	GetFlavorsRequest(ctx context.Context, projectId string, region string) ApiGetFlavorsRequestRequest
 	/*
 		GetFlavorsRequestExecute executes the request
 
@@ -203,7 +203,7 @@ type DefaultApi interface {
 		@return GetFlavorsResponse
 
 	*/
-	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) (*GetFlavorsResponse, error)
+	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*GetFlavorsResponse, error)
 	/*
 		GetInstanceRequest Get Specific Instance
 		Get information about a specific available instance
@@ -2520,27 +2520,21 @@ Get all available flavors for a project.
 	@param region The region which should be addressed
 	@return ApiGetFlavorsRequestRequest
 */
-func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) ApiGetFlavorsRequestRequest {
+func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, region string) ApiGetFlavorsRequestRequest {
 	return GetFlavorsRequestRequest{
 		apiService: a.defaultApi,
 		ctx:        ctx,
 		projectId:  projectId,
 		region:     region,
-		page:       page,
-		size:       size,
-		sort:       sort,
 	}
 }
 
-func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) (*GetFlavorsResponse, error) {
+func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*GetFlavorsResponse, error) {
 	r := GetFlavorsRequestRequest{
 		apiService: a.defaultApi,
 		ctx:        ctx,
 		projectId:  projectId,
 		region:     region,
-		page:       page,
-		size:       size,
-		sort:       sort,
 	}
 	return r.Execute()
 }

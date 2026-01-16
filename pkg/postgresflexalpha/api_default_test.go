@@ -23,1610 +23,2241 @@ import (
 
 func Test_postgresflexalpha_DefaultApiService(t *testing.T) {
 
-	t.Run("Test DefaultApiService CreateDatabaseRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
+	t.Run(
+		"Test DefaultApiService CreateDatabaseRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
 
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := CreateDatabaseResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := CreateDatabaseResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
+							},
+						},
+					},
+				},
+				OperationServers: map[string]config.ServerConfigurations{},
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
-
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
-							},
-						},
-					},
-				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		createDatabaseRequestPayload := CreateDatabaseRequestPayload{}
-
-		resp, reqErr := apiClient.CreateDatabaseRequest(context.Background(), projectId, region, instanceId).CreateDatabaseRequestPayload(createDatabaseRequestPayload).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService CreateInstanceRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := CreateInstanceResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			createDatabaseRequestPayload := CreateDatabaseRequestPayload{}
+
+			resp, reqErr := apiClient.CreateDatabaseRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).CreateDatabaseRequestPayload(createDatabaseRequestPayload).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService CreateInstanceRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := CreateInstanceResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		createInstanceRequestPayload := CreateInstanceRequestPayload{}
-
-		resp, reqErr := apiClient.CreateInstanceRequest(context.Background(), projectId, region).CreateInstanceRequestPayload(createInstanceRequestPayload).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService CreateUserRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := CreateUserResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			createInstanceRequestPayload := CreateInstanceRequestPayload{}
+
+			resp, reqErr := apiClient.CreateInstanceRequest(
+				context.Background(),
+				projectId,
+				region,
+			).CreateInstanceRequestPayload(createInstanceRequestPayload).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService CreateUserRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := CreateUserResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		createUserRequestPayload := CreateUserRequestPayload{}
-
-		resp, reqErr := apiClient.CreateUserRequest(context.Background(), projectId, region, instanceId).CreateUserRequestPayload(createUserRequestPayload).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService DeleteDatabaseRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		databaseIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseId"+"}", url.PathEscape(ParameterValueToString(databaseIdValue, "databaseId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
-
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
-							},
-						},
-					},
-				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		databaseId := databaseIdValue
-
-		reqErr := apiClient.DeleteDatabaseRequest(context.Background(), projectId, region, instanceId, databaseId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
-
-	t.Run("Test DefaultApiService DeleteInstanceRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
-
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
-							},
-						},
-					},
-				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		reqErr := apiClient.DeleteInstanceRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
-
-	t.Run("Test DefaultApiService DeleteUserRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		userIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
-
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
-							},
-						},
-					},
-				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		userId := userIdValue
-
-		reqErr := apiClient.DeleteUserRequest(context.Background(), projectId, region, instanceId, userId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
-
-	t.Run("Test DefaultApiService GetBackupRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/{backupId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		backupIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"backupId"+"}", url.PathEscape(ParameterValueToString(backupIdValue, "backupId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := GetBackupResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			createUserRequestPayload := CreateUserRequestPayload{}
+
+			resp, reqErr := apiClient.CreateUserRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).CreateUserRequestPayload(createUserRequestPayload).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService DeleteDatabaseRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			databaseIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"databaseId"+"}",
+				url.PathEscape(ParameterValueToString(databaseIdValue, "databaseId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		backupId := backupIdValue
-
-		resp, reqErr := apiClient.GetBackupRequest(context.Background(), projectId, region, instanceId, backupId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService GetCollationsRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/collations"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := GetCollationsResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			databaseId := databaseIdValue
+
+			reqErr := apiClient.DeleteDatabaseRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				databaseId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService DeleteInstanceRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.GetCollationsRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService GetFlavorsRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/flavors"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := GetFlavorsResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			reqErr := apiClient.DeleteInstanceRequest(context.Background(), projectId, region, instanceId).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService DeleteUserRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			userIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"userId"+"}",
+				url.PathEscape(ParameterValueToString(userIdValue, "userId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-
-		page := int64(1)
-		size := int64(10)
-		sort := FLAVORSORT_ID_DESC
-
-		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region, &page, &size, &sort).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService GetInstanceRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := GetInstanceResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			userId := userIdValue
+
+			reqErr := apiClient.DeleteUserRequest(context.Background(), projectId, region, instanceId, userId).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService GetBackupRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/{backupId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			backupIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"backupId"+"}",
+				url.PathEscape(ParameterValueToString(backupIdValue, "backupId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := GetBackupResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.GetInstanceRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService GetUserRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		userIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := GetUserResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			backupId := backupIdValue
+
+			resp, reqErr := apiClient.GetBackupRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				backupId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService GetCollationsRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/collations"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := GetCollationsResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		userId := userIdValue
-
-		resp, reqErr := apiClient.GetUserRequest(context.Background(), projectId, region, instanceId, userId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService GetVersionsRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/versions"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := GetVersionsResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.GetCollationsRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService GetFlavorsRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/flavors"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := GetFlavorsResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-
-		resp, reqErr := apiClient.GetVersionsRequest(context.Background(), projectId, region).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ListBackupsRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ListBackupResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+
+			resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService GetInstanceRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := GetInstanceResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.ListBackupsRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ListDatabasesRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ListDatabasesResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.GetInstanceRequest(context.Background(), projectId, region, instanceId).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService GetUserRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			userIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"userId"+"}",
+				url.PathEscape(ParameterValueToString(userIdValue, "userId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := GetUserResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.ListDatabasesRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ListInstancesRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ListInstancesResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			userId := userIdValue
+
+			resp, reqErr := apiClient.GetUserRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				userId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService GetVersionsRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/versions"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := GetVersionsResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-
-		resp, reqErr := apiClient.ListInstancesRequest(context.Background(), projectId, region).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ListRolesRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/roles"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ListRolesResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+
+			resp, reqErr := apiClient.GetVersionsRequest(context.Background(), projectId, region).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService ListBackupsRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ListBackupResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.ListRolesRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ListUsersRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ListUserResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.ListBackupsRequest(context.Background(), projectId, region, instanceId).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService ListDatabasesRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ListDatabasesResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.ListUsersRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService PointInTimeRecoveryRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/recoveries"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := RecoveryResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.ListDatabasesRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService ListInstancesRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ListInstancesResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-
-		resp, reqErr := apiClient.PointInTimeRecoveryRequest(context.Background(), projectId, region, instanceId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ProtectInstanceRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/protections"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ProtectInstanceResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+
+			resp, reqErr := apiClient.ListInstancesRequest(context.Background(), projectId, region).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService ListRolesRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/roles"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ListRolesResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		protectInstanceRequestPayload := ProtectInstanceRequestPayload{}
-
-		resp, reqErr := apiClient.ProtectInstanceRequest(context.Background(), projectId, region, instanceId).ProtectInstanceRequestPayload(protectInstanceRequestPayload).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService ResetUserRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}/reset"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		userIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := ResetUserResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.ListRolesRequest(context.Background(), projectId, region, instanceId).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService ListUsersRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ListUserResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		userId := userIdValue
-
-		resp, reqErr := apiClient.ResetUserRequest(context.Background(), projectId, region, instanceId, userId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService RestoreInstanceRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/{backupId}/restores"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		backupIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"backupId"+"}", url.PathEscape(ParameterValueToString(backupIdValue, "backupId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
-
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
-							},
-						},
-					},
-				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		backupId := backupIdValue
-
-		reqErr := apiClient.RestoreInstanceRequest(context.Background(), projectId, region, instanceId, backupId).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
-
-	t.Run("Test DefaultApiService UpdateDatabasePartiallyRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		databaseIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseId"+"}", url.PathEscape(ParameterValueToString(databaseIdValue, "databaseId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := UpdateDatabasePartiallyResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.ListUsersRequest(context.Background(), projectId, region, instanceId).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService PointInTimeRecoveryRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/recoveries"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := RecoveryResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
-
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		databaseId := databaseIdValue
-		updateDatabasePartiallyRequestPayload := UpdateDatabasePartiallyRequestPayload{}
-
-		resp, reqErr := apiClient.UpdateDatabasePartiallyRequest(context.Background(), projectId, region, instanceId, databaseId).UpdateDatabasePartiallyRequestPayload(updateDatabasePartiallyRequestPayload).Execute()
-
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
-
-	t.Run("Test DefaultApiService UpdateDatabaseRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		databaseIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseId"+"}", url.PathEscape(ParameterValueToString(databaseIdValue, "databaseId")), -1)
-
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-			data := UpdateDatabaseResponse{}
-			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
 			if err != nil {
-				return
+				t.Fatalf("creating API client: %v", err)
 			}
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+
+			resp, reqErr := apiClient.PointInTimeRecoveryRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService ProtectInstanceRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/protections"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ProtectInstanceResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
 
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		databaseId := databaseIdValue
-		updateDatabaseRequestPayload := UpdateDatabaseRequestPayload{}
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			protectInstanceRequestPayload := ProtectInstanceRequestPayload{}
 
-		resp, reqErr := apiClient.UpdateDatabaseRequest(context.Background(), projectId, region, instanceId, databaseId).UpdateDatabaseRequestPayload(updateDatabaseRequestPayload).Execute()
+			resp, reqErr := apiClient.ProtectInstanceRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).ProtectInstanceRequestPayload(protectInstanceRequestPayload).Execute()
 
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-		if IsNil(resp) {
-			t.Fatalf("response not present")
-		}
-	})
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
 
-	t.Run("Test DefaultApiService UpdateInstancePartiallyRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
+	t.Run(
+		"Test DefaultApiService ResetUserRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}/reset"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			userIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"userId"+"}",
+				url.PathEscape(ParameterValueToString(userIdValue, "userId")),
+			)
 
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := ResetUserResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
 
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		updateInstancePartiallyRequestPayload := UpdateInstancePartiallyRequestPayload{}
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			userId := userIdValue
 
-		reqErr := apiClient.UpdateInstancePartiallyRequest(context.Background(), projectId, region, instanceId).UpdateInstancePartiallyRequestPayload(updateInstancePartiallyRequestPayload).Execute()
+			resp, reqErr := apiClient.ResetUserRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				userId,
+			).Execute()
 
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
 
-	t.Run("Test DefaultApiService UpdateInstanceRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
+	t.Run(
+		"Test DefaultApiService RestoreInstanceRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/{backupId}/restores"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			backupIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"backupId"+"}",
+				url.PathEscape(ParameterValueToString(backupIdValue, "backupId")),
+			)
 
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
 
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		updateInstanceRequestPayload := UpdateInstanceRequestPayload{}
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			backupId := backupIdValue
 
-		reqErr := apiClient.UpdateInstanceRequest(context.Background(), projectId, region, instanceId).UpdateInstanceRequestPayload(updateInstanceRequestPayload).Execute()
+			reqErr := apiClient.RestoreInstanceRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				backupId,
+			).Execute()
 
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
 
-	t.Run("Test DefaultApiService UpdateUserPartiallyRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		userIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
+	t.Run(
+		"Test DefaultApiService UpdateDatabasePartiallyRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			databaseIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"databaseId"+"}",
+				url.PathEscape(ParameterValueToString(databaseIdValue, "databaseId")),
+			)
 
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := UpdateDatabasePartiallyResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
 
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		userId := userIdValue
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			databaseId := databaseIdValue
+			updateDatabasePartiallyRequestPayload := UpdateDatabasePartiallyRequestPayload{}
 
-		reqErr := apiClient.UpdateUserPartiallyRequest(context.Background(), projectId, region, instanceId, userId).Execute()
+			resp, reqErr := apiClient.UpdateDatabasePartiallyRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				databaseId,
+			).UpdateDatabasePartiallyRequestPayload(updateDatabasePartiallyRequestPayload).Execute()
 
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
 
-	t.Run("Test DefaultApiService UpdateUserRequest", func(t *testing.T) {
-		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
-		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
-		regionValue := "region-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
-		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
-		userIdValue := int64(123)
-		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
+	t.Run(
+		"Test DefaultApiService UpdateDatabaseRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			databaseIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"databaseId"+"}",
+				url.PathEscape(ParameterValueToString(databaseIdValue, "databaseId")),
+			)
 
-		testDefaultApiServeMux := http.NewServeMux()
-		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
-		})
-		testServer := httptest.NewServer(testDefaultApiServeMux)
-		defer testServer.Close()
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+					data := UpdateDatabaseResponse{}
+					w.Header().Add("Content-Type", "application/json")
+					err := json.NewEncoder(w).Encode(data)
+					if err != nil {
+						return
+					}
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
 
-		configuration := &config.Configuration{
-			DefaultHeader: make(map[string]string),
-			UserAgent:     "OpenAPI-Generator/1.0.0/go",
-			Debug:         false,
-			Region:        "test_region",
-			Servers: config.ServerConfigurations{
-				{
-					URL:         testServer.URL,
-					Description: "Localhost for postgresflexalpha_DefaultApi",
-					Variables: map[string]config.ServerVariable{
-						"region": {
-							DefaultValue: "test_region.",
-							EnumValues: []string{
-								"test_region.",
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
 							},
 						},
 					},
 				},
-			},
-			OperationServers: map[string]config.ServerConfigurations{},
-		}
-		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
-		if err != nil {
-			t.Fatalf("creating API client: %v", err)
-		}
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
 
-		projectId := projectIdValue
-		region := regionValue
-		instanceId := instanceIdValue
-		userId := userIdValue
-		updateUserRequestPayload := UpdateUserRequestPayload{}
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			databaseId := databaseIdValue
+			updateDatabaseRequestPayload := UpdateDatabaseRequestPayload{}
 
-		reqErr := apiClient.UpdateUserRequest(context.Background(), projectId, region, instanceId, userId).UpdateUserRequestPayload(updateUserRequestPayload).Execute()
+			resp, reqErr := apiClient.UpdateDatabaseRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				databaseId,
+			).UpdateDatabaseRequestPayload(updateDatabaseRequestPayload).Execute()
 
-		if reqErr != nil {
-			t.Fatalf("error in call: %v", reqErr)
-		}
-	})
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+			if IsNil(resp) {
+				t.Fatalf("response not present")
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService UpdateInstancePartiallyRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
+							},
+						},
+					},
+				},
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
+
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			updateInstancePartiallyRequestPayload := UpdateInstancePartiallyRequestPayload{}
+
+			reqErr := apiClient.UpdateInstancePartiallyRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).UpdateInstancePartiallyRequestPayload(updateInstancePartiallyRequestPayload).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService UpdateInstanceRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
+							},
+						},
+					},
+				},
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
+
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			updateInstanceRequestPayload := UpdateInstanceRequestPayload{}
+
+			reqErr := apiClient.UpdateInstanceRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+			).UpdateInstanceRequestPayload(updateInstanceRequestPayload).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService UpdateUserPartiallyRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			userIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"userId"+"}",
+				url.PathEscape(ParameterValueToString(userIdValue, "userId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
+							},
+						},
+					},
+				},
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
+
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			userId := userIdValue
+
+			reqErr := apiClient.UpdateUserPartiallyRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				userId,
+			).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
+
+	t.Run(
+		"Test DefaultApiService UpdateUserRequest", func(t *testing.T) {
+			_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
+			projectIdValue := "projectId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"projectId"+"}",
+				url.PathEscape(ParameterValueToString(projectIdValue, "projectId")),
+			)
+			regionValue := "region-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"region"+"}",
+				url.PathEscape(ParameterValueToString(regionValue, "region")),
+			)
+			instanceIdValue := "instanceId-value"
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"instanceId"+"}",
+				url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")),
+			)
+			userIdValue := int64(123)
+			_apiUrlPath = strings.ReplaceAll(
+				_apiUrlPath,
+				"{"+"userId"+"}",
+				url.PathEscape(ParameterValueToString(userIdValue, "userId")),
+			)
+
+			testDefaultApiServeMux := http.NewServeMux()
+			testDefaultApiServeMux.HandleFunc(
+				_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+				},
+			)
+			testServer := httptest.NewServer(testDefaultApiServeMux)
+			defer testServer.Close()
+
+			configuration := &config.Configuration{
+				DefaultHeader: make(map[string]string),
+				UserAgent:     "OpenAPI-Generator/1.0.0/go",
+				Debug:         false,
+				Region:        "test_region",
+				Servers: config.ServerConfigurations{
+					{
+						URL:         testServer.URL,
+						Description: "Localhost for postgresflexalpha_DefaultApi",
+						Variables: map[string]config.ServerVariable{
+							"region": {
+								DefaultValue: "test_region.",
+								EnumValues: []string{
+									"test_region.",
+								},
+							},
+						},
+					},
+				},
+				OperationServers: map[string]config.ServerConfigurations{},
+			}
+			apiClient, err := NewAPIClient(
+				config.WithCustomConfiguration(configuration),
+				config.WithoutAuthentication(),
+			)
+			if err != nil {
+				t.Fatalf("creating API client: %v", err)
+			}
+
+			projectId := projectIdValue
+			region := regionValue
+			instanceId := instanceIdValue
+			userId := userIdValue
+			updateUserRequestPayload := UpdateUserRequestPayload{}
+
+			reqErr := apiClient.UpdateUserRequest(
+				context.Background(),
+				projectId,
+				region,
+				instanceId,
+				userId,
+			).UpdateUserRequestPayload(updateUserRequestPayload).Execute()
+
+			if reqErr != nil {
+				t.Fatalf("error in call: %v", reqErr)
+			}
+		},
+	)
 
 }

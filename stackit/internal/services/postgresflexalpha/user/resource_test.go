@@ -14,22 +14,16 @@ func TestMapFieldsCreate(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
 		description string
-		input       *postgresflexalpha.CreateUserResponse
-		updateRoles *postgresflexalpha.UpdateUserRequestPayload
+		input       *postgresflexalpha.GetUserResponse
 		region      string
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&postgresflexalpha.CreateUserResponse{
-				Id:       utils.Ptr(int64(1)),
-				Password: utils.Ptr(""),
+			&postgresflexalpha.GetUserResponse{
+				Id: utils.Ptr(int64(1)),
 			},
-			&postgresflexalpha.UpdateUserRequestPayload{
-				Roles: &[]postgresflexalpha.UserRole{},
-			},
-
 			testRegion,
 			Model{
 				Id:               types.StringValue("pid,region,iid,1"),
@@ -37,11 +31,10 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId:       types.StringValue("iid"),
 				ProjectId:        types.StringValue("pid"),
 				Username:         types.StringNull(),
-				Roles:            types.SetValueMust(types.StringType, []attr.Value{}),
-				Password:         types.StringValue(""),
+				Roles:            types.SetNull(types.StringType),
+				Password:         types.StringNull(),
 				Host:             types.StringNull(),
 				Port:             types.Int64Null(),
-				Uri:              types.StringNull(),
 				Region:           types.StringValue(testRegion),
 				Status:           types.StringNull(),
 				ConnectionString: types.StringNull(),
@@ -50,15 +43,11 @@ func TestMapFieldsCreate(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&postgresflexalpha.CreateUserResponse{
+			&postgresflexalpha.GetUserResponse{
 				Id:               utils.Ptr(int64(1)),
 				Name:             utils.Ptr("username"),
-				Password:         utils.Ptr("password"),
 				ConnectionString: utils.Ptr("connection_string"),
 				Status:           utils.Ptr("status"),
-			},
-			&postgresflexalpha.UpdateUserRequestPayload{
-				Roles: &[]postgresflexalpha.UserRole{},
 			},
 			testRegion,
 			Model{
@@ -67,11 +56,10 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId:       types.StringValue("iid"),
 				ProjectId:        types.StringValue("pid"),
 				Username:         types.StringValue("username"),
-				Roles:            types.SetValueMust(types.StringType, []attr.Value{}),
-				Password:         types.StringValue("password"),
+				Roles:            types.SetNull(types.StringType),
+				Password:         types.StringNull(),
 				Host:             types.StringNull(),
 				Port:             types.Int64Null(),
-				Uri:              types.StringNull(),
 				Region:           types.StringValue(testRegion),
 				Status:           types.StringValue("status"),
 				ConnectionString: types.StringValue("connection_string"),
@@ -80,15 +68,11 @@ func TestMapFieldsCreate(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
-			&postgresflexalpha.CreateUserResponse{
+			&postgresflexalpha.GetUserResponse{
 				Id:               utils.Ptr(int64(1)),
 				Name:             nil,
-				Password:         utils.Ptr(""),
 				ConnectionString: nil,
 				Status:           nil,
-			},
-			&postgresflexalpha.UpdateUserRequestPayload{
-				Roles: &[]postgresflexalpha.UserRole{},
 			},
 			testRegion,
 			Model{
@@ -97,11 +81,10 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId:       types.StringValue("iid"),
 				ProjectId:        types.StringValue("pid"),
 				Username:         types.StringNull(),
-				Roles:            types.SetValueMust(types.StringType, []attr.Value{}),
-				Password:         types.StringValue(""),
+				Roles:            types.SetNull(types.StringType),
+				Password:         types.StringNull(),
 				Host:             types.StringNull(),
 				Port:             types.Int64Null(),
-				Uri:              types.StringNull(),
 				Region:           types.StringValue(testRegion),
 				Status:           types.StringNull(),
 				ConnectionString: types.StringNull(),
@@ -111,35 +94,20 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			"nil_response",
 			nil,
-			nil,
 			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"nil_response_2",
-			&postgresflexalpha.CreateUserResponse{},
-			&postgresflexalpha.UpdateUserRequestPayload{},
+			&postgresflexalpha.GetUserResponse{},
 			testRegion,
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			&postgresflexalpha.CreateUserResponse{},
-			&postgresflexalpha.UpdateUserRequestPayload{},
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"no_password",
-			&postgresflexalpha.CreateUserResponse{
-				Id: utils.Ptr(int64(1)),
-			},
-			&postgresflexalpha.UpdateUserRequestPayload{
-				Roles: &[]postgresflexalpha.UserRole{},
-			},
+			&postgresflexalpha.GetUserResponse{},
 			testRegion,
 			Model{},
 			false,
@@ -152,11 +120,8 @@ func TestMapFieldsCreate(t *testing.T) {
 					ProjectId:  tt.expected.ProjectId,
 					InstanceId: tt.expected.InstanceId,
 				}
-				var roles *[]postgresflexalpha.UserRole
-				if tt.updateRoles != nil {
-					roles = tt.updateRoles.Roles
-				}
-				err := mapFieldsCreate(tt.input, roles, state, tt.region)
+
+				err := mapFields(tt.input, state, tt.region)
 				if !tt.isValid && err == nil {
 					t.Fatalf("Should have failed")
 				}
@@ -175,7 +140,6 @@ func TestMapFieldsCreate(t *testing.T) {
 }
 
 func TestMapFields(t *testing.T) {
-	t.Skip("Skipping - needs refactoring")
 	const testRegion = "region"
 	tests := []struct {
 		description string
@@ -252,7 +216,7 @@ func TestMapFields(t *testing.T) {
 				InstanceId:       types.StringValue("iid"),
 				ProjectId:        types.StringValue("pid"),
 				Username:         types.StringNull(),
-				Roles:            types.SetValueMust(types.StringType, []attr.Value{}),
+				Roles:            types.SetNull(types.StringType),
 				Host:             types.StringNull(),
 				Port:             types.Int64Value(2123456789),
 				Region:           types.StringValue(testRegion),
@@ -424,6 +388,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"role_2",
 			},
 			&postgresflexalpha.UpdateUserRequestPayload{
+				Name: utils.Ptr("username"),
 				Roles: &[]postgresflexalpha.UserRole{
 					"role_1",
 					"role_2",
