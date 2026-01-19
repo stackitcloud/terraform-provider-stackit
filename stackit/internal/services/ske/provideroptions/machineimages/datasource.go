@@ -47,24 +47,24 @@ var (
 )
 
 // Ensure implementation satisfies interface
-var _ datasource.DataSource = &optionsDataSource{}
+var _ datasource.DataSource = &machineImagesDataSource{}
 
 // NewKubernetesMachineImageVersionDataSource creates the data source instance
 func NewKubernetesMachineImageVersionDataSource() datasource.DataSource {
-	return &optionsDataSource{}
+	return &machineImagesDataSource{}
 }
 
-type optionsDataSource struct {
+type machineImagesDataSource struct {
 	client       *ske.APIClient
 	providerData core.ProviderData
 }
 
 // Metadata sets the data source type name.
-func (d *optionsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *machineImagesDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ske_machine_image_versions"
 }
 
-func (d *optionsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *machineImagesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -83,7 +83,7 @@ func (d *optionsDataSource) Configure(ctx context.Context, req datasource.Config
 	tflog.Info(ctx, "SKE machine image versions client configured")
 }
 
-func (d *optionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *machineImagesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Returns a list of supported Kubernetes machine image versions for the cluster nodes."
 
 	resp.Schema = schema.Schema{
@@ -142,7 +142,7 @@ func (d *optionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (d *optionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
