@@ -7,6 +7,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
@@ -43,18 +48,30 @@ var (
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	Region           types.String `tfsdk:"region"`
-	VolumeId         types.String `tfsdk:"volume_id"`
-	Name             types.String `tfsdk:"name"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	Labels           types.Map    `tfsdk:"labels"`
-	Description      types.String `tfsdk:"description"`
-	PerformanceClass types.String `tfsdk:"performance_class"`
-	Size             types.Int64  `tfsdk:"size"`
-	ServerId         types.String `tfsdk:"server_id"`
-	Source           types.Object `tfsdk:"source"`
+	Id                   types.String               `tfsdk:"id"` // needed by TF
+	ProjectId            types.String               `tfsdk:"project_id"`
+	Region               types.String               `tfsdk:"region"`
+	VolumeId             types.String               `tfsdk:"volume_id"`
+	Name                 types.String               `tfsdk:"name"`
+	AvailabilityZone     types.String               `tfsdk:"availability_zone"`
+	Labels               types.Map                  `tfsdk:"labels"`
+	Description          types.String               `tfsdk:"description"`
+	PerformanceClass     types.String               `tfsdk:"performance_class"`
+	Size                 types.Int64                `tfsdk:"size"`
+	ServerId             types.String               `tfsdk:"server_id"`
+	Source               types.Object               `tfsdk:"source"`
+	EncryptionParameters *encryptionParametersModel `tfsdk:"encryption_parameters"`
+	Encrypted            types.Bool                 `tfsdk:"encrypted"`
+}
+
+type encryptionParametersModel struct {
+	KekKeyId                         types.String `tfsdk:"kek_key_id"`
+	KekKeyVersion                    types.Int64  `tfsdk:"kek_key_version"`
+	KekKeyringId                     types.String `tfsdk:"kek_keyring_id"`
+	KeyPayloadBase64                 types.String `tfsdk:"key_payload_base64"`
+	KeyPayloadBase64WriteOnly        types.String `tfsdk:"key_payload_base64_wo"`
+	KeyPayloadBase64WriteOnlyVersion types.Int64  `tfsdk:"key_payload_base64_wo_version"`
+	ServiceAccount                   types.String `tfsdk:"service_account"`
 }
 
 // Struct corresponding to Model.Source
@@ -145,7 +162,7 @@ func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRe
 func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Volume resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: description,
+		MarkdownDescription: fmt.Sprintf("%s \n\n-> **Note:** Write-Only argument `key_payload_base64_wo` is available to use in place of `key_payload_base64`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", description),
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -282,6 +299,91 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 				},
+			},
+			"encryption_parameters": schema.SingleNestedAttribute{
+				Description: "Parameter to connect to a key-encryption-key within the STACKIT-KMS to create encrypted volumes. These parameters never leave the backend again. So these parameters are not present on imports or in the datasource. They live only in your Terraform state after creation of the resource.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"kek_key_id": schema.StringAttribute{
+						Description: "UUID of the key within the STACKIT-KMS to use for the encryption.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"kek_key_version": schema.Int64Attribute{
+						Description: "Version of the key within the STACKIT-KMS to use for the encryption.",
+						Required:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
+					},
+					"kek_keyring_id": schema.StringAttribute{
+						Description: "UUID of the keyring where the key is located within the STACKTI-KMS.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"key_payload_base64": schema.StringAttribute{
+						Description: "Optional predefined secret, which will be encrypted against the key-encryption-key within the STACKIT-KMS. If not defined, a random secret will be generated by the API and encrypted against the STACKIT-KMS. If a key-payload is provided here, it must be base64 encoded.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							stringvalidator.ConflictsWith(
+								path.MatchRelative().AtParent().AtName("key_payload_base64_wo"),
+								path.MatchRelative().AtParent().AtName("key_payload_base64_wo_version"),
+							),
+							stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot("encryption_parameters").AtName("key_payload_base64_wo")),
+						},
+						Sensitive: true,
+					},
+					"key_payload_base64_wo": schema.StringAttribute{
+						Description: "Optional predefined secret, which will be encrypted against the key-encryption-key within the STACKIT-KMS. If not defined, a random secret will be generated by the API and encrypted against the STACKIT-KMS. If a key-payload is provided here, it must be base64 encoded.",
+						WriteOnly:   true,
+						Optional:    true,
+						Sensitive:   true,
+						Validators: []validator.String{
+							stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("key_payload_base64")),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("key_payload_base64_wo_version")),
+						},
+					},
+					"key_payload_base64_wo_version": schema.Int64Attribute{
+						Description: "Used together with `key_payload_base64_wo` to trigger an re-create. Increment this value when an update to `key_payload_base64_wo` is required.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
+						Validators: []validator.Int64{
+							int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("key_payload_base64_wo")),
+							int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("key_payload_base64")),
+						},
+					},
+					"service_account": schema.StringAttribute{
+						Description: "Service-Account linked to the Key within the STACKIT-KMS.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+				},
+			},
+			"encrypted": schema.BoolAttribute{
+				Description: "Indicates if the volume is encrypted.",
+				Computed:    true,
 			},
 		},
 	}
@@ -621,6 +723,10 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
 	model.Size = types.Int64PointerValue(volumeResp.Size)
 	model.Source = sourceObject
+	model.Encrypted = types.BoolPointerValue(volumeResp.Encrypted)
+
+	// no need to map encryption parameters as they are only **sent** to the API but **never returned**
+
 	return nil
 }
 
@@ -643,7 +749,7 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		}
 	}
 
-	return &iaas.CreateVolumePayload{
+	payload := iaas.CreateVolumePayload{
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		Description:      conversion.StringValueToPointer(model.Description),
 		Labels:           &labels,
@@ -651,7 +757,27 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		PerformanceClass: conversion.StringValueToPointer(model.PerformanceClass),
 		Size:             conversion.Int64ValueToPointer(model.Size),
 		Source:           sourcePayload,
-	}, nil
+	}
+
+	if model.EncryptionParameters != nil {
+		var keyPayload *[]byte
+		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
+			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString()))
+		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
+			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64.ValueString()))
+		}
+
+		payload.EncryptionParameters = &iaas.VolumeEncryptionParameter{
+			KekKeyId:       conversion.StringValueToPointer(model.EncryptionParameters.KekKeyId),
+			KekKeyVersion:  conversion.Int64ValueToPointer(model.EncryptionParameters.KekKeyVersion),
+			KekKeyringId:   conversion.StringValueToPointer(model.EncryptionParameters.KekKeyringId),
+			KekProjectId:   nil,
+			KeyPayload:     keyPayload,
+			ServiceAccount: conversion.StringValueToPointer(model.EncryptionParameters.ServiceAccount),
+		}
+	}
+
+	return &payload, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateVolumePayload, error) {

@@ -62,6 +62,7 @@ var testConfigRoutingTableMax = config.Variables{
 	"description":     config.StringVariable("This is the description of the routing table."),
 	"label":           config.StringVariable("routing-table-label-01"),
 	"system_routes":   config.BoolVariable(false),
+	"dynamic_routes":  config.BoolVariable(false),
 	"region":          config.StringVariable(testutil.Region),
 }
 
@@ -73,6 +74,7 @@ var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
+	updatedConfig["dynamic_routes"] = config.BoolVariable(true)
 	return updatedConfig
 }()
 
@@ -133,6 +135,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.Region),
 						resource.TestCheckNoResourceAttr("stackit_routing_table.routing_table", "description"),
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", "true"),
+						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", "true"),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
 					),
@@ -172,6 +175,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "region", testutil.Region),
 						resource.TestCheckNoResourceAttr("data.stackit_routing_table.routing_table", "description"),
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "system_routes", "true"),
+						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "dynamic_routes", "true"),
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "default", "false"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "created_at"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "updated_at"),
@@ -197,6 +201,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.labels.%", "0"),
 						resource.TestCheckNoResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.description"),
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.system_routes", "true"),
+						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.dynamic_routes", "true"),
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.default", "false"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.created_at"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.updated_at"),
@@ -242,6 +247,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.Region),
 						resource.TestCheckNoResourceAttr("stackit_routing_table.routing_table", "description"),
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", "true"),
+						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", "true"),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
 					),
@@ -272,6 +278,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMax["region"])),
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "description", testutil.ConvertConfigVariable(testConfigRoutingTableMax["description"])),
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["system_routes"])),
+						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["dynamic_routes"])),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
 					),
@@ -312,6 +319,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMax["region"])),
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "description", testutil.ConvertConfigVariable(testConfigRoutingTableMax["description"])),
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["system_routes"])),
+						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["dynamic_routes"])),
 						resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "default", "false"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "created_at"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_table.routing_table", "updated_at"),
@@ -338,6 +346,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.labels.acc-test", testutil.ConvertConfigVariable(testConfigRoutingTableMax["label"])),
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.description", testutil.ConvertConfigVariable(testConfigRoutingTableMax["description"])),
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["system_routes"])),
+						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMax["dynamic_routes"])),
 						resource.TestCheckResourceAttr("data.stackit_routing_tables.routing_tables", "items.1.default", "false"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.created_at"),
 						resource.TestCheckResourceAttrSet("data.stackit_routing_tables.routing_tables", "items.1.updated_at"),
@@ -384,6 +393,7 @@ func TestAccRoutingTable(t *testing.T) {
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "region", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["region"])),
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "description", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["description"])),
 						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "system_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["system_routes"])),
+						resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "dynamic_routes", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["dynamic_routes"])),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "created_at"),
 						resource.TestCheckResourceAttrSet("stackit_routing_table.routing_table", "updated_at"),
 					),
