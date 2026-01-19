@@ -66,6 +66,7 @@ var (
 
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
+	EdgeCloudCustomEndpoint       = os.Getenv("TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT")
 	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
 	IaaSCustomEndpoint            = os.Getenv("TF_ACC_IAAS_CUSTOM_ENDPOINT")
 	KMSCustomEndpoint             = os.Getenv("TF_ACC_KMS_CUSTOM_ENDPOINT")
@@ -134,6 +135,27 @@ func DnsProviderConfig() string {
 			dns_custom_endpoint = "%s"
 		}`,
 		DnsCustomEndpoint,
+	)
+}
+
+func EdgeCloudProviderConfig() string {
+	if EdgeCloudCustomEndpoint == "" {
+		return fmt.Sprintf(`
+			provider "stackit" {
+				enable_beta_resources = true
+				default_region 		    = "%s"
+			}`,
+			Region,
+		)
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			edgecloud_custom_endpoint = "%s"
+			enable_beta_resources = true
+			default_region 		    = "%s"
+		}`,
+		EdgeCloudCustomEndpoint,
+		Region,
 	)
 }
 

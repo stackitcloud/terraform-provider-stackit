@@ -5,6 +5,7 @@ variable "description" {}
 variable "region" {}
 variable "label" {}
 variable "system_routes" {}
+variable "dynamic_routes" {}
 
 resource "stackit_routing_table" "routing_table" {
   organization_id = var.organization_id
@@ -15,5 +16,6 @@ resource "stackit_routing_table" "routing_table" {
   labels = {
     "acc-test" : var.label
   }
-  system_routes = var.system_routes
+  system_routes  = var.system_routes
+  dynamic_routes = var.dynamic_routes
 }

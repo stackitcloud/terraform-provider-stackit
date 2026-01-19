@@ -25,6 +25,11 @@ import (
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	edgeCloudInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instance"
+	edgeCloudInstances "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instances"
+	edgeCloudKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/kubeconfig"
+	edgeCloudPlans "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/plans"
+	edgeCloudToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/token"
 	gitInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/instance"
 	iaasAffinityGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/affinitygroup"
 	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
@@ -144,6 +149,7 @@ type providerModel struct {
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
+	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
 	KmsCustomEndpoint               types.String `tfsdk:"kms_custom_endpoint"`
@@ -189,6 +195,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
+		"edgecloud_custom_endpoint":          "Custom endpoint for the Edge Cloud service",
 		"git_custom_endpoint":                "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
 		"kms_custom_endpoint":                "Custom endpoint for the KMS service",
@@ -286,6 +293,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["dns_custom_endpoint"],
+			},
+			"edgecloud_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["edgecloud_custom_endpoint"],
 			},
 			"git_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -447,6 +458,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
+	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
 	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
 	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
@@ -491,6 +503,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Make round tripper and custom endpoints available during DataSource and Resource
 	// type Configure methods.
 	providerData.RoundTripper = roundTripper
+
+	providerData.Version = p.version
+
 	resp.DataSourceData = providerData
 	resp.ResourceData = providerData
 
@@ -503,8 +518,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
 	resp.EphemeralResourceData = ephemeralProviderData
-
-	providerData.Version = p.version
 }
 
 // DataSources defines the data sources implemented in the provider.
@@ -515,6 +528,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		cdnCustomDomain.NewCustomDomainDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		edgeCloudInstances.NewInstancesDataSource,
+		edgeCloudPlans.NewPlansDataSource,
 		gitInstance.NewGitDataSource,
 		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
@@ -593,6 +608,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		cdnCustomDomain.NewCustomDomainResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		edgeCloudInstance.NewInstanceResource,
+		edgeCloudKubeconfig.NewKubeconfigResource,
+		edgeCloudToken.NewTokenResource,
 		gitInstance.NewGitResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
 		iaasImage.NewImageResource,
