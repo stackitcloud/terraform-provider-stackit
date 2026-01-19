@@ -318,7 +318,7 @@ var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
 
 var testConfigNetworkAreaVarsMax = config.Variables{
 	"organization_id":         config.StringVariable(testutil.OrganizationId),
-	"name":                    config.StringVariable(fmt.Sprintf("GGK-tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"name":                    config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
 	"transfer_network":        config.StringVariable("10.1.2.0/24"),
 	"network_ranges_prefix":   config.StringVariable("10.0.0.0/16"),
 	"default_nameservers":     config.StringVariable("1.1.1.1"),
@@ -565,7 +565,7 @@ var testConfigMachineTypeVars = config.Variables{
 
 var testConfigRoutingTableMin = config.Variables{
 	"organization_id": config.StringVariable(testutil.OrganizationId),
-	"name":            config.StringVariable(fmt.Sprintf("GGK-acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"name":            config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 }
 
 var testConfigRoutingTableMinUpdated = func() config.Variables {
