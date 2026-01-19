@@ -320,7 +320,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validate.CIDR(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"ipv6_prefix_length": schema.Int64Attribute{
