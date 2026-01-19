@@ -55,7 +55,7 @@ func (d *logsInstanceDataSource) Configure(ctx context.Context, req datasource.C
 
 func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Logs instance data source schema.", core.Resource),
+		MarkdownDescription: features.AddBetaDescription("Logs instance data source schema.", core.Datasource),
 		Description:         fmt.Sprintf("Logs instance resource schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
