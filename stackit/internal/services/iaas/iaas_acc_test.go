@@ -302,7 +302,7 @@ var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 
 var testConfigNetworkAreaVarsMin = config.Variables{
 	"organization_id": config.StringVariable(testutil.OrganizationId),
-	"name":            config.StringVariable(fmt.Sprintf("GGK-tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlpha))),
 }
 
 var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
