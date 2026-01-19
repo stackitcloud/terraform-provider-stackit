@@ -3,25 +3,9 @@ package postgresflexalpha
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
-	"regexp"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
-	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
-
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -29,6 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
+	postgresflexalpha "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance/resources_gen"
+	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 )
 
@@ -53,12 +45,9 @@ type instanceResource struct {
 	providerData core.ProviderData
 }
 
-func (r *instanceResource) ValidateConfig(
-	ctx context.Context,
-	req resource.ValidateConfigRequest,
-	resp *resource.ValidateConfigResponse,
-) {
-	var data Model
+func (r *instanceResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data postgresflexalpha.InstanceModel
+	// var data Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -77,12 +66,9 @@ func (r *instanceResource) ValidateConfig(
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
-func (r *instanceResource) ModifyPlan(
-	ctx context.Context,
-	req resource.ModifyPlanRequest,
-	resp *resource.ModifyPlanResponse,
-) { // nolint:gocritic // function signature required by Terraform
-	var configModel Model
+func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel postgresflexalpha.InstanceModel
+	// var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
@@ -92,7 +78,8 @@ func (r *instanceResource) ModifyPlan(
 		return
 	}
 
-	var planModel Model
+	var planModel postgresflexalpha.InstanceModel
+	// var planModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -135,243 +122,19 @@ func (r *instanceResource) Configure(
 }
 
 // Schema defines the schema for the resource.
-func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main":             "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":               "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id":      "ID of the PostgresFlex instance.",
-		"project_id":       "STACKIT project ID to which the instance is associated.",
-		"name":             "Instance name.",
-		"backup_schedule":  "The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.",
-		"retention_days":   "The days of the retention period.",
-		"flavor_id":        "The ID of the flavor.",
-		"replicas":         "The number of replicas.",
-		"storage":          "The block of the storage configuration.",
-		"storage_class":    "The storage class used.",
-		"storage_size":     "The disk size of the storage.",
-		"region":           "The resource region. If not defined, the provider region is used.",
-		"version":          "The database version used.",
-		"encryption":       "The encryption block.",
-		"keyring_id":       "KeyRing ID of the encryption key.",
-		"key_id":           "Key ID of the encryption key.",
-		"key_version":      "Key version of the encryption key.",
-		"service_account":  "The service account ID of the service account.",
-		"network":          "The network block configuration.",
-		"access_scope":     "The access scope. (Either SNA or PUBLIC)",
-		"acl":              "The Access Control List (ACL) for the PostgresFlex instance.",
-		"instance_address": "The returned instance address.",
-		"router_address":   "The returned router address.",
-	}
-
-	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Description: descriptions["id"],
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"instance_id": schema.StringAttribute{
-				Description: descriptions["instance_id"],
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Description: descriptions["project_id"],
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Description: descriptions["name"],
-				Required:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-					stringvalidator.RegexMatches(
-						regexp.MustCompile("^[a-z]([-a-z0-9]*[a-z0-9])?$"),
-						"must start with a letter, must have lower case letters, numbers or hyphens, and no hyphen at the end",
-					),
-				},
-			},
-			"backup_schedule": schema.StringAttribute{
-				Required: true,
-			},
-			"retention_days": schema.Int64Attribute{
-				Description: descriptions["retention_days"],
-				Required:    true,
-			},
-			"flavor_id": schema.StringAttribute{
-				Required: true,
-			},
-			"replicas": schema.Int64Attribute{
-				Required: true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-				},
-			},
-			"storage": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"class": schema.StringAttribute{
-						Required:    true,
-						Description: descriptions["storage_class"],
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-					"size": schema.Int64Attribute{
-						Description: descriptions["storage_size"],
-						Required:    true,
-						// PlanModifiers: []planmodifier.Int64{
-						// TODO - req replace if new size smaller than state size
-						// int64planmodifier.RequiresReplaceIf(),
-						// },
-					},
-				},
-			},
-			"version": schema.StringAttribute{
-				Description: descriptions["version"],
-				Required:    true,
-			},
-			"region": schema.StringAttribute{
-				Optional: true,
-				// must be computed to allow for storing the override value from the provider
-				Computed:    true,
-				Description: descriptions["region"],
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"encryption": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"key_id": schema.StringAttribute{
-						Description: descriptions["key_id"],
-						Required:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							validate.NoSeparator(),
-						},
-					},
-					"key_version": schema.StringAttribute{
-						Description: descriptions["key_version"],
-						Required:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							validate.NoSeparator(),
-						},
-					},
-					"keyring_id": schema.StringAttribute{
-						Description: descriptions["keyring_id"],
-						Required:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							validate.NoSeparator(),
-						},
-					},
-					"service_account": schema.StringAttribute{
-						Description: descriptions["service_account"],
-						Required:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-						Validators: []validator.String{
-							validate.NoSeparator(),
-						},
-					},
-				},
-				Description: descriptions["encryption"],
-				//Validators:          nil,
-				PlanModifiers: []planmodifier.Object{},
-			},
-			"network": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"access_scope": schema.StringAttribute{
-						Default: stringdefault.StaticString(
-							"PUBLIC",
-						),
-						Description: descriptions["access_scope"],
-						Computed:    true,
-						Optional:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-							stringplanmodifier.UseStateForUnknown(),
-						},
-						Validators: []validator.String{
-							validate.NoSeparator(),
-							stringvalidator.OneOf("SNA", "PUBLIC"),
-						},
-					},
-					"acl": schema.ListAttribute{
-						Description: descriptions["acl"],
-						ElementType: types.StringType,
-						Required:    true,
-						PlanModifiers: []planmodifier.List{
-							listplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"instance_address": schema.StringAttribute{
-						Description: descriptions["instance_address"],
-						Computed:    true,
-						Optional:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-					"router_address": schema.StringAttribute{
-						Description: descriptions["router_address"],
-						Computed:    true,
-						Optional:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
-					},
-				},
-				Description: descriptions["network"],
-				//MarkdownDescription: "",
-				//Validators:          nil,
-				PlanModifiers: []planmodifier.Object{},
-			},
-		},
-	}
+func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = postgresflexalpha.InstanceResourceSchema(ctx)
+	resp.Schema = addPlanModifiers(resp.Schema)
 }
 
-// func (r *instanceResource) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-//	resp.IdentitySchema = identityschema.Schema{
-//		Attributes: map[string]identityschema.Attribute{
-//			"project_id": identityschema.StringAttribute{
-//				RequiredForImport: true, // must be set during import by the practitioner
-//			},
-//			"region": identityschema.StringAttribute{
-//				RequiredForImport: true, // must be set during import by the practitioner
-//			},
-//			"instance_id": identityschema.StringAttribute{
-//				RequiredForImport: true, // must be set during import by the practitioner
-//			},
-//		},
-//	}
-//}
+func addPlanModifiers(s schema.Schema) schema.Schema {
+	attr := s.Attributes["backup_schedule"].(schema.StringAttribute)
+	attr.PlanModifiers = []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	}
+	s.Attributes["backup_schedule"] = attr
+	return s
+}
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *instanceResource) Create(
@@ -379,7 +142,8 @@ func (r *instanceResource) Create(
 	req resource.CreateRequest,
 	resp *resource.CreateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model postgresflexalpha.InstanceModel
+	//var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -393,59 +157,22 @@ func (r *instanceResource) Create(
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var storage = &storageModel{}
-	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
-		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var encryption = &encryptionModel{}
-	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
-		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var network = &networkModel{}
-	if !model.Network.IsNull() && !model.Network.IsUnknown() {
-		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var acl []string
-	if !network.ACL.IsNull() && !network.ACL.IsUnknown() {
-		diags = network.ACL.ElementsAs(ctx, &acl, false)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Generate API request body from model
-	payload, err := toCreatePayload(&model, storage, encryption, network)
-	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating instance",
-			fmt.Sprintf("Creating API payload: %v", err),
-		)
+	var netAcl []string
+	diag := model.Network.Acl.ElementsAs(ctx, &netAcl, false)
+	resp.Diagnostics.Append(diags...)
+	if diag.HasError() {
 		return
 	}
+
+	if model.Replicas.ValueInt64() > math.MaxInt32 {
+		resp.Diagnostics.AddError("invalid int32 value", "provided int64 value does not fit into int32")
+		return
+	}
+	replVal := int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
+	payload := modelToCreateInstancePayload(netAcl, model, replVal)
+
 	// Create new instance
-	createResp, err := r.client.CreateInstanceRequest(
-		ctx,
-		projectId,
-		region,
-	).CreateInstanceRequestPayload(*payload).Execute()
+	createResp, err := r.client.CreateInstanceRequest(ctx, projectId, region).CreateInstanceRequestPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -463,26 +190,16 @@ func (r *instanceResource) Create(
 
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating instance",
-			fmt.Sprintf("Wait handler error: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait handler error: %v", err))
 		return
 	}
 
-	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, storage, encryption, network, region)
+	err = mapGetInstanceResponseToModel(ctx, &model, waitResp)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating instance",
-			fmt.Sprintf("Processing API payload: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Error creating model: %v", err))
 		return
 	}
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
@@ -492,13 +209,41 @@ func (r *instanceResource) Create(
 	tflog.Info(ctx, "Postgres Flex instance created")
 }
 
+func modelToCreateInstancePayload(netAcl []string, model postgresflexalpha.InstanceModel, replVal int32) postgresflex.CreateInstanceRequestPayload {
+	payload := postgresflex.CreateInstanceRequestPayload{
+		Acl:            &netAcl,
+		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
+		Encryption: &postgresflex.InstanceEncryption{
+			KekKeyId:       model.Encryption.KekKeyId.ValueStringPointer(),
+			KekKeyRingId:   model.Encryption.KekKeyRingId.ValueStringPointer(),
+			KekKeyVersion:  model.Encryption.KekKeyVersion.ValueStringPointer(),
+			ServiceAccount: model.Encryption.ServiceAccount.ValueStringPointer(),
+		},
+		FlavorId: model.FlavorId.ValueStringPointer(),
+		Name:     model.Name.ValueStringPointer(),
+		Network: &postgresflex.InstanceNetwork{
+			AccessScope: postgresflex.InstanceNetworkGetAccessScopeAttributeType(
+				model.Network.AccessScope.ValueStringPointer(),
+			),
+			Acl:             &netAcl,
+			InstanceAddress: model.Network.InstanceAddress.ValueStringPointer(),
+			RouterAddress:   model.Network.RouterAddress.ValueStringPointer(),
+		},
+		Replicas:      postgresflex.CreateInstanceRequestPayloadGetReplicasAttributeType(&replVal),
+		RetentionDays: model.RetentionDays.ValueInt64Pointer(),
+		Storage: &postgresflex.StorageCreate{
+			PerformanceClass: model.Storage.PerformanceClass.ValueStringPointer(),
+			Size:             model.Storage.Size.ValueInt64Pointer(),
+		},
+		Version: model.Version.ValueStringPointer(),
+	}
+	return payload
+}
+
 // Read refreshes the Terraform state with the latest data.
-func (r *instanceResource) Read(
-	ctx context.Context,
-	req resource.ReadRequest,
-	resp *resource.ReadResponse,
-) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model postgresflexalpha.InstanceModel
+	//var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -514,33 +259,6 @@ func (r *instanceResource) Read(
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var storage = storageModel{}
-	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
-		diags = model.Storage.As(ctx, &storage, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var network = networkModel{}
-	if !model.Network.IsNull() && !model.Network.IsUnknown() {
-		diags = model.Network.As(ctx, &network, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var encryption = encryptionModel{}
-	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
-		diags = model.Encryption.As(ctx, &encryption, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
 	instanceResp, err := r.client.GetInstanceRequest(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
@@ -554,15 +272,9 @@ func (r *instanceResource) Read(
 
 	ctx = core.LogResponse(ctx)
 
-	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, &storage, &encryption, &network, region)
+	err = mapGetInstanceResponseToModel(ctx, &model, instanceResp)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error reading instance",
-			fmt.Sprintf("Processing API payload: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -576,12 +288,9 @@ func (r *instanceResource) Read(
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *instanceResource) Update(
-	ctx context.Context,
-	req resource.UpdateRequest,
-	resp *resource.UpdateResponse,
-) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model postgresflexalpha.InstanceModel
+	//var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -597,61 +306,38 @@ func (r *instanceResource) Update(
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// nolint:gocritic // need that code later
-	// var acl []string
-	// if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
-	//	diags = model.ACL.ElementsAs(ctx, &acl, false)
-	//	resp.Diagnostics.Append(diags...)
-	//	if resp.Diagnostics.HasError() {
-	//		return
-	//	}
-	// }
-
-	var storage = &storageModel{}
-	if !model.Storage.IsNull() && !model.Storage.IsUnknown() {
-		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var network = &networkModel{}
-	if !model.Network.IsNull() && !model.Network.IsUnknown() {
-		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var encryption = &encryptionModel{}
-	if !model.Encryption.IsNull() && !model.Encryption.IsUnknown() {
-		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, storage, network)
-	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating instance",
-			fmt.Sprintf("Creating API payload: %v", err),
-		)
+	var netAcl []string
+	diag := model.Network.Acl.ElementsAs(ctx, &netAcl, false)
+	resp.Diagnostics.Append(diags...)
+	if diag.HasError() {
 		return
 	}
+	replInt32 := int32(model.Replicas.ValueInt64())
+	payload := postgresflex.UpdateInstancePartiallyRequestPayload{
+		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
+		FlavorId:       model.FlavorId.ValueStringPointer(),
+		Name:           model.Name.ValueStringPointer(),
+		Network: &postgresflex.InstanceNetwork{
+			AccessScope: postgresflex.InstanceNetworkGetAccessScopeAttributeType(
+				model.Network.AccessScope.ValueStringPointer(),
+			),
+			Acl: &netAcl,
+		},
+		Replicas:      postgresflex.UpdateInstancePartiallyRequestPayloadGetReplicasAttributeType(&replInt32),
+		RetentionDays: model.RetentionDays.ValueInt64Pointer(),
+		Storage: &postgresflex.StorageUpdate{
+			Size: model.Storage.Size.ValueInt64Pointer(),
+		},
+		Version: model.Version.ValueStringPointer(),
+	}
+
 	// Update existing instance
-	err = r.client.UpdateInstancePartiallyRequest(
+	err := r.client.UpdateInstancePartiallyRequest(
 		ctx,
 		projectId,
 		region,
 		instanceId,
-	).UpdateInstancePartiallyRequestPayload(*payload).Execute()
+	).UpdateInstancePartiallyRequestPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -659,34 +345,18 @@ func (r *instanceResource) Update(
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(
-		ctx,
-		r.client,
-		projectId,
-		region,
-		instanceId,
-	).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating instance",
-			fmt.Sprintf("Instance update waiting: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 
-	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, storage, encryption, network, region)
+	err = mapGetInstanceResponseToModel(ctx, &model, waitResp)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating instance",
-			fmt.Sprintf("Processing API payload: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -696,12 +366,9 @@ func (r *instanceResource) Update(
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
-func (r *instanceResource) Delete(
-	ctx context.Context,
-	req resource.DeleteRequest,
-	resp *resource.DeleteResponse,
-) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	var model postgresflexalpha.InstanceModel
+	//var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -741,16 +408,11 @@ func (r *instanceResource) Delete(
 
 // ImportState imports a resource into the Terraform state on success.
 // The expected format of the resource import identifier is: project_id,instance_id
-func (r *instanceResource) ImportState(
-	ctx context.Context,
-	req resource.ImportStateRequest,
-	resp *resource.ImportStateResponse,
-) {
+func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
-		core.LogAndAddError(
-			ctx, &resp.Diagnostics,
+		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing instance",
 			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)

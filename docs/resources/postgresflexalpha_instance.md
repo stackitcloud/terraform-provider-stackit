@@ -3,12 +3,12 @@
 page_title: "stackitprivatepreview_postgresflexalpha_instance Resource - stackitprivatepreview"
 subcategory: ""
 description: |-
-  Postgres Flex instance resource schema. Must have a region specified in the provider configuration.
+  
 ---
 
 # stackitprivatepreview_postgresflexalpha_instance (Resource)
 
-Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.
+
 
 ## Example Usage
 
@@ -42,49 +42,42 @@ import {
 
 ### Required
 
-- `backup_schedule` (String)
-- `encryption` (Attributes) The encryption block. (see [below for nested schema](#nestedatt--encryption))
-- `flavor_id` (String)
-- `name` (String) Instance name.
-- `network` (Attributes) The network block configuration. (see [below for nested schema](#nestedatt--network))
-- `project_id` (String) STACKIT project ID to which the instance is associated.
-- `replicas` (Number)
-- `retention_days` (Number) The days of the retention period.
-- `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
-- `version` (String) The database version used.
+- `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.
+- `flavor_id` (String) The id of the instance flavor.
+- `name` (String) The name of the instance.
+- `network` (Attributes) The access configuration of the instance (see [below for nested schema](#nestedatt--network))
+- `replicas` (Number) How many replicas the instance should have.
+- `retention_days` (Number) How long backups are retained. The value can only be between 32 and 365 days.
+- `storage` (Attributes) The object containing information about the storage size and class. (see [below for nested schema](#nestedatt--storage))
+- `version` (String) The Postgres version used for the instance. See [Versions Endpoint](/documentation/postgres-flex-service/version/v3alpha1#tag/Version) for supported version parameters.
 
 ### Optional
 
-- `region` (String) The resource region. If not defined, the provider region is used.
+- `encryption` (Attributes) The configuration for instance's volume and backup storage encryption.
+
+⚠️ **Note:** This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. (see [below for nested schema](#nestedatt--encryption))
+- `instance_id` (String) The ID of the instance.
+- `project_id` (String) The STACKIT project ID.
+- `region` (String) The region which should be addressed
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
-- `instance_id` (String) ID of the PostgresFlex instance.
-
-<a id="nestedatt--encryption"></a>
-### Nested Schema for `encryption`
-
-Required:
-
-- `key_id` (String) Key ID of the encryption key.
-- `key_version` (String) Key version of the encryption key.
-- `keyring_id` (String) KeyRing ID of the encryption key.
-- `service_account` (String) The service account ID of the service account.
-
+- `id` (String) The ID of the instance.
+- `is_deletable` (Boolean) Whether the instance can be deleted or not.
+- `status` (String) The current status of the instance.
 
 <a id="nestedatt--network"></a>
 ### Nested Schema for `network`
 
 Required:
 
-- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
+- `acl` (List of String) List of IPV4 cidr.
 
 Optional:
 
-- `access_scope` (String) The access scope. (Either SNA or PUBLIC)
-- `instance_address` (String) The returned instance address.
-- `router_address` (String) The returned router address.
+- `access_scope` (String) The access scope of the instance. It defines if the instance is public or airgapped.
+- `instance_address` (String)
+- `router_address` (String)
 
 
 <a id="nestedatt--storage"></a>
@@ -92,5 +85,16 @@ Optional:
 
 Required:
 
-- `class` (String) The storage class used.
-- `size` (Number) The disk size of the storage.
+- `performance_class` (String) The storage class for the storage.
+- `size` (Number) The storage size in Gigabytes.
+
+
+<a id="nestedatt--encryption"></a>
+### Nested Schema for `encryption`
+
+Required:
+
+- `kek_key_id` (String) The encryption-key key identifier
+- `kek_key_ring_id` (String) The encryption-key keyring identifier
+- `kek_key_version` (String) The encryption-key version
+- `service_account` (String)

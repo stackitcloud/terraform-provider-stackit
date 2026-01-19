@@ -9,22 +9,22 @@ data "stackitprivatepreview_postgresflexalpha_flavor" "pgsql_flavor" {
 
 resource "stackitprivatepreview_postgresflexalpha_instance" "msh-sna-pe-example" {
   project_id      = var.project_id
-  name            = "msh-sna-pe-example"
+  name            = "mshpetest2"
   backup_schedule = "0 0 * * *"
-  retention_days  = 33
+  retention_days  = 45
   flavor_id = data.stackitprivatepreview_postgresflexalpha_flavor.pgsql_flavor.flavor_id
   replicas = 1
   storage = {
     # class = "premium-perf2-stackit"
-    class = data.stackitprivatepreview_postgresflexalpha_flavor.pgsql_flavor.storage_class
+    performance_class = data.stackitprivatepreview_postgresflexalpha_flavor.pgsql_flavor.storage_class
     size  = 10
   }
   encryption = {
     #    key_id = stackit_kms_key.key.key_id
     #    keyring_id = stackit_kms_keyring.keyring.keyring_id
-    key_id          = var.key_id
-    keyring_id      = var.keyring_id
-    key_version     = var.key_version
+    kek_key_id          = var.key_id
+    kek_key_ring_id      = var.keyring_id
+    kek_key_version     = var.key_version
     service_account = var.sa_email
   }
   network = {

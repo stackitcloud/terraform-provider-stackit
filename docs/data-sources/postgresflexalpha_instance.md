@@ -3,12 +3,12 @@
 page_title: "stackitprivatepreview_postgresflexalpha_instance Data Source - stackitprivatepreview"
 subcategory: ""
 description: |-
-  Postgres Flex instance data source schema. Must have a region specified in the provider configuration.
+  
 ---
 
 # stackitprivatepreview_postgresflexalpha_instance (Data Source)
 
-Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.
+
 
 ## Example Usage
 
@@ -24,44 +24,31 @@ data "stackitprivatepreview_postgresflexalpha_instance" "example" {
 
 ### Required
 
-- `instance_id` (String) ID of the PostgresFlex instance.
-- `project_id` (String) STACKIT project ID to which the instance is associated.
-
-### Optional
-
-- `region` (String) The resource region. If not defined, the provider region is used.
+- `instance_id` (String) The ID of the instance.
+- `project_id` (String) The STACKIT project ID.
+- `region` (String) The region which should be addressed
 
 ### Read-Only
 
-- `backup_schedule` (String)
-- `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
-- `flavor_id` (String)
-- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
-- `name` (String) Instance name.
-- `network` (Attributes) (see [below for nested schema](#nestedatt--network))
-- `replicas` (Number)
-- `retention_days` (Number)
-- `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
-- `version` (String)
-
-<a id="nestedatt--encryption"></a>
-### Nested Schema for `encryption`
-
-Read-Only:
-
-- `key_id` (String)
-- `key_version` (String)
-- `keyring_id` (String)
-- `service_account` (String)
-
+- `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. The schedule is written as a cron schedule.
+- `flavor_id` (String) The id of the instance flavor.
+- `id` (String) The ID of the instance.
+- `is_deletable` (Boolean) Whether the instance can be deleted or not.
+- `name` (String) The name of the instance.
+- `network` (Attributes) The access configuration of the instance (see [below for nested schema](#nestedatt--network))
+- `replicas` (Number) How many replicas the instance should have.
+- `retention_days` (Number) How long backups are retained. The value can only be between 32 and 365 days.
+- `status` (String) The current status of the instance.
+- `storage` (Attributes) The object containing information about the storage size and class. (see [below for nested schema](#nestedatt--storage))
+- `version` (String) The Postgres version used for the instance. See [Versions Endpoint](/documentation/postgres-flex-service/version/v3alpha1#tag/Version) for supported version parameters.
 
 <a id="nestedatt--network"></a>
 ### Nested Schema for `network`
 
 Read-Only:
 
-- `access_scope` (String)
-- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
+- `access_scope` (String) The access scope of the instance. It defines if the instance is public or airgapped.
+- `acl` (List of String) List of IPV4 cidr.
 - `instance_address` (String)
 - `router_address` (String)
 
@@ -71,5 +58,5 @@ Read-Only:
 
 Read-Only:
 
-- `class` (String)
-- `size` (Number)
+- `performance_class` (String) The storage class for the storage.
+- `size` (Number) The storage size in Gigabytes.
