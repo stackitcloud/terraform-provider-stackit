@@ -46,7 +46,6 @@ func TestConfigureClient(t *testing.T) {
 			expected: func() *logs.APIClient {
 				apiClient, err := logs.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
-					config.WithRegion("eu01"),
 				)
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
