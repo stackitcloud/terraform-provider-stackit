@@ -57,6 +57,7 @@ var (
 	_ resource.ResourceWithConfigure      = &networkAreaResource{}
 	_ resource.ResourceWithImportState    = &networkAreaResource{}
 	_ resource.ResourceWithValidateConfig = &networkAreaResource{}
+	_ resource.ResourceWithModifyPlan     = &networkAreaResource{}
 )
 
 type Model struct {
@@ -83,7 +84,12 @@ type Model struct {
 
 // Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider. LegacyMode checks if any of the deprecated fields are set which now relate to the network area region API resource.
 func (model *Model) LegacyMode() bool {
-	return !model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown() || !model.TransferNetwork.IsNull() || model.TransferNetwork.IsUnknown() || !model.DefaultNameservers.IsNull() || model.DefaultNameservers.IsUnknown() || model.DefaultPrefixLength != types.Int64Value(int64(defaultValueDefaultPrefixLength)) || model.MinPrefixLength != types.Int64Value(int64(defaultValueMinPrefixLength)) || model.MaxPrefixLength != types.Int64Value(int64(defaultValueMaxPrefixLength))
+	return !model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown() ||
+		!model.TransferNetwork.IsNull() || model.TransferNetwork.IsUnknown() ||
+		!model.DefaultNameservers.IsNull() || model.DefaultNameservers.IsUnknown() ||
+		(model.DefaultPrefixLength != types.Int64Value(int64(defaultValueDefaultPrefixLength)) && model.DefaultPrefixLength.IsUnknown()) ||
+		(model.MinPrefixLength != types.Int64Value(int64(defaultValueMinPrefixLength)) && model.MinPrefixLength.IsUnknown()) ||
+		(model.MaxPrefixLength != types.Int64Value(int64(defaultValueMaxPrefixLength)) && model.MaxPrefixLength.IsUnknown())
 }
 
 // Struct corresponding to Model.NetworkRanges[i]
@@ -107,6 +113,38 @@ func NewNetworkAreaResource() resource.Resource {
 type networkAreaResource struct {
 	client                *iaas.APIClient
 	resourceManagerClient *resourcemanager.APIClient
+}
+
+func (r *networkAreaResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	// If the resource is being created, do nothing.
+	if req.State.Raw.IsNull() {
+		return
+	}
+
+	var state, plan Model
+	req.State.Get(ctx, &state)
+	req.Plan.Get(ctx, &plan)
+
+	// Check if transferNetwork was set before and is changed to a different value
+	if !plan.TransferNetwork.IsNull() && !state.TransferNetwork.IsNull() &&
+		plan.TransferNetwork.ValueString() != state.TransferNetwork.ValueString() {
+		// Trigger replace
+		resp.RequiresReplace.Append(path.Root("transfer_network"))
+	}
+
+	// Check if no transferNetwork was set before and transferNetwork is added now
+	if !plan.TransferNetwork.IsNull() && state.TransferNetwork.IsNull() {
+		// Trigger replace
+		resp.RequiresReplace.Append(path.Root("transfer_network"))
+	}
+
+	// Check if deprecated fields were set before and are now removed
+	if !state.TransferNetwork.IsNull() && !state.NetworkRanges.IsNull() && plan.TransferNetwork.IsNull() && plan.NetworkRanges.IsNull() {
+		resp.Diagnostics.AddWarning("Deprecated fields removed",
+			fmt.Sprintf("You are removing deprecated fields from this resource. They will only be removed from the terraform state.\n"+
+				"For a complete migration, please import `stackit_network_area_region` with the ID `%s,eu01`.\n"+
+				"If you don't import the resource, you may run into issues.", state.Id.ValueString()))
+	}
 }
 
 // Metadata returns the resource type name.
@@ -242,9 +280,6 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 				DeprecationMessage: deprecationMsg,
 				Description:        "Classless Inter-Domain Routing (CIDR) for configuration of network area for region `eu01`.",
 				Optional:           true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
 			"default_prefix_length": schema.Int64Attribute{
