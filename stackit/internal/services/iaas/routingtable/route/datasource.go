@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"net/http"
 
-	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
+	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -30,7 +29,7 @@ func NewRoutingTableRouteDataSource() datasource.DataSource {
 
 // routingTableRouteDataSource is the data source implementation.
 type routingTableRouteDataSource struct {
-	client       *iaasalpha.APIClient
+	client       *iaas.APIClient
 	providerData core.ProviderData
 }
 
@@ -51,7 +50,7 @@ func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasou
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

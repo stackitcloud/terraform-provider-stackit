@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
 const (
@@ -35,7 +35,7 @@ func TestMapDataFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       DataSourceModelTables
-		input       *iaasalpha.RoutingTableListResponse
+		input       *iaas.RoutingTableListResponse
 		expected    DataSourceModelTables
 		isValid     bool
 	}{
@@ -46,8 +46,8 @@ func TestMapDataFields(t *testing.T) {
 				NetworkAreaId:  types.StringValue(networkAreaId.String()),
 				Region:         types.StringValue(testRegion),
 			},
-			&iaasalpha.RoutingTableListResponse{
-				Items: &[]iaasalpha.RoutingTable{
+			&iaas.RoutingTableListResponse{
+				Items: &[]iaas.RoutingTable{
 					{
 						Id:            utils.Ptr(routingTableId.String()),
 						Name:          utils.Ptr("test"),
@@ -88,8 +88,8 @@ func TestMapDataFields(t *testing.T) {
 				NetworkAreaId:  types.StringValue(networkAreaId.String()),
 				Region:         types.StringValue(testRegion),
 			},
-			&iaasalpha.RoutingTableListResponse{
-				Items: &[]iaasalpha.RoutingTable{
+			&iaas.RoutingTableListResponse{
+				Items: &[]iaas.RoutingTable{
 					{
 						Id:            utils.Ptr(routingTableId.String()),
 						Name:          utils.Ptr("test"),
@@ -147,7 +147,7 @@ func TestMapDataFields(t *testing.T) {
 		{
 			"response_fields_items_nil_fail",
 			DataSourceModelTables{},
-			&iaasalpha.RoutingTableListResponse{
+			&iaas.RoutingTableListResponse{
 				Items: nil,
 			},
 			DataSourceModelTables{},

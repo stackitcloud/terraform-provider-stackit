@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -21,11 +22,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -60,7 +59,7 @@ func NewRoutingTableResource() resource.Resource {
 
 // routingTableResource is the resource implementation.
 type routingTableResource struct {
-	client       *iaasalpha.APIClient
+	client       *iaas.APIClient
 	providerData core.ProviderData
 }
 
@@ -82,7 +81,7 @@ func (r *routingTableResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -451,7 +450,7 @@ func (r *routingTableResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "Routing table state imported")
 }
 
-func mapFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model *Model, region string) error {
+func mapFields(ctx context.Context, routingTable *iaas.RoutingTable, model *Model, region string) error {
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -498,7 +497,7 @@ func mapFields(ctx context.Context, routingTable *iaasalpha.RoutingTable, model 
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.AddRoutingTableToAreaPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*iaas.AddRoutingTableToAreaPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -508,7 +507,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.AddRoutingTa
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.AddRoutingTableToAreaPayload{
+	return &iaas.AddRoutingTableToAreaPayload{
 		Description:   conversion.StringValueToPointer(model.Description),
 		Name:          conversion.StringValueToPointer(model.Name),
 		Labels:        &labels,
@@ -517,7 +516,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaasalpha.AddRoutingTa
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaasalpha.UpdateRoutingTableOfAreaPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateRoutingTableOfAreaPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -527,7 +526,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdateRoutingTableOfAreaPayload{
+	return &iaas.UpdateRoutingTableOfAreaPayload{
 		Description:   conversion.StringValueToPointer(model.Description),
 		Name:          conversion.StringValueToPointer(model.Name),
 		Labels:        &labels,

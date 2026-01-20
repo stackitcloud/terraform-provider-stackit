@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
+	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,11 +19,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasalphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -41,7 +41,7 @@ func NewRoutingTableRouteResource() resource.Resource {
 
 // routeResource is the resource implementation.
 type routeResource struct {
-	client       *iaasalpha.APIClient
+	client       *iaas.APIClient
 	providerData core.ProviderData
 }
 
@@ -63,7 +63,7 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 
-	apiClient := iaasalphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -461,7 +461,7 @@ func (r *routeResource) ImportState(ctx context.Context, req resource.ImportStat
 	tflog.Info(ctx, "Routing table route state imported")
 }
 
-func mapFieldsFromList(ctx context.Context, routeResp *iaasalpha.RouteListResponse, model *shared.RouteModel, region string) error {
+func mapFieldsFromList(ctx context.Context, routeResp *iaas.RouteListResponse, model *shared.RouteModel, region string) error {
 	if routeResp == nil || routeResp.Items == nil {
 		return fmt.Errorf("response input is nil")
 	} else if len(*routeResp.Items) < 1 {
@@ -474,7 +474,7 @@ func mapFieldsFromList(ctx context.Context, routeResp *iaasalpha.RouteListRespon
 	return shared.MapRouteModel(ctx, &route, model, region)
 }
 
-func toCreatePayload(ctx context.Context, model *shared.RouteReadModel) (*iaasalpha.AddRoutesToRoutingTablePayload, error) {
+func toCreatePayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.AddRoutesToRoutingTablePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -493,8 +493,8 @@ func toCreatePayload(ctx context.Context, model *shared.RouteReadModel) (*iaasal
 		return nil, err
 	}
 
-	return &iaasalpha.AddRoutesToRoutingTablePayload{
-		Items: &[]iaasalpha.Route{
+	return &iaas.AddRoutesToRoutingTablePayload{
+		Items: &[]iaas.Route{
 			{
 				Labels:      &labels,
 				Nexthop:     nextHopPayload,
@@ -504,7 +504,7 @@ func toCreatePayload(ctx context.Context, model *shared.RouteReadModel) (*iaasal
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *shared.RouteModel, currentLabels types.Map) (*iaasalpha.UpdateRouteOfRoutingTablePayload, error) {
+func toUpdatePayload(ctx context.Context, model *shared.RouteModel, currentLabels types.Map) (*iaas.UpdateRouteOfRoutingTablePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -514,12 +514,12 @@ func toUpdatePayload(ctx context.Context, model *shared.RouteModel, currentLabel
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	return &iaasalpha.UpdateRouteOfRoutingTablePayload{
+	return &iaas.UpdateRouteOfRoutingTablePayload{
 		Labels: &labels,
 	}, nil
 }
 
-func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaasalpha.RouteNexthop, error) {
+func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.RouteNexthop, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -535,18 +535,18 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaasa
 
 	switch nexthopModel.Type.ValueString() {
 	case "blackhole":
-		return sdkUtils.Ptr(iaasalpha.NexthopBlackholeAsRouteNexthop(iaasalpha.NewNexthopBlackhole("blackhole"))), nil
+		return sdkUtils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
 	case "internet":
-		return sdkUtils.Ptr(iaasalpha.NexthopInternetAsRouteNexthop(iaasalpha.NewNexthopInternet("internet"))), nil
+		return sdkUtils.Ptr(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
 	case "ipv4":
-		return sdkUtils.Ptr(iaasalpha.NexthopIPv4AsRouteNexthop(iaasalpha.NewNexthopIPv4("ipv4", nexthopModel.Value.ValueString()))), nil
+		return sdkUtils.Ptr(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", nexthopModel.Value.ValueString()))), nil
 	case "ipv6":
-		return sdkUtils.Ptr(iaasalpha.NexthopIPv6AsRouteNexthop(iaasalpha.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
+		return sdkUtils.Ptr(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown nexthop type: %s", nexthopModel.Type.ValueString())
 }
 
-func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*iaasalpha.RouteDestination, error) {
+func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.RouteDestination, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -562,9 +562,9 @@ func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*i
 
 	switch destinationModel.Type.ValueString() {
 	case "cidrv4":
-		return sdkUtils.Ptr(iaasalpha.DestinationCIDRv4AsRouteDestination(iaasalpha.NewDestinationCIDRv4("cidrv4", destinationModel.Value.ValueString()))), nil
+		return sdkUtils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", destinationModel.Value.ValueString()))), nil
 	case "cidrv6":
-		return sdkUtils.Ptr(iaasalpha.DestinationCIDRv6AsRouteDestination(iaasalpha.NewDestinationCIDRv6("cidrv6", destinationModel.Value.ValueString()))), nil
+		return sdkUtils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", destinationModel.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown destination type: %s", destinationModel.Type.ValueString())
 }

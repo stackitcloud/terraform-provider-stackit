@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 )
@@ -76,7 +76,7 @@ var RouteNextHopTypes = map[string]attr.Type{
 	"value": types.StringType,
 }
 
-func MapRouteModel(ctx context.Context, route *iaasalpha.Route, model *RouteModel, region string) error {
+func MapRouteModel(ctx context.Context, route *iaas.Route, model *RouteModel, region string) error {
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -104,7 +104,7 @@ func MapRouteModel(ctx context.Context, route *iaasalpha.Route, model *RouteMode
 	return nil
 }
 
-func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *RouteReadModel) error {
+func MapRouteReadModel(ctx context.Context, route *iaas.Route, model *RouteReadModel) error {
 	if route == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -156,23 +156,23 @@ func MapRouteReadModel(ctx context.Context, route *iaasalpha.Route, model *Route
 	return nil
 }
 
-func MapRouteNextHop(routeResp *iaasalpha.Route) (types.Object, error) {
+func MapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 	if routeResp.Nexthop == nil {
 		return types.ObjectNull(RouteNextHopTypes), nil
 	}
 
 	nextHopMap := map[string]attr.Value{}
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
-	case *iaasalpha.NexthopIPv4:
+	case *iaas.NexthopIPv4:
 		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringPointerValue(i.Value)
-	case *iaasalpha.NexthopIPv6:
+	case *iaas.NexthopIPv6:
 		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringPointerValue(i.Value)
-	case *iaasalpha.NexthopBlackhole:
+	case *iaas.NexthopBlackhole:
 		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringNull()
-	case *iaasalpha.NexthopInternet:
+	case *iaas.NexthopInternet:
 		nextHopMap["type"] = types.StringValue(*i.Type)
 		nextHopMap["value"] = types.StringNull()
 	default:
@@ -187,17 +187,17 @@ func MapRouteNextHop(routeResp *iaasalpha.Route) (types.Object, error) {
 	return nextHopTF, nil
 }
 
-func MapRouteDestination(routeResp *iaasalpha.Route) (types.Object, error) {
+func MapRouteDestination(routeResp *iaas.Route) (types.Object, error) {
 	if routeResp.Destination == nil {
 		return types.ObjectNull(RouteDestinationTypes), nil
 	}
 
 	destinationMap := map[string]attr.Value{}
 	switch i := routeResp.Destination.GetActualInstance().(type) {
-	case *iaasalpha.DestinationCIDRv4:
+	case *iaas.DestinationCIDRv4:
 		destinationMap["type"] = types.StringValue(*i.Type)
 		destinationMap["value"] = types.StringPointerValue(i.Value)
-	case *iaasalpha.DestinationCIDRv6:
+	case *iaas.DestinationCIDRv6:
 		destinationMap["type"] = types.StringValue(*i.Type)
 		destinationMap["value"] = types.StringPointerValue(i.Value)
 	default:

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/routingtable/shared"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 )
 
 const (
@@ -31,7 +31,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       shared.RoutingTableDataSourceModel
-		input       *iaasalpha.RoutingTable
+		input       *iaas.RoutingTable
 		expected    shared.RoutingTableDataSourceModel
 		isValid     bool
 	}{
@@ -41,7 +41,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 				OrganizationId: types.StringValue(organizationId.String()),
 				NetworkAreaId:  types.StringValue(networkAreaId.String()),
 			},
-			&iaasalpha.RoutingTable{
+			&iaas.RoutingTable{
 				Id:   utils.Ptr(routingTableId.String()),
 				Name: utils.Ptr("default_values"),
 			},
@@ -65,7 +65,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 				NetworkAreaId:         types.StringValue(networkAreaId.String()),
 				RoutingTableReadModel: shared.RoutingTableReadModel{},
 			},
-			&iaasalpha.RoutingTable{
+			&iaas.RoutingTable{
 				Id:          utils.Ptr(routingTableId.String()),
 				Name:        utils.Ptr("values_ok"),
 				Description: utils.Ptr("Description"),
@@ -92,7 +92,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 		{
 			"response_fields_nil_fail",
 			shared.RoutingTableDataSourceModel{},
-			&iaasalpha.RoutingTable{
+			&iaas.RoutingTable{
 				Id: nil,
 			},
 			shared.RoutingTableDataSourceModel{},
@@ -111,7 +111,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 				OrganizationId: types.StringValue("oid"),
 				NetworkAreaId:  types.StringValue("naid"),
 			},
-			&iaasalpha.RoutingTable{},
+			&iaas.RoutingTable{},
 			shared.RoutingTableDataSourceModel{},
 			false,
 		},

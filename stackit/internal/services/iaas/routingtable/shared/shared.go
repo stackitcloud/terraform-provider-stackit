@@ -6,13 +6,13 @@ import (
 	"maps"
 	"time"
 
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaasalpha"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -225,7 +225,7 @@ func RoutingTableResponseAttributes() map[string]schema.Attribute {
 	}
 }
 
-func MapRoutingTableReadModel(ctx context.Context, routingTable *iaasalpha.RoutingTable, model *RoutingTableReadModel) error {
+func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTable, model *RoutingTableReadModel) error {
 	if routingTable == nil {
 		return fmt.Errorf("response input is nil")
 	}
