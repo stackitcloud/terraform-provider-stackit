@@ -167,8 +167,8 @@ github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.23-alpha h1:ugpMO
 github.com/stackitcloud/stackit-sdk-go/services/iaasalpha v0.1.23-alpha/go.mod h1:v5VGvTxLcCdJJmblbhqYalt/MFHcElDfYoy15CMhaWs=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.2.0 h1:Ar2n9GKmrTN80G/Ta1R+fL5aX5nEoxL6ODVJl3emzho=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.2.0/go.mod h1:sHMFoYvVrkRZcH13DkLvp48nW+ssRVVVuwqJHDGpa5M=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.2 h1:DwwRMzvnKWTbfmLvq2xe+mYhv5fA1AwWdQGznI05sGc=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.2/go.mod h1:dYmNdSNDKUG+E0SwuFWu+c8CuMBF/l6w1bdzAHxQao0=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.0 h1:ZyaB4jL71p+FWI/cXgP+p6t4iw1oAeGbLLOz4cs3dmI=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.0/go.mod h1:dYmNdSNDKUG+E0SwuFWu+c8CuMBF/l6w1bdzAHxQao0=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.3 h1:fUQLWs2WsXFh+FtFDYOm1kv/gJrGBZLjhVOXJOuYfFY=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.3/go.mod h1:305j9bvzJ+3c4csOw4SUfLSSxRbkpL0osbvqMI89FeM=
 github.com/stackitcloud/stackit-sdk-go/services/logs v0.3.0 h1:N1gerABK2vH7/PBkxZeaWYJ7dz3rjeCHuto+FAuGx3w=
