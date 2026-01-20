@@ -18,7 +18,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.2.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.6.2
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.3
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.3
@@ -33,7 +33,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.2
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.4
+	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.3
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.3
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.4
