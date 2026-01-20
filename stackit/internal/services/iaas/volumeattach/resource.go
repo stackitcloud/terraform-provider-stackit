@@ -205,6 +205,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, volumeId)
+	model.Region = types.StringValue(region)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
@@ -247,6 +248,10 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	// Update region in model
+	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, volumeId)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
