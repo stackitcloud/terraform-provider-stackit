@@ -335,9 +335,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	var client *logs.APIClient
 	var err error
 	if testutil.LogsCustomEndpoint == "" {
-		client, err = logs.NewAPIClient(
-			coreConfig.WithRegion("eu01"),
-		)
+		client, err = logs.NewAPIClient()
 	} else {
 		client, err = logs.NewAPIClient(
 			coreConfig.WithEndpoint(testutil.LogsCustomEndpoint),
