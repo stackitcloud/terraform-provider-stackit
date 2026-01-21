@@ -303,11 +303,11 @@ func toCreatePayload(model *Model, apiName *string) (*authorization.AddMembersPa
 		return nil, fmt.Errorf("nil model")
 	}
 
-	if model.Role.IsUnknown() || model.Role.ValueString() == "" {
+	if utils.IsUndefined(model.Role) || model.Role.ValueString() == "" {
 		return nil, fmt.Errorf("invalid model role")
 	}
 
-	if model.Subject.IsUnknown() || model.Subject.ValueString() == "" {
+	if utils.IsUndefined(model.Subject) || model.Subject.ValueString() == "" {
 		return nil, fmt.Errorf("invalid model subject")
 	}
 
