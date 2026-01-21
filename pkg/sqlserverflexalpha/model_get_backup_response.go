@@ -21,26 +21,8 @@ var _ MappedNullable = &GetBackupResponse{}
 	types and functions for completionTime
 */
 
-//// isAny
-//type GetBackupResponseGetCompletionTimeAttributeType = any
-//type GetBackupResponseGetCompletionTimeArgType = any
-//type GetBackupResponseGetCompletionTimeRetType = any
-//
-//func getGetBackupResponseGetCompletionTimeAttributeTypeOk(arg GetBackupResponseGetCompletionTimeAttributeType) (ret GetBackupResponseGetCompletionTimeRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setGetBackupResponseGetCompletionTimeAttributeType(arg *GetBackupResponseGetCompletionTimeAttributeType, val GetBackupResponseGetCompletionTimeRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type GetBackupResponseGetCompletionTimeAttributeType = *string
-type GetBackupResponseGetCompletionTimeArgType = string
-type GetBackupResponseGetCompletionTimeRetType = string
 
 func getGetBackupResponseGetCompletionTimeAttributeTypeOk(arg GetBackupResponseGetCompletionTimeAttributeType) (ret GetBackupResponseGetCompletionTimeRetType, ok bool) {
 	if arg == nil {
@@ -53,27 +35,14 @@ func setGetBackupResponseGetCompletionTimeAttributeType(arg *GetBackupResponseGe
 	*arg = &val
 }
 
+type GetBackupResponseGetCompletionTimeArgType = string
+type GetBackupResponseGetCompletionTimeRetType = string
+
 /*
 	types and functions for id
 */
 
-//// isAny
-//type GetBackupResponseGetIdAttributeType = any
-//type GetBackupResponseGetIdArgType = any
-//type GetBackupResponseGetIdRetType = any
-//
-//func getGetBackupResponseGetIdAttributeTypeOk(arg GetBackupResponseGetIdAttributeType) (ret GetBackupResponseGetIdRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setGetBackupResponseGetIdAttributeType(arg *GetBackupResponseGetIdAttributeType, val GetBackupResponseGetIdRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isLong
 type GetBackupResponseGetIdAttributeType = *int64
 type GetBackupResponseGetIdArgType = int64
 type GetBackupResponseGetIdRetType = int64
@@ -93,26 +62,8 @@ func setGetBackupResponseGetIdAttributeType(arg *GetBackupResponseGetIdAttribute
 	types and functions for name
 */
 
-//// isAny
-//type GetBackupResponseGetNameAttributeType = any
-//type GetBackupResponseGetNameArgType = any
-//type GetBackupResponseGetNameRetType = any
-//
-//func getGetBackupResponseGetNameAttributeTypeOk(arg GetBackupResponseGetNameAttributeType) (ret GetBackupResponseGetNameRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setGetBackupResponseGetNameAttributeType(arg *GetBackupResponseGetNameAttributeType, val GetBackupResponseGetNameRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type GetBackupResponseGetNameAttributeType = *string
-type GetBackupResponseGetNameArgType = string
-type GetBackupResponseGetNameRetType = string
 
 func getGetBackupResponseGetNameAttributeTypeOk(arg GetBackupResponseGetNameAttributeType) (ret GetBackupResponseGetNameRetType, ok bool) {
 	if arg == nil {
@@ -125,30 +76,15 @@ func setGetBackupResponseGetNameAttributeType(arg *GetBackupResponseGetNameAttri
 	*arg = &val
 }
 
+type GetBackupResponseGetNameArgType = string
+type GetBackupResponseGetNameRetType = string
+
 /*
 	types and functions for retainedUntil
 */
 
-//// isAny
-//type GetBackupResponseGetRetainedUntilAttributeType = any
-//type GetBackupResponseGetRetainedUntilArgType = any
-//type GetBackupResponseGetRetainedUntilRetType = any
-//
-//func getGetBackupResponseGetRetainedUntilAttributeTypeOk(arg GetBackupResponseGetRetainedUntilAttributeType) (ret GetBackupResponseGetRetainedUntilRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setGetBackupResponseGetRetainedUntilAttributeType(arg *GetBackupResponseGetRetainedUntilAttributeType, val GetBackupResponseGetRetainedUntilRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type GetBackupResponseGetRetainedUntilAttributeType = *string
-type GetBackupResponseGetRetainedUntilArgType = string
-type GetBackupResponseGetRetainedUntilRetType = string
 
 func getGetBackupResponseGetRetainedUntilAttributeTypeOk(arg GetBackupResponseGetRetainedUntilAttributeType) (ret GetBackupResponseGetRetainedUntilRetType, ok bool) {
 	if arg == nil {
@@ -161,27 +97,14 @@ func setGetBackupResponseGetRetainedUntilAttributeType(arg *GetBackupResponseGet
 	*arg = &val
 }
 
+type GetBackupResponseGetRetainedUntilArgType = string
+type GetBackupResponseGetRetainedUntilRetType = string
+
 /*
 	types and functions for size
 */
 
-//// isAny
-//type GetBackupResponseGetSizeAttributeType = any
-//type GetBackupResponseGetSizeArgType = any
-//type GetBackupResponseGetSizeRetType = any
-//
-//func getGetBackupResponseGetSizeAttributeTypeOk(arg GetBackupResponseGetSizeAttributeType) (ret GetBackupResponseGetSizeRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setGetBackupResponseGetSizeAttributeType(arg *GetBackupResponseGetSizeAttributeType, val GetBackupResponseGetSizeRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isLong
 type GetBackupResponseGetSizeAttributeType = *int64
 type GetBackupResponseGetSizeArgType = int64
 type GetBackupResponseGetSizeRetType = int64
@@ -201,26 +124,8 @@ func setGetBackupResponseGetSizeAttributeType(arg *GetBackupResponseGetSizeAttri
 	types and functions for type
 */
 
-//// isAny
-//type GetBackupResponseGetTypeAttributeType = any
-//type GetBackupResponseGetTypeArgType = any
-//type GetBackupResponseGetTypeRetType = any
-//
-//func getGetBackupResponseGetTypeAttributeTypeOk(arg GetBackupResponseGetTypeAttributeType) (ret GetBackupResponseGetTypeRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setGetBackupResponseGetTypeAttributeType(arg *GetBackupResponseGetTypeAttributeType, val GetBackupResponseGetTypeRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type GetBackupResponseGetTypeAttributeType = *string
-type GetBackupResponseGetTypeArgType = string
-type GetBackupResponseGetTypeRetType = string
 
 func getGetBackupResponseGetTypeAttributeTypeOk(arg GetBackupResponseGetTypeAttributeType) (ret GetBackupResponseGetTypeRetType, ok bool) {
 	if arg == nil {
@@ -233,18 +138,27 @@ func setGetBackupResponseGetTypeAttributeType(arg *GetBackupResponseGetTypeAttri
 	*arg = &val
 }
 
+type GetBackupResponseGetTypeArgType = string
+type GetBackupResponseGetTypeRetType = string
+
 // GetBackupResponse struct for GetBackupResponse
 type GetBackupResponse struct {
+	// The time when the backup was completed in RFC3339 format.
 	// REQUIRED
 	CompletionTime GetBackupResponseGetCompletionTimeAttributeType `json:"completionTime" required:"true"`
+	// The ID of the backup.
 	// REQUIRED
 	Id GetBackupResponseGetIdAttributeType `json:"id" required:"true"`
+	// The name of the backup.
 	// REQUIRED
 	Name GetBackupResponseGetNameAttributeType `json:"name" required:"true"`
+	// The time until the backup will be retained.
 	// REQUIRED
 	RetainedUntil GetBackupResponseGetRetainedUntilAttributeType `json:"retainedUntil" required:"true"`
+	// The size of the backup in bytes.
 	// REQUIRED
 	Size GetBackupResponseGetSizeAttributeType `json:"size" required:"true"`
+	// The type of the backup, which can be automated or manual triggered.
 	// REQUIRED
 	Type GetBackupResponseGetTypeAttributeType `json:"type" required:"true"`
 }

@@ -35,10 +35,10 @@ data "stackitprivatepreview_postgresflexalpha_user" "example" {
 
 ### Read-Only
 
-- `connection_string` (String)
-- `host` (String)
+- `connection_string` (String) The connection string for the user to the instance.
+- `host` (String) The host address for the user to connect to the instance.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`,`user_id`".
-- `port` (Number)
-- `roles` (Set of String)
-- `status` (String)
-- `username` (String)
+- `port` (Number) The port number for the user to connect to the instance.
+- `roles` (Set of String) The roles assigned to the user.
+- `status` (String) The current status of the user.
+- `username` (String) The name of the user.

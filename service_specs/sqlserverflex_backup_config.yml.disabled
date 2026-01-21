@@ -1,0 +1,13 @@
+provider:
+  name: stackitprivatepreview
+
+data_sources:
+  backups:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups
+      method: GET
+
+  backup:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/{backupId}
+      method: GET

@@ -33,7 +33,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	sqlserverflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/sqlserverflexalpha"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/sqlserverflexalpha/wait"
+	wait "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/wait/sqlserverflexalpha"
+
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 )
 

@@ -34,8 +34,8 @@ import {
 
 - `instance_id` (String) ID of the PostgresFlex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
-- `roles` (Set of String) Database access levels for the user. Possible values are: `login`, `createdb`.
-- `username` (String)
+- `roles` (Set of String) Database access levels for the user. Possible values are: `login`, `createdb`, `createrole`.
+- `username` (String) The name of the user.
 
 ### Optional
 
@@ -43,8 +43,10 @@ import {
 
 ### Read-Only
 
-- `connection_string` (String)
+- `connection_string` (String) The connection string for the user to the instance.
+- `host` (String) The host of the Postgres Flex instance.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`,`user_id`".
-- `password` (String, Sensitive)
-- `status` (String)
+- `password` (String, Sensitive) The password for the user. This is only set upon creation.
+- `port` (Number) The port of the Postgres Flex instance.
+- `status` (String) The current status of the user.
 - `user_id` (Number) User ID.

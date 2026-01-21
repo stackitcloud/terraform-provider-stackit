@@ -1,0 +1,23 @@
+provider:
+  name: stackitprivatepreview
+
+resources:
+  instance:
+    create:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances
+      method: POST
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}
+      method: GET
+    update:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}
+      method: PUT
+    delete:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}
+      method: DELETE
+
+data_sources:
+  instance:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}
+      method: GET

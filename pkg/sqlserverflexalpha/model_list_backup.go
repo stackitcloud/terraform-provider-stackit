@@ -21,26 +21,8 @@ var _ MappedNullable = &ListBackup{}
 	types and functions for completionTime
 */
 
-//// isAny
-//type ListBackupGetCompletionTimeAttributeType = any
-//type ListBackupGetCompletionTimeArgType = any
-//type ListBackupGetCompletionTimeRetType = any
-//
-//func getListBackupGetCompletionTimeAttributeTypeOk(arg ListBackupGetCompletionTimeAttributeType) (ret ListBackupGetCompletionTimeRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setListBackupGetCompletionTimeAttributeType(arg *ListBackupGetCompletionTimeAttributeType, val ListBackupGetCompletionTimeRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type ListBackupGetCompletionTimeAttributeType = *string
-type ListBackupGetCompletionTimeArgType = string
-type ListBackupGetCompletionTimeRetType = string
 
 func getListBackupGetCompletionTimeAttributeTypeOk(arg ListBackupGetCompletionTimeAttributeType) (ret ListBackupGetCompletionTimeRetType, ok bool) {
 	if arg == nil {
@@ -53,27 +35,14 @@ func setListBackupGetCompletionTimeAttributeType(arg *ListBackupGetCompletionTim
 	*arg = &val
 }
 
+type ListBackupGetCompletionTimeArgType = string
+type ListBackupGetCompletionTimeRetType = string
+
 /*
 	types and functions for id
 */
 
-//// isAny
-//type ListBackupGetIdAttributeType = any
-//type ListBackupGetIdArgType = any
-//type ListBackupGetIdRetType = any
-//
-//func getListBackupGetIdAttributeTypeOk(arg ListBackupGetIdAttributeType) (ret ListBackupGetIdRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setListBackupGetIdAttributeType(arg *ListBackupGetIdAttributeType, val ListBackupGetIdRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isLong
 type ListBackupGetIdAttributeType = *int64
 type ListBackupGetIdArgType = int64
 type ListBackupGetIdRetType = int64
@@ -93,26 +62,8 @@ func setListBackupGetIdAttributeType(arg *ListBackupGetIdAttributeType, val List
 	types and functions for name
 */
 
-//// isAny
-//type ListBackupGetNameAttributeType = any
-//type ListBackupGetNameArgType = any
-//type ListBackupGetNameRetType = any
-//
-//func getListBackupGetNameAttributeTypeOk(arg ListBackupGetNameAttributeType) (ret ListBackupGetNameRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setListBackupGetNameAttributeType(arg *ListBackupGetNameAttributeType, val ListBackupGetNameRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type ListBackupGetNameAttributeType = *string
-type ListBackupGetNameArgType = string
-type ListBackupGetNameRetType = string
 
 func getListBackupGetNameAttributeTypeOk(arg ListBackupGetNameAttributeType) (ret ListBackupGetNameRetType, ok bool) {
 	if arg == nil {
@@ -125,30 +76,15 @@ func setListBackupGetNameAttributeType(arg *ListBackupGetNameAttributeType, val 
 	*arg = &val
 }
 
+type ListBackupGetNameArgType = string
+type ListBackupGetNameRetType = string
+
 /*
 	types and functions for retainedUntil
 */
 
-//// isAny
-//type ListBackupGetRetainedUntilAttributeType = any
-//type ListBackupGetRetainedUntilArgType = any
-//type ListBackupGetRetainedUntilRetType = any
-//
-//func getListBackupGetRetainedUntilAttributeTypeOk(arg ListBackupGetRetainedUntilAttributeType) (ret ListBackupGetRetainedUntilRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setListBackupGetRetainedUntilAttributeType(arg *ListBackupGetRetainedUntilAttributeType, val ListBackupGetRetainedUntilRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type ListBackupGetRetainedUntilAttributeType = *string
-type ListBackupGetRetainedUntilArgType = string
-type ListBackupGetRetainedUntilRetType = string
 
 func getListBackupGetRetainedUntilAttributeTypeOk(arg ListBackupGetRetainedUntilAttributeType) (ret ListBackupGetRetainedUntilRetType, ok bool) {
 	if arg == nil {
@@ -161,27 +97,14 @@ func setListBackupGetRetainedUntilAttributeType(arg *ListBackupGetRetainedUntilA
 	*arg = &val
 }
 
+type ListBackupGetRetainedUntilArgType = string
+type ListBackupGetRetainedUntilRetType = string
+
 /*
 	types and functions for size
 */
 
-//// isAny
-//type ListBackupGetSizeAttributeType = any
-//type ListBackupGetSizeArgType = any
-//type ListBackupGetSizeRetType = any
-//
-//func getListBackupGetSizeAttributeTypeOk(arg ListBackupGetSizeAttributeType) (ret ListBackupGetSizeRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setListBackupGetSizeAttributeType(arg *ListBackupGetSizeAttributeType, val ListBackupGetSizeRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isLong
 type ListBackupGetSizeAttributeType = *int64
 type ListBackupGetSizeArgType = int64
 type ListBackupGetSizeRetType = int64
@@ -201,26 +124,8 @@ func setListBackupGetSizeAttributeType(arg *ListBackupGetSizeAttributeType, val 
 	types and functions for type
 */
 
-//// isAny
-//type ListBackupGetTypeAttributeType = any
-//type ListBackupGetTypeArgType = any
-//type ListBackupGetTypeRetType = any
-//
-//func getListBackupGetTypeAttributeTypeOk(arg ListBackupGetTypeAttributeType) (ret ListBackupGetTypeRetType, ok bool) {
-//	if arg == nil {
-//		return ret, false
-//	}
-//	return *arg, true
-//}
-//
-//func setListBackupGetTypeAttributeType(arg *ListBackupGetTypeAttributeType, val ListBackupGetTypeRetType) {
-//	*arg = &val
-//}
-
-// isModel
+// isNotNullableString
 type ListBackupGetTypeAttributeType = *string
-type ListBackupGetTypeArgType = string
-type ListBackupGetTypeRetType = string
 
 func getListBackupGetTypeAttributeTypeOk(arg ListBackupGetTypeAttributeType) (ret ListBackupGetTypeRetType, ok bool) {
 	if arg == nil {
@@ -233,18 +138,27 @@ func setListBackupGetTypeAttributeType(arg *ListBackupGetTypeAttributeType, val 
 	*arg = &val
 }
 
+type ListBackupGetTypeArgType = string
+type ListBackupGetTypeRetType = string
+
 // ListBackup struct for ListBackup
 type ListBackup struct {
+	// The time when the backup was completed in RFC3339 format.
 	// REQUIRED
 	CompletionTime ListBackupGetCompletionTimeAttributeType `json:"completionTime" required:"true"`
+	// The ID of the backup.
 	// REQUIRED
 	Id ListBackupGetIdAttributeType `json:"id" required:"true"`
+	// The name of the backup.
 	// REQUIRED
 	Name ListBackupGetNameAttributeType `json:"name" required:"true"`
+	// The time until the backup will be retained.
 	// REQUIRED
 	RetainedUntil ListBackupGetRetainedUntilAttributeType `json:"retainedUntil" required:"true"`
+	// The size of the backup in bytes.
 	// REQUIRED
 	Size ListBackupGetSizeAttributeType `json:"size" required:"true"`
+	// The type of the backup, which can be automated or manual triggered.
 	// REQUIRED
 	Type ListBackupGetTypeAttributeType `json:"type" required:"true"`
 }

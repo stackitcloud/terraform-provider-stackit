@@ -1,0 +1,8 @@
+provider:
+  name: stackitprivatepreview
+
+data_sources:
+  roles:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/roles
+      method: GET

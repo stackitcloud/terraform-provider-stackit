@@ -25,16 +25,16 @@ data "stackitprivatepreview_postgresflexalpha_database" "example" {
 
 ### Required
 
-- `database_id` (String) Database ID.
 - `instance_id` (String) ID of the Postgres Flex instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Optional
 
+- `database_id` (Number) Database ID.
+- `name` (String) Database name.
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`,`database_id`".
-- `name` (String) Database name.
 - `owner` (String) Username of the database owner.

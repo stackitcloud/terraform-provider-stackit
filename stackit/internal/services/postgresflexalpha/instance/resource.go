@@ -15,12 +15,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha/wait"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 	postgresflexalpha "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance/resources_gen"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
+	wait "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/wait/postgresflexalpha"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 )
 
@@ -211,7 +211,7 @@ func (r *instanceResource) Create(
 
 func modelToCreateInstancePayload(netAcl []string, model postgresflexalpha.InstanceModel, replVal int32) postgresflex.CreateInstanceRequestPayload {
 	payload := postgresflex.CreateInstanceRequestPayload{
-		Acl:            &netAcl,
+		// Acl:            &netAcl,
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		Encryption: &postgresflex.InstanceEncryption{
 			KekKeyId:       model.Encryption.KekKeyId.ValueStringPointer(),

@@ -1,0 +1,8 @@
+provider:
+  name: stackitprivatepreview
+
+data_sources:
+  versions:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/versions
+      method: GET

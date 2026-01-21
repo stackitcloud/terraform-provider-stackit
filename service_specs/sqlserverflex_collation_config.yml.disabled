@@ -1,0 +1,8 @@
+provider:
+  name: stackitprivatepreview
+
+data_sources:
+  collation:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/collations
+      method: GET

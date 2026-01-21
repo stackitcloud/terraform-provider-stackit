@@ -217,7 +217,7 @@ type DefaultApi interface {
 		@param region The region which should be addressed
 		@return ApiGetFlavorsRequestRequest
 	*/
-	GetFlavorsRequest(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) ApiGetFlavorsRequestRequest
+	GetFlavorsRequest(ctx context.Context, projectId string, region string) ApiGetFlavorsRequestRequest
 	/*
 		GetFlavorsRequestExecute executes the request
 
@@ -227,7 +227,7 @@ type DefaultApi interface {
 		@return GetFlavorsResponse
 
 	*/
-	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) (*GetFlavorsResponse, error)
+	GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*GetFlavorsResponse, error)
 	/*
 		GetInstanceRequest Get Specific Instance
 		Get information about a specific available instance
@@ -515,6 +515,25 @@ type DefaultApi interface {
 	*/
 	ResetUserRequestExecute(ctx context.Context, projectId string, region string, instanceId string, userId int64) (*ResetUserResponse, error)
 	/*
+		RestoreDatabaseFromBackup Create a Restore Operation
+		Triggers a new restore operation for the specified instance.
+		The request body defines the source
+		(e.g., internal backup, external S3) and the target database.
+
+
+		@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+		@param projectId The STACKIT project ID.
+		@param region The region which should be addressed
+		@param instanceId The ID of the instance.
+		@return ApiRestoreDatabaseFromBackupRequest
+	*/
+	RestoreDatabaseFromBackup(ctx context.Context, projectId string, region string, instanceId string) ApiRestoreDatabaseFromBackupRequest
+	/*
+		RestoreDatabaseFromBackupExecute executes the request
+
+	*/
+	RestoreDatabaseFromBackupExecute(ctx context.Context, projectId string, region string, instanceId string) error
+	/*
 		TriggerBackupRequest Trigger backup for a specific Database
 		Trigger backup for a specific database
 
@@ -716,6 +735,12 @@ type ApiProtectInstanceRequestRequest interface {
 
 type ApiResetUserRequestRequest interface {
 	Execute() (*ResetUserResponse, error)
+}
+
+type ApiRestoreDatabaseFromBackupRequest interface {
+	// The restore operation payload.
+	RestoreDatabaseFromBackupPayload(restoreDatabaseFromBackupPayload RestoreDatabaseFromBackupPayload) ApiRestoreDatabaseFromBackupRequest
+	Execute() error
 }
 
 type ApiTriggerBackupRequestRequest interface {
@@ -2700,27 +2725,21 @@ Get all available flavors for a project.
 	@param region The region which should be addressed
 	@return ApiGetFlavorsRequestRequest
 */
-func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) ApiGetFlavorsRequestRequest {
+func (a *APIClient) GetFlavorsRequest(ctx context.Context, projectId string, region string) ApiGetFlavorsRequestRequest {
 	return GetFlavorsRequestRequest{
 		apiService: a.defaultApi,
 		ctx:        ctx,
 		projectId:  projectId,
 		region:     region,
-		page:       page,
-		size:       size,
-		sort:       sort,
 	}
 }
 
-func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId string, region string, page, size *int64, sort *FlavorSort) (*GetFlavorsResponse, error) {
+func (a *APIClient) GetFlavorsRequestExecute(ctx context.Context, projectId string, region string) (*GetFlavorsResponse, error) {
 	r := GetFlavorsRequestRequest{
 		apiService: a.defaultApi,
 		ctx:        ctx,
 		projectId:  projectId,
 		region:     region,
-		page:       page,
-		size:       size,
-		sort:       sort,
 	}
 	return r.Execute()
 }
@@ -5359,6 +5378,206 @@ func (a *APIClient) ResetUserRequestExecute(ctx context.Context, projectId strin
 		region:     region,
 		instanceId: instanceId,
 		userId:     userId,
+	}
+	return r.Execute()
+}
+
+type RestoreDatabaseFromBackupRequest struct {
+	ctx                              context.Context
+	apiService                       *DefaultApiService
+	projectId                        string
+	region                           string
+	instanceId                       string
+	restoreDatabaseFromBackupPayload *RestoreDatabaseFromBackupPayload
+}
+
+// The restore operation payload.
+
+func (r RestoreDatabaseFromBackupRequest) RestoreDatabaseFromBackupPayload(restoreDatabaseFromBackupPayload RestoreDatabaseFromBackupPayload) ApiRestoreDatabaseFromBackupRequest {
+	r.restoreDatabaseFromBackupPayload = &restoreDatabaseFromBackupPayload
+	return r
+}
+
+func (r RestoreDatabaseFromBackupRequest) Execute() error {
+	var (
+		localVarHTTPMethod = http.MethodPost
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+	a := r.apiService
+	client, ok := a.client.(*APIClient)
+	if !ok {
+		return fmt.Errorf("could not parse client to type APIClient")
+	}
+	localBasePath, err := client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.RestoreDatabaseFromBackup")
+	if err != nil {
+		return &oapierror.GenericOpenAPIError{ErrorMessage: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/restores"
+	localVarPath = strings.Replace(localVarPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(r.projectId, "projectId")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(r.region, "region")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(r.instanceId, "instanceId")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.restoreDatabaseFromBackupPayload == nil {
+		return fmt.Errorf("restoreDatabaseFromBackupPayload is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.restoreDatabaseFromBackupPayload
+	req, err := client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return err
+	}
+
+	contextHTTPRequest, ok := r.ctx.Value(config.ContextHTTPRequest).(**http.Request)
+	if ok {
+		*contextHTTPRequest = req
+	}
+
+	localVarHTTPResponse, err := client.callAPI(req)
+	contextHTTPResponse, ok := r.ctx.Value(config.ContextHTTPResponse).(**http.Response)
+	if ok {
+		*contextHTTPResponse = localVarHTTPResponse
+	}
+	if err != nil || localVarHTTPResponse == nil {
+		return err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &oapierror.GenericOpenAPIError{
+			StatusCode:   localVarHTTPResponse.StatusCode,
+			Body:         localVarBody,
+			ErrorMessage: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.ErrorMessage = err.Error()
+				return newErr
+			}
+			newErr.ErrorMessage = oapierror.FormatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.Model = v
+			return newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v Error
+			err = client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.ErrorMessage = err.Error()
+				return newErr
+			}
+			newErr.ErrorMessage = oapierror.FormatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.Model = v
+			return newErr
+		}
+		if localVarHTTPResponse.StatusCode == 403 {
+			var v Error
+			err = client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.ErrorMessage = err.Error()
+				return newErr
+			}
+			newErr.ErrorMessage = oapierror.FormatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.Model = v
+			return newErr
+		}
+		if localVarHTTPResponse.StatusCode == 404 {
+			var v Error
+			err = client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.ErrorMessage = err.Error()
+				return newErr
+			}
+			newErr.ErrorMessage = oapierror.FormatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.Model = v
+			return newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.ErrorMessage = err.Error()
+				return newErr
+			}
+			newErr.ErrorMessage = oapierror.FormatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.Model = v
+			return newErr
+		}
+		if localVarHTTPResponse.StatusCode == 501 {
+			var v Error
+			err = client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.ErrorMessage = err.Error()
+				return newErr
+			}
+			newErr.ErrorMessage = oapierror.FormatErrorMessage(localVarHTTPResponse.Status, &v)
+			newErr.Model = v
+		}
+		return newErr
+	}
+
+	return nil
+}
+
+/*
+RestoreDatabaseFromBackup: Create a Restore Operation
+
+Triggers a new restore operation for the specified instance.
+The request body defines the source
+(e.g., internal backup, external S3) and the target database.
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param projectId The STACKIT project ID.
+	@param region The region which should be addressed
+	@param instanceId The ID of the instance.
+	@return ApiRestoreDatabaseFromBackupRequest
+*/
+func (a *APIClient) RestoreDatabaseFromBackup(ctx context.Context, projectId string, region string, instanceId string) ApiRestoreDatabaseFromBackupRequest {
+	return RestoreDatabaseFromBackupRequest{
+		apiService: a.defaultApi,
+		ctx:        ctx,
+		projectId:  projectId,
+		region:     region,
+		instanceId: instanceId,
+	}
+}
+
+func (a *APIClient) RestoreDatabaseFromBackupExecute(ctx context.Context, projectId string, region string, instanceId string) error {
+	r := RestoreDatabaseFromBackupRequest{
+		apiService: a.defaultApi,
+		ctx:        ctx,
+		projectId:  projectId,
+		region:     region,
+		instanceId: instanceId,
 	}
 	return r.Execute()
 }

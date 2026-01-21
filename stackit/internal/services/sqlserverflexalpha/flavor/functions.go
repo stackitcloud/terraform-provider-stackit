@@ -8,12 +8,8 @@ import (
 )
 
 type flavorsClient interface {
-	GetFlavorsRequestExecute(
-		ctx context.Context,
-		projectId, region string,
-		page, size *int64,
-		sort *sqlserverflex.FlavorSort,
-	) (*sqlserverflex.GetFlavorsResponse, error)
+	GetFlavorsRequestExecute(ctx context.Context, projectId, region string) (*sqlserverflex.GetFlavorsResponse, error)
+	GetFlavorsRequest(ctx context.Context, projectId, region string) sqlserverflex.ApiGetFlavorsRequestRequest
 }
 
 // func loadFlavorId(ctx context.Context, client flavorsClient, model *Model, flavor *flavorModel, storage *storageModel) error {
@@ -122,12 +118,10 @@ func getAllFlavors(ctx context.Context, client flavorsClient, projectId, region 
 	}
 	var flavorList []sqlserverflex.ListFlavors
 
-	page := int64(1)
-	size := int64(10)
-	sort := sqlserverflex.FLAVORSORT_INDEX_ASC
+	var page int64 = 1
 	counter := 0
 	for {
-		res, err := client.GetFlavorsRequestExecute(ctx, projectId, region, &page, &size, &sort)
+		res, err := client.GetFlavorsRequest(ctx, projectId, region).Page(page).Execute()
 		if err != nil {
 			return nil, fmt.Errorf("listing sqlserverflex flavors: %w", err)
 		}

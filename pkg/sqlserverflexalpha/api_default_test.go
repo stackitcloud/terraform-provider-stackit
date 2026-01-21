@@ -26,20 +26,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService CreateDatabaseRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := CreateDatabaseResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -88,18 +85,15 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService CreateInstanceRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := CreateInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -147,20 +141,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService CreateUserRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := CreateUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -209,13 +200,13 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService DeleteDatabaseRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseName}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		databaseNameValue := "databaseName-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
@@ -264,11 +255,11 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService DeleteInstanceRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
@@ -316,13 +307,13 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService DeleteUserRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		userIdValue := int64(123)
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
@@ -371,22 +362,19 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetBackupRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/{backupId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		backupIdValue := int64(123)
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"backupId"+"}", url.PathEscape(ParameterValueToString(backupIdValue, "backupId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"backupId"+"}", url.PathEscape(ParameterValueToString(backupIdValue, "backupId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetBackupResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -435,20 +423,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetCollationsRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/collations"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetCollationsResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -496,22 +481,19 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetDatabaseRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseName}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		databaseNameValue := "databaseName-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetDatabaseResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -560,18 +542,15 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetFlavorsRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/flavors"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetFlavorsResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -605,10 +584,7 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		projectId := projectIdValue
 		region := regionValue
 
-		page := int64(1)
-		size := int64(10)
-		sort := FLAVORSORT_ID_DESC
-		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region, &page, &size, &sort).Execute()
+		resp, reqErr := apiClient.GetFlavorsRequest(context.Background(), projectId, region).Execute()
 
 		if reqErr != nil {
 			t.Fatalf("error in call: %v", reqErr)
@@ -621,20 +597,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetInstanceRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -682,20 +655,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetStoragesRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/storages/{flavorId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		flavorIdValue := "flavorId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"flavorId"+"}", url.PathEscape(ParameterValueToString(flavorIdValue, "flavorId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"flavorId"+"}", url.PathEscape(ParameterValueToString(flavorIdValue, "flavorId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetStoragesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -743,22 +713,19 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetUserRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		userIdValue := int64(123)
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -807,18 +774,15 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService GetVersionsRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/versions"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := GetVersionsResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -865,20 +829,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListBackupsRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListBackupResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -926,20 +887,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListCompatibilitiesRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/compatibility"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListCompatibilityResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -987,20 +945,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListCurrentRunningRestoreJobs", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/restore-jobs"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListCurrentRunningRestoreJobs{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1048,20 +1003,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListDatabasesRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListDatabasesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1109,18 +1061,15 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListInstancesRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListInstancesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1167,20 +1116,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListRolesRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/roles"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListRolesResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1228,20 +1174,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ListUsersRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ListUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1289,20 +1232,17 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ProtectInstanceRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/protections"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ProtectInstanceResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1351,22 +1291,19 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService ResetUserRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/users/{userId}/reset"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		userIdValue := int64(123)
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"userId"+"}", url.PathEscape(ParameterValueToString(userIdValue, "userId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
 			data := ResetUserResponse{}
 			w.Header().Add("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(data)
-			if err != nil {
-				return
-			}
+			json.NewEncoder(w).Encode(data)
 		})
 		testServer := httptest.NewServer(testDefaultApiServeMux)
 		defer testServer.Close()
@@ -1412,16 +1349,69 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 		}
 	})
 
+	t.Run("Test DefaultApiService RestoreDatabaseFromBackup", func(t *testing.T) {
+		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/restores"
+		projectIdValue := "projectId-value"
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
+		regionValue := "region-value"
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
+		instanceIdValue := "instanceId-value"
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
+
+		testDefaultApiServeMux := http.NewServeMux()
+		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
+		})
+		testServer := httptest.NewServer(testDefaultApiServeMux)
+		defer testServer.Close()
+
+		configuration := &config.Configuration{
+			DefaultHeader: make(map[string]string),
+			UserAgent:     "OpenAPI-Generator/1.0.0/go",
+			Debug:         false,
+			Region:        "test_region",
+			Servers: config.ServerConfigurations{
+				{
+					URL:         testServer.URL,
+					Description: "Localhost for sqlserverflexalpha_DefaultApi",
+					Variables: map[string]config.ServerVariable{
+						"region": {
+							DefaultValue: "test_region.",
+							EnumValues: []string{
+								"test_region.",
+							},
+						},
+					},
+				},
+			},
+			OperationServers: map[string]config.ServerConfigurations{},
+		}
+		apiClient, err := NewAPIClient(config.WithCustomConfiguration(configuration), config.WithoutAuthentication())
+		if err != nil {
+			t.Fatalf("creating API client: %v", err)
+		}
+
+		projectId := projectIdValue
+		region := regionValue
+		instanceId := instanceIdValue
+		restoreDatabaseFromBackupPayload := RestoreDatabaseFromBackupPayload{}
+
+		reqErr := apiClient.RestoreDatabaseFromBackup(context.Background(), projectId, region, instanceId).RestoreDatabaseFromBackupPayload(restoreDatabaseFromBackupPayload).Execute()
+
+		if reqErr != nil {
+			t.Fatalf("error in call: %v", reqErr)
+		}
+	})
+
 	t.Run("Test DefaultApiService TriggerBackupRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/databases/{databaseName}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		databaseNameValue := "databaseName-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
@@ -1470,13 +1460,13 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService TriggerRestoreRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/backups/databases/{databaseName}/restores"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 		databaseNameValue := "databaseName-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"databaseName"+"}", url.PathEscape(ParameterValueToString(databaseNameValue, "databaseName")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
@@ -1525,11 +1515,11 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService UpdateInstancePartiallyRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {
@@ -1578,11 +1568,11 @@ func Test_sqlserverflexalpha_DefaultApiService(t *testing.T) {
 	t.Run("Test DefaultApiService UpdateInstanceRequest", func(t *testing.T) {
 		_apiUrlPath := "/v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}"
 		projectIdValue := "projectId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"projectId"+"}", url.PathEscape(ParameterValueToString(projectIdValue, "projectId")), -1)
 		regionValue := "region-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"region"+"}", url.PathEscape(ParameterValueToString(regionValue, "region")), -1)
 		instanceIdValue := "instanceId-value"
-		_apiUrlPath = strings.ReplaceAll(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")))
+		_apiUrlPath = strings.Replace(_apiUrlPath, "{"+"instanceId"+"}", url.PathEscape(ParameterValueToString(instanceIdValue, "instanceId")), -1)
 
 		testDefaultApiServeMux := http.NewServeMux()
 		testDefaultApiServeMux.HandleFunc(_apiUrlPath, func(w http.ResponseWriter, req *http.Request) {

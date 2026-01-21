@@ -38,3 +38,5 @@ stackit/internal/services/iaas/test-512k.img
 # Test coverage reports
 coverage.out
 coverage.html
+generated
+stackit-sdk-generator

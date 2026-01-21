@@ -1,0 +1,23 @@
+provider:
+  name: stackitprivatepreview
+
+resources:
+  database:
+    create:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases
+      method: POST
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}
+      method: GET
+    update:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}
+      method: PUT
+    delete:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseId}
+      method: DELETE
+
+data_sources:
+  databases:
+    read:
+      path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases
+      method: GET
