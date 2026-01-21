@@ -15,3 +15,10 @@ resource "stackit_authorization_folder_role_assignment" "fra" {
   role        = var.role
   subject     = var.subject
 }
+
+# Second assignment – duplicates stackit_authorization_folder_role_assignment.fra (same resource_id, role, subject)
+resource "stackit_authorization_folder_role_assignment" "fra2" {
+  resource_id = stackit_resourcemanager_folder.folder.folder_id
+  role        = var.role
+  subject     = var.subject
+}

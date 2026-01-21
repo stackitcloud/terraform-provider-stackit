@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -25,11 +26,20 @@ var (
 	//go:embed testdata/resource-project-role-assignment.tf
 	resourceProjectRoleAssignment string
 
+	//go:embed testdata/resource-project-role-assignment-duplicate.tf
+	resourceProjectRoleAssignmentDuplicate string
+
 	//go:embed testdata/resource-folder-role-assignment.tf
 	resourceFolderRoleAssignment string
 
+	//go:embed testdata/resource-folder-role-assignment-duplicate.tf
+	resourceFolderRoleAssignmentDuplicate string
+
 	//go:embed testdata/resource-org-role-assignment.tf
 	resourceOrgRoleAssignment string
+
+	//go:embed testdata/resource-org-role-assignment-duplicate.tf
+	resourceOrgRoleAssignmentDuplicate string
 )
 
 var testProjectName = fmt.Sprintf("proj-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
@@ -155,6 +165,13 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_authorization_project_role_assignment.pra", "subject", testutil.ConvertConfigVariable(testConfigVarsProjectRoleAssignmentUpdated()["subject"])),
 				),
 			},
+			// Duplicate assignment should fail
+			{
+				ConfigVariables: testConfigVarsProjectRoleAssignmentUpdated(),
+				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceProjectRoleAssignmentDuplicate,
+				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
+			},
+
 			// Deletion is done by the framework implicitly
 		},
 	})
@@ -234,6 +251,12 @@ func TestAccFolderRoleAssignmentResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_authorization_folder_role_assignment.fra", "subject", testutil.ConvertConfigVariable(testConfigVarsFolderRoleAssignmentUpdated()["subject"])),
 				),
 			},
+			// Duplicate assignment should fail
+			{
+				ConfigVariables: testConfigVarsFolderRoleAssignmentUpdated(),
+				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceFolderRoleAssignmentDuplicate,
+				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
+			},
 			// Deletion is done by the framework implicitly
 		},
 	})
@@ -294,6 +317,12 @@ func TestAccOrgRoleAssignmentResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_authorization_organization_role_assignment.ora", "role", testutil.ConvertConfigVariable(testConfigVarsOrgRoleAssignmentUpdated()["role"])),
 					resource.TestCheckResourceAttr("stackit_authorization_organization_role_assignment.ora", "subject", testutil.ConvertConfigVariable(testConfigVarsOrgRoleAssignmentUpdated()["subject"])),
 				),
+			},
+			// Duplicate assignment should fail
+			{
+				ConfigVariables: testConfigVarsOrgRoleAssignmentUpdated(),
+				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceOrgRoleAssignmentDuplicate,
+				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
 			},
 			// Deletion is done by the framework implicitly
 		},

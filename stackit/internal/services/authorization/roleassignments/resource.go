@@ -36,7 +36,8 @@ var (
 	_ resource.ResourceWithConfigure   = &roleAssignmentResource{}
 	_ resource.ResourceWithImportState = &roleAssignmentResource{}
 
-	errRoleAssignmentNotFound = errors.New("response members did not contain expected role assignment")
+	errRoleAssignmentNotFound       = errors.New("response members did not contain expected role assignment")
+	errRoleAssignmentDuplicateFound = errors.New("found a duplicate role assignment")
 )
 
 type Model struct {
@@ -152,6 +153,17 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "subject", model.Subject.ValueString())
 	ctx = tflog.SetField(ctx, "role", model.Role.ValueString())
 	ctx = tflog.SetField(ctx, "resource_type", r.apiName)
+
+	listMemberResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing current resource members", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	if err := checkDuplicate(model, listMemberResp); err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error while checking for duplicate role assignments", err.Error())
+		return
+	}
 
 	// Create new project role assignment
 	payload, err := toCreatePayload(&model, &r.apiName)
@@ -337,4 +349,19 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 	}
 
 	return errRoleAssignmentNotFound
+}
+
+// Prevent creating duplicate <resource_id, role, subject> assignments.
+// Duplicates lead to inconsistent state (Terraform then fails).
+func checkDuplicate(model Model, listMemberResp *authorization.ListMembersResponse) error { //nolint:gocritic // A read only copy is required since an api response is parsed into the model and this check should not affect the model parameter
+	err := mapListMembersResponse(listMemberResp, &model)
+
+	if err != nil {
+		if errors.Is(err, errRoleAssignmentNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	return errRoleAssignmentDuplicateFound
 }

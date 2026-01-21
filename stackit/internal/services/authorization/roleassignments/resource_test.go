@@ -1,6 +1,7 @@
 package roleassignments
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -210,9 +211,7 @@ func TestMapListMembersResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			model := tt.inputModel // copy pointer to avoid overriding test data
-
-			err := mapListMembersResponse(tt.resp, model)
+			err := mapListMembersResponse(tt.resp, tt.inputModel)
 
 			if tt.expectError && err == nil {
 				t.Fatalf("Expected error but got none")
@@ -222,9 +221,137 @@ func TestMapListMembersResponse(t *testing.T) {
 			}
 
 			if !tt.expectError {
-				if diff := cmp.Diff(tt.expected, model); diff != "" {
+				if diff := cmp.Diff(tt.expected, tt.inputModel); diff != "" {
 					t.Errorf("Mapped model mismatch (-want +got):\n%s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestCheckDuplicate(t *testing.T) {
+	role := "editor"
+	subject := "foo.bar@stackit.cloud"
+	resourceID := "project"
+
+	tests := []struct {
+		name        string
+		resp        *authorization.ListMembersResponse
+		inputModel  Model
+		expectError bool
+		expectedErr error
+	}{
+		{
+			name: "no members => no duplicate",
+			resp: &authorization.ListMembersResponse{
+				ResourceId: &resourceID,
+				Members:    &[]authorization.Member{},
+			},
+			inputModel: Model{
+				ResourceId: types.StringValue(resourceID),
+				Role:       types.StringValue(role),
+				Subject:    types.StringValue(subject),
+			},
+			expectError: false,
+		},
+		{
+			name: "members but no matching role/subject => no duplicate",
+			resp: &authorization.ListMembersResponse{
+				ResourceId: &resourceID,
+				Members: &[]authorization.Member{
+					{
+						Role:    utils.Ptr("reader"),
+						Subject: utils.Ptr("foo.bar@stackit.cloud"),
+					},
+					{
+						Role:    utils.Ptr("editor"),
+						Subject: utils.Ptr("someoneelse@stackit.cloud"),
+					},
+				},
+			},
+			inputModel: Model{
+				ResourceId: types.StringValue(resourceID),
+				Role:       types.StringValue(role),
+				Subject:    types.StringValue(subject),
+			},
+			expectError: false,
+		},
+		{
+			name: "matching role/subject exists => duplicate error",
+			resp: &authorization.ListMembersResponse{
+				ResourceId: &resourceID,
+				Members: &[]authorization.Member{
+					{
+						Role:    &role,
+						Subject: &subject,
+					},
+				},
+			},
+			inputModel: Model{
+				ResourceId: types.StringValue(resourceID),
+				Role:       types.StringValue(role),
+				Subject:    types.StringValue(subject),
+			},
+			expectError: true,
+			expectedErr: errRoleAssignmentDuplicateFound,
+		},
+		{
+			name: "nil response input => propagated error",
+			resp: nil,
+			inputModel: Model{
+				ResourceId: types.StringValue(resourceID),
+				Role:       types.StringValue(role),
+				Subject:    types.StringValue(subject),
+			},
+			expectError: true,
+			// we don't compare by value here, just expect some error
+		},
+		{
+			name: "nil members input => propagated error",
+			resp: &authorization.ListMembersResponse{
+				ResourceId: &resourceID,
+				Members:    nil,
+			},
+			inputModel: Model{
+				ResourceId: types.StringValue(resourceID),
+				Role:       types.StringValue(role),
+				Subject:    types.StringValue(subject),
+			},
+			expectError: true,
+		},
+		{
+			name: "nil resource_id input => propagated error",
+			resp: &authorization.ListMembersResponse{
+				ResourceId: nil,
+				Members: &[]authorization.Member{
+					{
+						Role:    &role,
+						Subject: &subject,
+					},
+				},
+			},
+			inputModel: Model{
+				ResourceId: types.StringValue(resourceID),
+				Role:       types.StringValue(role),
+				Subject:    types.StringValue(subject),
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkDuplicate(tt.inputModel, tt.resp)
+
+			if tt.expectError && err == nil {
+				t.Fatalf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Fatalf("Expected no error, but got: %v", err)
+			}
+
+			if tt.expectError && tt.expectedErr != nil && !errors.Is(err, tt.expectedErr) {
+				t.Fatalf("Expected error %v, but got: %v", tt.expectedErr, err)
 			}
 		})
 	}

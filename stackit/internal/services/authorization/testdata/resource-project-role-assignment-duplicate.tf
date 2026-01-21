@@ -15,3 +15,10 @@ resource "stackit_authorization_project_role_assignment" "pra" {
   role        = var.role
   subject     = var.subject
 }
+
+# Second assignment – duplicates stackit_authorization_project_role_assignment.pra (same resource_id, role, subject)
+resource "stackit_authorization_project_role_assignment" "pra2" {
+  resource_id = stackit_resourcemanager_project.project.project_id
+  role        = var.role
+  subject     = var.subject
+}
