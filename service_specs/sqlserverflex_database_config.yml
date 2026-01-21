@@ -3,6 +3,10 @@ provider:
 
 resources:
   database:
+    schema:
+      attributes:
+        aliases:
+          id: database_id
     create:
       path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases
       method: POST
@@ -21,6 +25,9 @@ data_sources:
       method: GET
 
   database:
+    attributes:
+      aliases:
+        id: database_id
     read:
       path: /v3alpha1/projects/{projectId}/regions/{region}/instances/{instanceId}/databases/{databaseName}
       method: GET

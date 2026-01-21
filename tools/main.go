@@ -14,7 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
+	"text/template"
 
 	"github.com/ldez/go-git-cmd-wrapper/v2/clone"
 	"github.com/ldez/go-git-cmd-wrapper/v2/git"
@@ -46,6 +46,12 @@ func Build() error {
 
 	slog.Info("Cleaning up old generator directory")
 	err = os.RemoveAll(path.Join(*root, GEN_REPO_NAME))
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Cleaning up old packages directory")
+	err = os.RemoveAll(path.Join(*root, "pkg"))
 	if err != nil {
 		return err
 	}
@@ -162,6 +168,10 @@ func Build() error {
 	}
 
 	slog.Info("Rearranging package directories")
+	err = os.MkdirAll(path.Join(*root, "pkg"), 0755)
+	if err != nil {
+		return err
+	}
 	srcDir := path.Join(genDir, "sdk-repo-updated", "services")
 	items, err := os.ReadDir(srcDir)
 	if err != nil {
@@ -171,27 +181,30 @@ func Build() error {
 		if item.IsDir() {
 			slog.Info(" -> package", "name", item.Name())
 			tgtDir := path.Join(*root, "pkg", item.Name())
-			bakName := fmt.Sprintf("%s.%s", item.Name(), time.Now().Format("20060102-150405"))
-			if _, err = os.Stat(tgtDir); !os.IsNotExist(err) {
-				err = os.Rename(
-					tgtDir,
-					path.Join(*root, "pkg", bakName),
-				)
-				if err != nil {
-					return err
-				}
-			}
+			// no backup needed as we generate new
+			//bakName := fmt.Sprintf("%s.%s", item.Name(), time.Now().Format("20060102-150405"))
+			//if _, err = os.Stat(tgtDir); !os.IsNotExist(err) {
+			//	err = os.Rename(
+			//		tgtDir,
+			//		path.Join(*root, "pkg", bakName),
+			//	)
+			//	if err != nil {
+			//		return err
+			//	}
+			//}
 			err = os.Rename(path.Join(srcDir, item.Name()), tgtDir)
 			if err != nil {
 				return err
 			}
-			if _, err = os.Stat(path.Join(*root, "pkg", bakName, "wait")); !os.IsNotExist(err) {
-				slog.Info("    Copying wait subfolder")
-				err = os.Rename(path.Join(*root, "pkg", bakName, "wait"), path.Join(tgtDir, "wait"))
-				if err != nil {
-					return err
-				}
-			}
+
+			// wait is placed outside now
+			//if _, err = os.Stat(path.Join(*root, "pkg", bakName, "wait")); !os.IsNotExist(err) {
+			//	slog.Info("    Copying wait subfolder")
+			//	err = os.Rename(path.Join(*root, "pkg", bakName, "wait"), path.Join(tgtDir, "wait"))
+			//	if err != nil {
+			//		return err
+			//	}
+			//}
 		}
 	}
 
@@ -216,19 +229,17 @@ func Build() error {
 		return err
 	}
 
-	// TODO
-	for _, testDir := range []string{
-		path.Join(*root, "stackit", "internal", "services"),
-	} {
-		fmt.Println(testDir)
+	err = createBoilerplate(*root, path.Join(*root, "stackit", "internal", "services"))
+	if err != nil {
+		return err
 	}
 
 	slog.Info("Finally removing temporary files and directories")
-	err = os.RemoveAll(path.Join(*root, "generated"))
-	if err != nil {
-		slog.Error("RemoveAll", "dir", path.Join(*root, "generated"), "err", err)
-		return err
-	}
+	//err = os.RemoveAll(path.Join(*root, "generated"))
+	//if err != nil {
+	//	slog.Error("RemoveAll", "dir", path.Join(*root, "generated"), "err", err)
+	//	return err
+	//}
 
 	err = os.RemoveAll(path.Join(*root, GEN_REPO_NAME))
 	if err != nil {
@@ -237,6 +248,146 @@ func Build() error {
 	}
 
 	slog.Info("Done")
+	return nil
+}
+
+type templateData struct {
+	PackageName string
+	NameCamel   string
+	NamePascal  string
+	NameSnake   string
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		panic(err)
+	}
+	return true
+}
+
+func createBoilerplate(rootFolder, folder string) error {
+	services, err := os.ReadDir(folder)
+	if err != nil {
+		return err
+	}
+	for _, svc := range services {
+		if !svc.IsDir() {
+			continue
+		}
+		resources, err := os.ReadDir(path.Join(folder, svc.Name()))
+		if err != nil {
+			return err
+		}
+
+		handleDS := false
+		handleRes := false
+		foundDS := false
+		foundRes := false
+		for _, res := range resources {
+			if !res.IsDir() {
+				continue
+			}
+
+			resourceName := res.Name()
+
+			dsFile := path.Join(folder, svc.Name(), res.Name(), "datasources_gen", fmt.Sprintf("%s_data_source_gen.go", res.Name()))
+			handleDS = fileExists(dsFile)
+
+			resFile := path.Join(folder, svc.Name(), res.Name(), "resources_gen", fmt.Sprintf("%s_resource_gen.go", res.Name()))
+			handleRes = fileExists(resFile)
+
+			dsGoFile := path.Join(folder, svc.Name(), res.Name(), "datasource.go")
+			foundDS = fileExists(dsGoFile)
+
+			resGoFile := path.Join(folder, svc.Name(), res.Name(), "resource.go")
+			foundRes = fileExists(resGoFile)
+
+			if handleDS && !foundDS {
+				slog.Info("Creating missing datasource.go", "service", svc.Name(), "resource", resourceName)
+				if !ValidateSnakeCase(resourceName) {
+					return errors.New("resource name is invalid")
+				}
+
+				tplName := "data_source_scaffold.gotmpl"
+				err = writeTemplateToFile(
+					tplName,
+					path.Join(rootFolder, "tools", "templates", tplName),
+					path.Join(folder, svc.Name(), res.Name(), "datasource.go"),
+					&templateData{
+						PackageName: svc.Name(),
+						NameCamel:   ToCamelCase(resourceName),
+						NamePascal:  ToPascalCase(resourceName),
+						NameSnake:   resourceName,
+					},
+				)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			if handleRes && !foundRes {
+				slog.Info("Creating missing resource.go", "service", svc.Name(), "resource", resourceName)
+				if !ValidateSnakeCase(resourceName) {
+					return errors.New("resource name is invalid")
+				}
+
+				tplName := "resource_scaffold.gotmpl"
+				err = writeTemplateToFile(
+					tplName,
+					path.Join(rootFolder, "tools", "templates", tplName),
+					path.Join(folder, svc.Name(), res.Name(), "resource.go"),
+					&templateData{
+						PackageName: svc.Name(),
+						NameCamel:   ToCamelCase(resourceName),
+						NamePascal:  ToPascalCase(resourceName),
+						NameSnake:   resourceName,
+					},
+				)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func ucfirst(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+func writeTemplateToFile(tplName, tplFile, outFile string, data *templateData) error {
+	fn := template.FuncMap{
+		"ucfirst": ucfirst,
+	}
+
+	tmpl, err := template.New(tplName).Funcs(fn).ParseFiles(tplFile)
+	if err != nil {
+		return err
+	}
+
+	var f *os.File
+	f, err = os.Create(outFile)
+	if err != nil {
+		return err
+	}
+
+	err = tmpl.Execute(f, *data)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -211,7 +211,7 @@ func (r *instanceResource) Create(
 
 func modelToCreateInstancePayload(netAcl []string, model postgresflexalpha.InstanceModel, replVal int32) postgresflex.CreateInstanceRequestPayload {
 	payload := postgresflex.CreateInstanceRequestPayload{
-		// Acl:            &netAcl,
+		Acl:            &netAcl,
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		Encryption: &postgresflex.InstanceEncryption{
 			KekKeyId:       model.Encryption.KekKeyId.ValueStringPointer(),

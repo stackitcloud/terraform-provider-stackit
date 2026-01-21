@@ -51,7 +51,7 @@ resource "stackitprivatepreview_postgresflexalpha_user" "ptlsdbuser" {
 }
 
 resource "stackitprivatepreview_postgresflexalpha_database" "example" {
-  count = 25
+  count = 5
   depends_on = [stackitprivatepreview_postgresflexalpha_user.ptlsdbadminuser]
   project_id  = var.project_id
   instance_id = stackitprivatepreview_postgresflexalpha_instance.msh-sna-pe-example.instance_id
