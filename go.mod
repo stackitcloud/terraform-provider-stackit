@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.20.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.21.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.8.0
@@ -42,8 +42,6 @@ require (
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.31.0
 )
-
-replace github.com/stackitcloud/stackit-sdk-go/core => github.com/JorTurFer/stackit-sdk-go/core v0.0.0-20260120223110-91124826d5bb
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
