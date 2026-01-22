@@ -45,7 +45,7 @@ func (r *runnerDataSource) Configure(ctx context.Context, req datasource.Configu
 		return
 	}
 
-	apiClient := intakeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.client := intakeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
