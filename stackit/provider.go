@@ -217,6 +217,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
 		"git_custom_endpoint":                  "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":                 "Custom endpoint for the IaaS service",
+		"intake_custom_endpoint":             "Custom endpoint for the Intake service",
 		"kms_custom_endpoint":                  "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":          "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":         "Custom endpoint for the AI Model Serving service",
@@ -245,6 +246,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
 	}
+
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"credentials_path": schema.StringAttribute{
