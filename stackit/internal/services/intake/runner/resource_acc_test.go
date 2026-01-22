@@ -29,7 +29,6 @@ func TestAccIntakeRunner(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", "example-runner-minimal"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "region", "eu01"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "description", ""),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "0"),
@@ -74,7 +73,6 @@ func testAccIntakeRunnerConfigMinimal(name string) string {
         resource "stackit_intake_runner" "example" {
             project_id = "%s"
             name       = "%s"
-            region     = "eu01"
             max_message_size_kib    = 1024
             max_messages_per_hour   = 1000
         }
@@ -96,7 +94,6 @@ func testAccIntakeRunnerConfigFull(name, description string, maxKib, maxPerHour 
                 "created_by" = "terraform-provider-stackit"
                 "env"        = "development"
             }
-            region                  = "eu01"
         }
         `,
 		testutil.ProjectId,
@@ -116,7 +113,6 @@ func testAccIntakeRunnerConfigUpdated(name string, maxKib, maxPerHour int) strin
             max_message_size_kib    = %d
             max_messages_per_hour   = %d
             labels                  = {}
-            region                  = "eu01"
         }
         `,
 		testutil.ProjectId,
@@ -131,9 +127,7 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	var client *intake.APIClient
 	var err error
 	if testutil.IntakeCustomEndpoint == "" {
-		client, err = intake.NewAPIClient(
-			sdkConfig.WithRegion("eu01"),
-		)
+		client, err = intake.NewAPIClient()
 	} else {
 		client, err = intake.NewAPIClient(sdkConfig.WithEndpoint(testutil.IntakeCustomEndpoint))
 	}
@@ -148,7 +142,12 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 		// Try to find the runner
 		_, err := client.GetIntakeRunner(ctx, rs.Primary.Attributes["project_id"], rs.Primary.Attributes["region"], rs.Primary.Attributes["runner_id"]).Execute()
 		if err == nil {
-			return fmt.Errorf("intake runner with ID %s still exists", rs.Primary.ID)
+			err = client.DeleteIntakeRunner(ctx, rs.Primary.Attributes["project_id"], rs.Primary.Attributes["region"], rs.Primary.Attributes["runner_id"]).Execute()
+			if err != nil {
+				return fmt.Errorf("intake runner with ID %s still existed, got an error removing", rs.Primary.ID, err)
+			}
+
+			return fmt.Errorf("intake runner with ID %s still existed", rs.Primary.ID)
 		}
 		var oapiErr *oapierror.GenericOpenAPIError
 		if !errors.As(err, &oapiErr) || oapiErr.StatusCode != http.StatusNotFound {

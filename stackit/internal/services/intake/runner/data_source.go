@@ -45,7 +45,7 @@ func (r *runnerDataSource) Configure(ctx context.Context, req datasource.Configu
 		return
 	}
 
-	r.client := intakeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := intakeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -61,7 +61,6 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"project_id":            "STACKIT Project ID to which the runner is associated.",
 		"runner_id":             "The runner ID.",
 		"name":                  "The name of the runner.",
-		"region":                "The resource region.",
 		"description":           "The description of the runner.",
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
@@ -90,10 +89,6 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
-			},
-			"region": schema.StringAttribute{
-				Description: descriptions["region"],
-				Required:    true,
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
