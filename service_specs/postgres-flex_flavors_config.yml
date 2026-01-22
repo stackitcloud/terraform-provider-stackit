@@ -1,8 +1,11 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 provider:
   name: stackitprivatepreview
 
 data_sources:
-  flavor:
+  flavors:
     read:
       path: /v3alpha1/projects/{projectId}/regions/{region}/flavors
       method: GET

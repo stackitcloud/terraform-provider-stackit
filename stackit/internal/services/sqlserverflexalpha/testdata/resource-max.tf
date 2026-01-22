@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 variable "project_id" {}
 variable "name" {}
 variable "acl1" {}

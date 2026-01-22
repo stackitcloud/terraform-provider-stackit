@@ -21,7 +21,7 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "allows debugging the provider")
 	flag.Parse()
 	err := providerserver.Serve(context.Background(), stackit.New(version), providerserver.ServeOpts{
-		Address: "registry.terraform.io/mhenselin/stackitprivatepreview",
+		Address: "tfregistry.sysops.stackit.rocks/mhenselin/stackitprivatepreview",
 		Debug:   debug,
 	})
 	if err != nil {

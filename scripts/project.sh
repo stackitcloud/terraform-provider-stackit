@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 
 # This script is used to manage the project, only used for installing the required tools for now
 # Usage: ./project.sh [action]

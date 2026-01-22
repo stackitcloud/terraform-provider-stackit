@@ -1,6 +1,6 @@
 // Copyright (c) STACKIT
 
-package postgresflex_test
+package postgresflexalpha_test
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 
 var (
 	//go:embed testdata/resource-complete.tf
-	resourceSecurityGroupMinConfig string
+	resourceSecurityGroupMinConfig string //nolint:unused // needs implementation
 )
 
 // Instance resource data

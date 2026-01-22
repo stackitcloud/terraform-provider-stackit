@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package postgresflexalpha
 
 import (
@@ -6,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	postgresflexalphadatasource "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance/datasources_gen"
 	postgresflexalpharesource "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance/resources_gen"
@@ -15,7 +19,7 @@ import (
 func mapGetInstanceResponseToModel(ctx context.Context, m *postgresflexalpharesource.InstanceModel, resp *postgresflex.GetInstanceResponse) error {
 	m.BackupSchedule = types.StringValue(resp.GetBackupSchedule())
 	// need to leave out encryption, as the GetInstance endpoint does not provide it
-	//m.Encryption = postgresflexalpharesource.NewEncryptionValueMust(
+	// m.Encryption = postgresflexalpharesource.NewEncryptionValueMust(
 	//	m.Encryption.AttributeTypes(ctx),
 	//	map[string]attr.Value{
 	//		"kek_key_id":      types.StringValue(resp.Encryption.GetKekKeyId()),
@@ -23,13 +27,17 @@ func mapGetInstanceResponseToModel(ctx context.Context, m *postgresflexalphareso
 	//		"kek_key_version": types.StringValue(resp.Encryption.GetKekKeyVersion()),
 	//		"service_account": types.StringValue(resp.Encryption.GetServiceAccount()),
 	//	},
-	//)
+	// )
 	m.FlavorId = types.StringValue(resp.GetFlavorId())
 	if m.Id.IsNull() || m.Id.IsUnknown() {
 		m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), m.InstanceId.ValueString())
 	}
 	m.InstanceId = types.StringPointerValue(resp.Id)
-	m.IsDeletable = types.BoolValue(resp.GetIsDeletable())
+
+	m.IsDeletable = types.BoolUnknown()
+	if isDel, ok := resp.GetIsDeletableOk(); ok {
+		m.IsDeletable = types.BoolValue(isDel)
+	}
 	m.Name = types.StringValue(resp.GetName())
 
 	netAcl, diags := types.ListValueFrom(ctx, types.StringType, resp.Network.GetAcl())
@@ -37,13 +45,23 @@ func mapGetInstanceResponseToModel(ctx context.Context, m *postgresflexalphareso
 		return fmt.Errorf("failed converting network acl from response")
 	}
 
+	netInstAdd := types.StringUnknown()
+	if instAdd, ok := resp.Network.GetInstanceAddressOk(); ok {
+		netInstAdd = types.StringValue(instAdd)
+	}
+
+	netRtrAdd := types.StringUnknown()
+	if rtrAdd, ok := resp.Network.GetRouterAddressOk(); ok {
+		netRtrAdd = types.StringValue(rtrAdd)
+	}
+
 	net, diags := postgresflexalpharesource.NewNetworkValue(
 		postgresflexalpharesource.NetworkValue{}.AttributeTypes(ctx),
 		map[string]attr.Value{
-			"access_scope":     types.StringValue(string(resp.Network.GetAccessScope())),
+			"access_scope":     basetypes.NewStringValue(string(resp.Network.GetAccessScope())),
 			"acl":              netAcl,
-			"instance_address": types.StringValue(resp.Network.GetInstanceAddress()),
-			"router_address":   types.StringValue(resp.Network.GetRouterAddress()),
+			"instance_address": netInstAdd,
+			"router_address":   netRtrAdd,
 		},
 	)
 	if diags.HasError() {
@@ -53,7 +71,13 @@ func mapGetInstanceResponseToModel(ctx context.Context, m *postgresflexalphareso
 	m.Network = net
 	m.Replicas = types.Int64Value(int64(resp.GetReplicas()))
 	m.RetentionDays = types.Int64Value(resp.GetRetentionDays())
-	m.Status = types.StringValue(string(resp.GetStatus()))
+
+	m.Name = types.StringValue(resp.GetName())
+
+	m.Status = types.StringUnknown()
+	if status, ok := resp.GetStatusOk(); ok {
+		m.Status = types.StringValue(string(status))
+	}
 
 	storage, diags := postgresflexalpharesource.NewStorageValue(
 		postgresflexalpharesource.StorageValue{}.AttributeTypes(ctx),
@@ -66,18 +90,20 @@ func mapGetInstanceResponseToModel(ctx context.Context, m *postgresflexalphareso
 		return fmt.Errorf("failed converting storage from response")
 	}
 	m.Storage = storage
+
 	m.Version = types.StringValue(resp.GetVersion())
 	return nil
 }
 
 func mapGetDataInstanceResponseToModel(ctx context.Context, m *postgresflexalphadatasource.InstanceModel, resp *postgresflex.GetInstanceResponse) error {
 	m.BackupSchedule = types.StringValue(resp.GetBackupSchedule())
-	//m.Encryption = postgresflexalpharesource.EncryptionValue{
+	//nolint:gocritic
+	// m.Encryption = postgresflexalpharesource.EncryptionValue{
 	//	KekKeyId:       types.StringValue(resp.Encryption.GetKekKeyId()),
 	//	KekKeyRingId:   types.StringValue(resp.Encryption.GetKekKeyRingId()),
 	//	KekKeyVersion:  types.StringValue(resp.Encryption.GetKekKeyVersion()),
 	//	ServiceAccount: types.StringValue(resp.Encryption.GetServiceAccount()),
-	//}
+	// }
 	m.FlavorId = types.StringValue(resp.GetFlavorId())
 	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), m.InstanceId.ValueString())
 	m.InstanceId = types.StringPointerValue(resp.Id)

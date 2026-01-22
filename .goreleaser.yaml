@@ -5,6 +5,8 @@
 # behavior.
 version: 2
 
+project_name: terraform-provider-stackitprivatepreview
+
 builds:
 - env:
     # goreleaser does not work with CGO, it could also complicate
@@ -30,15 +32,15 @@ builds:
     - goos: darwin
       goarch: '386'
     - goos: windows
-      goarch: 'arm6'
+      goarch: arm
   binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
 - formats: [ 'zip' ]
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
 checksum:
-  extra_files:
-    - glob: 'terraform-registry-manifest.json'
-      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
+#  extra_files:
+#    - glob: 'terraform-registry-manifest.json'
+#      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
 signs:

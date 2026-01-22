@@ -40,3 +40,4 @@ coverage.out
 coverage.html
 generated
 stackit-sdk-generator
+dist

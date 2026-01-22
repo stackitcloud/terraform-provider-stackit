@@ -1,9 +1,12 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 data "stackitprivatepreview_postgresflexalpha_flavor" "pgsql_flavor" {
-  project_id = var.project_id
-  region = "eu01"
-  cpu = 2
-  ram = 4
-  node_type = "Single"
+  project_id    = var.project_id
+  region        = "eu01"
+  cpu           = 2
+  ram           = 4
+  node_type     = "Single"
   storage_class = "premium-perf2-stackit"
 }
 
@@ -12,19 +15,19 @@ resource "stackitprivatepreview_postgresflexalpha_instance" "msh-sna-pe-example"
   name            = "mshpetest2"
   backup_schedule = "0 0 * * *"
   retention_days  = 45
-  flavor_id = data.stackitprivatepreview_postgresflexalpha_flavor.pgsql_flavor.flavor_id
-  replicas = 1
+  flavor_id       = data.stackitprivatepreview_postgresflexalpha_flavor.pgsql_flavor.flavor_id
+  replicas        = 1
   storage = {
     # class = "premium-perf2-stackit"
-    performance_class = data.stackitprivatepreview_postgresflexalpha_flavor.pgsql_flavor.storage_class
-    size  = 10
+    performance_class = "premium-perf2-stackit"
+    size              = 10
   }
   encryption = {
     #    key_id = stackit_kms_key.key.key_id
     #    keyring_id = stackit_kms_keyring.keyring.keyring_id
-    kek_key_id          = var.key_id
-    kek_key_ring_id      = var.keyring_id
-    kek_key_version     = var.key_version
+    kek_key_id      = var.key_id
+    kek_key_ring_id = var.keyring_id
+    kek_key_version = var.key_version
     service_account = var.sa_email
   }
   network = {
@@ -51,8 +54,8 @@ resource "stackitprivatepreview_postgresflexalpha_user" "ptlsdbuser" {
 }
 
 resource "stackitprivatepreview_postgresflexalpha_database" "example" {
-  count = 5
-  depends_on = [stackitprivatepreview_postgresflexalpha_user.ptlsdbadminuser]
+  count       = 5
+  depends_on  = [stackitprivatepreview_postgresflexalpha_user.ptlsdbadminuser]
   project_id  = var.project_id
   instance_id = stackitprivatepreview_postgresflexalpha_instance.msh-sna-pe-example.instance_id
   name        = "${var.db_name}${count.index}"
@@ -70,11 +73,11 @@ resource "stackitprivatepreview_postgresflexalpha_database" "example" {
 # }
 
 output "psql_user_password" {
-  value = stackitprivatepreview_postgresflexalpha_user.ptlsdbuser.password
+  value     = stackitprivatepreview_postgresflexalpha_user.ptlsdbuser.password
   sensitive = true
 }
 
 output "psql_user_conn" {
-  value = stackitprivatepreview_postgresflexalpha_user.ptlsdbuser.connection_string
+  value     = stackitprivatepreview_postgresflexalpha_user.ptlsdbuser.connection_string
   sensitive = true
 }

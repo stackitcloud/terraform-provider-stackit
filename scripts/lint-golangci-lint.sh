@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 # This script lints the SDK modules and the internal examples
 # Pre-requisites: golangci-lint
 set -eo pipefail

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package postgresflexalpha
 
 import (
@@ -53,6 +56,8 @@ func CreateInstanceWaitHandler(
 ) *wait.AsyncActionHandler[postgresflex.GetInstanceResponse] {
 	instanceCreated := false
 	var instanceGetResponse *postgresflex.GetInstanceResponse
+	maxWait := time.Minute * 30
+	startTime := time.Now()
 
 	handler := wait.New(
 		func() (waitFinished bool, response *postgresflex.GetInstanceResponse, err error) {
@@ -74,7 +79,20 @@ func CreateInstanceWaitHandler(
 				case InstanceStateUnknown:
 					return false, nil, nil
 				case InstanceStateProgressing:
-					return false, nil, nil
+					if time.Since(startTime) < maxWait {
+						return false, nil, nil
+					}
+					tflog.Warn(
+						ctx,
+						fmt.Sprintf(
+							"Wait handler still got status %s after %v for instance: %s",
+							InstanceStateProgressing,
+							maxWait,
+							instanceId,
+						),
+					)
+					instanceCreated = true
+					instanceGetResponse = s
 				case InstanceStateSuccess:
 					if s.Network == nil || s.Network.InstanceAddress == nil {
 						tflog.Info(ctx, "Waiting for instance_address")

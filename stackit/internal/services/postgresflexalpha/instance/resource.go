@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package postgresflexalpha
 
 import (
@@ -9,9 +12,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
@@ -47,7 +47,6 @@ type instanceResource struct {
 
 func (r *instanceResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var data postgresflexalpha.InstanceModel
-	// var data Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -68,7 +67,6 @@ func (r *instanceResource) ValidateConfig(ctx context.Context, req resource.Vali
 // Use the modifier to set the effective region in the current plan.
 func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel postgresflexalpha.InstanceModel
-	// var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
 		return
@@ -79,7 +77,6 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	}
 
 	var planModel postgresflexalpha.InstanceModel
-	// var planModel Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,16 +121,6 @@ func (r *instanceResource) Configure(
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = postgresflexalpha.InstanceResourceSchema(ctx)
-	resp.Schema = addPlanModifiers(resp.Schema)
-}
-
-func addPlanModifiers(s schema.Schema) schema.Schema {
-	attr := s.Attributes["backup_schedule"].(schema.StringAttribute)
-	attr.PlanModifiers = []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	}
-	s.Attributes["backup_schedule"] = attr
-	return s
 }
 
 // Create creates the resource and sets the initial Terraform state.
@@ -143,7 +130,7 @@ func (r *instanceResource) Create(
 	resp *resource.CreateResponse,
 ) { // nolint:gocritic // function signature required by Terraform
 	var model postgresflexalpha.InstanceModel
-	//var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -211,7 +198,6 @@ func (r *instanceResource) Create(
 
 func modelToCreateInstancePayload(netAcl []string, model postgresflexalpha.InstanceModel, replVal int32) postgresflex.CreateInstanceRequestPayload {
 	payload := postgresflex.CreateInstanceRequestPayload{
-		Acl:            &netAcl,
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		Encryption: &postgresflex.InstanceEncryption{
 			KekKeyId:       model.Encryption.KekKeyId.ValueStringPointer(),
@@ -243,7 +229,6 @@ func modelToCreateInstancePayload(netAcl []string, model postgresflexalpha.Insta
 // Read refreshes the Terraform state with the latest data.
 func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model postgresflexalpha.InstanceModel
-	//var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -290,7 +275,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model postgresflexalpha.InstanceModel
-	//var model Model
+
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -312,7 +297,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if diag.HasError() {
 		return
 	}
-	replInt32 := int32(model.Replicas.ValueInt64())
+
+	if model.Replicas.ValueInt64() > math.MaxInt32 {
+		resp.Diagnostics.AddError("invalid int32 value", "provided int64 value does not fit into int32")
+		return
+	}
+	replInt32 := int32(model.Replicas.ValueInt64()) // nolint:gosec // check is performed above
+
 	payload := postgresflex.UpdateInstancePartiallyRequestPayload{
 		BackupSchedule: model.BackupSchedule.ValueStringPointer(),
 		FlavorId:       model.FlavorId.ValueStringPointer(),
@@ -368,7 +359,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model postgresflexalpha.InstanceModel
-	//var model Model
+
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

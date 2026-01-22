@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package postgresFlexAlphaFlavor
 
 import (
@@ -10,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/postgresflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
-	postgresflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha"
+	postgresflexalphaGen "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/flavors/datasources_gen"
 	postgresflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/utils"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 
@@ -143,9 +146,9 @@ func (r *flavorDataSource) Schema(ctx context.Context, _ datasource.SchemaReques
 							Computed: true,
 						},
 					},
-					CustomType: postgresflex.StorageClassesType{
+					CustomType: postgresflexalphaGen.StorageClassesType{
 						ObjectType: types.ObjectType{
-							AttrTypes: postgresflex.StorageClassesValue{}.AttributeTypes(ctx),
+							AttrTypes: postgresflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 						},
 					},
 				},
@@ -210,9 +213,9 @@ func (r *flavorDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	model.MinGb = types.Int64Value(*f.MinGB)
 
 	if f.StorageClasses == nil {
-		model.StorageClasses = types.ListNull(postgresflex.StorageClassesType{
+		model.StorageClasses = types.ListNull(postgresflexalphaGen.StorageClassesType{
 			ObjectType: basetypes.ObjectType{
-				AttrTypes: postgresflex.StorageClassesValue{}.AttributeTypes(ctx),
+				AttrTypes: postgresflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 			},
 		})
 	} else {
@@ -220,8 +223,8 @@ func (r *flavorDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		for _, sc := range *f.StorageClasses {
 			scList = append(
 				scList,
-				postgresflex.NewStorageClassesValueMust(
-					postgresflex.StorageClassesValue{}.AttributeTypes(ctx),
+				postgresflexalphaGen.NewStorageClassesValueMust(
+					postgresflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 					map[string]attr.Value{
 						"class":             types.StringValue(*sc.Class),
 						"max_io_per_sec":    types.Int64Value(*sc.MaxIoPerSec),
@@ -231,9 +234,9 @@ func (r *flavorDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			)
 		}
 		storageClassesList := types.ListValueMust(
-			postgresflex.StorageClassesType{
+			postgresflexalphaGen.StorageClassesType{
 				ObjectType: basetypes.ObjectType{
-					AttrTypes: postgresflex.StorageClassesValue{}.AttributeTypes(ctx),
+					AttrTypes: postgresflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 				},
 			},
 			scList,

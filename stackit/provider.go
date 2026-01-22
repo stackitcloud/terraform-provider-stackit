@@ -20,12 +20,14 @@ import (
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/features"
 	postgresFlexAlphaDatabase "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/database"
 	postgresFlexAlphaFlavor "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/flavor"
+	postgresflexalphaFlavors "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/flavors"
 	postgresFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/instance"
 	postgresFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/postgresflexalpha/user"
-	sqlserverflexalpha "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/database"
+	sqlserverflexalphaDatabase "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/database"
 	sqlserverFlexAlphaFlavor "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/flavor"
 	sqlServerFlexAlphaInstance "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/instance"
 	sqlserverFlexAlphaUser "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/user"
+	sqlserverflexalphaVersion "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/version"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 )
@@ -496,11 +498,13 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		postgresFlexAlphaDatabase.NewDatabaseDataSource,
 		postgresFlexAlphaInstance.NewInstanceDataSource,
 		postgresFlexAlphaUser.NewUserDataSource,
+		postgresflexalphaFlavors.NewFlavorsDataSource,
 
+		sqlserverflexalphaVersion.NewVersionDataSource,
 		sqlserverFlexAlphaFlavor.NewFlavorDataSource,
 		sqlServerFlexAlphaInstance.NewInstanceDataSource,
 		sqlserverFlexAlphaUser.NewUserDataSource,
-		sqlserverflexalpha.NewDatabaseDataSource,
+		sqlserverflexalphaDatabase.NewDatabaseDataSource,
 	}
 }
 
@@ -512,7 +516,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		postgresFlexAlphaUser.NewUserResource,
 		sqlServerFlexAlphaInstance.NewInstanceResource,
 		sqlserverFlexAlphaUser.NewUserResource,
-		sqlserverflexalpha.NewDatabaseResource,
+		sqlserverflexalphaDatabase.NewDatabaseResource,
 	}
 	return resources
 }

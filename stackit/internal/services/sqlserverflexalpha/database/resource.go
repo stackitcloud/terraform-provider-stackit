@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package sqlserverflexalpha
 
 import (
@@ -34,11 +37,11 @@ type databaseResource struct {
 	providerData core.ProviderData
 }
 
-func (r *databaseResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *databaseResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_sqlserverflexalpha_database"
 }
 
-func (r *databaseResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *databaseResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = sqlserverflexalphaGen.DatabaseResourceSchema(ctx)
 }
 
@@ -88,7 +91,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	// TODO: Create API call logic
 
 	// Example data value setting
-	//data.DatabaseId = types.StringValue("id-from-response")
+	// data.DatabaseId = types.StringValue("id-from-response")
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

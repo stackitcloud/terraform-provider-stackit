@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -16,7 +19,7 @@ func NewRootCmd() *cobra.Command {
 		SilenceErrors:     true, // Error is beautified in a custom way before being printed
 		SilenceUsage:      true,
 		DisableAutoGenTag: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return tools.Build()
 		},
 	}

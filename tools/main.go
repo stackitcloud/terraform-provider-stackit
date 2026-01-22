@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package tools
 
 import (
@@ -65,20 +68,20 @@ func Build() error {
 	slog.Info("Creating oas dir", "dir", fmt.Sprintf("%s/%s", *root, OAS_REPO_NAME))
 	repoDir, err := createRepoDir(genDir, OAS_REPO, OAS_REPO_NAME)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return fmt.Errorf("%s", err.Error())
 	}
 
 	slog.Info("Retrieving versions from subdirs")
 	// TODO - major
 	verMap, err := getVersions(repoDir)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return fmt.Errorf("%s", err.Error())
 	}
 
 	slog.Info("Reducing to only latest or highest")
 	res, err := getOnlyLatest(verMap)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return fmt.Errorf("%s", err.Error())
 	}
 
 	slog.Info("Creating OAS dir")
@@ -105,14 +108,14 @@ func Build() error {
 		dstFile := path.Join(genDir, "oas", fmt.Sprintf("%s.json", service))
 		_, err = copyFile(srcFile, dstFile)
 		if err != nil {
-			return fmt.Errorf(err.Error())
+			return fmt.Errorf("%s", err.Error())
 		}
 	}
 
 	slog.Info("Cleaning up", "dir", repoDir)
 	err = os.RemoveAll(filepath.Dir(repoDir))
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return fmt.Errorf("%s", err.Error())
 	}
 
 	slog.Info("Changing dir", "dir", genDir)
@@ -128,7 +131,7 @@ func Build() error {
 	cmd.Stderr = &stdErr
 
 	if err = cmd.Start(); err != nil {
-		slog.Error("cmd.Start", err)
+		slog.Error("cmd.Start", "error", err)
 		return err
 	}
 
@@ -136,8 +139,9 @@ func Build() error {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			slog.Error("cmd.Wait", "code", exitErr.ExitCode())
-			return fmt.Errorf(stdErr.String())
-		} else {
+			return fmt.Errorf("%s", stdErr.String())
+		}
+		if err != nil {
 			slog.Error("cmd.Wait", "err", err)
 			return err
 		}
@@ -168,7 +172,7 @@ func Build() error {
 	}
 
 	slog.Info("Rearranging package directories")
-	err = os.MkdirAll(path.Join(*root, "pkg"), 0755)
+	err = os.MkdirAll(path.Join(*root, "pkg"), 0755) // noqa:gosec
 	if err != nil {
 		return err
 	}
@@ -283,10 +287,11 @@ func createBoilerplate(rootFolder, folder string) error {
 			return err
 		}
 
-		handleDS := false
-		handleRes := false
-		foundDS := false
-		foundRes := false
+		var handleDS bool
+		var handleRes bool
+		var foundDS bool
+		var foundRes bool
+
 		for _, res := range resources {
 			if !res.IsDir() {
 				continue
@@ -436,6 +441,7 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 
 					// slog.Info("Generating openapi spec json")
 					specFile := path.Join(rootDir, "generated", "specs", fmt.Sprintf("%s_%s_spec.json", scName, resource))
+					// noqa:gosec
 					cmd := exec.Command(
 						"tfplugingen-openapi",
 						"generate",
@@ -459,6 +465,7 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 					}
 
 					// slog.Info("Generating terraform service resource files")
+					// noqa:gosec
 					cmd2 := exec.Command(
 						"tfplugingen-framework",
 						"generate",
@@ -475,7 +482,7 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 					cmd2.Stderr = &stdErr
 
 					if err = cmd2.Start(); err != nil {
-						slog.Error("cmd.Start", err)
+						slog.Error("cmd.Start", "error", err)
 						return err
 					}
 
@@ -483,8 +490,9 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 						var exitErr *exec.ExitError
 						if errors.As(err, &exitErr) {
 							slog.Error("cmd.Wait", "code", exitErr.ExitCode())
-							return fmt.Errorf(stdErr.String())
-						} else {
+							return fmt.Errorf("%s", stdErr.String())
+						}
+						if err != nil {
 							slog.Error("cmd.Wait", "err", err)
 							return err
 						}
@@ -498,6 +506,8 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 					}
 
 					// slog.Info("Generating terraform service resource files")
+
+					// noqa:gosec
 					cmd3 := exec.Command(
 						"tfplugingen-framework",
 						"generate",
@@ -514,7 +524,7 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 					cmd3.Stderr = &stdErr3
 
 					if err = cmd3.Start(); err != nil {
-						slog.Error("cmd.Start", err)
+						slog.Error("cmd.Start", "error", err)
 						return err
 					}
 
@@ -522,8 +532,9 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 						var exitErr *exec.ExitError
 						if errors.As(err, &exitErr) {
 							slog.Error("cmd.Wait", "code", exitErr.ExitCode())
-							return fmt.Errorf(stdErr.String())
-						} else {
+							return fmt.Errorf("%s", stdErr.String())
+						}
+						if err != nil {
 							slog.Error("cmd.Wait", "err", err)
 							return err
 						}
@@ -537,11 +548,10 @@ func generateServiceFiles(rootDir, generatorDir string) error {
 
 func checkCommands(commands []string) error {
 	for _, commandName := range commands {
-		if commandExists(commandName) {
-			slog.Info("found", "command", commandName)
-		} else {
-			return fmt.Errorf("missing command %s\n", commandName)
+		if !commandExists(commandName) {
+			return fmt.Errorf("missing command %s", commandName)
 		}
+		slog.Info("found", "command", commandName)
 	}
 	return nil
 }

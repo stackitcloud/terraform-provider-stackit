@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package tools
 
 import (
@@ -32,7 +35,7 @@ func ToPascalCase(in string) string {
 	}
 
 	return snakeLetters.ReplaceAllStringFunc(ucName, func(s string) string {
-		return strings.ToUpper(strings.Replace(s, "_", "", -1))
+		return strings.ToUpper(strings.ReplaceAll(s, "_", ""))
 	})
 }
 

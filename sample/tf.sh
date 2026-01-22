@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 
 
 # ./tf.sh apply > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2)

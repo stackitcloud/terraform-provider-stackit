@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package sqlserverFlexAlphaFlavor
 
 import (
@@ -5,24 +8,25 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/pkg/sqlserverflexalpha"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/conversion"
+	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/utils"
 
-	sqlserverflex "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha"
+	sqlserverflexalphaGen "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/flavor/datasources_gen"
 	sqlserverflexUtils "github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/services/sqlserverflexalpha/utils"
-
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/mhenselin/terraform-provider-stackitprivatepreview/stackit/internal/core"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ datasource.DataSource = &flavorDataSource{}
+	_ datasource.DataSource              = &flavorDataSource{}
+	_ datasource.DataSourceWithConfigure = &flavorDataSource{}
 )
 
 type FlavorModel struct {
@@ -144,9 +148,9 @@ func (r *flavorDataSource) Schema(ctx context.Context, _ datasource.SchemaReques
 							Computed: true,
 						},
 					},
-					CustomType: sqlserverflex.StorageClassesType{
+					CustomType: sqlserverflexalphaGen.StorageClassesType{
 						ObjectType: types.ObjectType{
-							AttrTypes: sqlserverflex.StorageClassesValue{}.AttributeTypes(ctx),
+							AttrTypes: sqlserverflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 						},
 					},
 				},
@@ -211,9 +215,9 @@ func (r *flavorDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	model.MinGb = types.Int64Value(*f.MinGB)
 
 	if f.StorageClasses == nil {
-		model.StorageClasses = types.ListNull(sqlserverflex.StorageClassesType{
+		model.StorageClasses = types.ListNull(sqlserverflexalphaGen.StorageClassesType{
 			ObjectType: basetypes.ObjectType{
-				AttrTypes: sqlserverflex.StorageClassesValue{}.AttributeTypes(ctx),
+				AttrTypes: sqlserverflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 			},
 		})
 	} else {
@@ -221,8 +225,8 @@ func (r *flavorDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		for _, sc := range *f.StorageClasses {
 			scList = append(
 				scList,
-				sqlserverflex.NewStorageClassesValueMust(
-					sqlserverflex.StorageClassesValue{}.AttributeTypes(ctx),
+				sqlserverflexalphaGen.NewStorageClassesValueMust(
+					sqlserverflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 					map[string]attr.Value{
 						"class":             types.StringValue(*sc.Class),
 						"max_io_per_sec":    types.Int64Value(*sc.MaxIoPerSec),
@@ -232,9 +236,9 @@ func (r *flavorDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			)
 		}
 		storageClassesList := types.ListValueMust(
-			sqlserverflex.StorageClassesType{
+			sqlserverflexalphaGen.StorageClassesType{
 				ObjectType: basetypes.ObjectType{
-					AttrTypes: sqlserverflex.StorageClassesValue{}.AttributeTypes(ctx),
+					AttrTypes: sqlserverflexalphaGen.StorageClassesValue{}.AttributeTypes(ctx),
 				},
 			},
 			scList,

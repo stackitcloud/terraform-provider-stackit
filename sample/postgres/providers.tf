@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 terraform {
   required_providers {
     # stackit = {
@@ -5,8 +8,8 @@ terraform {
     #   version = "~> 0.70"
     # }
     stackitprivatepreview = {
-      source  = "registry.terraform.io/mhenselin/stackitprivatepreview"
-      version = "~> 0.1"
+      source  = "tfregistry.sysops.stackit.rocks/mhenselin/stackitprivatepreview"
+      version = "0.0.0-SNAPSHOT-e91e10e"
     }
   }
 }

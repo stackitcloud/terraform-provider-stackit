@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 
 # This script is used to ensure for PRs the docs are up-to-date via the CI pipeline
 # Usage: ./check-docs.sh

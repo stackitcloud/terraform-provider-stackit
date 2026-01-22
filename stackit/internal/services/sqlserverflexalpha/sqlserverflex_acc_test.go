@@ -1,6 +1,6 @@
 // Copyright (c) STACKIT
 
-package sqlserverflex_test
+package sqlserverflexalpha_test
 
 import (
 	"context"
