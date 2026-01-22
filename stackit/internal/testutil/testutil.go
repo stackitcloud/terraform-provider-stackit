@@ -209,6 +209,20 @@ func IaaSProviderConfigWithExperiments() string {
 	)
 }
 
+func IntakeProviderConfig() string {
+	if IntakeCustomEndpoint == "" {
+		return `provider "stackit" {
+            default_region = "eu01"
+        }`
+	}
+	return fmt.Sprintf(`
+        provider "stackit" {
+            intake_custom_endpoint = "%s"
+        }`,
+		IntakeCustomEndpoint,
+	)
+}
+
 func KMSProviderConfig() string {
 	if KMSCustomEndpoint == "" {
 		return `
