@@ -489,18 +489,8 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	}
 
 	payload := &intake.UpdateIntakeRunnerPayload{}
-
-	if !model.Name.IsUnknown() {
-		payload.DisplayName = conversion.StringValueToPointer(model.Name)
-	}
-
-	if !model.MaxMessageSizeKiB.IsUnknown() {
-		payload.MaxMessageSizeKiB = conversion.Int64ValueToPointer(model.MaxMessageSizeKiB)
-	}
-
-	if !model.MaxMessagesPerHour.IsUnknown() {
-		payload.MaxMessagesPerHour = conversion.Int64ValueToPointer(model.MaxMessagesPerHour)
-	}
+	payload.MaxMessageSizeKiB = conversion.Int64ValueToPointer(model.MaxMessageSizeKiB)
+	payload.MaxMessagesPerHour = conversion.Int64ValueToPointer(model.MaxMessagesPerHour)
 
 	// Handle optional fields
 	if !model.Description.IsUnknown() || model.Description.IsNull() {
@@ -513,10 +503,7 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 
 	var labels map[string]string
 	if !model.Labels.IsUnknown() {
-		if model.Labels.IsNull() {
-			labels = map[string]string{}
-			payload.Labels = &labels
-		} else {
+		if !model.Labels.IsNull() {
 			diags := model.Labels.ElementsAs(context.Background(), &labels, false)
 			if diags.HasError() {
 				return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
