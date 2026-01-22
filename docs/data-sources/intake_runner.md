@@ -18,7 +18,6 @@ Datasource for STACKIT Intake Runner.
 ### Required
 
 - `project_id` (String) STACKIT Project ID to which the runner is associated.
-- `region` (String) The resource region.
 - `runner_id` (String) The runner ID.
 
 ### Read-Only
