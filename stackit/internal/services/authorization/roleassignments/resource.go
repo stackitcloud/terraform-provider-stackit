@@ -204,10 +204,6 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 
 	err = mapListMembersResponse(listMembersResponse, &model)
 	if err != nil {
-		if errors.Is(err, errRoleAssignmentNotFound) {
-			resp.State.RemoveResource(ctx)
-			return
-		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
@@ -250,6 +246,10 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	// Map response body to schema
 	err = mapListMembersResponse(listResp, &model)
 	if err != nil {
+		if errors.Is(err, errRoleAssignmentNotFound) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorization", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
