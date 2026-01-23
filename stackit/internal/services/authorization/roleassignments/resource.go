@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -154,6 +155,21 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "role", model.Role.ValueString())
 	ctx = tflog.SetField(ctx, "resource_type", r.apiName)
 
+	lockKey := fmt.Sprintf("%s,%s,%s",
+		model.ResourceId.ValueString(),
+		model.Role.ValueString(),
+		model.Subject.ValueString(),
+	)
+
+	// Terraform executes resources in parallel. If two resources define the same
+	// role assignment, they create a "Check-Then-Act" race condition:
+	// 1. Thread A creates -> Success
+	// 2. Thread B creates -> Duplicate Error
+	// This lock forces Thread B to wait until Thread A completes, allowing
+	// the subsequent duplicate check to correctly find the existing assignment.
+	unlock := authorizationUtils.LockAssignment(lockKey)
+	defer unlock()
+
 	listMemberResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing current resource members", fmt.Sprintf("Calling API: %v", err))
@@ -188,6 +204,10 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 
 	err = mapListMembersResponse(listMembersResponse, &model)
 	if err != nil {
+		if errors.Is(err, errRoleAssignmentNotFound) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
@@ -197,6 +217,10 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// safety sleep due to api cache
+	time.Sleep(1 * time.Second)
+
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment created", r.apiName))
 }
 
