@@ -908,13 +908,20 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		}
 	}
 
+	// Plan does not support metrics retention
+	if plan.GetTotalMetricSamples() == 0 {
+		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
+		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
+		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
+		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
+	}
+
 	// Plan does not support log storage and trace storage
 	if plan.GetLogsStorage() == 0 && plan.GetTracesStorage() == 0 {
 		logsRetentionDays := conversion.Int64ValueToPointer(configModel.LogsRetentionDays)
 		tracesRetentionDays := conversion.Int64ValueToPointer(configModel.TracesRetentionDays)
-		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
-		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
-		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
 		// If logs retention days are set, return an error to the user
 		if logsRetentionDays != nil {
 			resp.Diagnostics.AddAttributeError(path.Root("logs_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring logs retention days. Remove this from your config or use a different plan.", *plan.Name))
@@ -922,10 +929,6 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		// If traces retention days are set, return an error to the user
 		if tracesRetentionDays != nil {
 			resp.Diagnostics.AddAttributeError(path.Root("traces_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring trace retention days. Remove this from your config or use a different plan.", *plan.Name))
-		}
-		// If any of the metrics retention days are set, return an error to the user
-		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
 		}
 	}
 }
@@ -1030,9 +1033,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
-	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
-		err := r.getMetricsRetention(ctx, &model)
+	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetTotalMetricSamples() != 0 {
+		err = r.getMetricsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
 		}
@@ -1043,7 +1046,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	} else {
+		// Set metric retention days to zero
+		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
 		err = r.getLogsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
@@ -1066,12 +1079,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	} else {
-		// Set metric retention days to zero
-		diags = setMetricsRetentionsZero(ctx, &resp.State)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 		// Set logs retention days to zero
 		diags = setLogsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
@@ -1178,8 +1185,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
-	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetTotalMetricSamples() != 0 {
 		metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
@@ -1197,7 +1204,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	}
 
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
 		logsRetentionResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
@@ -1377,9 +1387,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
-	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
-		err := r.getMetricsRetention(ctx, &model)
+	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetTotalMetricSamples() != 0 {
+		err = r.getMetricsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("%v", err))
 		}
@@ -1390,7 +1400,17 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	} else {
+		// Set metric retention days to zero
+		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
 		err = r.getLogsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
@@ -1413,13 +1433,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 	} else {
-		// Set metric retention days to zero
-		diags = setMetricsRetentionsZero(ctx, &resp.State)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
 		diags = setLogsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
