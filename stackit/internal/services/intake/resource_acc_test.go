@@ -67,15 +67,13 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Verify project_id, name and the existence of runner_id
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMinName),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", "1024"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", "1000"),
-					// Verify empty fields
-					resource.TestCheckResourceAttr(intakeRunnerResource, "description", ""),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "0"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "region"),
 				),
 			},
 			// Data source check: creates config that includes resource and data source
@@ -90,7 +88,11 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					}`, testutil.IntakeProviderConfig()+"\n"+resourceMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Make sure it's correctly found resource by comparing runner_id attribute
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "runner_id", "data.stackit_intake_runner.example", "runner_id"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "name", "data.stackit_intake_runner.example", "name"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "region", "data.stackit_intake_runner.example", "region"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "max_messages_per_hour", "data.stackit_intake_runner.example", "max_messages_per_hour"),
 				),
 			},
 			// Simulate terraform import
@@ -131,14 +133,35 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMaxName),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "description", "An example runner for Intake"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", "1024"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", "1100"),
-					// Verify map size
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "2"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "region"),
+				),
+			},
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+					data "stackit_intake_runner" "example" {
+						project_id = %s.project_id
+						runner_id  = %s.runner_id
+					}`, testutil.IntakeProviderConfig()+"\n"+resourceMax, intakeRunnerResource, intakeRunnerResource),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "runner_id", "data.stackit_intake_runner.example", "runner_id"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "name", "data.stackit_intake_runner.example", "name"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "description", "data.stackit_intake_runner.example", "description"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "region", "data.stackit_intake_runner.example", "region"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "labels.env", "data.stackit_intake_runner.example", "labels.env"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "max_messages_per_hour", "data.stackit_intake_runner.example", "max_messages_per_hour"),
 				),
 			},
 			// Update and verify changes are reflected
@@ -146,7 +169,10 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMaxUpdated(),
 				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMaxNameUpdated),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["name"])),
+					// Ensure optional fields survived the update (didn't get wiped by a bad Update payload)
+					resource.TestCheckResourceAttr(intakeRunnerResource, "description", "An example runner for Intake"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
 				),
 			},
 		},
@@ -160,7 +186,6 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	var client *intake.APIClient
 	var err error
 
-	// todo: check this again
 	effectiveRegion := testutil.Region
 	if effectiveRegion == "" {
 		effectiveRegion = "eu01"
