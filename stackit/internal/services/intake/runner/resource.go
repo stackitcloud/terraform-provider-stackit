@@ -501,14 +501,12 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	payload.Description = conversion.StringValueToPointer(model.Description)
 
 	var labels map[string]string
-	if !model.Labels.IsUnknown() {
-		if !model.Labels.IsNull() {
-			diags := model.Labels.ElementsAs(context.Background(), &labels, false)
-			if diags.HasError() {
-				return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
-			}
-			payload.Labels = &labels
+	if !model.Labels.IsUnknown() && !model.Labels.IsNull() {
+		diags := model.Labels.ElementsAs(context.Background(), &labels, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
 		}
+		payload.Labels = &labels
 	}
 
 	return payload, nil
