@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -34,8 +35,6 @@ var (
 		"feature_gates":   types.MapType{ElemType: types.StringType},
 		"state":           types.StringType,
 	}
-
-	versionStateOptions = []string{"UNSPECIFIED", "SUPPORTED"}
 )
 
 // Ensure implementation satisfies interface
@@ -83,9 +82,9 @@ func (d *kubernetesVersionsDataSource) Schema(_ context.Context, _ datasource.Sc
 			},
 			"version_state": schema.StringAttribute{
 				Optional:    true,
-				Description: "If specified, only returns Kubernetes versions with this version state. " + utils.FormatPossibleValues(versionStateOptions...),
+				Description: "If specified, only returns Kubernetes versions with this version state. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedGetProviderOptionsRequestVersionStateEnumValues)...),
 				Validators: []validator.String{
-					stringvalidator.OneOf(versionStateOptions...),
+					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(ske.AllowedGetProviderOptionsRequestVersionStateEnumValues)...),
 				},
 			},
 			"kubernetes_versions": schema.ListNestedAttribute{
@@ -163,7 +162,7 @@ func (d *kubernetesVersionsDataSource) Read(ctx context.Context, req datasource.
 		return
 	}
 
-	tflog.Info(ctx, "Read SKE provider options successfully", map[string]interface{}{
+	tflog.Info(ctx, "Read SKE provider options successfully", map[string]any{
 		"region":       region,
 		"versionState": model.VersionState.ValueString(),
 	})

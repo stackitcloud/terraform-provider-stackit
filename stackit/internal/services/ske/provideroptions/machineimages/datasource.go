@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -28,11 +29,6 @@ type Model struct {
 }
 
 var (
-	versionStateOptions = []string{
-		"UNSPECIFIED",
-		"SUPPORTED",
-	}
-
 	machineImageVersionType = map[string]attr.Type{
 		"version":         types.StringType,
 		"state":           types.StringType,
@@ -95,9 +91,9 @@ func (d *machineImagesDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			},
 			"version_state": schema.StringAttribute{
 				Optional:    true,
-				Description: "Filter returned machine image versions by their state. " + utils.FormatPossibleValues(versionStateOptions...),
+				Description: "Filter returned machine image versions by their state. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedGetProviderOptionsRequestVersionStateEnumValues)...),
 				Validators: []validator.String{
-					stringvalidator.OneOf(versionStateOptions...),
+					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(ske.AllowedGetProviderOptionsRequestVersionStateEnumValues)...),
 				},
 			},
 			"machine_images": schema.ListNestedAttribute{
@@ -184,7 +180,7 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 	// Set final state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
-	tflog.Info(ctx, "Read SKE provider options successfully", map[string]interface{}{
+	tflog.Info(ctx, "Read SKE provider options successfully", map[string]any{
 		"region":       region,
 		"versionState": model.VersionState.ValueString(),
 	})
