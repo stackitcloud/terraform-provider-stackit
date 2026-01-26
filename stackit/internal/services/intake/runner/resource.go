@@ -435,17 +435,13 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		model.Labels = labels
 	}
 
-	if runnerResp.Id != nil && *runnerResp.Id == "" {
+	if runnerResp.Id != nil || *runnerResp.Id == "" {
 		model.RunnerId = types.StringNull()
 	} else {
 		model.RunnerId = types.StringPointerValue(runnerResp.Id)
 	}
 	model.Name = types.StringPointerValue(runnerResp.DisplayName)
-	if runnerResp.Description == nil {
-		model.Description = types.StringValue("")
-	} else {
-		model.Description = types.StringPointerValue(runnerResp.Description)
-	}
+	model.Description = types.StringPointerValue(runnerResp.Description)
 	model.Region = types.StringValue(region)
 	model.MaxMessageSizeKiB = types.Int64PointerValue(runnerResp.MaxMessageSizeKiB)
 	model.MaxMessagesPerHour = types.Int64PointerValue(runnerResp.MaxMessagesPerHour)
@@ -498,7 +494,7 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	payload.Description = conversion.StringValueToPointer(model.Description)
 
 	var labels map[string]string
-	if !model.Labels.IsUnknown() && !model.Labels.IsNull() {
+	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
 		diags := model.Labels.ElementsAs(context.Background(), &labels, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
