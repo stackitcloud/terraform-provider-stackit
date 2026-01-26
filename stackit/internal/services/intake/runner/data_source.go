@@ -31,7 +31,8 @@ func NewRunnerDataSource() datasource.DataSource {
 }
 
 type runnerDataSource struct {
-	client *intake.APIClient
+	client       *intake.APIClient
+	providerData core.ProviderData
 }
 
 func (r *runnerDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -40,12 +41,13 @@ func (r *runnerDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 
 // Configure adds the provider configured client to the data source
 func (r *runnerDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := intakeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := intakeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -65,6 +67,7 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"region":                "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -111,6 +114,10 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: descriptions["max_messages_per_hour"],
 				Computed:    true,
 			},
+			"region": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -126,7 +133,7 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	runnerId := model.RunnerId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -147,7 +154,7 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(runnerResp, &model)
+	err = mapFields(runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
