@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -18,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
@@ -42,12 +40,12 @@ type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	ProjectId          types.String `tfsdk:"project_id"`
 	RunnerId           types.String `tfsdk:"runner_id"`
-	Region             types.String `tfsdk:"region"`
 	Name               types.String `tfsdk:"name"`
 	Description        types.String `tfsdk:"description"`
 	Labels             types.Map    `tfsdk:"labels"`
 	MaxMessageSizeKiB  types.Int64  `tfsdk:"max_message_size_kib"`
 	MaxMessagesPerHour types.Int64  `tfsdk:"max_messages_per_hour"`
+	Region             types.String `tfsdk:"region"`
 }
 
 // NewRunnerResource is a helper function to simplify the provider implementation.
@@ -132,12 +130,16 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					validate.UUID(),
@@ -154,6 +156,9 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
@@ -187,9 +192,6 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					stringvalidator.OneOf("eu01"), // Currently Intake supports only EU01 region
-				},
 			},
 		},
 	}
@@ -217,7 +219,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// Create new bar
+	// Create new runner
 	runnerResp, err := r.client.CreateIntakeRunner(ctx, projectId, region).CreateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Calling API: %v", err))
@@ -232,7 +234,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	err = mapFields(runnerResp, &model)
+	err = mapFields(runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -277,7 +279,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(runnerResp, &model)
+	err = mapFields(runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -304,7 +306,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	projectId := model.ProjectId.ValueString()
 	runnerId := model.RunnerId.ValueString()
-	region := r.providerData.GetRegionWithOverride(model.Region)
+	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -330,7 +332,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(runnerResp, &model)
+	err = mapFields(runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -361,7 +363,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 
-	// Delete existing bar
+	// Delete existing runner
 	err := r.client.DeleteIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -407,7 +409,7 @@ func (r *runnerResource) ImportState(ctx context.Context, req resource.ImportSta
 }
 
 // Maps runner fields to the provider internal model
-func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model) error {
+func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region string) error {
 	if runnerResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -422,7 +424,7 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model) error {
 
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
-		model.Region.ValueString(),
+		region,
 		runnerId,
 	)
 
@@ -447,12 +449,13 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model) error {
 	} else {
 		model.Description = types.StringPointerValue(runnerResp.Description)
 	}
+	model.Region = types.StringValue(region)
 	model.MaxMessageSizeKiB = types.Int64PointerValue(runnerResp.MaxMessageSizeKiB)
 	model.MaxMessagesPerHour = types.Int64PointerValue(runnerResp.MaxMessagesPerHour)
 	return nil
 }
 
-// Build CreateBarPayload from provider's model
+// Build CreateIntakeRunnerPayload from provider's model
 func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -480,6 +483,7 @@ func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 	}, nil
 }
 
+// Build UpdateIntakeRunnerPayload from provider's model
 func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
@@ -492,14 +496,9 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	payload.MaxMessageSizeKiB = conversion.Int64ValueToPointer(model.MaxMessageSizeKiB)
 	payload.MaxMessagesPerHour = conversion.Int64ValueToPointer(model.MaxMessagesPerHour)
 
-	// Handle optional fields
-	if !model.Description.IsUnknown() || model.Description.IsNull() {
-		if model.Description.IsNull() {
-			payload.Description = sdkUtils.Ptr("")
-		} else {
-			payload.Description = conversion.StringValueToPointer(model.Description)
-		}
-	}
+	// Optional fields
+	payload.DisplayName = conversion.StringValueToPointer(model.Name)
+	payload.Description = conversion.StringValueToPointer(model.Description)
 
 	var labels map[string]string
 	if !model.Labels.IsUnknown() {
