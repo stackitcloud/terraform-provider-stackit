@@ -71,6 +71,11 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMinName),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", "1024"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", "1000"),
+					// Verify empty fields
+					resource.TestCheckResourceAttr(intakeRunnerResource, "description", ""),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "0"),
 				),
 			},
 			// Data source check: creates config that includes resource and data source
@@ -129,6 +134,11 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMaxName),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "description", "An example runner for Intake"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", "1024"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", "1100"),
+					// Verify map size
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "2"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
 				),
 			},
 			// Update and verify changes are reflected
