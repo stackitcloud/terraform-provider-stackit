@@ -425,6 +425,12 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		runnerId,
 	)
 
+	if runnerResp.Id == nil || *runnerResp.Id == "" {
+		model.RunnerId = types.StringNull()
+	} else {
+		model.RunnerId = types.StringPointerValue(runnerResp.Id)
+	}
+
 	if runnerResp.Labels == nil {
 		model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 	} else {
@@ -435,11 +441,6 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		model.Labels = labels
 	}
 
-	if runnerResp.Id != nil || *runnerResp.Id == "" {
-		model.RunnerId = types.StringNull()
-	} else {
-		model.RunnerId = types.StringPointerValue(runnerResp.Id)
-	}
 	model.Name = types.StringPointerValue(runnerResp.DisplayName)
 	model.Description = types.StringPointerValue(runnerResp.Description)
 	model.Region = types.StringValue(region)
