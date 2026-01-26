@@ -34,7 +34,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.6
-	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.3
+	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.4
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.3
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.4
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.2.0
