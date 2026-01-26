@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -20,6 +19,7 @@ func TestMapFields(t *testing.T) {
 		description string
 		input       *intake.IntakeRunnerResponse
 		model       *Model
+		region      string
 		expected    *Model
 		wantErr     bool
 	}{
@@ -35,8 +35,8 @@ func TestMapFields(t *testing.T) {
 			},
 			&Model{
 				ProjectId: types.StringValue("pid"),
-				Region:    types.StringValue("eu01"),
 			},
+			"eu01",
 			&Model{
 				Id:                 types.StringValue(fmt.Sprintf("pid,eu01,%s", runnerId)),
 				ProjectId:          types.StringValue("pid"),
@@ -54,6 +54,7 @@ func TestMapFields(t *testing.T) {
 			"nil input",
 			nil,
 			&Model{},
+			"eu01",
 			nil,
 			true,
 		},
@@ -61,6 +62,7 @@ func TestMapFields(t *testing.T) {
 			"nil model",
 			&intake.IntakeRunnerResponse{},
 			nil,
+			"eu01",
 			nil,
 			true,
 		},
@@ -72,8 +74,8 @@ func TestMapFields(t *testing.T) {
 			},
 			&Model{
 				ProjectId: types.StringValue("pid"),
-				Region:    types.StringValue("eu01"),
 			},
+			"eu01",
 			&Model{
 				Id:                 types.StringValue("pid,eu01,"),
 				ProjectId:          types.StringValue("pid"),
@@ -90,7 +92,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, tt.model)
+			err := mapFields(tt.input, tt.model, tt.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -209,10 +211,7 @@ func TestToUpdatePayload(t *testing.T) {
 			"empty model",
 			&Model{},
 			&Model{},
-			&intake.UpdateIntakeRunnerPayload{
-				Description: utils.Ptr(""),
-				Labels:      &map[string]string{},
-			},
+			&intake.UpdateIntakeRunnerPayload{},
 			false,
 		},
 		{
@@ -231,14 +230,6 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var labels map[string]string
-			if tt.model != nil && !tt.model.Labels.IsNull() && !tt.model.Labels.IsUnknown() {
-				diags := tt.model.Labels.ElementsAs(context.Background(), &labels, false)
-				if diags.HasError() {
-					t.Fatalf("error preparing test %v", diags)
-				}
-			}
-
 			payload, err := toUpdatePayload(tt.model, tt.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
