@@ -82,7 +82,7 @@ func TestMapFields(t *testing.T) {
 				Region:             types.StringValue("eu01"),
 				RunnerId:           types.StringNull(),
 				Name:               types.StringNull(),
-				Description:        types.StringValue(""),
+				Description:        types.StringNull(),
 				Labels:             types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				MaxMessageSizeKiB:  types.Int64Null(),
 				MaxMessagesPerHour: types.Int64Null(),
