@@ -11,14 +11,14 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.20.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.21.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.3
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.2.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.3
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.3
@@ -33,13 +33,13 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.2
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.5
+	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.6
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.3
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.3
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.4
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.1
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.32.0
 )
@@ -84,7 +84,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.2.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.11.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
