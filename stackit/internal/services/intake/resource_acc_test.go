@@ -3,18 +3,19 @@ package intake_test
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"maps"
-	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/intake"
+	"github.com/stackitcloud/stackit-sdk-go/services/intake/wait"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -181,53 +182,57 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 
 // testAccCheckIntakeRunnerDestroy act as independent auditor to verify destroy operation
 func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
-	// Create own raw API client
 	ctx := context.Background()
 	var client *intake.APIClient
 	var err error
 
-	effectiveRegion := testutil.Region
-	if effectiveRegion == "" {
-		effectiveRegion = "eu01"
-	}
-
 	if testutil.IntakeCustomEndpoint == "" {
-		client, err = intake.NewAPIClient(sdkConfig.WithRegion(effectiveRegion))
+		client, err = intake.NewAPIClient()
 	} else {
 		client, err = intake.NewAPIClient(
 			sdkConfig.WithEndpoint(testutil.IntakeCustomEndpoint),
-			sdkConfig.WithRegion(effectiveRegion),
 		)
 	}
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	// Loop through resources that should have been deleted
+	instancesToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_intake_runner" {
 			continue
 		}
+		// Intake internal ID: "[project_id],[region],[runner_id]"
+		runnerId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		instancesToDestroy = append(instancesToDestroy, runnerId)
+	}
 
-		pID := rs.Primary.Attributes["project_id"]
-		reg := rs.Primary.Attributes["region"]
-		rID := rs.Primary.Attributes["runner_id"]
+	// List all resources in the project/region to see what's left
+	instancesResp, err := client.ListIntakeRunners(ctx, testutil.ProjectId, testutil.Region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting instancesResp: %w", err)
+	}
 
-		// If it still exists, destroy operation was unsuccessful
-		_, err := client.GetIntakeRunner(ctx, pID, reg, rID).Execute()
-		if err == nil {
-			// Delete to prevent orphaned instances
-			errDel := client.DeleteIntakeRunner(ctx, pID, reg, rID).Execute()
-			if errDel != nil {
-				return fmt.Errorf("resource leaked and manual cleanup failed: %w", errDel)
-			}
-
-			return fmt.Errorf("intake runner %s still exists in region %s", rID, reg)
+	// If the API returns a list of runners, check if our deleted ones are still there
+	items := *instancesResp.IntakeRunners
+	for i := range items {
+		if items[i].Id == nil {
+			continue
 		}
 
-		var oapiErr *oapierror.GenericOpenAPIError
-		if !errors.As(err, &oapiErr) || oapiErr.StatusCode != http.StatusNotFound {
-			return fmt.Errorf("unexpected error checking destruction: %w", err)
+		// If a runner we thought we deleted is found in the list
+		if utils.Contains(instancesToDestroy, *items[i].Id) {
+			// Attempt a final delete and wait, just like Postgres
+			err := client.DeleteIntakeRunner(ctx, testutil.ProjectId, testutil.Region, *items[i].Id).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting runner %s during CheckDestroy: %w", *items[i].Id, err)
+			}
+
+			// Using the wait handler for destruction verification
+			_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("deleting runner %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
+			}
 		}
 	}
 	return nil
