@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.21.0
-	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.1
+	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.2
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.3
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.1
