@@ -464,7 +464,6 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 						"stackit_logs_instance.logs", "instance_id",
 					),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "display_name", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMinUpdated()["display_name"])),
-					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "retention_days", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMinUpdated()["retention_days"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "permissions.0", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMinUpdated()["permissions"])),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token_id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
@@ -519,8 +518,8 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 			},
 			// Datasource
 			{
-				ConfigVariables: testConfigVarsMin,
-				Config: testutil.LogsProviderConfig() + "\n" + accessTokenMinConfig + `
+				ConfigVariables: testConfigAccessTokenVarsMax,
+				Config: testutil.LogsProviderConfig() + "\n" + accessTokenMaxConfig + `
 					data "stackit_logs_access_token" "accessToken" {
 					  project_id   = stackit_logs_access_token.accessToken.project_id
 					  region       = stackit_logs_access_token.accessToken.region
@@ -529,15 +528,15 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					}
 					`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["project_id"])),
-					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "region", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["region"])),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "region", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["region"])),
 					resource.TestCheckResourceAttrPair(
 						"stackit_logs_access_token.accessToken", "instance_id",
 						"data.stackit_logs_access_token.accessToken", "instance_id",
 					),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "access_token_id"),
-					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "display_name", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["display_name"])),
-					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "permissions.0", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["permissions"])),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "display_name", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["display_name"])),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "permissions.0", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["permissions"])),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "creator"),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "expires"),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "status"),
@@ -547,7 +546,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 			},
 			// Import
 			{
-				ConfigVariables: testConfigAccessTokenVarsMin,
+				ConfigVariables: testConfigAccessTokenVarsMax,
 				ResourceName:    "stackit_logs_access_token.accessToken",
 				ImportStateIdFunc: func(state *terraform.State) (string, error) {
 					rs, ok := state.RootModule().Resources["stackit_logs_access_token.accessToken"]
@@ -570,7 +569,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigAccessTokenVarsMaxUpdated(),
-				Config:          testutil.LogsProviderConfig() + "\n" + accessTokenMinConfig,
+				Config:          testutil.LogsProviderConfig() + "\n" + accessTokenMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "region", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["region"])),
@@ -580,7 +579,6 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "display_name", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["display_name"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "description", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["description"])),
-					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "retention_days", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["retention_days"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "permissions.0", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["permissions"])),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token_id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
