@@ -172,6 +172,8 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	if err := mapFields(ctx, optionsResp, &model); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading provider options", fmt.Sprintf("Mapping API payload: %v", err))
 		return
