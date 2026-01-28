@@ -63,6 +63,7 @@ import (
 	loadBalancerObservabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/observability-credential"
 	logMeCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/credential"
 	logMeInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logme/instance"
+	logsAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/accesstoken"
 	logsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
@@ -558,6 +559,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logMeInstance.NewInstanceDataSource,
 		logMeCredential.NewCredentialDataSource,
 		logsInstance.NewLogsInstanceDataSource,
+		logsAccessToken.NewLogsAccessTokenDataSource,
 		logAlertGroup.NewLogAlertGroupDataSource,
 		machineType.NewMachineTypeDataSource,
 		mariaDBInstance.NewInstanceDataSource,
@@ -640,6 +642,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		logMeCredential.NewCredentialResource,
 		logAlertGroup.NewLogAlertGroupResource,
 		logsInstance.NewLogsInstanceResource,
+		logsAccessToken.NewLogsAccessTokenResource,
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
 		modelServingToken.NewTokenResource,
