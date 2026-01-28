@@ -406,7 +406,7 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 			},
 			// Datasource
 			{
-				ConfigVariables: testConfigVarsMin,
+				ConfigVariables: testConfigAccessTokenVarsMin,
 				Config: testutil.LogsProviderConfig() + "\n" + accessTokenMinConfig + `
 					data "stackit_logs_access_token" "accessToken" {
 					  project_id   = stackit_logs_access_token.accessToken.project_id
