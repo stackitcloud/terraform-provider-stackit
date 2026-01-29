@@ -80,7 +80,7 @@ func TestToCreatePayload(t *testing.T) {
 			expect: &observability.CreateLogsAlertgroupsPayload{
 				Name:     utils.Ptr("full-alertgroup"),
 				Interval: utils.Ptr("10m"),
-				Rules: &[]observability.UpdateAlertgroupsRequestInnerRulesInner{
+				Rules: &[]observability.CreateLogsAlertgroupsPayloadRulesInner{
 					{
 						Alert: utils.Ptr("alert"),
 						Annotations: &map[string]interface{}{
