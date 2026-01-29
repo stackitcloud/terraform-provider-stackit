@@ -45,6 +45,7 @@ import {
 
 - `acl` (Set of String) The access control list for this instance. Each entry is an IP address range that is permitted to access, in CIDR notation.
 - `alert_config` (Attributes) Alert configuration for the instance. (see [below for nested schema](#nestedatt--alert_config))
+- `grafana_admin_enabled` (Boolean) If true, a default Grafana server admin user is created. It's recommended to set this to false and use STACKIT SSO (Owner or Observability Grafana Server Admin role) instead. It is still possible to manually create a new Grafana admin user via the Grafana UI later.
 - `logs_retention_days` (Number) Specifies for how many days the logs are kept. Default is set to `7`.
 - `metrics_retention_days` (Number) Specifies for how many days the raw metrics are kept. Default is set to `90`.
 - `metrics_retention_days_1h_downsampling` (Number) Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.
@@ -56,8 +57,6 @@ import {
 
 - `alerting_url` (String) Specifies Alerting URL.
 - `dashboard_url` (String) Specifies Observability instance dashboard URL.
-- `grafana_initial_admin_password` (String, Sensitive) Specifies an initial Grafana admin password.
-- `grafana_initial_admin_user` (String) Specifies an initial Grafana admin username.
 - `grafana_public_read_access` (Boolean) If true, anyone can access Grafana dashboards without logging in.
 - `grafana_url` (String) Specifies Grafana URL.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
