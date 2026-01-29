@@ -412,9 +412,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateLo
 }
 
 // toRulesPayload generates rules for create payload.
-func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAlertgroupsRequestInnerRulesInner, error) {
+func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLogsAlertgroupsPayloadRulesInner, error) {
 	if model.Rules.Elements() == nil || len(model.Rules.Elements()) == 0 {
-		return []observability.UpdateAlertgroupsRequestInnerRulesInner{}, nil
+		return []observability.CreateLogsAlertgroupsPayloadRulesInner{}, nil
 	}
 
 	var rules []rule
@@ -423,10 +423,10 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 		return nil, core.DiagsToError(diags)
 	}
 
-	var oarrs []observability.UpdateAlertgroupsRequestInnerRulesInner
+	var oarrs []observability.CreateLogsAlertgroupsPayloadRulesInner
 	for i := range rules {
 		rule := &rules[i]
-		oarr := observability.UpdateAlertgroupsRequestInnerRulesInner{}
+		oarr := observability.CreateLogsAlertgroupsPayloadRulesInner{}
 
 		if !utils.IsUndefined(rule.Alert) {
 			alert := conversion.StringValueToPointer(rule.Alert)

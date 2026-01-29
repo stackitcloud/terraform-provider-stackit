@@ -63,8 +63,7 @@ type Model struct {
 	IsUpdatable                        types.Bool   `tfsdk:"is_updatable"`
 	GrafanaURL                         types.String `tfsdk:"grafana_url"`
 	GrafanaPublicReadAccess            types.Bool   `tfsdk:"grafana_public_read_access"`
-	GrafanaInitialAdminPassword        types.String `tfsdk:"grafana_initial_admin_password"`
-	GrafanaInitialAdminUser            types.String `tfsdk:"grafana_initial_admin_user"`
+	GrafanaAdminEnabled                types.Bool   `tfsdk:"grafana_admin_enabled"`
 	MetricsRetentionDays               types.Int64  `tfsdk:"metrics_retention_days"`
 	MetricsRetentionDays5mDownsampling types.Int64  `tfsdk:"metrics_retention_days_5m_downsampling"`
 	MetricsRetentionDays1hDownsampling types.Int64  `tfsdk:"metrics_retention_days_1h_downsampling"`
@@ -500,20 +499,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"grafana_initial_admin_user": schema.StringAttribute{
-				Description: "Specifies an initial Grafana admin username.",
+			"grafana_admin_enabled": schema.BoolAttribute{
+				Description: "If true, a default Grafana server admin user is created. It's recommended to set this to false and use STACKIT SSO (Owner or Observability Grafana Server Admin role) instead. It is still possible to manually create a new Grafana admin user via the Grafana UI later.",
+				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"grafana_initial_admin_password": schema.StringAttribute{
-				Description: "Specifies an initial Grafana admin password.",
-				Computed:    true,
-				Sensitive:   true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Default:     booldefault.StaticBool(true),
 			},
 			"traces_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the traces are kept. Default is set to `7`.",
@@ -1558,8 +1548,6 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		i := *r.Instance
 		model.GrafanaURL = types.StringPointerValue(i.GrafanaUrl)
 		model.GrafanaPublicReadAccess = types.BoolPointerValue(i.GrafanaPublicReadAccess)
-		model.GrafanaInitialAdminPassword = types.StringPointerValue(i.GrafanaAdminPassword)
-		model.GrafanaInitialAdminUser = types.StringPointerValue(i.GrafanaAdminUser)
 		model.MetricsURL = types.StringPointerValue(i.MetricsUrl)
 		model.MetricsPushURL = types.StringPointerValue(i.PushMetricsUrl)
 		model.TargetsURL = types.StringPointerValue(i.TargetsUrl)
@@ -1570,6 +1558,7 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		model.JaegerUIURL = types.StringPointerValue(i.JaegerUiUrl)
 		model.OtlpTracesURL = types.StringPointerValue(i.OtlpTracesUrl)
 		model.ZipkinSpansURL = types.StringPointerValue(i.ZipkinSpansUrl)
+		model.GrafanaAdminEnabled = types.BoolPointerValue(i.GrafanaAdminEnabled)
 	}
 
 	return nil
@@ -2128,9 +2117,10 @@ func toCreatePayload(model *Model) (*observability.CreateInstancePayload, error)
 		pa[k] = elements[k].String()
 	}
 	return &observability.CreateInstancePayload{
-		Name:      conversion.StringValueToPointer(model.Name),
-		PlanId:    conversion.StringValueToPointer(model.PlanId),
-		Parameter: &pa,
+		GrafanaAdminEnabled: conversion.BoolValueToPointer(model.GrafanaAdminEnabled),
+		Name:                conversion.StringValueToPointer(model.Name),
+		PlanId:              conversion.StringValueToPointer(model.PlanId),
+		Parameter:           &pa,
 	}, nil
 }
 
