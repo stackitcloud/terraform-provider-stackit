@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.3
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.4
@@ -30,7 +30,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.25.3
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.4
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.2
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.3
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.6
