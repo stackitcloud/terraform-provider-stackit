@@ -49,6 +49,7 @@ type ProviderData struct {
 	EdgeCloudCustomEndpoint         string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
+	IntakeCustomEndpoint            string
 	KMSCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string
