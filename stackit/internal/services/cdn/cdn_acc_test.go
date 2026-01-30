@@ -102,10 +102,10 @@ resource "stackit_cdn_custom_domain" "custom_domain" {
 `
 
 // 3. Implement the Renderer
-func renderConfig(conf distributionConfig, includeCustomDomain bool) string {
+func renderConfig(conf *distributionConfig, includeCustomDomain bool) string {
 	// Wrapper struct to include global provider config for the template
 	type templateData struct {
-		distributionConfig
+		*distributionConfig
 		ProviderConfig string
 	}
 
@@ -153,7 +153,7 @@ func renderConfig(conf distributionConfig, includeCustomDomain bool) string {
 	return buf.String()
 }
 
-func configDatasources(conf distributionConfig) string {
+func configDatasources(conf *distributionConfig) string {
 	baseConfig := renderConfig(conf, true) // Includes custom domain
 
 	return fmt.Sprintf(`
@@ -218,7 +218,7 @@ func TestAccCDNDistributionResource(t *testing.T) {
 	cert, key := makeCertAndKey(t, organization)
 
 	// Setup Base Configuration
-	baseConf := distributionConfig{
+	baseConf := &distributionConfig{
 		ProjectId:          testutil.ProjectId,
 		BackendType:        "http",
 		OriginURL:          "https://test-backend-1.cdn-dev.runs.onstackit.cloud",
@@ -236,7 +236,8 @@ func TestAccCDNDistributionResource(t *testing.T) {
 	organization_updated := fmt.Sprintf("organization-updated-%s", uuid.NewString())
 	cert_updated, key_updated := makeCertAndKey(t, organization_updated)
 
-	updatedConf := baseConf
+	baseConfCopy := *baseConf
+	updatedConf := &baseConfCopy
 	updatedConf.Regions = []string{"EU", "US", "ASIA"}
 	updatedConf.Cert = string(cert_updated)
 	updatedConf.Key = string(key_updated)

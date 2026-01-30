@@ -70,7 +70,7 @@ func TestToCreatePayload(t *testing.T) {
 							"testHeader1": "testHeaderValue1",
 						},
 						Geofencing: &map[string][]string{
-							"https://de.mycoolapp.com": []string{"DE", "FR"},
+							"https://de.mycoolapp.com": {"DE", "FR"},
 						},
 						Type: cdn.PtrString("http"),
 					},
@@ -98,7 +98,7 @@ func TestToCreatePayload(t *testing.T) {
 							"testHeader1": "testHeaderValue1",
 						},
 						Geofencing: &map[string][]string{
-							"https://de.mycoolapp.com": []string{"DE", "FR"},
+							"https://de.mycoolapp.com": {"DE", "FR"},
 						},
 						Type: cdn.PtrString("http"),
 					},
