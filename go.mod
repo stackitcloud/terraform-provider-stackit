@@ -102,3 +102,9 @@ require (
 )
 
 tool golang.org/x/tools/cmd/goimports
+
+// Temporary: Use local SDK with CLI auth support until SDK PR #3865 is merged
+// See: https://github.com/stackitcloud/stackit-sdk-go/pull/3865
+// For testing, use: replace github.com/stackitcloud/stackit-sdk-go/core => ../stackit-sdk-go/core
+// For CI/others: replace github.com/stackitcloud/stackit-sdk-go/core => github.com/franklouwers/stackit-sdk-go/core v0.0.0-20251127223915-25b6b99bd648
+replace github.com/stackitcloud/stackit-sdk-go/core => github.com/franklouwers/stackit-sdk-go/core v0.0.0-20251127223915-25b6b99bd648
