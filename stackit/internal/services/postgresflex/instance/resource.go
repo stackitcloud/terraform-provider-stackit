@@ -147,13 +147,15 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id": "ID of the PostgresFlex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acl":         "The Access Control List (ACL) for the PostgresFlex instance.",
-		"region":      "The resource region. If not defined, the provider region is used.",
+		"main":            "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":     "ID of the PostgresFlex instance.",
+		"project_id":      "STACKIT project ID to which the instance is associated.",
+		"name":            "Instance name.",
+		"acl":             "The Access Control List (ACL) for the PostgresFlex instance.",
+		"region":          "The resource region. If not defined, the provider region is used.",
+		"backup_schedule": "The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.",
+		"replicas":        "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -206,7 +208,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Required:    true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Required: true,
+				Description: descriptions["backup_schedule"],
+				Required:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
@@ -232,7 +235,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"replicas": schema.Int64Attribute{
-				Required: true,
+				Description: descriptions["replicas"],
+				Required:    true,
 			},
 			"storage": schema.SingleNestedAttribute{
 				Required: true,
