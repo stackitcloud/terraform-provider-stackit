@@ -80,7 +80,7 @@ func TestToCreatePayload(t *testing.T) {
 			expect: &observability.CreateLogsAlertgroupsPayload{
 				Name:     utils.Ptr("full-alertgroup"),
 				Interval: utils.Ptr("10m"),
-				Rules: &[]observability.UpdateAlertgroupsRequestInnerRulesInner{
+				Rules: &[]observability.CreateLogsAlertgroupsPayloadRulesInner{
 					{
 						Alert: utils.Ptr("alert"),
 						Annotations: &map[string]interface{}{
@@ -118,7 +118,7 @@ func TestToRulesPayload(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     *Model
-		expect    []observability.UpdateAlertgroupsRequestInnerRulesInner
+		expect    []observability.CreateLogsAlertgroupsPayloadRulesInner
 		expectErr bool
 	}{
 		{
@@ -126,7 +126,7 @@ func TestToRulesPayload(t *testing.T) {
 			input: &Model{
 				Rules: types.ListNull(types.StringType), // Simulates a lack of rules
 			},
-			expect:    []observability.UpdateAlertgroupsRequestInnerRulesInner{},
+			expect:    []observability.CreateLogsAlertgroupsPayloadRulesInner{},
 			expectErr: false,
 		},
 		{
@@ -156,7 +156,7 @@ func TestToRulesPayload(t *testing.T) {
 					}),
 				}),
 			},
-			expect: []observability.UpdateAlertgroupsRequestInnerRulesInner{
+			expect: []observability.CreateLogsAlertgroupsPayloadRulesInner{
 				{
 					Alert: utils.Ptr("alert"),
 					Expr:  utils.Ptr("expr"),
@@ -195,7 +195,7 @@ func TestToRulesPayload(t *testing.T) {
 					}),
 				}),
 			},
-			expect: []observability.UpdateAlertgroupsRequestInnerRulesInner{
+			expect: []observability.CreateLogsAlertgroupsPayloadRulesInner{
 				{
 					Alert: utils.Ptr("alert1"),
 					Expr:  utils.Ptr("expr1"),

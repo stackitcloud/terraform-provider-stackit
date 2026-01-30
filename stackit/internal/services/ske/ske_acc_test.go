@@ -31,6 +31,9 @@ var (
 
 	//go:embed testdata/resource-max.tf
 	resourceMax string
+
+	//go:embed testdata/provider-options.tf
+	dataSourceProviderOptions string
 )
 
 var skeProviderOptions = NewSkeProviderOptions("flatcar")
@@ -89,6 +92,10 @@ var testConfigVarsMax = config.Variables{
 	"refresh_before":                                   config.StringVariable("600"),
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
+}
+
+var testConfigDatasource = config.Variables{
+	"region": config.StringVariable(testutil.Region),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -451,6 +458,36 @@ func TestAccSKEMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccProviderOption(t *testing.T) {
+	t.Logf("TestAccProviderOption")
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: testConfigDatasource,
+				Config:          testutil.SKEProviderConfig() + "\n" + dataSourceProviderOptions,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_ske_kubernetes_versions.example", "version_state", "SUPPORTED"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_kubernetes_versions.example", "kubernetes_versions.0.version"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_kubernetes_versions.example", "kubernetes_versions.0.state"),
+					resource.TestCheckResourceAttr("data.stackit_ske_kubernetes_versions.example", "kubernetes_versions.0.state", "supported"),
+
+					resource.TestCheckResourceAttr("data.stackit_ske_machine_image_versions.example", "version_state", "SUPPORTED"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.0.name"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.0.versions.0.version"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.0.versions.0.state"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.0.versions.0.cri.0"),
+					resource.TestCheckResourceAttr("data.stackit_ske_machine_image_versions.example", "machine_images.0.versions.0.state", "supported"),
+
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.1.name"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.1.versions.0.version"),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_machine_image_versions.example", "machine_images.1.versions.0.state"),
+				),
+			},
 		},
 	})
 }
