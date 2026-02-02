@@ -507,32 +507,46 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = &tempBlockedCountries
 	}
 
-	geofencingPatch := map[string][]string{}
-	if configModel.Backend.Geofencing != nil {
-		gf := make(map[string][]string)
-		for url, countries := range *configModel.Backend.Geofencing {
-			countryStrings := make([]string, len(countries))
-			for i, countryPtr := range countries {
-				if countryPtr == nil {
-					core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geofencing url %q has a null value", url))
-					return
+	configPatchBackend := &cdn.ConfigPatchBackend{}
+
+	if configModel.Backend.Type == "http" {
+		geofencingPatch := map[string][]string{}
+		if configModel.Backend.Geofencing != nil {
+			gf := make(map[string][]string)
+			for url, countries := range *configModel.Backend.Geofencing {
+				countryStrings := make([]string, len(countries))
+				for i, countryPtr := range countries {
+					if countryPtr == nil {
+						core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Geofencing url %q has a null value", url))
+						return
+					}
+					countryStrings[i] = *countryPtr
 				}
-				countryStrings[i] = *countryPtr
+				gf[url] = countryStrings
 			}
-			gf[url] = countryStrings
+			geofencingPatch = gf
 		}
-		geofencingPatch = gf
+
+		configPatchBackend.HttpBackendPatch = &cdn.HttpBackendPatch{
+			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
+			OriginUrl:            &configModel.Backend.OriginURL,
+			Type:                 cdn.PtrString("http"),
+			Geofencing:           &geofencingPatch,
+		}
+	} else if configModel.Backend.Type == "bucket" {
+		configPatchBackend.BucketBackendPatch = &cdn.BucketBackendPatch{
+			Type:      cdn.PtrString("bucket"),
+			BucketUrl: configModel.Backend.BucketURL,
+			Region:    configModel.Backend.Region,
+			Credentials: &cdn.BucketCredentials{
+				AccessKeyId:     configModel.Backend.AccessKey,
+				SecretAccessKey: configModel.Backend.SecretKey,
+			},
+		}
 	}
 
 	configPatch := &cdn.ConfigPatch{
-		Backend: &cdn.ConfigPatchBackend{
-			HttpBackendPatch: &cdn.HttpBackendPatch{
-				OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
-				OriginUrl:            &configModel.Backend.OriginURL,
-				Type:                 &configModel.Backend.Type,
-				Geofencing:           &geofencingPatch, // Use the converted variable
-			},
-		},
+		Backend:          configPatchBackend,
 		Regions:          &regions,
 		BlockedCountries: blockedCountries,
 	}
