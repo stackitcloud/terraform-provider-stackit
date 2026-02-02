@@ -35,7 +35,6 @@ data "stackit_logs_access_token" "accessToken" {
 
 ### Optional
 
-- `lifetime` (Number) A lifetime period for an access token in days. If unset the token will not expire.
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only

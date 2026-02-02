@@ -213,7 +213,6 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
-					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"permissions": schema.ListAttribute{
