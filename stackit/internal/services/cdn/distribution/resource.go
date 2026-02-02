@@ -62,6 +62,10 @@ var schemaDescriptions = map[string]string{
 	"domain_status":                         "The status of the domain",
 	"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
 	"domain_errors":                         "List of domain errors",
+	"config_backend_bucket_url":             "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
+	"config_backend_region":                 "The region where the bucket is hosted. Required if type is 'bucket'.",
+	"config_backend_access_key":             "The access key for the bucket. Required if type is 'bucket'.",
+	"config_backend_secret_key":             "The secret key for the bucket. Required if type is 'bucket'.",
 }
 
 type Model struct {
@@ -92,6 +96,10 @@ type backend struct {
 	OriginURL            string                `tfsdk:"origin_url"`             // The origin URL of the backend
 	OriginRequestHeaders *map[string]string    `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
 	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
+	BucketURL            *string               `tfsdk:"bucket_url"`
+	Region               *string               `tfsdk:"region"`
+	AccessKey            *string               `tfsdk:"access_key"`
+	SecretKey            *string               `tfsdk:"secret_key"`
 }
 
 var configTypes = map[string]attr.Type{
@@ -116,6 +124,10 @@ var backendTypes = map[string]attr.Type{
 	"origin_url":             types.StringType,
 	"origin_request_headers": types.MapType{ElemType: types.StringType},
 	"geofencing":             geofencingTypes,
+	"bucket_url":             types.StringType,
+	"region":                 types.StringType,
+	"access_key":             types.StringType,
+	"secret_key":             types.StringType,
 }
 
 var domainTypes = map[string]attr.Type{
@@ -159,7 +171,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 }
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	backendOptions := []string{"http"}
+	backendOptions := []string{"http", "bucket"}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
@@ -271,6 +283,27 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Validators: []validator.Map{
 									mapvalidator.SizeAtLeast(1),
 								},
+							},
+							"bucket_url": schema.StringAttribute{
+								Optional:    true,
+								Description: schemaDescriptions["config_backend_bucket_url"],
+								Validators: []validator.String{
+									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("region"), path.MatchRelative().AtParent().AtName("access_key"), path.MatchRelative().AtParent().AtName("secret_key")),
+								},
+							},
+							"region": schema.StringAttribute{
+								Optional:    true,
+								Description: schemaDescriptions["config_backend_region"],
+							},
+							"access_key": schema.StringAttribute{
+								Optional:    true,
+								Sensitive:   true,
+								Description: schemaDescriptions["config_backend_access_key"],
+							},
+							"secret_key": schema.StringAttribute{
+								Optional:    true,
+								Sensitive:   true,
+								Description: schemaDescriptions["config_backend_secret_key"],
 							},
 						},
 					},
@@ -650,6 +683,21 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		return core.DiagsToError(diags)
 	}
 
+	// Check if we have existing configuration to preerve secrets
+	var oldConfig distributionConfig
+	if !model.Config.IsNull() && !model.Config.IsUnknown() {
+		diags := model.Config.As(ctx, &oldConfig, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+	}
+	if distribution.Config.Backend.BucketBackend != nil {
+
+	}
+
 	// blockedCountries
 	var blockedCountries []attr.Value
 	if distribution.Config != nil && distribution.Config.BlockedCountries != nil {
@@ -678,17 +726,10 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	}
 
 	// geofencing
-	var oldConfig distributionConfig
 	oldGeofencingMap := make(map[string][]*string)
-	if !model.Config.IsNull() {
-		diags = model.Config.As(ctx, &oldConfig, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return core.DiagsToError(diags)
-		}
 		if oldConfig.Backend.Geofencing != nil {
 			oldGeofencingMap = *oldConfig.Backend.Geofencing
 		}
-	}
 
 	reconciledGeofencingData := make(map[string][]string)
 	if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
@@ -721,14 +762,49 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		}
 		geofencingVal = mappedGeofencing
 	}
+	// Map Backend Fields (HTTP or Bucket)
+	var backendValues map[string]attr.Value
 
-	// note that httpbackend is hardcoded here as long as it is the only available backend
-	backend, diags := types.ObjectValue(backendTypes, map[string]attr.Value{
-		"type":                   types.StringValue(*distribution.Config.Backend.HttpBackend.Type),
+	if distribution.Config.Backend.HttpBackend != nil {
+		backendValues = map[string]attr.Value{
+			"type":                   types.StringValue("http"),
 		"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
 		"origin_request_headers": originRequestHeaders,
 		"geofencing":             geofencingVal,
-	})
+			// bucket fields must be null when using HTTP
+			"bucket_url": types.StringNull(),
+			"region":     types.StringNull(),
+			"access_key": types.StringNull(),
+			"secret_key": types.StringNull(),
+		}
+	} else if distribution.Config.Backend.HttpBackend != nil {
+		// Preserve secrets from previos state beacuse API does not return them
+		accessKeyVal := types.StringNull()
+		secretKeyVal := types.StringNull()
+
+		if oldConfig.Backend.AccessKey != nil {
+			accessKeyVal = types.StringValue(*oldConfig.Backend.AccessKey)
+			secretKeyVal = types.StringValue(*oldConfig.Backend.SecretKey)
+		}
+		if oldConfig.Backend.SecretKey != nil {
+			secretKeyVal = types.StringValue(*oldConfig.Backend.SecretKey)
+		}
+
+		backendValues = map[string]attr.Value{
+			"type":       types.StringValue("bucket"),
+			"bucket_url": types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
+			"region":     types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
+			"access_key": accessKeyVal,
+			"secret_key": secretKeyVal,
+			// HTTP field must be null when using Bucket
+			"origin_url":             types.StringNull(),
+			"origin_request_headers": types.MapNull(types.StringType),
+			"geofencing":             types.MapNull(geofencingTypes.ElemType),
+		}
+	}
+
+	// note that httpbackend is hardcoded here as long as it is the only available backend
+	backend, diags := types.ObjectValue(backendTypes, backendValues)
 	if diags.HasError() {
 		return core.DiagsToError(diags)
 	}
