@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -202,9 +201,6 @@ func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
 			},
 			"dynamic_routes": schema.BoolAttribute{
 				Description: "This controls whether dynamic routes are propagated to this routing table",
@@ -531,5 +527,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		Name:          conversion.StringValueToPointer(model.Name),
 		Labels:        &labels,
 		DynamicRoutes: conversion.BoolValueToPointer(model.DynamicRoutes),
+		SystemRoutes:  conversion.BoolValueToPointer(model.SystemRoutes),
 	}, nil
 }
