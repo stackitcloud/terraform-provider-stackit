@@ -708,9 +708,6 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 			return core.DiagsToError(diags)
 		}
 	}
-	if distribution.Config.Backend.BucketBackend != nil {
-
-	}
 
 	// blockedCountries
 	var blockedCountries []attr.Value
@@ -791,14 +788,13 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 			"access_key": types.StringNull(),
 			"secret_key": types.StringNull(),
 		}
-	} else if distribution.Config.Backend.HttpBackend != nil {
+	} else if distribution.Config.Backend.BucketBackend != nil {
 		// Preserve secrets from previos state beacuse API does not return them
 		accessKeyVal := types.StringNull()
 		secretKeyVal := types.StringNull()
 
 		if oldConfig.Backend.AccessKey != nil {
 			accessKeyVal = types.StringValue(*oldConfig.Backend.AccessKey)
-			secretKeyVal = types.StringValue(*oldConfig.Backend.SecretKey)
 		}
 		if oldConfig.Backend.SecretKey != nil {
 			secretKeyVal = types.StringValue(*oldConfig.Backend.SecretKey)
