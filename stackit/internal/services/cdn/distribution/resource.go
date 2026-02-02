@@ -727,9 +727,9 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	// geofencing
 	oldGeofencingMap := make(map[string][]*string)
-		if oldConfig.Backend.Geofencing != nil {
-			oldGeofencingMap = *oldConfig.Backend.Geofencing
-		}
+	if oldConfig.Backend.Geofencing != nil {
+		oldGeofencingMap = *oldConfig.Backend.Geofencing
+	}
 
 	reconciledGeofencingData := make(map[string][]string)
 	if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
@@ -768,9 +768,9 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	if distribution.Config.Backend.HttpBackend != nil {
 		backendValues = map[string]attr.Value{
 			"type":                   types.StringValue("http"),
-		"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
-		"origin_request_headers": originRequestHeaders,
-		"geofencing":             geofencingVal,
+			"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
+			"origin_request_headers": originRequestHeaders,
+			"geofencing":             geofencingVal,
 			// bucket fields must be null when using HTTP
 			"bucket_url": types.StringNull(),
 			"region":     types.StringNull(),
@@ -886,10 +886,45 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	if cfg.Optimizer != nil {
 		optimizer = cdn.NewOptimizer(cfg.Optimizer.GetEnabled())
 	}
+	var backend *cdn.CreateDistributionPayloadBackend
+	if cfg.Backend.HttpBackend != nil {
+		backend = &cdn.CreateDistributionPayloadBackend{
+			HttpBackendCreate: &cdn.HttpBackendCreate{
+				OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
+				OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+				Geofencing:           cfg.Backend.HttpBackend.Geofencing,
+				Type:                 cdn.PtrString("http"),
+			},
+		}
+	} else if cfg.Backend.BucketBackend != nil {
+		// We need to parse the model again to access the credentials,
+		// as convertConfig returns the SDK Config struct which hides them.
+		var rawConfig distributionConfig
+		diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
+			UnhandledNullAsEmpty:    true,
+			UnhandledUnknownAsEmpty: true,
+		})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		backend = &cdn.CreateDistributionPayloadBackend{
+			BucketBackendCreate: &cdn.BucketBackendCreate{
+				Type:      cdn.PtrString("bucket"),
+				BucketUrl: cfg.Backend.BucketBackend.BucketUrl,
+				Region:    cfg.Backend.BucketBackend.Region,
+				Credentials: &cdn.BucketCredentials{
+					AccessKeyId:     rawConfig.Backend.AccessKey,
+					SecretAccessKey: rawConfig.Backend.SecretKey,
+				},
+			},
+		}
+	}
 
 	payload := &cdn.CreateDistributionPayload{
 		IntentId:         cdn.PtrString(uuid.NewString()),
 		Regions:          cfg.Regions,
+		Backend:          backend,
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
 	}
@@ -954,25 +989,32 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 	}
 
-	// originRequestHeaders
-	originRequestHeaders := map[string]string{}
-	if configModel.Backend.OriginRequestHeaders != nil {
-		for k, v := range *configModel.Backend.OriginRequestHeaders {
-			originRequestHeaders[k] = v
-		}
-	}
-
 	cdnConfig := &cdn.Config{
-		Backend: &cdn.ConfigBackend{
-			HttpBackend: &cdn.HttpBackend{
-				OriginRequestHeaders: &originRequestHeaders,
-				OriginUrl:            &configModel.Backend.OriginURL,
-				Type:                 &configModel.Backend.Type,
-				Geofencing:           &geofencing,
-			},
-		},
+		Backend:          &cdn.ConfigBackend{},
 		Regions:          &regions,
 		BlockedCountries: &blockedCountries,
+	}
+
+	if configModel.Backend.Type == "http" {
+		originRequestHeaders := map[string]string{}
+		if configModel.Backend.OriginRequestHeaders != nil {
+			for k, v := range *configModel.Backend.OriginRequestHeaders {
+				originRequestHeaders[k] = v
+			}
+		}
+		cdnConfig.Backend.HttpBackend = &cdn.HttpBackend{
+			OriginRequestHeaders: &originRequestHeaders,
+			OriginUrl:            &configModel.Backend.OriginURL,
+			Type:                 cdn.PtrString("http"),
+			Geofencing:           &geofencing,
+		}
+
+	} else if configModel.Backend.Type == "bucket" {
+		cdnConfig.Backend.BucketBackend = &cdn.BucketBackend{
+			Type:      cdn.PtrString("bucket"),
+			BucketUrl: configModel.Backend.BucketURL,
+			Region:    configModel.Backend.Region,
+		}
 	}
 
 	if !utils.IsUndefined(configModel.Optimizer) {
