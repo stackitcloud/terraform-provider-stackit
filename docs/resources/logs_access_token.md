@@ -63,7 +63,6 @@ import {
 
 ### Read-Only
 
-- `access_token` (String, Sensitive) The generated access token
 - `access_token_id` (String) The access token ID
 - `creator` (String) The user who created the access token
 - `expires` (Boolean) Indicates if the access token can expire

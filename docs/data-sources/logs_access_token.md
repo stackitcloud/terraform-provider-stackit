@@ -40,7 +40,6 @@ data "stackit_logs_access_token" "accessToken" {
 
 ### Read-Only
 
-- `access_token` (String, Sensitive) The generated access token
 - `creator` (String) The user who created the access token
 - `description` (String) The description of the access token
 - `display_name` (String) The displayed name of the access token

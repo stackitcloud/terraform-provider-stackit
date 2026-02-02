@@ -33,7 +33,6 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		InstanceID:    types.StringValue("iid"),
 		Region:        types.StringValue("rid"),
 		ProjectID:     types.StringValue("pid"),
-		AccessToken:   types.String{},
 		Creator:       types.String{},
 		Description:   types.String{},
 		DisplayName:   types.String{},
@@ -76,7 +75,6 @@ func TestMapFields(t *testing.T) {
 				model.Permissions = types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("write"),
 				})
-				model.AccessToken = types.StringValue("")
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
 				model.Creator = types.StringValue("testUser")

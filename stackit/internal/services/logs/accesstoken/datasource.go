@@ -91,11 +91,6 @@ func (d *logsAccessTokenDataSource) Schema(_ context.Context, _ datasource.Schem
 					validate.NoSeparator(),
 				},
 			},
-			"access_token": schema.StringAttribute{
-				Description: schemaDescriptions["access_token"],
-				Computed:    true,
-				Sensitive:   true,
-			},
 			"creator": schema.StringAttribute{
 				Description: schemaDescriptions["creator"],
 				Computed:    true,

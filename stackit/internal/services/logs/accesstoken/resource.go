@@ -43,7 +43,6 @@ var schemaDescriptions = map[string]string{
 	"instance_id":     "The Logs instance ID associated with the access token",
 	"region":          "STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"project_id":      "STACKIT project ID associated with the Logs access token",
-	"access_token":    "The generated access token",
 	"creator":         "The user who created the access token",
 	"description":     "The description of the access token",
 	"display_name":    "The displayed name of the access token",
@@ -63,7 +62,6 @@ type Model struct {
 	InstanceID    types.String `tfsdk:"instance_id"`
 	Region        types.String `tfsdk:"region"`
 	ProjectID     types.String `tfsdk:"project_id"`
-	AccessToken   types.String `tfsdk:"access_token"`
 	Creator       types.String `tfsdk:"creator"`
 	Description   types.String `tfsdk:"description"`
 	DisplayName   types.String `tfsdk:"display_name"`
@@ -190,14 +188,6 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 					validate.NoSeparator(),
 				},
 			},
-			"access_token": schema.StringAttribute{
-				Description: schemaDescriptions["access_token"],
-				Computed:    true,
-				Sensitive:   true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			"creator": schema.StringAttribute{
 				Description: schemaDescriptions["creator"],
 				Computed:    true,
@@ -223,6 +213,7 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"permissions": schema.ListAttribute{
@@ -500,10 +491,6 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {
 		model.ValidUntil = types.StringValue(accessToken.ValidUntil.Format(time.RFC3339))
-	}
-
-	if accessToken.AccessToken != nil {
-		model.AccessToken = types.StringValue(*accessToken.AccessToken)
 	}
 
 	permissionList := types.ListNull(types.StringType)
