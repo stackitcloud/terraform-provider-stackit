@@ -75,7 +75,7 @@ var (
 	LogsCustomEndpoint            = os.Getenv("TF_ACC_LOGS_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
 	ModelServingCustomEndpoint    = os.Getenv("TF_ACC_MODELSERVING_CUSTOM_ENDPOINT")
-	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_authorization_custom_endpoint")
+	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT")
 	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
 	ObservabilityCustomEndpoint   = os.Getenv("TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT")
@@ -91,8 +91,8 @@ var (
 	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
 	SFSCustomEndpoint             = os.Getenv("TF_ACC_SFS_CUSTOM_ENDPOINT")
 	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
-	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 	TokenCustomEndpoint           = os.Getenv("TF_ACC_TOKEN_CUSTOM_ENDPOINT")
+	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 )
 
 // Provider config helper functions
@@ -513,7 +513,7 @@ func SKEProviderConfig() string {
 }
 
 func AuthorizationProviderConfig() string {
-	if AuthorizationCustomEndpoint == "" {
+	if AuthorizationCustomEndpoint == "" || ServiceAccountCustomEndpoint == "" || ResourceManagerCustomEndpoint == "" || TokenCustomEndpoint == "" {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
@@ -523,9 +523,15 @@ func AuthorizationProviderConfig() string {
 	return fmt.Sprintf(`
 		provider "stackit" {
 			authorization_custom_endpoint = "%s"
+			service_account_custom_endpoint = "%s"
+			resourcemanager_custom_endpoint = "%s"
+			token_custom_endpoint = "%s"
 			experiments = ["iam"]
 		}`,
 		AuthorizationCustomEndpoint,
+		ServiceAccountCustomEndpoint,
+		ResourceManagerCustomEndpoint,
+		TokenCustomEndpoint,
 	)
 }
 
