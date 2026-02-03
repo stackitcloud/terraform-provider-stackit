@@ -376,9 +376,27 @@ const (
 )
 
 func blockUntilDomainResolves(domain string) (net.IP, error) {
+
+	// Create a custom resolver that bypasses the local system DNS settings/cache
+	// and queries Google DNS (8.8.8.8) directly.
+	r := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Millisecond * time.Duration(10000),
+			}
+			// Force query to Google DNS
+			return d.DialContext(ctx, network, "8.8.8.8:53")
+		},
+	}
+
 	// wait until it becomes ready
 	isReady := func() (net.IP, error) {
-		ips, err := net.LookupIP(domain)
+		// Use a context for the individual query timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		ips, err := r.LookupIP(ctx, "ip", domain)
 		if err != nil {
 			return nil, fmt.Errorf("error looking up IP for domain %s: %w", domain, err)
 		}
@@ -389,6 +407,7 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 		}
 		return nil, fmt.Errorf("no IP for domain: %v", domain)
 	}
+
 	return retry(recordCheckAttempts, recordCheckInterval, isReady)
 }
 
