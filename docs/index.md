@@ -187,7 +187,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
 - `server_update_custom_endpoint` (String) Custom endpoint for the Server Update service
 - `service_account_custom_endpoint` (String) Custom endpoint for the Service Account service
-- `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.
+- `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required uisng OpenID Connect authentication.
 - `service_account_federated_token` (String) The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.
 - `service_account_federated_token_path` (String) Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
@@ -198,4 +198,4 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
-- `use_oidc` (Boolean) Enable OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
+- `use_oidc` (Boolean) Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
