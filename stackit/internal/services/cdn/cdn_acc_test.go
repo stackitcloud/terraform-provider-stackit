@@ -333,6 +333,112 @@ func TestAccCDNDistributionResource(t *testing.T) {
 		},
 	})
 }
+func configBucketResources(bucketUrl, region, accessKey, secretKey string) string {
+	return fmt.Sprintf(`
+                %s
+
+                resource "stackit_cdn_distribution" "distribution" {
+                    project_id = "%s"
+                    config = {
+                        backend = {
+                            type       = "bucket"
+                            bucket_url = "%s"
+                            region     = "%s"
+                            access_key = "%s"
+                            secret_key = "%s"
+                        }
+                        regions           = ["EU", "US"]
+                        blocked_countries = ["CN", "RU"] 
+            
+                        optimizer = {
+                            enabled = false
+                        }
+                    }
+                }
+        `, testutil.CdnProviderConfig(), testutil.ProjectId, bucketUrl, region, accessKey, secretKey)
+}
+func randomString(n int) string {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	bytes := make([]byte, n)
+	if _, err := cryptoRand.Read(bytes); err != nil {
+		panic("failed to generate random string: " + err.Error())
+	}
+	for i, b := range bytes {
+		bytes[i] = letters[b%byte(len(letters))]
+	}
+	return string(bytes)
+}
+func TestAccCDNDistributionBucketResource(t *testing.T) {
+	// Define dummy bucket data
+	// Note: We use dummy credentials. The CDN API might validate format,
+	// but usually accepts valid-looking strings for async creation.
+	bucketUrl := "https://my-private-bucket.s3.eu-central-1.amazonaws.com"
+	bucketRegion := "eu01"
+	accessKey := strings.ToUpper(randomString(16))
+	secretKey := randomString(40)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckCDNDistributionDestroy,
+		Steps: []resource.TestStep{
+			// 1. Distribution Create with Bucket Backend
+			{
+				Config: configBucketResources(bucketUrl, bucketRegion, accessKey, secretKey),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Basic Identity Checks
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+
+					// Backend Type Check
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.type", "bucket"),
+
+					// Bucket Specific Field Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", bucketUrl),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", bucketRegion),
+
+					// CRITICAL: Check Credentials Persistence
+					// The API returns null for these, so if this passes,
+					// it means your logic in resource.go (mapFields) correctly
+					// restored the secrets from the Terraform state.
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.access_key", accessKey),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.secret_key", secretKey),
+
+					// Ensure HTTP fields are not set
+					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.backend.origin_url"),
+				),
+			},
+			// 2. Import Test
+			// This verifies that importing a bucket distribution works,
+			// although note that imported resources usually lose secrets (access_key/secret_key)
+			// because they are not in the API response.
+			{
+				ResourceName: "stackit_cdn_distribution.distribution",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_cdn_distribution.distribution"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_cdn_distribution.distribution")
+					}
+					distributionId, ok := r.Primary.Attributes["distribution_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute distribution_id")
+					}
+
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, distributionId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+				// We MUST ignore credentials on import verification
+				// because the API does not return them, so Terraform will see them as null/empty
+				// in the new state, differing from the config.
+				ImportStateVerifyIgnore: []string{
+					"config.backend.access_key",
+					"config.backend.secret_key",
+				},
+			},
+		},
+	})
+}
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *cdn.APIClient

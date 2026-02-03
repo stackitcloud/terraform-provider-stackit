@@ -266,7 +266,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Validators:  []validator.String{stringvalidator.OneOf(backendOptions...)},
 							},
 							"origin_url": schema.StringAttribute{
-								Required:    true,
+								Optional:    true,
 								Description: schemaDescriptions["config_backend_origin_url"],
 							},
 							"origin_request_headers": schema.MapAttribute{
