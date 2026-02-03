@@ -724,15 +724,17 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	// originRequestHeaders
 	originRequestHeaders := types.MapNull(types.StringType)
-	if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; origHeaders != nil && len(*origHeaders) > 0 {
-		headers := map[string]attr.Value{}
-		for k, v := range *origHeaders {
-			headers[k] = types.StringValue(v)
-		}
-		mappedHeaders, diags := types.MapValue(types.StringType, headers)
-		originRequestHeaders = mappedHeaders
-		if diags.HasError() {
-			return core.DiagsToError(diags)
+	if distribution.Config.Backend.HttpBackend != nil {
+		if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; origHeaders != nil && len(*origHeaders) > 0 {
+			headers := map[string]attr.Value{}
+			for k, v := range *origHeaders {
+				headers[k] = types.StringValue(v)
+			}
+			mappedHeaders, diags := types.MapValue(types.StringType, headers)
+			originRequestHeaders = mappedHeaders
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
 		}
 	}
 
@@ -743,15 +745,17 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	}
 
 	reconciledGeofencingData := make(map[string][]string)
-	if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
-		newGeofencingMap := *geofencingAPI
-		for url, newCountries := range newGeofencingMap {
-			oldCountriesPtrs := oldGeofencingMap[url]
+	if distribution.Config.Backend.HttpBackend != nil {
+		if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
+			newGeofencingMap := *geofencingAPI
+			for url, newCountries := range newGeofencingMap {
+				oldCountriesPtrs := oldGeofencingMap[url]
 
-			oldCountries := utils.ConvertPointerSliceToStringSlice(oldCountriesPtrs)
+				oldCountries := utils.ConvertPointerSliceToStringSlice(oldCountriesPtrs)
 
-			reconciledCountries := utils.ReconcileStringSlices(oldCountries, newCountries)
-			reconciledGeofencingData[url] = reconciledCountries
+				reconciledCountries := utils.ReconcileStringSlices(oldCountries, newCountries)
+				reconciledGeofencingData[url] = reconciledCountries
+			}
 		}
 	}
 
@@ -951,8 +955,8 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	}
 	configModel := distributionConfig{}
 	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    false,
-		UnhandledUnknownAsEmpty: false,
+		UnhandledNullAsEmpty:    true,
+		UnhandledUnknownAsEmpty: true,
 	})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)

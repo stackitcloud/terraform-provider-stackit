@@ -29,6 +29,10 @@ func TestToCreatePayload(t *testing.T) {
 		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 		"origin_request_headers": originRequestHeaders,
 		"geofencing":             geofencing,
+		"bucket_url":             types.StringNull(),
+		"region":                 types.StringNull(),
+		"access_key":             types.StringNull(),
+		"secret_key":             types.StringNull(),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
@@ -64,6 +68,14 @@ func TestToCreatePayload(t *testing.T) {
 			Expected: &cdn.CreateDistributionPayload{
 				Regions:          &[]cdn.Region{"EU", "US"},
 				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Backend: &cdn.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdn.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            cdn.PtrString("https://www.mycoolapp.com"),
+						Type:                 cdn.PtrString("http"),
+					},
+				},
 			},
 			IsValid: true,
 		},
@@ -79,6 +91,50 @@ func TestToCreatePayload(t *testing.T) {
 			Expected: &cdn.CreateDistributionPayload{
 				Regions:          &[]cdn.Region{"EU", "US"},
 				Optimizer:        cdn.NewOptimizer(true),
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Backend: &cdn.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdn.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            cdn.PtrString("https://www.mycoolapp.com"),
+						Type:                 cdn.PtrString("http"),
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_bucket": {
+			Input: modelFixture(func(m *Model) {
+				bucketBackend := types.ObjectValueMust(backendTypes, map[string]attr.Value{
+					"type":                   types.StringValue("bucket"),
+					"bucket_url":             types.StringValue("https://s3.example.com"),
+					"region":                 types.StringValue("eu01"),
+					"access_key":             types.StringValue("my-access"),
+					"secret_key":             types.StringValue("my-secret"),
+					"origin_url":             types.StringNull(),
+					"origin_request_headers": types.MapNull(types.StringType),
+					"geofencing":             types.MapNull(geofencingTypes.ElemType),
+				})
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           bucketBackend,
+					"regions":           regionsFixture, // reusing the existing one
+					"blocked_countries": blockedCountriesFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+				})
+			}),
+			Expected: &cdn.CreateDistributionPayload{
+				Backend: &cdn.CreateDistributionPayloadBackend{
+					BucketBackendCreate: &cdn.BucketBackendCreate{
+						Type:      cdn.PtrString("bucket"),
+						BucketUrl: cdn.PtrString("https://s3.example.com"),
+						Region:    cdn.PtrString("eu01"),
+						Credentials: &cdn.BucketCredentials{
+							AccessKeyId:     cdn.PtrString("my-access"),
+							SecretAccessKey: cdn.PtrString("my-secret"),
+						},
+					},
+				},
+				Regions:          &[]cdn.Region{"EU", "US"},
 				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
@@ -136,6 +192,10 @@ func TestConvertConfig(t *testing.T) {
 		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 		"origin_request_headers": originRequestHeaders,
 		"geofencing":             geofencing,
+		"bucket_url":             types.StringNull(),
+		"region":                 types.StringNull(),
+		"access_key":             types.StringNull(),
+		"secret_key":             types.StringNull(),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
@@ -214,6 +274,40 @@ func TestConvertConfig(t *testing.T) {
 			},
 			IsValid: true,
 		},
+		"happy_path_bucket": {
+			Input: modelFixture(func(m *Model) {
+				bucketBackend := types.ObjectValueMust(backendTypes, map[string]attr.Value{
+					"type":                   types.StringValue("bucket"),
+					"bucket_url":             types.StringValue("https://s3.example.com"),
+					"region":                 types.StringValue("eu01"),
+					"access_key":             types.StringValue("my-access"),
+					"secret_key":             types.StringValue("my-secret"),
+					"origin_url":             types.StringNull(),
+					"origin_request_headers": types.MapNull(types.StringType),
+					"geofencing":             types.MapNull(geofencingTypes.ElemType),
+				})
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           bucketBackend,
+					"regions":           regionsFixture,
+					"blocked_countries": blockedCountriesFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+				})
+			}),
+			Expected: &cdn.Config{
+				Backend: &cdn.ConfigBackend{
+					BucketBackend: &cdn.BucketBackend{
+						Type:      cdn.PtrString("bucket"),
+						BucketUrl: cdn.PtrString("https://s3.example.com"),
+						Region:    cdn.PtrString("eu01"),
+						// Note: config does not return credentials
+
+					},
+				},
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+			},
+			IsValid: true,
+		},
 		"sad_path_model_nil": {
 			Input:    nil,
 			Expected: nil,
@@ -259,6 +353,10 @@ func TestMapFields(t *testing.T) {
 		"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 		"origin_request_headers": originRequestHeaders,
 		"geofencing":             types.MapNull(geofencingTypes.ElemType),
+		"bucket_url":             types.StringNull(),
+		"region":                 types.StringNull(),
+		"access_key":             types.StringNull(),
+		"secret_key":             types.StringNull(),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
 	regionsFixture := types.ListValueMust(types.StringType, regions)
@@ -339,10 +437,28 @@ func TestMapFields(t *testing.T) {
 		}
 		return distribution
 	}
+	// define old state with the secrets
+	bucketBackendOld := types.ObjectValueMust(backendTypes, map[string]attr.Value{
+		"type":                   types.StringValue("bucket"),
+		"bucket_url":             types.StringValue("https://s3.example.com"),
+		"region":                 types.StringValue("eu01"),
+		"access_key":             types.StringValue("old-access"),
+		"secret_key":             types.StringValue("old-secret"),
+		"origin_url":             types.StringNull(),
+		"origin_request_headers": types.MapNull(types.StringType),
+		"geofencing":             types.MapNull(geofencingTypes.ElemType),
+	})
+	configOld := types.ObjectValueMust(configTypes, map[string]attr.Value{
+		"backend":           bucketBackendOld,
+		"regions":           regionsFixture,
+		"blocked_countries": blockedCountriesFixture,
+		"optimizer":         types.ObjectNull(optimizerTypes),
+	})
 	tests := map[string]struct {
-		Input    *cdn.Distribution
-		Expected *Model
-		IsValid  bool
+		Input        *cdn.Distribution
+		Expected     *Model
+		InitialState *Model
+		IsValid      bool
 	}{
 		"happy_path": {
 			Expected: expectedModel(),
@@ -372,6 +488,10 @@ func TestMapFields(t *testing.T) {
 					"origin_url":             types.StringValue("https://www.mycoolapp.com"),
 					"origin_request_headers": originRequestHeaders,
 					"geofencing":             geofencing,
+					"bucket_url":             types.StringNull(),
+					"region":                 types.StringNull(),
+					"access_key":             types.StringNull(),
+					"secret_key":             types.StringNull(),
 				})
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
 					"backend":           backendWithGeofencing,
@@ -427,6 +547,24 @@ func TestMapFields(t *testing.T) {
 			}),
 			IsValid: true,
 		},
+		"happy_path_bucket_restore_creds": {
+			Input: distributionFixture(func(d *cdn.Distribution) {
+				d.Config.Backend = &cdn.ConfigBackend{
+					BucketBackend: &cdn.BucketBackend{
+						Type:      cdn.PtrString("bucket"),
+						BucketUrl: cdn.PtrString("https://s3.example.com"),
+						Region:    cdn.PtrString("eu01"),
+					},
+				}
+			}),
+			InitialState: expectedModel(func(m *Model) {
+				m.Config = configOld
+			}),
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configOld
+			}),
+			IsValid: true,
+		},
 		"sad_path_distribution_nil": {
 			Expected: nil,
 			Input:    nil,
@@ -450,6 +588,12 @@ func TestMapFields(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			model := &Model{}
+			if tc.InitialState != nil {
+				model = tc.InitialState
+			} else {
+				model.Config = types.ObjectNull(configTypes)
+			}
+
 			err := mapFields(context.Background(), tc.Input, model)
 			if err != nil && tc.IsValid {
 				t.Fatalf("Error mapping fields: %v", err)
