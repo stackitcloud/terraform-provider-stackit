@@ -244,7 +244,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 }
 
 // mapDataSourceFields is a specialized version of mapFields for the Data Source.
-// It uses dataSourceConfigTypes (excludes secrets) and skips state restoration logic.
+// It uses dataSourceConfigTypes (excludes bucket access and secrets) and skips state restoration logic.
 func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, model *Model) error {
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")
