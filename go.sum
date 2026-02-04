@@ -201,8 +201,8 @@ github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6 h1:sQ3fdtUjg
 github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6/go.mod h1:3fjlL+9YtuI9Oocl1ZeYIK48ImtY4DwPggFhqAygr7o=
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.6 h1:WU76mZkJP6diMDjGFqM8On6fZhUDmGcy6ppX0+kWx9Y=
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.6/go.mod h1:hRllU+yEJM6ovrLeXwVeT5hI70ftPKjX4z/Nj8TZqJw=
-github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.5 h1:P2lqx/WGqwTDQVPxFh4NbU6ygg52J33ClIDrCFWomAc=
-github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.5/go.mod h1:hwk3gEL1l9dVM4HWGaV8eM+Yxb4dEFENPN15LYP85gI=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.7 h1:M2PYLF8k3zmAwYWSKfUiCTNTXr7ROGuJganVVEQA3YI=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.7/go.mod h1:jitkQuP2K/SH63Qor0C4pcqz1GDCy/lK2H4t8/VDse4=
 github.com/stackitcloud/stackit-sdk-go/services/sfs v0.3.0 h1:4567q2dFp3Hw+5Kx+NLDKDcMWsRHMazTlh5aBrhlkXs=
 github.com/stackitcloud/stackit-sdk-go/services/sfs v0.3.0/go.mod h1:r5lBwzJpJe2xBIYctkVIIpaZ41Y6vUEpkmsWR2VoQJs=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.1 h1:gWC/4rCroldoHtlSu1WMhYOZqXsNSoVCiLr/uQcIN1I=
