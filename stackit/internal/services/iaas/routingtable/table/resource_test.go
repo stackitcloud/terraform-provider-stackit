@@ -183,6 +183,7 @@ func TestToUpdatePayload(t *testing.T) {
 					"key2": types.StringValue("value2"),
 				}),
 				DynamicRoutes: types.BoolValue(false),
+				SystemRoutes:  types.BoolValue(false),
 			},
 			&iaas.UpdateRoutingTableOfAreaPayload{
 				Description: utils.Ptr("Description"),
@@ -192,6 +193,7 @@ func TestToUpdatePayload(t *testing.T) {
 					"key2": "value2",
 				},
 				DynamicRoutes: utils.Ptr(false),
+				SystemRoutes:  utils.Ptr(false),
 			},
 			true,
 		},
