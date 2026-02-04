@@ -593,6 +593,7 @@ var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
+	updatedConfig["system_routes"] = config.BoolVariable(true)
 	updatedConfig["dynamic_routes"] = config.BoolVariable(true)
 	return updatedConfig
 }()
@@ -4693,6 +4694,11 @@ func TestAccRoutingTableMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigRoutingTableMin,
 				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionCreate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
@@ -4750,6 +4756,11 @@ func TestAccRoutingTableMin(t *testing.T) {
 					`,
 					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig,
 				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionNoop),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table
 					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMin["organization_id"])),
@@ -4831,6 +4842,11 @@ func TestAccRoutingTableMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigRoutingTableMinUpdated,
 				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table
 					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMinUpdated["organization_id"])),
@@ -4863,6 +4879,11 @@ func TestAccRoutingTableMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigRoutingTableMax,
 				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionCreate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
@@ -4919,6 +4940,11 @@ func TestAccRoutingTableMax(t *testing.T) {
 					`,
 					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig,
 				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionNoop),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table
 					resource.TestCheckResourceAttr("data.stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMax["organization_id"])),
@@ -5002,6 +5028,11 @@ func TestAccRoutingTableMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigRoutingTableMaxUpdated,
 				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table
 					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableMaxUpdated["organization_id"])),
