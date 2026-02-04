@@ -828,7 +828,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 				OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
 				OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
 				Geofencing:           cfg.Backend.HttpBackend.Geofencing,
-				Type:                 cdn.PtrString("http"),
+				Type:                 cfg.Backend.HttpBackend.Type,
 			},
 		},
 		IntentId:         cdn.PtrString(uuid.NewString()),
