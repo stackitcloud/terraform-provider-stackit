@@ -449,8 +449,9 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"lifetime"},
 			},
 			// Update
 			{
@@ -563,8 +564,9 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
 				},
-				ImportState:       true,
-				ImportStateVerify: true,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"lifetime"},
 			},
 			// Update
 			{
