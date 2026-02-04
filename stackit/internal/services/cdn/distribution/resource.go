@@ -268,6 +268,15 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"origin_url": schema.StringAttribute{
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_origin_url"],
+								Validators: []validator.String{
+									stringvalidator.ConflictsWith(
+										// If the origin_url field is populated, no bucket fields can be used
+										path.MatchRelative().AtParent().AtName("bucket_url"),
+										path.MatchRelative().AtParent().AtName("region"),
+										path.MatchRelative().AtParent().AtName("access_key"),
+										path.MatchRelative().AtParent().AtName("secret_key"),
+									),
+								},
 							},
 							"origin_request_headers": schema.MapAttribute{
 								Optional:    true,
@@ -289,21 +298,28 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Description: schemaDescriptions["config_backend_bucket_url"],
 								Validators: []validator.String{
 									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("region"), path.MatchRelative().AtParent().AtName("access_key"), path.MatchRelative().AtParent().AtName("secret_key")),
+									stringvalidator.ConflictsWith(
+										// If the origin_url is populated, bucket_url can not be used
+										path.MatchRelative().AtParent().AtName("origin_url"),
+									),
 								},
 							},
 							"region": schema.StringAttribute{
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_region"],
+								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
 							"access_key": schema.StringAttribute{
 								Optional:    true,
 								Sensitive:   true,
 								Description: schemaDescriptions["config_backend_access_key"],
+								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
 							"secret_key": schema.StringAttribute{
 								Optional:    true,
 								Sensitive:   true,
 								Description: schemaDescriptions["config_backend_secret_key"],
+								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
 						},
 					},
