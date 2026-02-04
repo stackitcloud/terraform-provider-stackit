@@ -2,7 +2,6 @@ package accesstoken
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -166,13 +164,17 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 
 	accessTokenResponse, err := d.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Calling API: %v", err))
+		tfutils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading Logs access token",
+			fmt.Sprintf("Calling API: %v", err),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	ctx = core.LogResponse(ctx)

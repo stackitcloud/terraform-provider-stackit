@@ -2,7 +2,6 @@ package accesstoken
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -43,6 +41,7 @@ var schemaDescriptions = map[string]string{
 	"instance_id":     "The Logs instance ID associated with the access token",
 	"region":          "STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"project_id":      "STACKIT project ID associated with the Logs access token",
+	"access_token":    "The generated access token",
 	"creator":         "The user who created the access token",
 	"description":     "The description of the access token",
 	"display_name":    "The displayed name of the access token",
@@ -65,6 +64,7 @@ type Model struct {
 	Creator       types.String `tfsdk:"creator"`
 	Description   types.String `tfsdk:"description"`
 	DisplayName   types.String `tfsdk:"display_name"`
+	AccessToken   types.String `tfsdk:"access_token"`
 	Expires       types.Bool   `tfsdk:"expires"`
 	ValidUntil    types.String `tfsdk:"valid_until"`
 	Lifetime      types.Int64  `tfsdk:"lifetime"`
@@ -82,22 +82,21 @@ func NewLogsAccessTokenResource() resource.Resource {
 }
 
 func (r *logsAccessTokenResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_logs_access_token", "resource")
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_logs_access_token", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.client = utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
-	r.providerData = providerData
 	tflog.Info(ctx, "Logs client configured")
 }
 
@@ -192,6 +191,14 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 				Description: schemaDescriptions["creator"],
 				Computed:    true,
 			},
+			"access_token": schema.StringAttribute{
+				Description: schemaDescriptions["access_token"],
+				Computed:    true,
+				Sensitive:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
@@ -243,7 +250,7 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 
 	instanceId := model.InstanceID.ValueString()
 	projectId := model.ProjectID.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -254,9 +261,7 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	regionId := r.providerData.GetRegionWithOverride(model.Region)
-	ctx = tflog.SetField(ctx, "region", regionId)
-	createResp, err := r.client.CreateAccessToken(ctx, projectId, regionId, instanceId).CreateAccessTokenPayload(*payload).Execute()
+	createResp, err := r.client.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -306,13 +311,17 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 
 	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Calling API: %v", err))
+		tfutils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading Logs access token",
+			fmt.Sprintf("Calling API: %v", err),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	ctx = core.LogResponse(ctx)
@@ -449,7 +458,7 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		Lifetime:    conversion.Int64ValueToPointer(model.Lifetime),
 	}
 
-	if !(model.Permissions.IsNull() || model.Permissions.IsUnknown()) {
+	if !(tfutils.IsUndefined(model.Permissions)) {
 		var permissions []string
 		permissionDiags := model.Permissions.ElementsAs(ctx, &permissions, false)
 		diagnostics.Append(permissionDiags...)
@@ -490,6 +499,10 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {
 		model.ValidUntil = types.StringValue(accessToken.ValidUntil.Format(time.RFC3339))
+	}
+
+	if accessToken.AccessToken != nil {
+		model.AccessToken = types.StringValue(*accessToken.AccessToken)
 	}
 
 	permissionList := types.ListNull(types.StringType)

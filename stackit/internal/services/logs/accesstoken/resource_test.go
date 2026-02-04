@@ -34,6 +34,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		Region:        types.StringValue("rid"),
 		ProjectID:     types.StringValue("pid"),
 		Creator:       types.String{},
+		AccessToken:   types.String{},
 		Description:   types.String{},
 		DisplayName:   types.String{},
 		Expires:       types.Bool{},
@@ -75,6 +76,7 @@ func TestMapFields(t *testing.T) {
 				model.Permissions = types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("write"),
 				})
+				model.AccessToken = types.StringValue("")
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
 				model.Creator = types.StringValue("testUser")
