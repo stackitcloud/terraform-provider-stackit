@@ -52,17 +52,21 @@ var (
 )
 
 type Model struct {
-	Id                                 types.String `tfsdk:"id"` // needed by TF
-	ProjectId                          types.String `tfsdk:"project_id"`
-	InstanceId                         types.String `tfsdk:"instance_id"`
-	Name                               types.String `tfsdk:"name"`
-	PlanName                           types.String `tfsdk:"plan_name"`
-	PlanId                             types.String `tfsdk:"plan_id"`
-	Parameters                         types.Map    `tfsdk:"parameters"`
-	DashboardURL                       types.String `tfsdk:"dashboard_url"`
-	IsUpdatable                        types.Bool   `tfsdk:"is_updatable"`
-	GrafanaURL                         types.String `tfsdk:"grafana_url"`
-	GrafanaPublicReadAccess            types.Bool   `tfsdk:"grafana_public_read_access"`
+	Id                      types.String `tfsdk:"id"` // needed by TF
+	ProjectId               types.String `tfsdk:"project_id"`
+	InstanceId              types.String `tfsdk:"instance_id"`
+	Name                    types.String `tfsdk:"name"`
+	PlanName                types.String `tfsdk:"plan_name"`
+	PlanId                  types.String `tfsdk:"plan_id"`
+	Parameters              types.Map    `tfsdk:"parameters"`
+	DashboardURL            types.String `tfsdk:"dashboard_url"`
+	IsUpdatable             types.Bool   `tfsdk:"is_updatable"`
+	GrafanaURL              types.String `tfsdk:"grafana_url"`
+	GrafanaPublicReadAccess types.Bool   `tfsdk:"grafana_public_read_access"`
+	// Deprecated: GrafanaInitialAdminPassword is deprecated and will be removed after 5th July 2026. Use GrafanaAdminEnabled instead.
+	GrafanaInitialAdminPassword types.String `tfsdk:"grafana_initial_admin_password"`
+	// Deprecated: GrafanaInitialAdminUser is deprecated and will be removed after 5th July 2026. Use GrafanaAdminEnabled instead.
+	GrafanaInitialAdminUser            types.String `tfsdk:"grafana_initial_admin_user"`
 	GrafanaAdminEnabled                types.Bool   `tfsdk:"grafana_admin_enabled"`
 	MetricsRetentionDays               types.Int64  `tfsdk:"metrics_retention_days"`
 	MetricsRetentionDays5mDownsampling types.Int64  `tfsdk:"metrics_retention_days_5m_downsampling"`
@@ -495,6 +499,23 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"grafana_url": schema.StringAttribute{
 				Description: "Specifies Grafana URL.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"grafana_initial_admin_user": schema.StringAttribute{
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin username.",
+				Computed:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"grafana_initial_admin_password": schema.StringAttribute{
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin password.",
+				Computed:           true,
+				Sensitive:          true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -1548,6 +1569,10 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		i := *r.Instance
 		model.GrafanaURL = types.StringPointerValue(i.GrafanaUrl)
 		model.GrafanaPublicReadAccess = types.BoolPointerValue(i.GrafanaPublicReadAccess)
+		//nolint:staticcheck // SA1019: This field deprecated but needs to be supported. It is removed on 5th July 2026.
+		model.GrafanaInitialAdminPassword = types.StringPointerValue(i.GrafanaAdminPassword)
+		//nolint:staticcheck // SA1019: This field deprecated but needs to be supported. It is removed on 5th July 2026.
+		model.GrafanaInitialAdminUser = types.StringPointerValue(i.GrafanaAdminUser)
 		model.MetricsURL = types.StringPointerValue(i.MetricsUrl)
 		model.MetricsPushURL = types.StringPointerValue(i.PushMetricsUrl)
 		model.TargetsURL = types.StringPointerValue(i.TargetsUrl)

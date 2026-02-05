@@ -57,6 +57,8 @@ import {
 
 - `alerting_url` (String) Specifies Alerting URL.
 - `dashboard_url` (String) Specifies Observability instance dashboard URL.
+- `grafana_initial_admin_password` (String, Sensitive, Deprecated) Specifies an initial Grafana admin password.
+- `grafana_initial_admin_user` (String, Deprecated) Specifies an initial Grafana admin username.
 - `grafana_public_read_access` (Boolean) If true, anyone can access Grafana dashboards without logging in.
 - `grafana_url` (String) Specifies Grafana URL.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
