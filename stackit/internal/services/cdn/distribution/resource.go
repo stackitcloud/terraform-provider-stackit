@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -281,8 +282,18 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 					},
 					"blocked_countries": schema.ListAttribute{
 						Optional:    true,
+						Computed:    true, // Required when using Default
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
+						// The API returns an empty list for blocked_countries even if the field is omitted
+						// (null) in the request. This causes an "inconsistent result" error in Terraform
+						// because the config is null but the state is [].
+						//
+						// By setting a Default value of an empty list, we tell Terraform to treat a missing
+						// blocked_countries block in the HCL as if the user explicitly defined
+						// blocked_countries = []. This ensures the config (empty list) matches the
+						// API response (empty list).
+						Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 					},
 				},
 			},
@@ -812,6 +823,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	}
 
 	payload := &cdn.CreateDistributionPayload{
+		Backend: &cdn.CreateDistributionPayloadBackend{
+			HttpBackendCreate: &cdn.HttpBackendCreate{
+				OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
+				OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+				Geofencing:           cfg.Backend.HttpBackend.Geofencing,
+				Type:                 cfg.Backend.HttpBackend.Type,
+			},
+		},
 		IntentId:         cdn.PtrString(uuid.NewString()),
 		Regions:          cfg.Regions,
 		BlockedCountries: cfg.BlockedCountries,
