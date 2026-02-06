@@ -188,10 +188,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"region": schema.StringAttribute{
 				// the region cannot be found, so it has to be passed
 				Optional:    true,
-				Description: "Can only be used when experimental \"network\" is set. This is likely going to undergo significant changes or be removed in the future.\nThe resource region. If not defined, the provider region is used.",
+				Description: "The resource region. If not defined, the provider region is used.",
 			},
 			"routing_table_id": schema.StringAttribute{
-				Description: "Can only be used when experimental \"network\" is set. This is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.\nThe ID of the routing table associated with the network.",
+				Description: "The ID of the routing table associated with the network.",
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
