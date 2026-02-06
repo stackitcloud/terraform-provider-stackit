@@ -207,8 +207,8 @@ github.com/stackitcloud/stackit-sdk-go/services/sfs v0.3.0 h1:4567q2dFp3Hw+5Kx+N
 github.com/stackitcloud/stackit-sdk-go/services/sfs v0.3.0/go.mod h1:r5lBwzJpJe2xBIYctkVIIpaZ41Y6vUEpkmsWR2VoQJs=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.1 h1:gWC/4rCroldoHtlSu1WMhYOZqXsNSoVCiLr/uQcIN1I=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.1/go.mod h1:gMb+Jx6OmkZ12GxVXf8UffSVQbkc+OO/Ml6AXz9ifhg=
-github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.1 h1:6MJdy1xmdE+uOo/F8mR5HSldjPSHpdhwuqS3u9m2EWQ=
-github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.1/go.mod h1:XLr3ZfrT1g8ZZMm7A6RXOPBuhBkikdUN2o/+/Y+Hu+g=
+github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.3 h1:AQrcr+qeIuZob+3TT2q1L4WOPtpsu5SEpkTnOUHDqfE=
+github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.3/go.mod h1:8BBGC69WFXWWmKgzSjgE4HvsI7pEgO0RN2cASwuPJ18=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=

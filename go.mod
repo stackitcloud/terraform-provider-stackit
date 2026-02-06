@@ -39,7 +39,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.7
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.1
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.1
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.3
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.32.0
 )
