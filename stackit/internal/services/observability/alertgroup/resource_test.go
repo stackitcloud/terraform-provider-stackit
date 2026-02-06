@@ -72,6 +72,7 @@ func TestToCreatePayload(t *testing.T) {
 										"k": types.StringValue("v"),
 									},
 								),
+								"record": types.StringValue("record"),
 							},
 						),
 					},
@@ -91,6 +92,7 @@ func TestToCreatePayload(t *testing.T) {
 						Labels: &map[string]interface{}{
 							"k": "v",
 						},
+						Record: utils.Ptr("record"),
 					},
 				},
 			},
@@ -153,6 +155,7 @@ func TestToRulesPayload(t *testing.T) {
 						"annotations": types.MapValueMust(types.StringType, map[string]attr.Value{
 							"note": types.StringValue("important"),
 						}),
+						"record": types.StringValue("record"),
 					}),
 				}),
 			},
@@ -167,6 +170,7 @@ func TestToRulesPayload(t *testing.T) {
 					Annotations: &map[string]interface{}{
 						"note": "important",
 					},
+					Record: utils.Ptr("record"),
 				},
 			},
 			expectErr: false,
@@ -181,6 +185,7 @@ func TestToRulesPayload(t *testing.T) {
 						"for":         types.StringValue("5s"),
 						"labels":      types.MapNull(types.StringType),
 						"annotations": types.MapNull(types.StringType),
+						"record":      types.StringValue("record1"),
 					}),
 					types.ObjectValueMust(ruleTypes, map[string]attr.Value{
 						"alert":      types.StringValue("alert2"),
@@ -192,14 +197,16 @@ func TestToRulesPayload(t *testing.T) {
 						"annotations": types.MapValueMust(types.StringType, map[string]attr.Value{
 							"note": types.StringValue("important"),
 						}),
+						"record": types.StringValue("record2"),
 					}),
 				}),
 			},
 			expect: []observability.UpdateAlertgroupsRequestInnerRulesInner{
 				{
-					Alert: utils.Ptr("alert1"),
-					Expr:  utils.Ptr("expr1"),
-					For:   utils.Ptr("5s"),
+					Alert:  utils.Ptr("alert1"),
+					Expr:   utils.Ptr("expr1"),
+					For:    utils.Ptr("5s"),
+					Record: utils.Ptr("record1"),
 				},
 				{
 					Alert: utils.Ptr("alert2"),
@@ -211,6 +218,7 @@ func TestToRulesPayload(t *testing.T) {
 					Annotations: &map[string]interface{}{
 						"note": "important",
 					},
+					Record: utils.Ptr("record2"),
 				},
 			},
 			expectErr: false,
