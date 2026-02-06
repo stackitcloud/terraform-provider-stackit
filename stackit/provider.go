@@ -3,6 +3,7 @@ package stackit
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -138,12 +140,16 @@ func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp 
 
 type providerModel struct {
 	CredentialsFilePath   types.String `tfsdk:"credentials_path"`
-	ServiceAccountEmail   types.String `tfsdk:"service_account_email"` // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025
+	ServiceAccountEmail   types.String `tfsdk:"service_account_email"`
 	ServiceAccountKey     types.String `tfsdk:"service_account_key"`
 	ServiceAccountKeyPath types.String `tfsdk:"service_account_key_path"`
 	PrivateKey            types.String `tfsdk:"private_key"`
 	PrivateKeyPath        types.String `tfsdk:"private_key_path"`
 	Token                 types.String `tfsdk:"service_account_token"`
+	WifFederatedTokenPath types.String `tfsdk:"service_account_federated_token_path"`
+	WifFederatedToken     types.String `tfsdk:"service_account_federated_token"`
+	UseOIDC               types.Bool   `tfsdk:"use_oidc"`
+
 	// Deprecated: Use DefaultRegion instead
 	Region        types.String `tfsdk:"region"`
 	DefaultRegion types.String `tfsdk:"default_region"`
@@ -179,6 +185,8 @@ type providerModel struct {
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
+	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
 	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
 	Experiments         types.List `tfsdk:"experiments"`
@@ -187,49 +195,53 @@ type providerModel struct {
 // Schema defines the provider-level schema for configuration data.
 func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	descriptions := map[string]string{
-		"credentials_path":                   "Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.",
-		"service_account_token":              "Token used for authentication. If set, the token flow will be used to authenticate all operations.",
-		"service_account_key_path":           "Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.",
-		"service_account_key":                "Service account key used for authentication. If set, the key flow will be used to authenticate all operations.",
-		"private_key_path":                   "Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
-		"private_key":                        "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
-		"service_account_email":              "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
-		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
-		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
-		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
-		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
-		"edgecloud_custom_endpoint":          "Custom endpoint for the Edge Cloud service",
-		"git_custom_endpoint":                "Custom endpoint for the Git service",
-		"iaas_custom_endpoint":               "Custom endpoint for the IaaS service",
-		"kms_custom_endpoint":                "Custom endpoint for the KMS service",
-		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
-		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
-		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
-		"logme_custom_endpoint":              "Custom endpoint for the LogMe service",
-		"logs_custom_endpoint":               "Custom endpoint for the Logs service",
-		"rabbitmq_custom_endpoint":           "Custom endpoint for the RabbitMQ service",
-		"mariadb_custom_endpoint":            "Custom endpoint for the MariaDB service",
-		"authorization_custom_endpoint":      "Custom endpoint for the Membership service",
-		"objectstorage_custom_endpoint":      "Custom endpoint for the Object Storage service",
-		"observability_custom_endpoint":      "Custom endpoint for the Observability service",
-		"opensearch_custom_endpoint":         "Custom endpoint for the OpenSearch service",
-		"postgresflex_custom_endpoint":       "Custom endpoint for the PostgresFlex service",
-		"redis_custom_endpoint":              "Custom endpoint for the Redis service",
-		"server_backup_custom_endpoint":      "Custom endpoint for the Server Backup service",
-		"server_update_custom_endpoint":      "Custom endpoint for the Server Update service",
-		"service_account_custom_endpoint":    "Custom endpoint for the Service Account service",
-		"resourcemanager_custom_endpoint":    "Custom endpoint for the Resource Manager service",
-		"scf_custom_endpoint":                "Custom endpoint for the Cloud Foundry (SCF) service",
-		"secretsmanager_custom_endpoint":     "Custom endpoint for the Secrets Manager service",
-		"sqlserverflex_custom_endpoint":      "Custom endpoint for the SQL Server Flex service",
-		"ske_custom_endpoint":                "Custom endpoint for the Kubernetes Engine (SKE) service",
-		"service_enablement_custom_endpoint": "Custom endpoint for the Service Enablement API",
-		"sfs_custom_endpoint":                "Custom endpoint for the Stackit Filestorage API",
-		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
-		"enable_beta_resources":              "Enable beta resources. Default is false.",
-		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
+		"credentials_path":                     "Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.",
+		"service_account_token":                "Token used for authentication. If set, the token flow will be used to authenticate all operations.",
+		"service_account_key_path":             "Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.",
+		"service_account_key":                  "Service account key used for authentication. If set, the key flow will be used to authenticate all operations.",
+		"private_key_path":                     "Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
+		"private_key":                          "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
+		"service_account_email":                "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required uisng OpenID Connect authentication.",
+		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
+		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
+		"use_oidc":                             "Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
+		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
+		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
+		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
+		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
+		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
+		"git_custom_endpoint":                  "Custom endpoint for the Git service",
+		"iaas_custom_endpoint":                 "Custom endpoint for the IaaS service",
+		"kms_custom_endpoint":                  "Custom endpoint for the KMS service",
+		"mongodbflex_custom_endpoint":          "Custom endpoint for the MongoDB Flex service",
+		"modelserving_custom_endpoint":         "Custom endpoint for the AI Model Serving service",
+		"loadbalancer_custom_endpoint":         "Custom endpoint for the Load Balancer service",
+		"logme_custom_endpoint":                "Custom endpoint for the LogMe service",
+		"logs_custom_endpoint":                 "Custom endpoint for the Logs service",
+		"rabbitmq_custom_endpoint":             "Custom endpoint for the RabbitMQ service",
+		"mariadb_custom_endpoint":              "Custom endpoint for the MariaDB service",
+		"authorization_custom_endpoint":        "Custom endpoint for the Membership service",
+		"objectstorage_custom_endpoint":        "Custom endpoint for the Object Storage service",
+		"observability_custom_endpoint":        "Custom endpoint for the Observability service",
+		"opensearch_custom_endpoint":           "Custom endpoint for the OpenSearch service",
+		"postgresflex_custom_endpoint":         "Custom endpoint for the PostgresFlex service",
+		"redis_custom_endpoint":                "Custom endpoint for the Redis service",
+		"server_backup_custom_endpoint":        "Custom endpoint for the Server Backup service",
+		"server_update_custom_endpoint":        "Custom endpoint for the Server Update service",
+		"service_account_custom_endpoint":      "Custom endpoint for the Service Account service",
+		"resourcemanager_custom_endpoint":      "Custom endpoint for the Resource Manager service",
+		"scf_custom_endpoint":                  "Custom endpoint for the Cloud Foundry (SCF) service",
+		"secretsmanager_custom_endpoint":       "Custom endpoint for the Secrets Manager service",
+		"sqlserverflex_custom_endpoint":        "Custom endpoint for the SQL Server Flex service",
+		"ske_custom_endpoint":                  "Custom endpoint for the Kubernetes Engine (SKE) service",
+		"service_enablement_custom_endpoint":   "Custom endpoint for the Service Enablement API",
+		"sfs_custom_endpoint":                  "Custom endpoint for the Stackit Filestorage API",
+		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"enable_beta_resources":                "Enable beta resources. Default is false.",
+		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
 	}
-
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"credentials_path": schema.StringAttribute{
@@ -237,9 +249,8 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["credentials_path"],
 			},
 			"service_account_email": schema.StringAttribute{
-				Optional:           true,
-				Description:        descriptions["service_account_email"],
-				DeprecationMessage: "The `service_account_email` field has been deprecated because it is not required. Will be removed after June 12th 2025.",
+				Optional:    true,
+				Description: descriptions["service_account_email"],
 			},
 			"service_account_token": schema.StringAttribute{
 				Optional:    true,
@@ -263,6 +274,26 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"private_key_path": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["private_key_path"],
+			},
+			"service_account_federated_token_path": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_federated_token_path"],
+			},
+			"service_account_federated_token": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_account_federated_token"],
+			},
+			"use_oidc": schema.BoolAttribute{
+				Optional:    true,
+				Description: descriptions["use_oidc"],
+			},
+			"oidc_request_token": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["oidc_request_token"],
+			},
+			"oidc_request_url": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["oidc_request_url"],
 			},
 			"region": schema.StringAttribute{
 				Optional:           true,
@@ -447,10 +478,12 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Configure SDK client
 	setStringField(providerConfig.CredentialsFilePath, func(v string) { sdkConfig.CredentialsFilePath = v })
+	setStringField(providerConfig.ServiceAccountEmail, func(v string) { sdkConfig.ServiceAccountEmail = v })
 	setStringField(providerConfig.ServiceAccountKey, func(v string) { sdkConfig.ServiceAccountKey = v })
 	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { sdkConfig.ServiceAccountKeyPath = v })
 	setStringField(providerConfig.PrivateKey, func(v string) { sdkConfig.PrivateKey = v })
 	setStringField(providerConfig.PrivateKeyPath, func(v string) { sdkConfig.PrivateKeyPath = v })
+	setBoolField(providerConfig.UseOIDC, func(v bool) { sdkConfig.WorkloadIdentityFederation = v })
 	setStringField(providerConfig.Token, func(v string) { sdkConfig.Token = v })
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
 
@@ -497,6 +530,35 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		providerData.Experiments = experimentValues
 	}
 
+	// Workload Identity Federation via provided OIDC Token
+	oidc_token := ""
+	setStringField(providerConfig.WifFederatedToken, func(v string) { oidc_token = v })
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token != "" {
+		sdkConfig.WorkloadIdentityFederation = true
+		sdkConfig.ServiceAccountFederatedTokenFunc = func(context.Context) (string, error) {
+			return oidc_token, nil
+		}
+	}
+
+	// Workload Identity Federation via OIDC Token from file
+	oidc_token_path := ""
+	setStringField(providerConfig.WifFederatedTokenPath, func(v string) { oidc_token_path = v })
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && oidc_token_path != "" {
+		sdkConfig.WorkloadIdentityFederation = true
+		sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.ReadJWTFromFileSystem(oidc_token_path)
+	}
+
+	// Workload Identity Federation via provided OIDC Token from GitHub Actions
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && getEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") {
+		sdkConfig.WorkloadIdentityFederation = true
+		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
+		oidcReqURL := getEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
+		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+		if oidcReqURL != "" && oidcReqToken != "" {
+			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)
+		}
+	}
+
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
@@ -515,11 +577,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
 	var ephemeralProviderData core.EphemeralProviderData
 	ephemeralProviderData.ProviderData = providerData
-	setStringField(providerConfig.ServiceAccountKey, func(v string) { ephemeralProviderData.ServiceAccountKey = v })
-	setStringField(providerConfig.ServiceAccountKeyPath, func(v string) { ephemeralProviderData.ServiceAccountKeyPath = v })
-	setStringField(providerConfig.PrivateKey, func(v string) { ephemeralProviderData.PrivateKey = v })
-	setStringField(providerConfig.PrivateKeyPath, func(v string) { ephemeralProviderData.PrivateKeyPath = v })
-	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { ephemeralProviderData.TokenCustomEndpoint = v })
 	resp.EphemeralResourceData = ephemeralProviderData
 }
 
@@ -698,4 +755,35 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 	return []func() ephemeral.EphemeralResource{
 		access_token.NewAccessTokenEphemeralResource,
 	}
+}
+
+// getEnvStringOrDefault takes a Framework StringValue and a corresponding Environment Variable name and returns
+// either the string value set in the StringValue if not Null / Unknown _or_ the os.GetEnv() value of the Environment
+// Variable provided. If both of these are empty, an empty string defaultValue is returned.
+func getEnvStringOrDefault(val types.String, envVar, defaultValue string) string {
+	if val.IsNull() || val.IsUnknown() {
+		if v := os.Getenv(envVar); v != "" {
+			return os.Getenv(envVar)
+		}
+		return defaultValue
+	}
+
+	return val.ValueString()
+}
+
+// getEnvBoolIfValueAbsent takes a Framework BoolValue and a corresponding Environment Variable name and returns
+// one of the following in priority order:
+// 1 - the Boolean value set in the BoolValue if this is not Null / Unknown.
+// 2 - the boolean representation of the os.GetEnv() value of the Environment Variable provided (where anything but
+// 'true' or '1' is 'false').
+// 3 - `false` in all other cases.
+func getEnvBoolIfValueAbsent(val types.Bool, envVar string) bool {
+	if val.IsNull() || val.IsUnknown() {
+		v := os.Getenv(envVar)
+		if strings.EqualFold(v, "true") || strings.EqualFold(v, "1") {
+			return true
+		}
+	}
+
+	return val.ValueBool()
 }

@@ -2,6 +2,8 @@ package conversion
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -306,6 +308,9 @@ func TestParseProviderData(t *testing.T) {
 }
 
 func TestParseEphemeralProviderData(t *testing.T) {
+	var randomRoundTripper http.RoundTripper = &http.Transport{
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+	}
 	type args struct {
 		providerData any
 	}
@@ -354,21 +359,17 @@ func TestParseEphemeralProviderData(t *testing.T) {
 			name: "valid provider data 2",
 			args: args{
 				providerData: core.EphemeralProviderData{
-					PrivateKey:            "",
-					PrivateKeyPath:        "/home/dev/foo/private-key.json",
-					ServiceAccountKey:     "",
-					ServiceAccountKeyPath: "/home/dev/foo/key.json",
-					TokenCustomEndpoint:   "",
+					ProviderData: core.ProviderData{
+						RoundTripper: randomRoundTripper,
+					},
 				},
 			},
 			want: want{
 				ok: true,
 				providerData: core.EphemeralProviderData{
-					PrivateKey:            "",
-					PrivateKeyPath:        "/home/dev/foo/private-key.json",
-					ServiceAccountKey:     "",
-					ServiceAccountKeyPath: "/home/dev/foo/key.json",
-					TokenCustomEndpoint:   "",
+					ProviderData: core.ProviderData{
+						RoundTripper: randomRoundTripper,
+					},
 				},
 			},
 			wantErr: false,
