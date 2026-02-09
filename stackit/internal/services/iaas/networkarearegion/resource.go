@@ -503,12 +503,21 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), model.NetworkAreaId.ValueString(), region)
 	model.Region = types.StringValue(region)
 
-	model.Ipv4 = &ipv4Model{}
+	// This mapFields() function is also used for the datasource where model.Ipv4 is computed.
+	if model.Ipv4 == nil {
+		model.Ipv4 = &ipv4Model{}
+	}
+
 	if networkAreaRegion.Ipv4 != nil {
 		model.Ipv4.TransferNetwork = types.StringPointerValue(networkAreaRegion.Ipv4.TransferNetwork)
 		model.Ipv4.DefaultPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.DefaultPrefixLen)
 		model.Ipv4.MaxPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.MaxPrefixLen)
 		model.Ipv4.MinPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.MinPrefixLen)
+		// map network ranges
+		err := mapIpv4NetworkRanges(ctx, networkAreaRegion.Ipv4.NetworkRanges, model)
+		if err != nil {
+			return fmt.Errorf("mapping network ranges: %w", err)
+		}
 	}
 
 	// map default nameservers
@@ -529,12 +538,6 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 		}
 
 		model.Ipv4.DefaultNameservers = defaultNameserversTF
-	}
-
-	// map network ranges
-	err := mapIpv4NetworkRanges(ctx, networkAreaRegion.Ipv4.NetworkRanges, model)
-	if err != nil {
-		return fmt.Errorf("mapping network ranges: %w", err)
 	}
 
 	return nil

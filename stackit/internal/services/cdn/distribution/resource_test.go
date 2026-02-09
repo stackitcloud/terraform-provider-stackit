@@ -62,6 +62,19 @@ func TestToCreatePayload(t *testing.T) {
 		"happy_path": {
 			Input: modelFixture(),
 			Expected: &cdn.CreateDistributionPayload{
+				Backend: &cdn.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdn.HttpBackendCreate{
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						Geofencing: &map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+						Type: cdn.PtrString("http"),
+					},
+				},
 				Regions:          &[]cdn.Region{"EU", "US"},
 				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
 			},
@@ -77,6 +90,19 @@ func TestToCreatePayload(t *testing.T) {
 				})
 			}),
 			Expected: &cdn.CreateDistributionPayload{
+				Backend: &cdn.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdn.HttpBackendCreate{
+						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
+						OriginRequestHeaders: &map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						Geofencing: &map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+						Type: cdn.PtrString("http"),
+					},
+				},
 				Regions:          &[]cdn.Region{"EU", "US"},
 				Optimizer:        cdn.NewOptimizer(true),
 				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
