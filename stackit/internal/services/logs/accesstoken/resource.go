@@ -53,7 +53,7 @@ var schemaDescriptions = map[string]string{
 	"lifetime":        "A lifetime period for an access token in days. If unset the token will not expire.",
 	"permissions":     "The access permissions granted to the access token. Possible values: `read`, `write`.",
 	"status": fmt.Sprintf(
-		"The status of the access token, possible values: %s",
+		"The status of the access token. %s",
 		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(logs.AllowedAccessTokenStatusEnumValues)...),
 	),
 }
