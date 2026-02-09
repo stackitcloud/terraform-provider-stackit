@@ -45,5 +45,5 @@ data "stackit_logs_access_token" "accessToken" {
 - `expires` (Boolean) Indicates if the access token can expire
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`access_token_id`".
 - `permissions` (List of String) The access permissions granted to the access token. Possible values: `read`, `write`.
-- `status` (String) The status of the access token, possible values: Possible values are: `active`, `expired`.
+- `status` (String) The status of the access token. Possible values are: `active`, `expired`.
 - `valid_until` (String) The date and time until an access token is valid to (inclusively)

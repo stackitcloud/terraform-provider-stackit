@@ -410,6 +410,7 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token_id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
+					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token"),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "expires", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["expires"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "status", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["status"])),
 				),
@@ -482,6 +483,7 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "expires"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "status"),
+					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token"),
 				),
 			},
 			// Deletion handled by framework
@@ -531,6 +533,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token_id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
+					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token"),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "expires", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["expires"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "status", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["status"])),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "valid_until"),
@@ -607,6 +610,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "expires"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "status"),
+					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token"),
 				),
 			},
 			// Deletion handled by framework
