@@ -437,8 +437,8 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "permissions.0", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["permissions"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "permissions.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "creator"),
-					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "expires"),
-					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "status"),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "expires", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["expires"])),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "status", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["status"])),
 				),
 			},
 			// Import
