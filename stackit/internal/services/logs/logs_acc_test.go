@@ -533,6 +533,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "expires", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["expires"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "status", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["status"])),
+					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "valid_until"),
 				),
 			},
 			// Datasource
@@ -558,8 +559,8 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "permissions.0", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["permissions"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "permissions.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "creator"),
-					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "expires"),
-					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "status"),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "expires", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["expires"])),
+					resource.TestCheckResourceAttr("data.stackit_logs_access_token.accessToken", "status", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["status"])),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "valid_until"),
 					resource.TestCheckResourceAttrSet("data.stackit_logs_access_token.accessToken", "description"),
 				),

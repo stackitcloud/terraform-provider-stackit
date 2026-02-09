@@ -169,7 +169,7 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 			&resp.Diagnostics,
 			err,
 			"Reading Logs access token",
-			fmt.Sprintf("Calling API: %v", err),
+			fmt.Sprintf("Access token with ID %q does not exist in project %q.", accessTokenID, projectID),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
 			},

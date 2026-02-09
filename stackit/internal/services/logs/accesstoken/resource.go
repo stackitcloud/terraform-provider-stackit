@@ -2,11 +2,13 @@ package accesstoken
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -229,6 +232,9 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+				},
 			},
 			"status": schema.StringAttribute{
 				Description: schemaDescriptions["status"],
@@ -311,17 +317,13 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 
 	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
-		tfutils.LogError(
-			ctx,
-			&resp.Diagnostics,
-			err,
-			"Reading Logs access token",
-			fmt.Sprintf("Calling API: %v", err),
-			map[int]string{
-				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
-			},
-		)
-		resp.State.RemoveResource(ctx)
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = core.LogResponse(ctx)
