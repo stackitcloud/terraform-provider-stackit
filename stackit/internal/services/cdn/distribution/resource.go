@@ -713,7 +713,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		return core.DiagsToError(diags)
 	}
 
-	// Check if we have existing configuration to preerve secrets
+	// Check if we have existing configuration to preserve secrets
 	var oldConfig distributionConfig
 	if !model.Config.IsNull() && !model.Config.IsUnknown() {
 		diags := model.Config.As(ctx, &oldConfig, basetypes.ObjectAsOptions{
