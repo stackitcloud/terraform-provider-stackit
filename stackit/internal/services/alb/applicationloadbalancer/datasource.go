@@ -35,7 +35,7 @@ type albDataSource struct {
 
 // Metadata returns the data source type name.
 func (r *albDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_alb"
+	resp.TypeName = req.ProviderTypeName + "_application_load_balancer"
 }
 
 // Configure adds the provider configured client to the data source.
@@ -51,63 +51,61 @@ func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Load balancer client configured")
+	tflog.Info(ctx, "Application Load Balancer client configured")
 }
 
 // Schema defines the schema for the resource.
 func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	protocolOptions := []string{"PROTOCOL_UNSPECIFIED", "PROTOCOL_HTTP", "PROTOCOL_HTTPS"}
-	roleOptions := []string{"ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"}
-	servicePlanOptions := []string{"p10"}
-	regionOptions := []string{"eu01", "eu02"}
+	protocolOptions := albUtils.ToStringList(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := albUtils.ToStringList(albSdk.AllowedNetworkRoleEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
-		"id":         "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
+		"id":         "Terraform's internal resource ID. It is structured as `project_id`,`region`,`name`.",
 		"project_id": "STACKIT project ID to which the Application Load Balancer is associated.",
-		"region":     "The resource region. If not defined, the provider region is used. " + utils.FormatPossibleValues(regionOptions...),
+		"region":     "The resource region. If not defined, the provider region is used.",
 		"disable_target_security_group_assignment": "Disable target security group assignemt to allow targets outside of the given network. Connectivity to targets need to be ensured by the customer, including routing and Security Groups (targetSecurityGroup can be assigned). Not changeable after creation.",
-		"errors":                                 "Reports all errors a Application Load Balancer has.",
-		"errors.type":                            "Enum: \"TYPE_UNSPECIFIED\" \"TYPE_INTERNAL\" \"TYPE_QUOTA_SECGROUP_EXCEEDED\" \"TYPE_QUOTA_SECGROUPRULE_EXCEEDED\" \"TYPE_PORT_NOT_CONFIGURED\" \"TYPE_FIP_NOT_CONFIGURED\" \"TYPE_TARGET_NOT_ACTIVE\" \"TYPE_METRICS_MISCONFIGURED\" \"TYPE_LOGS_MISCONFIGURED\"\nThe error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.",
-		"errors.description":                     "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
-		"external_address":                       "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
-		"labels":                                 "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",
-		"listeners":                              "List of all listeners which will accept traffic. Limited to 20.",
-		"listeners.name":                         "Unique name for the listener",
-		"http":                                   "Configuration for handling HTTP traffic on this listener.",
-		"hosts":                                  "Defines routing rules grouped by hostname.",
-		"host":                                   "Hostname to match. Supports wildcards (e.g. *.example.com).",
-		"rules":                                  "Routing rules under the specified host, matched by path prefix.",
-		"cookie_persistence":                     "Routing persistence via cookies.",
-		"cookie_persistence.name":                "The name of the cookie to use.",
-		"ttl":                                    "TTL specifies the time-to-live for the cookie. The default value is 0s, and it acts as a session cookie, expiring when the client session ends.",
-		"headers":                                "Headers for the rule.",
-		"headers.exact_match":                    "Exact match for the header value.",
-		"headers.name":                           "Header name.",
-		"path":                                   "Routing via path.",
-		"path.exact_match":                       "Exact path match. Only a request path exactly equal to the value will match, e.g. '/foo' matches only '/foo', not '/foo/bar' or '/foobar'.",
-		"path.prefix":                            "Prefix path match. Only matches on full segment boundaries, e.g. '/foo' matches '/foo' and '/foo/bar' but NOT '/foobar'.",
-		"query_parameters":                       "Query parameters for the rule.",
-		"query_parameters.exact_match":           "Exact match for the query parameters value.",
-		"query_parameters.name":                  "Query parameter name.",
-		"target_pool":                            "Reference target pool by target pool name.",
-		"web_socket":                             "If enabled, when client sends an HTTP request with and Upgrade header, indicating the desire to establish a Websocket connection, if backend server supports WebSocket, it responds with HTTP 101 status code, switching protocols from HTTP to WebSocket. Hence the client and the server can exchange data in real-time using one long-lived TCP connection.",
-		"https":                                  "Configuration for handling HTTPS traffic on this listener.",
-		"certificate_config":                     "TLS termination certificate configuration.",
-		"certificate_ids":                        "Certificate IDs for TLS termination.",
-		"port":                                   "Port number on which the listener receives incoming traffic.",
-		"protocol":                               "Protocol is the highest network protocol we understand to load balance. " + utils.FormatPossibleValues(protocolOptions...),
-		"waf_config_name":                        "Enable Web Application Firewall (WAF), referenced by name. See \"Application Load Balancer - Web Application Firewall API\" for more information.",
-		"load_balancer_security_group":           "Security Group permitting network traffic from the LoadBalancer to the targets. Useful when disableTargetSecurityGroupAssignment=true to manually assign target security groups to targets.",
-		"load_balancer_security_group.id":        "ID of the security Group",
-		"load_balancer_security_group.name":      "Name of the security Group",
-		"name":                                   "Application Load balancer name.",
-		"networks":                               "List of networks that listeners and targets reside in.",
-		"network_id":                             "STACKIT network ID the Application Load Balancer and/or targets are in.",
-		"role":                                   "The role defines how the Application Load Balancer is using the network. " + utils.FormatPossibleValues(roleOptions...),
-		"options":                                "Defines any optional functionality you want to have enabled on your Application Load Balancer.",
-		"acl":                                    "Use this option to limit the IP ranges that can use the Application Load Balancer.",
-		"ephemeral_address":                      "This option automates the handling of the external IP address for an Application Load Balancer. If set to true a new IP address will be automatically created. It will also be automatically deleted when the Load Balancer is deleted.",
+		"errors":                            "Reports all errors a Application Load Balancer has.",
+		"errors.type":                       "Enum: \"TYPE_UNSPECIFIED\" \"TYPE_INTERNAL\" \"TYPE_QUOTA_SECGROUP_EXCEEDED\" \"TYPE_QUOTA_SECGROUPRULE_EXCEEDED\" \"TYPE_PORT_NOT_CONFIGURED\" \"TYPE_FIP_NOT_CONFIGURED\" \"TYPE_TARGET_NOT_ACTIVE\" \"TYPE_METRICS_MISCONFIGURED\" \"TYPE_LOGS_MISCONFIGURED\"\nThe error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.",
+		"errors.description":                "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
+		"external_address":                  "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
+		"labels":                            "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",
+		"listeners":                         "List of all listeners which will accept traffic. Limited to 20.",
+		"listeners.name":                    "Unique name for the listener",
+		"http":                              "Configuration for handling HTTP traffic on this listener.",
+		"hosts":                             "Defines routing rules grouped by hostname.",
+		"host":                              "Hostname to match. Supports wildcards (e.g. *.example.com).",
+		"rules":                             "Routing rules under the specified host, matched by path prefix.",
+		"cookie_persistence":                "Routing persistence via cookies.",
+		"cookie_persistence.name":           "The name of the cookie to use.",
+		"ttl":                               "TTL specifies the time-to-live for the cookie. The default value is 0s, and it acts as a session cookie, expiring when the client session ends.",
+		"headers":                           "Headers for the rule.",
+		"headers.exact_match":               "Exact match for the header value.",
+		"headers.name":                      "Header name.",
+		"path":                              "Routing via path.",
+		"path.exact_match":                  "Exact path match. Only a request path exactly equal to the value will match, e.g. '/foo' matches only '/foo', not '/foo/bar' or '/foobar'.",
+		"path.prefix":                       "Prefix path match. Only matches on full segment boundaries, e.g. '/foo' matches '/foo' and '/foo/bar' but NOT '/foobar'.",
+		"query_parameters":                  "Query parameters for the rule.",
+		"query_parameters.exact_match":      "Exact match for the query parameters value.",
+		"query_parameters.name":             "Query parameter name.",
+		"target_pool":                       "Reference target pool by target pool name.",
+		"web_socket":                        "If enabled, when client sends an HTTP request with and Upgrade header, indicating the desire to establish a Websocket connection, if backend server supports WebSocket, it responds with HTTP 101 status code, switching protocols from HTTP to WebSocket. Hence the client and the server can exchange data in real-time using one long-lived TCP connection.",
+		"https":                             "Configuration for handling HTTPS traffic on this listener.",
+		"certificate_config":                "TLS termination certificate configuration.",
+		"certificate_ids":                   "Certificate IDs for TLS termination.",
+		"port":                              "Port number on which the listener receives incoming traffic.",
+		"protocol":                          "Protocol is the highest network protocol we understand to load balance. " + utils.FormatPossibleValues(protocolOptions...),
+		"waf_config_name":                   "Enable Web Application Firewall (WAF), referenced by name. See \"Application Load Balancer - Web Application Firewall API\" for more information.",
+		"load_balancer_security_group":      "Security Group permitting network traffic from the LoadBalancer to the targets. Useful when disableTargetSecurityGroupAssignment=true to manually assign target security groups to targets.",
+		"load_balancer_security_group.id":   "ID of the security Group",
+		"load_balancer_security_group.name": "Name of the security Group",
+		"name":                              "Application Load balancer name.",
+		"networks":                          "List of networks that listeners and targets reside in.",
+		"network_id":                        "STACKIT network ID the Application Load Balancer and/or targets are in.",
+		"role":                              "The role defines how the Application Load Balancer is using the network. " + utils.FormatPossibleValues(roleOptions...),
+		"options":                           "Defines any optional functionality you want to have enabled on your Application Load Balancer.",
+		"access_control":                    "Use this option to limit the IP ranges that can use the Application Load Balancer.",
+		"allowed_source_ranges":             "Application Load Balancer is accessible only from an IP address in this range.", "ephemeral_address": "This option automates the handling of the external IP address for an Application Load Balancer. If set to true a new IP address will be automatically created. It will also be automatically deleted when the Load Balancer is deleted.",
 		"observability":                          "We offer Load Balancer observability via STACKIT Observability or external solutions.",
 		"observability_logs":                     "Observability logs configuration.",
 		"observability_logs_credentials_ref":     "Credentials reference for logging. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the logging solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
@@ -115,9 +113,8 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 		"observability_metrics":                  "Observability metrics configuration.",
 		"observability_metrics_credentials_ref":  "Credentials reference for metrics. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the metrics solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
 		"observability_metrics_push_url":         "The Observability(Metrics)/Prometheus remote write push URL you want the metrics to be shipped to.",
-		"plan_id":                                "Service Plan configures the size of the Application Load Balancer. " + utils.FormatPossibleValues(servicePlanOptions...) + ". This list can change in the future. Therefore, this is not an enum.",
+		"plan_id":                                "Service Plan configures the size of the Application Load Balancer.",
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
-		"status":                                 "Enum: \"STATUS_UNSPECIFIED\" \"STATUS_PENDING\" \"STATUS_READY\" \"STATUS_ERROR\" \"STATUS_TERMINATING\"",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
 		"healthy_threshold":                      "Healthy threshold of the health checking.",
@@ -145,10 +142,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
-		MarkdownDescription: `
-## Setting up supporting infrastructure` + "\n" + `
-
-The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the network, network interface, a public IP address and server resources.
+		MarkdownDescription: `Application Load Balancer data source schema. Must have a region specified in the provider configuration.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -369,10 +363,16 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Description: descriptions["options"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
-					"acl": schema.SetAttribute{
-						Description: descriptions["acl"],
-						ElementType: types.StringType,
+					"access_control": schema.SingleNestedAttribute{
+						Description: descriptions["access_control"],
 						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"allowed_source_ranges": schema.SetAttribute{
+								Description: descriptions["allowed_source_ranges"],
+								ElementType: types.StringType,
+								Computed:    true,
+							},
+						},
 					},
 					"ephemeral_address": schema.BoolAttribute{
 						Description: descriptions["ephemeral_address"],
@@ -420,10 +420,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"private_address": schema.StringAttribute{
 				Description: descriptions["private_address"],
-				Computed:    true,
-			},
-			"status": schema.StringAttribute{
-				Description: descriptions["status"],
 				Computed:    true,
 			},
 			"target_pools": schema.ListNestedAttribute{
@@ -561,7 +557,7 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 			&resp.Diagnostics,
 			err,
 			"Reading application load balancer",
-			fmt.Sprintf("Load balancer with name %q does not exist in project %q.", name, projectId),
+			fmt.Sprintf("Application Load Balancer with name %q does not exist in project %q.", name, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -583,5 +579,5 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Load balancer read")
+	tflog.Info(ctx, "Application Load Balancer read")
 }

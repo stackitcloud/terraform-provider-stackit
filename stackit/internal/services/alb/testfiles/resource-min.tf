@@ -86,7 +86,7 @@ resource "stackit_server" "server" {
   ]
 }
 
-resource "stackit_alb" "loadbalancer" {
+resource "stackit_application_load_balancer" "loadbalancer" {
   region     = var.region
   project_id = var.project_id
   name       = var.loadbalancer_name

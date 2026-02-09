@@ -131,6 +131,7 @@ type providerModel struct {
 	// Deprecated: Use DefaultRegion instead
 	Region                          types.String `tfsdk:"region"`
 	DefaultRegion                   types.String `tfsdk:"default_region"`
+	ALBCustomEndpoint               types.String `tfsdk:"alb_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DNSCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
@@ -139,7 +140,6 @@ type providerModel struct {
 	PostgresFlexCustomEndpoint      types.String `tfsdk:"postgresflex_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
-	ALBCustomEndpoint               types.String `tfsdk:"alb_custom_endpoint"`
 	LoadBalancerCustomEndpoint      types.String `tfsdk:"loadbalancer_custom_endpoint"`
 	LogMeCustomEndpoint             types.String `tfsdk:"logme_custom_endpoint"`
 	RabbitMQCustomEndpoint          types.String `tfsdk:"rabbitmq_custom_endpoint"`
@@ -175,6 +175,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_email":              "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource.",
 		"region":                             "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                     "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"alb_custom_endpoint":                "Custom endpoint for the Application Load Balancer service",
 		"cdn_custom_endpoint":                "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                "Custom endpoint for the DNS service",
 		"git_custom_endpoint":                "Custom endpoint for the Git service",
@@ -182,7 +183,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"kms_custom_endpoint":                "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":        "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":       "Custom endpoint for the AI Model Serving service",
-		"alb_custom_endpoint":                "Custom endpoint for the Application Load Balancer service",
 		"loadbalancer_custom_endpoint":       "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":              "Custom endpoint for the LogMe service",
 		"rabbitmq_custom_endpoint":           "Custom endpoint for the RabbitMQ service",
@@ -256,6 +256,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 					stringvalidator.ConflictsWith(path.MatchRoot("region")),
 				},
 			},
+			"alb_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["alb_custom_endpoint"],
+			},
 			"cdn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["cdn_custom_endpoint"],
@@ -295,10 +299,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"mongodbflex_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["mongodbflex_custom_endpoint"],
-			},
-			"alb_custom_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: descriptions["alb_custom_endpoint"],
 			},
 			"loadbalancer_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -425,6 +425,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Provider Data Configuration
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
+	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DNSCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
@@ -433,7 +434,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.KMSCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
 	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
 	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
-	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
 	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
 	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
 	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
@@ -552,6 +552,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
+		alb.NewApplicationLoadBalancerResource,
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,
 		cdnCustomDomain.NewCustomDomainResource,
@@ -579,7 +580,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
 		kmsWrappingKey.NewWrappingKeyResource,
-		alb.NewApplicationLoadBalancerResource,
 		loadBalancer.NewLoadBalancerResource,
 		loadBalancerObservabilityCredential.NewObservabilityCredentialResource,
 		logMeInstance.NewInstanceResource,

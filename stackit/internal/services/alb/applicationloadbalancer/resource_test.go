@@ -8,8 +8,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -171,11 +171,16 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 		Options: types.ObjectValueMust(
 			optionsTypes,
 			map[string]attr.Value{
-				"acl": types.SetValueMust(
-					types.StringType,
-					[]attr.Value{
-						types.StringValue("192.168.0.0"),
-						types.StringValue("192.168.0.1"),
+				"access_control": types.ObjectValueMust(
+					accessControlTypes,
+					map[string]attr.Value{
+						"allowed_source_ranges": types.SetValueMust(
+							types.StringType,
+							[]attr.Value{
+								types.StringValue("192.168.0.0"),
+								types.StringValue("192.168.0.1"),
+							},
+						),
 					},
 				),
 				"ephemeral_address":    types.BoolPointerValue(explicitBool),
@@ -204,7 +209,6 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 		PlanId:         types.StringValue("p10"),
 		PrivateAddress: types.StringValue("10.1.11.0"),
 		Region:         types.StringValue(region),
-		Status:         types.StringValue("STATUS_READY"),
 		TargetPools: types.ListValueMust(
 			types.ObjectType{AttrTypes: targetPoolTypes},
 			[]attr.Value{
@@ -291,7 +295,6 @@ func fixtureModelNull(mods ...func(m *Model)) *Model {
 		PlanId:                         types.StringNull(),
 		PrivateAddress:                 types.StringNull(),
 		Region:                         types.StringNull(),
-		Status:                         types.StringNull(),
 		TargetPools:                    types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
 		TargetSecurityGroup:            types.ObjectNull(targetSecurityGroupType),
 		Version:                        types.StringNull(),
@@ -338,62 +341,62 @@ func fixtureUpdatePayload(lb *albSdk.LoadBalancer) *albSdk.UpdateLoadBalancerPay
 func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.LoadBalancer)) *albSdk.LoadBalancer {
 	resp := &albSdk.LoadBalancer{
 		DisableTargetSecurityGroupAssignment: explicitBool,
-		ExternalAddress:                      ptr.To(externalAddress),
-		Errors: ptr.To([]albSdk.LoadBalancerError{
+		ExternalAddress:                      utils.Ptr(externalAddress),
+		Errors: utils.Ptr([]albSdk.LoadBalancerError{
 			{
-				Description: ptr.To("quota test error"),
-				Type:        ptr.To(albSdk.LOADBALANCERERRORTYPE_QUOTA_SECGROUP_EXCEEDED),
+				Description: utils.Ptr("quota test error"),
+				Type:        utils.Ptr(albSdk.LOADBALANCERERRORTYPE_QUOTA_SECGROUP_EXCEEDED),
 			},
 			{
-				Description: ptr.To("fip test error"),
-				Type:        ptr.To(albSdk.LOADBALANCERERRORTYPE_FIP_NOT_CONFIGURED),
+				Description: utils.Ptr("fip test error"),
+				Type:        utils.Ptr(albSdk.LOADBALANCERERRORTYPE_FIP_NOT_CONFIGURED),
 			},
 		}),
-		Name:           ptr.To(lbName),
-		PlanId:         ptr.To("p10"),
-		PrivateAddress: ptr.To("10.1.11.0"),
-		Region:         ptr.To(region),
-		Status:         ptr.To(albSdk.LoadBalancerStatus("STATUS_READY")),
-		Version:        ptr.To(lbVersion),
+		Name:           utils.Ptr(lbName),
+		PlanId:         utils.Ptr("p10"),
+		PrivateAddress: utils.Ptr("10.1.11.0"),
+		Region:         utils.Ptr(region),
+		Status:         utils.Ptr(albSdk.LoadBalancerStatus("STATUS_READY")),
+		Version:        utils.Ptr(lbVersion),
 		Labels: &map[string]string{
 			"key":  "value",
 			"key2": "value2",
 		},
 		Networks: &[]albSdk.Network{
 			{
-				NetworkId: ptr.To("c7c92cc1-a6bd-4e15-a129-b6e2b9899bbc"),
-				Role:      ptr.To(albSdk.NetworkRole("ROLE_LISTENERS")),
+				NetworkId: utils.Ptr("c7c92cc1-a6bd-4e15-a129-b6e2b9899bbc"),
+				Role:      utils.Ptr(albSdk.NetworkRole("ROLE_LISTENERS")),
 			},
 			{
-				NetworkId: ptr.To("ed3f1822-ca1c-4969-bea6-74c6b3e9aa40"),
-				Role:      ptr.To(albSdk.NetworkRole("ROLE_TARGETS")),
+				NetworkId: utils.Ptr("ed3f1822-ca1c-4969-bea6-74c6b3e9aa40"),
+				Role:      utils.Ptr(albSdk.NetworkRole("ROLE_TARGETS")),
 			},
 		},
 		Listeners: &[]albSdk.Listener{
 			{
-				Name:     ptr.To("http-80"),
-				Port:     ptr.To(int64(80)),
-				Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+				Name:     utils.Ptr("http-80"),
+				Port:     utils.Ptr(int64(80)),
+				Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 				Http: &albSdk.ProtocolOptionsHTTP{
 					Hosts: &[]albSdk.HostConfig{
 						{
-							Host: ptr.To("*"),
+							Host: utils.Ptr("*"),
 							Rules: &[]albSdk.Rule{
 								{
-									TargetPool: ptr.To(targetPoolName),
+									TargetPool: utils.Ptr(targetPoolName),
 									WebSocket:  explicitBool,
 									Path: &albSdk.Path{
-										Prefix: ptr.To("/"),
+										Prefix: utils.Ptr("/"),
 									},
 									Headers: &[]albSdk.HttpHeader{
-										{Name: ptr.To("a-header"), ExactMatch: ptr.To("value")},
+										{Name: utils.Ptr("a-header"), ExactMatch: utils.Ptr("value")},
 									},
 									QueryParameters: &[]albSdk.QueryParameter{
-										{Name: ptr.To("a_query_parameter"), ExactMatch: ptr.To("value")},
+										{Name: utils.Ptr("a_query_parameter"), ExactMatch: utils.Ptr("value")},
 									},
 									CookiePersistence: &albSdk.CookiePersistence{
-										Name: ptr.To("cookie_name"),
-										Ttl:  ptr.To("3s"),
+										Name: utils.Ptr("cookie_name"),
+										Ttl:  utils.Ptr("3s"),
 									},
 								},
 							},
@@ -401,54 +404,54 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 					},
 				},
 				Https: &albSdk.ProtocolOptionsHTTPS{
-					CertificateConfig: ptr.To(albSdk.CertificateConfig{
+					CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
 						CertificateIds: &[]string{
 							credentialsRef,
 						},
 					}),
 				},
-				WafConfigName: ptr.To("my-waf-config"),
+				WafConfigName: utils.Ptr("my-waf-config"),
 			},
 		},
 		TargetPools: &[]albSdk.TargetPool{
 			{
-				Name:       ptr.To(targetPoolName),
-				TargetPort: ptr.To(int64(80)),
+				Name:       utils.Ptr(targetPoolName),
+				TargetPort: utils.Ptr(int64(80)),
 				Targets: &[]albSdk.Target{
 					{
-						DisplayName: ptr.To("test-backend-server"),
-						Ip:          ptr.To("192.168.0.218"),
+						DisplayName: utils.Ptr("test-backend-server"),
+						Ip:          utils.Ptr("192.168.0.218"),
 					},
 				},
 				TlsConfig: &albSdk.TargetPoolTlsConfig{
 					Enabled:                   explicitBool,
 					SkipCertificateValidation: explicitBool,
-					CustomCa:                  ptr.To("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURDekNDQWZPZ0F3SUJBZ0lVVHlQc1RXQzlseTdvK3dORlltMHV1MStQOElFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF3d0tUWGxEZFhOMGIyMURRVEFlRncweU5UQXlNVGt4T1RJME1qQmFGdzB5TmpBeQpNVGt4T1RJME1qQmFNQlV4RXpBUkJnTlZCQU1NQ2sxNVEzVnpkRzl0UTBFd2dnRWlNQTBHQ1NxR1NJYjNEUUVCCkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDUU1FWUtiaU54VTM3ZkV3Qk94a3ZDc2hCUiswTXd4d0xXOE1pMy9wdm8KbjNodXhqY203RWFLVzlyN2tJYW9IWGJUUzF0bk82ckhBSEtCRHh6dW9ZRDdDMlNNU2lMeGRkcXVOUnZwa0xhUAo4cUFYbmVRWTJWUDdMenNBZ3NDMDRQS0cwWUMxTmdGNXNKR3NpV0lSR0ltK2NzWUxuUE1ud2FBR3g0SXZZNm1ICkFtTTY0YjZRUkNnMzZMSytQNk45S1R2U1FMdnZtRmRrQTJzRFRvQ21OL0FtcDZ4TkRGcSthUUdMd2RRUXFIRFAKVGFVcVBtRXlpRkhLdkZVYUZNTlFWazhCMU9tOEFTbzY5bThVM0VhdDRaT1ZXMXRpdEUzOTNRa09kQTZaeXBNQwpySkpwZU5OTExKcTNtSU9XT2Q3R0V5QXZqVWZtSndHaHFFRlM3bE1HNjdobkFnTUJBQUdqVXpCUk1CMEdBMVVkCkRnUVdCQlNrL0lNNWphT0FKTDMvS255cTNjVnZhMDRZWkRBZkJnTlZIU01FR0RBV2dCU2svSU01amFPQUpMMy8KS255cTNjVnZhMDRZWkRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCZQpaL21FOHJOSWJOYkhRZXAvVnBwc2hhWlV6Z2R5NG5zbWgwd3Z4TXVISVFQMEtIcnhMQ2toT243QTlmdTRtWS9QClErOFFxbG5qVHNNNGNxaXVGY2Q1VjFOazlWRi9lNVgzSFhDREhoL2pCRncrTzVUR1ZBUi83REJ3MzFsWXYvTHQKSGFra2pRQ2Rhd3V2SDNvc08vVWtFbE0vaTJLQytpWUJhdlRlbm05N0FSN1dHZ1cxNS9NSXF4TmFZRStuSnRoLwpkY1ZEMGI1cVN1WVFhRW1aM0N6TVVpMTg4UitnbzVvekNmMmNPYWErMy9MRVlBYUkzdktpU0U4S1Rzc2h5b0ttCk82WVpxclZ4UUNXQ0RUT3NkMjhrN2xIdDh3SitqelljakN1NjBEVXBnMVpwWStabm1yRTh2UFBEYi96WGhCbjYKL2xsWFRXT1VqbXVUS25Hc0lEUDUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="),
+					CustomCa:                  utils.Ptr("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURDekNDQWZPZ0F3SUJBZ0lVVHlQc1RXQzlseTdvK3dORlltMHV1MStQOElFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF3d0tUWGxEZFhOMGIyMURRVEFlRncweU5UQXlNVGt4T1RJME1qQmFGdzB5TmpBeQpNVGt4T1RJME1qQmFNQlV4RXpBUkJnTlZCQU1NQ2sxNVEzVnpkRzl0UTBFd2dnRWlNQTBHQ1NxR1NJYjNEUUVCCkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDUU1FWUtiaU54VTM3ZkV3Qk94a3ZDc2hCUiswTXd4d0xXOE1pMy9wdm8KbjNodXhqY203RWFLVzlyN2tJYW9IWGJUUzF0bk82ckhBSEtCRHh6dW9ZRDdDMlNNU2lMeGRkcXVOUnZwa0xhUAo4cUFYbmVRWTJWUDdMenNBZ3NDMDRQS0cwWUMxTmdGNXNKR3NpV0lSR0ltK2NzWUxuUE1ud2FBR3g0SXZZNm1ICkFtTTY0YjZRUkNnMzZMSytQNk45S1R2U1FMdnZtRmRrQTJzRFRvQ21OL0FtcDZ4TkRGcSthUUdMd2RRUXFIRFAKVGFVcVBtRXlpRkhLdkZVYUZNTlFWazhCMU9tOEFTbzY5bThVM0VhdDRaT1ZXMXRpdEUzOTNRa09kQTZaeXBNQwpySkpwZU5OTExKcTNtSU9XT2Q3R0V5QXZqVWZtSndHaHFFRlM3bE1HNjdobkFnTUJBQUdqVXpCUk1CMEdBMVVkCkRnUVdCQlNrL0lNNWphT0FKTDMvS255cTNjVnZhMDRZWkRBZkJnTlZIU01FR0RBV2dCU2svSU01amFPQUpMMy8KS255cTNjVnZhMDRZWkRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCZQpaL21FOHJOSWJOYkhRZXAvVnBwc2hhWlV6Z2R5NG5zbWgwd3Z4TXVISVFQMEtIcnhMQ2toT243QTlmdTRtWS9QClErOFFxbG5qVHNNNGNxaXVGY2Q1VjFOazlWRi9lNVgzSFhDREhoL2pCRncrTzVUR1ZBUi83REJ3MzFsWXYvTHQKSGFra2pRQ2Rhd3V2SDNvc08vVWtFbE0vaTJLQytpWUJhdlRlbm05N0FSN1dHZ1cxNS9NSXF4TmFZRStuSnRoLwpkY1ZEMGI1cVN1WVFhRW1aM0N6TVVpMTg4UitnbzVvekNmMmNPYWErMy9MRVlBYUkzdktpU0U4S1Rzc2h5b0ttCk82WVpxclZ4UUNXQ0RUT3NkMjhrN2xIdDh3SitqelljakN1NjBEVXBnMVpwWStabm1yRTh2UFBEYi96WGhCbjYKL2xsWFRXT1VqbXVUS25Hc0lEUDUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="),
 				},
 				ActiveHealthCheck: &albSdk.ActiveHealthCheck{
-					HealthyThreshold:   ptr.To(int64(1)),
-					UnhealthyThreshold: ptr.To(int64(5)),
-					Interval:           ptr.To("2s"),
-					IntervalJitter:     ptr.To("3s"),
-					Timeout:            ptr.To("4s"),
+					HealthyThreshold:   utils.Ptr(int64(1)),
+					UnhealthyThreshold: utils.Ptr(int64(5)),
+					Interval:           utils.Ptr("2s"),
+					IntervalJitter:     utils.Ptr("3s"),
+					Timeout:            utils.Ptr("4s"),
 					HttpHealthChecks: &albSdk.HttpHealthChecks{
-						Path:       ptr.To("/health"),
+						Path:       utils.Ptr("/health"),
 						OkStatuses: &[]string{"200", "201"},
 					},
 				},
 			},
 		},
-		Options: ptr.To(albSdk.LoadBalancerOptions{
+		Options: utils.Ptr(albSdk.LoadBalancerOptions{
 			EphemeralAddress:   explicitBool,
 			PrivateNetworkOnly: explicitBool,
 			Observability: &albSdk.LoadbalancerOptionObservability{
 				Logs: &albSdk.LoadbalancerOptionLogs{
-					CredentialsRef: ptr.To(credentialsRef),
-					PushUrl:        ptr.To("http://www.example.org/push"),
+					CredentialsRef: utils.Ptr(credentialsRef),
+					PushUrl:        utils.Ptr("http://www.example.org/push"),
 				},
 				Metrics: &albSdk.LoadbalancerOptionMetrics{
-					CredentialsRef: ptr.To(credentialsRef),
-					PushUrl:        ptr.To("http://www.example.org/pull"),
+					CredentialsRef: utils.Ptr(credentialsRef),
+					PushUrl:        utils.Ptr("http://www.example.org/pull"),
 				},
 			},
 			AccessControl: &albSdk.LoadbalancerOptionAccessControl{
@@ -456,12 +459,12 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 			},
 		}),
 		LoadBalancerSecurityGroup: &albSdk.CreateLoadBalancerPayloadLoadBalancerSecurityGroup{
-			Id:   ptr.To(sgLBID),
-			Name: ptr.To("loadbalancer/" + lbName + "/backend-port"),
+			Id:   utils.Ptr(sgLBID),
+			Name: utils.Ptr("loadbalancer/" + lbName + "/backend-port"),
 		},
 		TargetSecurityGroup: &albSdk.CreateLoadBalancerPayloadTargetSecurityGroup{
-			Id:   ptr.To(sgTargetID),
-			Name: ptr.To("loadbalancer/" + lbName + "/backend"),
+			Id:   utils.Ptr(sgTargetID),
+			Name: utils.Ptr("loadbalancer/" + lbName + "/backend"),
 		},
 	}
 	for _, mod := range mods {
@@ -578,7 +581,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region:   testRegion,
-			expected: fixtureModel(ptr.To(false)),
+			expected: fixtureModel(utils.Ptr(false)),
 			isValid:  true,
 		},
 		{
@@ -620,43 +623,43 @@ func TestMapFields(t *testing.T) {
 				Name:      types.StringValue(lbName),
 			},
 			region:   testRegion,
-			expected: fixtureModel(ptr.To(false)),
+			expected: fixtureModel(utils.Ptr(false)),
 			isValid:  true,
 		},
 		{
 			description: "false - explicitly set",
-			input:       fixtureApplicationLoadBalancer(ptr.To(false)),
+			input:       fixtureApplicationLoadBalancer(utils.Ptr(false)),
 			output: &Model{
 				ProjectId: types.StringValue(projectID),
 			},
 			region:   testRegion,
-			expected: fixtureModel(ptr.To(false)),
+			expected: fixtureModel(utils.Ptr(false)),
 			isValid:  true,
 		},
 		{
 			description: "true - explicitly set",
-			input:       fixtureApplicationLoadBalancer(ptr.To(true)),
+			input:       fixtureApplicationLoadBalancer(utils.Ptr(true)),
 			output: &Model{
 				ProjectId: types.StringValue(projectID),
 			},
 			region:   testRegion,
-			expected: fixtureModel(ptr.To(true)),
+			expected: fixtureModel(utils.Ptr(true)),
 			isValid:  true,
 		},
 		{
 			description: "false - only in model set",
 			input:       fixtureApplicationLoadBalancer(nil),
-			output:      fixtureModel(ptr.To(false)),
+			output:      fixtureModel(utils.Ptr(false)),
 			region:      testRegion,
-			expected:    fixtureModel(ptr.To(false)),
+			expected:    fixtureModel(utils.Ptr(false)),
 			isValid:     true,
 		},
 		{
 			description: "true - only in model set",
 			input:       fixtureApplicationLoadBalancer(nil),
-			output:      fixtureModel(ptr.To(true)),
+			output:      fixtureModel(utils.Ptr(true)),
 			region:      testRegion,
-			expected:    fixtureModel(ptr.To(false)),
+			expected:    fixtureModel(utils.Ptr(false)),
 			isValid:     true,
 		},
 		{
@@ -693,7 +696,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.TargetPools = types.ListValueMust(
 					types.ObjectType{AttrTypes: targetPoolTypes},
 					[]attr.Value{
@@ -717,20 +720,20 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.TargetPools = &[]albSdk.TargetPool{
 					{
-						Name:       ptr.To(targetPoolName),
-						TargetPort: ptr.To(int64(80)),
+						Name:       utils.Ptr(targetPoolName),
+						TargetPort: utils.Ptr(int64(80)),
 						Targets: &[]albSdk.Target{
 							{
-								DisplayName: ptr.To("test-backend-server"),
-								Ip:          ptr.To("192.168.0.218"),
+								DisplayName: utils.Ptr("test-backend-server"),
+								Ip:          utils.Ptr("192.168.0.218"),
 							},
 						},
 						ActiveHealthCheck: &albSdk.ActiveHealthCheck{
-							HealthyThreshold:   ptr.To(int64(1)),
-							UnhealthyThreshold: ptr.To(int64(5)),
-							Interval:           ptr.To("2s"),
-							IntervalJitter:     ptr.To("3s"),
-							Timeout:            ptr.To("4s"),
+							HealthyThreshold:   utils.Ptr(int64(1)),
+							UnhealthyThreshold: utils.Ptr(int64(5)),
+							Interval:           utils.Ptr("2s"),
+							IntervalJitter:     utils.Ptr("3s"),
+							Timeout:            utils.Ptr("4s"),
 						},
 					},
 				}
@@ -739,7 +742,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.TargetPools = types.ListValueMust(
 					types.ObjectType{AttrTypes: targetPoolTypes},
 					[]attr.Value{
@@ -793,7 +796,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Options = types.ObjectNull(optionsTypes)
 			}),
 			isValid: true,
@@ -803,29 +806,29 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = &[]albSdk.Listener{
 					{
-						Name:     ptr.To("http-80"),
-						Port:     ptr.To(int64(80)),
-						Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+						Name:     utils.Ptr("http-80"),
+						Port:     utils.Ptr(int64(80)),
+						Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: &[]albSdk.HostConfig{
 								{
-									Host: ptr.To("*"),
+									Host: utils.Ptr("*"),
 									Rules: &[]albSdk.Rule{
 										{
-											TargetPool: ptr.To(targetPoolName),
+											TargetPool: utils.Ptr(targetPoolName),
 											WebSocket:  nil,
 											Path: &albSdk.Path{
-												Prefix: ptr.To("/"),
+												Prefix: utils.Ptr("/"),
 											},
 											Headers: &[]albSdk.HttpHeader{
-												{Name: ptr.To("a-header"), ExactMatch: ptr.To("value")},
+												{Name: utils.Ptr("a-header"), ExactMatch: utils.Ptr("value")},
 											},
 											QueryParameters: &[]albSdk.QueryParameter{
-												{Name: ptr.To("a_query_parameter"), ExactMatch: ptr.To("value")},
+												{Name: utils.Ptr("a_query_parameter"), ExactMatch: utils.Ptr("value")},
 											},
 											CookiePersistence: &albSdk.CookiePersistence{
-												Name: ptr.To("cookie_name"),
-												Ttl:  ptr.To("3s"),
+												Name: utils.Ptr("cookie_name"),
+												Ttl:  utils.Ptr("3s"),
 											},
 										},
 									},
@@ -835,7 +838,7 @@ func TestMapFields(t *testing.T) {
 						Https: &albSdk.ProtocolOptionsHTTPS{
 							CertificateConfig: nil,
 						},
-						WafConfigName: ptr.To("my-waf-config"),
+						WafConfigName: utils.Ptr("my-waf-config"),
 					},
 				}
 			}),
@@ -843,7 +846,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -929,29 +932,29 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = &[]albSdk.Listener{
 					{
-						Name:     ptr.To("http-80"),
-						Port:     ptr.To(int64(80)),
-						Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+						Name:     utils.Ptr("http-80"),
+						Port:     utils.Ptr(int64(80)),
+						Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: &[]albSdk.HostConfig{
 								{
-									Host: ptr.To("*"),
+									Host: utils.Ptr("*"),
 									Rules: &[]albSdk.Rule{
 										{
-											TargetPool: ptr.To(targetPoolName),
+											TargetPool: utils.Ptr(targetPoolName),
 											WebSocket:  nil,
 											Path: &albSdk.Path{
-												Prefix: ptr.To("/"),
+												Prefix: utils.Ptr("/"),
 											},
 											Headers: &[]albSdk.HttpHeader{
-												{Name: ptr.To("a-header"), ExactMatch: ptr.To("value")},
+												{Name: utils.Ptr("a-header"), ExactMatch: utils.Ptr("value")},
 											},
 											QueryParameters: &[]albSdk.QueryParameter{
-												{Name: ptr.To("a_query_parameter"), ExactMatch: ptr.To("value")},
+												{Name: utils.Ptr("a_query_parameter"), ExactMatch: utils.Ptr("value")},
 											},
 											CookiePersistence: &albSdk.CookiePersistence{
-												Name: ptr.To("cookie_name"),
-												Ttl:  ptr.To("3s"),
+												Name: utils.Ptr("cookie_name"),
+												Ttl:  utils.Ptr("3s"),
 											},
 										},
 									},
@@ -959,7 +962,7 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						Https:         nil,
-						WafConfigName: ptr.To("my-waf-config"),
+						WafConfigName: utils.Ptr("my-waf-config"),
 					},
 				}
 			}),
@@ -967,7 +970,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1048,16 +1051,16 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = &[]albSdk.Listener{
 					{
-						Name:     ptr.To("http-80"),
-						Port:     ptr.To(int64(80)),
-						Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+						Name:     utils.Ptr("http-80"),
+						Port:     utils.Ptr(int64(80)),
+						Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: &[]albSdk.HostConfig{
 								{
-									Host: ptr.To("*"),
+									Host: utils.Ptr("*"),
 									Rules: &[]albSdk.Rule{
 										{
-											TargetPool:        ptr.To(targetPoolName),
+											TargetPool:        utils.Ptr(targetPoolName),
 											WebSocket:         nil,
 											Path:              nil,
 											Headers:           nil,
@@ -1069,13 +1072,13 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: ptr.To(albSdk.CertificateConfig{
+							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
 								CertificateIds: &[]string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: ptr.To("my-waf-config"),
+						WafConfigName: utils.Ptr("my-waf-config"),
 					},
 				}
 			}),
@@ -1083,7 +1086,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1150,25 +1153,25 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = &[]albSdk.Listener{
 					{
-						Name:     ptr.To("http-80"),
-						Port:     ptr.To(int64(80)),
-						Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+						Name:     utils.Ptr("http-80"),
+						Port:     utils.Ptr(int64(80)),
+						Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: &[]albSdk.HostConfig{
 								{
-									Host:  ptr.To("*"),
+									Host:  utils.Ptr("*"),
 									Rules: nil,
 								},
 							},
 						},
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: ptr.To(albSdk.CertificateConfig{
+							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
 								CertificateIds: &[]string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: ptr.To("my-waf-config"),
+						WafConfigName: utils.Ptr("my-waf-config"),
 					},
 				}
 			}),
@@ -1176,7 +1179,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1230,20 +1233,20 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = &[]albSdk.Listener{
 					{
-						Name:     ptr.To("http-80"),
-						Port:     ptr.To(int64(80)),
-						Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+						Name:     utils.Ptr("http-80"),
+						Port:     utils.Ptr(int64(80)),
+						Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: nil,
 						},
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: ptr.To(albSdk.CertificateConfig{
+							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
 								CertificateIds: &[]string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: ptr.To("my-waf-config"),
+						WafConfigName: utils.Ptr("my-waf-config"),
 					},
 				}
 			}),
@@ -1251,7 +1254,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1296,18 +1299,18 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = &[]albSdk.Listener{
 					{
-						Name:     ptr.To("http-80"),
-						Port:     ptr.To(int64(80)),
-						Protocol: ptr.To(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
+						Name:     utils.Ptr("http-80"),
+						Port:     utils.Ptr(int64(80)),
+						Protocol: utils.Ptr(albSdk.ListenerProtocol("PROTOCOL_HTTP")),
 						Http:     nil,
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: ptr.To(albSdk.CertificateConfig{
+							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
 								CertificateIds: &[]string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: ptr.To("my-waf-config"),
+						WafConfigName: utils.Ptr("my-waf-config"),
 					},
 				}
 			}),
@@ -1315,7 +1318,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(ptr.To(false), func(m *Model) {
+			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1382,7 +1385,7 @@ func Test_toExternalAddress(t *testing.T) {
 			input: &Model{
 				ExternalAddress: types.StringValue(externalAddress),
 			},
-			expected: ptr.To(externalAddress),
+			expected: utils.Ptr(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1391,13 +1394,13 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolNull(),
 						"ephemeral_address":    types.BoolNull(),
 					}),
 			},
-			expected: ptr.To(externalAddress),
+			expected: utils.Ptr(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1406,7 +1409,7 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolValue(true),
 						"ephemeral_address":    types.BoolValue(true),
@@ -1421,13 +1424,13 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolValue(false),
 						"ephemeral_address":    types.BoolValue(false),
 					}),
 			},
-			expected: ptr.To(externalAddress),
+			expected: utils.Ptr(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1436,7 +1439,7 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolNull(),
 						"ephemeral_address":    types.BoolValue(true),
@@ -1451,7 +1454,7 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolValue(true),
 						"ephemeral_address":    types.BoolNull(),
@@ -1466,13 +1469,13 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolNull(),
 						"ephemeral_address":    types.BoolValue(false),
 					}),
 			},
-			expected: ptr.To(externalAddress),
+			expected: utils.Ptr(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1481,13 +1484,13 @@ func Test_toExternalAddress(t *testing.T) {
 				ExternalAddress: types.StringValue(externalAddress),
 				Options: types.ObjectValueMust(optionsTypes,
 					map[string]attr.Value{
-						"acl":                  types.SetNull(types.StringType),
+						"access_control":       types.ObjectNull(accessControlTypes),
 						"observability":        types.ObjectNull(observabilityTypes),
 						"private_network_only": types.BoolValue(false),
 						"ephemeral_address":    types.BoolNull(),
 					}),
 			},
-			expected: ptr.To(externalAddress),
+			expected: utils.Ptr(externalAddress),
 			isValid:  true,
 		},
 	}
@@ -1528,7 +1531,7 @@ func Test_toPathPayload(t *testing.T) {
 			},
 			expected: &albSdk.Path{
 				Exact:  nil,
-				Prefix: ptr.To("/"),
+				Prefix: utils.Ptr("/"),
 			},
 			isValid: true,
 		},
@@ -1542,7 +1545,7 @@ func Test_toPathPayload(t *testing.T) {
 					}),
 			},
 			expected: &albSdk.Path{
-				Exact:  ptr.To("exact-match"),
+				Exact:  utils.Ptr("exact-match"),
 				Prefix: nil,
 			},
 			isValid: true,

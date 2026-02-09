@@ -97,7 +97,7 @@ resource "stackit_loadbalancer_observability_credential" "observability" {
 }
 
 # Create a Application Load Balancer
-resource "stackit_alb" "example" {
+resource "stackit_application_load_balancer" "example" {
   project_id = var.project_id
   region     = "eu01"
   name       = "example-load-balancer"

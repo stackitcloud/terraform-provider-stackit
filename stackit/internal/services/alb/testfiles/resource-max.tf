@@ -70,7 +70,6 @@ variable "host_3" {}
 variable "path_prefix_3" {}
 variable "target_pool_name_3" {}
 variable "target_pool_port_3" {}
-variable "certificate_ids" {}
 variable "listener_port_4" {}
 variable "host_4" {}
 variable "path_prefix_4" {}
@@ -81,7 +80,6 @@ variable "network_name_targets" {}
 variable "network_role_listeners" {}
 variable "network_role_targets" {}
 variable "disable_security_group_assignment" {}
-variable "protocol_https" {}
 variable "protocol_http" {}
 variable "private_network_only" {}
 variable "acl" {}
@@ -153,7 +151,7 @@ resource "stackit_loadbalancer_observability_credential" "observer" {
   username     = var.observability_credential_username
 }
 
-resource "stackit_alb" "loadbalancer" {
+resource "stackit_application_load_balancer" "loadbalancer" {
   region                                   = var.region
   project_id                               = var.project_id
   name                                     = var.loadbalancer_name
@@ -261,14 +259,7 @@ resource "stackit_alb" "loadbalancer" {
         }]
       }]
     }
-    https = {
-      certificate_config = {
-        certificate_ids = [
-          var.certificate_ids
-        ]
-      }
-    }
-    protocol = var.protocol_https
+    protocol = var.protocol_http
     }, {
     port = var.listener_port_4
     http = {
@@ -297,7 +288,9 @@ resource "stackit_alb" "loadbalancer" {
   options = {
     ephemeral_address    = var.ephemeral_address
     private_network_only = var.private_network_only
-    acl                  = [var.acl]
+    access_control = {
+      allowed_source_ranges = [var.acl]
+    }
     observability = {
       logs = {
         credentials_ref = stackit_loadbalancer_observability_credential.observer.credentials_ref

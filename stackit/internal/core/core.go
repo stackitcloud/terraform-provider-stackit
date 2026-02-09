@@ -31,13 +31,13 @@ type ProviderData struct {
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
+	ALBCustomEndpoint               string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
 	KMSCustomEndpoint               string
-	ALBCustomEndpoint               string
 	LoadBalancerCustomEndpoint      string
 	LogMeCustomEndpoint             string
 	MariaDBCustomEndpoint           string

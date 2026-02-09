@@ -64,7 +64,6 @@ type Model struct {
 	PlanId                         types.String `tfsdk:"plan_id"`
 	PrivateAddress                 types.String `tfsdk:"private_address"`
 	Region                         types.String `tfsdk:"region"`
-	Status                         types.String `tfsdk:"status"`
 	TargetPools                    types.List   `tfsdk:"target_pools"`
 	TargetSecurityGroup            types.Object `tfsdk:"target_security_group"`
 	Version                        types.String `tfsdk:"version"`
@@ -226,7 +225,7 @@ var networkTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Options
 type options struct {
-	ACL                types.Set    `tfsdk:"acl"`
+	AccessControl      types.Object `tfsdk:"access_control"`
 	PrivateNetworkOnly types.Bool   `tfsdk:"private_network_only"`
 	Observability      types.Object `tfsdk:"observability"`
 	EphemeralAddress   types.Bool   `tfsdk:"ephemeral_address"`
@@ -234,10 +233,18 @@ type options struct {
 
 // Types corresponding to options
 var optionsTypes = map[string]attr.Type{
-	"acl":                  types.SetType{ElemType: types.StringType},
+	"access_control":       types.ObjectType{AttrTypes: accessControlTypes},
 	"private_network_only": types.BoolType,
 	"observability":        types.ObjectType{AttrTypes: observabilityTypes},
 	"ephemeral_address":    types.BoolType,
+}
+
+type accessControl struct {
+	AllowedSourceRanges types.Set `tfsdk:"allowed_source_ranges"`
+}
+
+var accessControlTypes = map[string]attr.Type{
+	"allowed_source_ranges": types.SetType{ElemType: types.StringType},
 }
 
 type observability struct {
@@ -345,7 +352,7 @@ type applicationLoadBalancerResource struct {
 
 // Metadata returns the resource type name.
 func (r *applicationLoadBalancerResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_alb"
+	resp.TypeName = req.ProviderTypeName + "_application_load_balancer"
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -404,19 +411,19 @@ func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req res
 
 // Schema defines the schema for the resource.
 func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	protocolOptions := []string{"PROTOCOL_UNSPECIFIED", "PROTOCOL_HTTP", "PROTOCOL_HTTPS"}
-	roleOptions := []string{"ROLE_UNSPECIFIED", "ROLE_LISTENERS_AND_TARGETS", "ROLE_LISTENERS", "ROLE_TARGETS"}
+	protocolOptions := albUtils.ToStringList(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := albUtils.ToStringList(albSdk.AllowedNetworkRoleEnumValues)
+	errorOptions := albUtils.ToStringList(albSdk.AllowedLoadBalancerErrorTypesEnumValues)
 	servicePlanOptions := []string{"p10"}
-	regionOptions := []string{"eu01", "eu02"}
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
-		"id":         "Terraform's internal resource ID. It is structured as \"`project_id`\",\"region\",\"`name`\".",
+		"id":         "Terraform's internal resource ID. It is structured as `project_id`,`region`,`name`.",
 		"project_id": "STACKIT project ID to which the Application Load Balancer is associated.",
-		"region":     "The resource region. If not defined, the provider region is used. " + utils.FormatPossibleValues(regionOptions...),
+		"region":     "The resource region (e.g. eu01). If not defined, the provider region is used.",
 		"disable_target_security_group_assignment": "Disable target security group assignemt to allow targets outside of the given network. Connectivity to targets need to be ensured by the customer, including routing and Security Groups (targetSecurityGroup can be assigned). Not changeable after creation.",
 		"errors":                                 "Reports all errors a Application Load Balancer has.",
-		"errors.type":                            "Enum: \"TYPE_UNSPECIFIED\" \"TYPE_INTERNAL\" \"TYPE_QUOTA_SECGROUP_EXCEEDED\" \"TYPE_QUOTA_SECGROUPRULE_EXCEEDED\" \"TYPE_PORT_NOT_CONFIGURED\" \"TYPE_FIP_NOT_CONFIGURED\" \"TYPE_TARGET_NOT_ACTIVE\" \"TYPE_METRICS_MISCONFIGURED\" \"TYPE_LOGS_MISCONFIGURED\"\nThe error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.",
+		"errors.type":                            "Enum: " + utils.FormatPossibleValues(errorOptions...) + "\nThe error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.",
 		"errors.description":                     "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
 		"external_address":                       "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
 		"labels":                                 "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",
@@ -454,7 +461,8 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"network_id":                             "STACKIT network ID the Application Load Balancer and/or targets are in.",
 		"role":                                   "The role defines how the Application Load Balancer is using the network. " + utils.FormatPossibleValues(roleOptions...),
 		"options":                                "Defines any optional functionality you want to have enabled on your Application Load Balancer.",
-		"acl":                                    "Use this option to limit the IP ranges that can use the Application Load Balancer.",
+		"access_control":                         "Use this option to limit the IP ranges that can use the Application Load Balancer.",
+		"allowed_source_ranges":                  "Application Load Balancer is accessible only from an IP address in this range.",
 		"ephemeral_address":                      "This option automates the handling of the external IP address for an Application Load Balancer. If set to true a new IP address will be automatically created. It will also be automatically deleted when the Load Balancer is deleted.",
 		"observability":                          "We offer Load Balancer observability via STACKIT Observability or external solutions.",
 		"observability_logs":                     "Observability logs configuration.",
@@ -463,9 +471,8 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"observability_metrics":                  "Observability metrics configuration.",
 		"observability_metrics_credentials_ref":  "Credentials reference for metrics. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the metrics solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
 		"observability_metrics_push_url":         "The Observability(Metrics)/Prometheus remote write push URL you want the metrics to be shipped to.",
-		"plan_id":                                "Service Plan configures the size of the Application Load Balancer. " + utils.FormatPossibleValues(servicePlanOptions...) + ". This list can change in the future. Therefore, this is not an enum.",
+		"plan_id":                                "Service Plan configures the size of the Application Load Balancer. " + utils.FormatPossibleValues(servicePlanOptions...) + ". See available plans via STACKIT CLI 'stackit alb plans' or API https://docs.api.stackit.cloud/documentation/alb/version/v2#tag/Project/operation/APIService_ListPlans",
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
-		"status":                                 "Enum: \"STATUS_UNSPECIFIED\" \"STATUS_PENDING\" \"STATUS_READY\" \"STATUS_ERROR\" \"STATUS_TERMINATING\"",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
 		"healthy_threshold":                      "Healthy threshold of the health checking.",
@@ -522,7 +529,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				// must be computed to allow for storing the override value from the provider
 				Computed: true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(regionOptions...),
+					stringvalidator.LengthBetween(4, 6),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -882,15 +889,21 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Description: descriptions["options"],
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
-					"acl": schema.SetAttribute{
-						Description: descriptions["acl"],
-						ElementType: types.StringType,
+					"access_control": schema.SingleNestedAttribute{
+						Description: descriptions["access_control"],
 						Optional:    true,
-						Validators: []validator.Set{
-							setvalidator.SizeBetween(1, 100),
-							setvalidator.ValueStringsAre(
-								validate.CIDR(),
-							),
+						Attributes: map[string]schema.Attribute{
+							"allowed_source_ranges": schema.SetAttribute{
+								Description: descriptions["allowed_source_ranges"],
+								ElementType: types.StringType,
+								Required:    true,
+								Validators: []validator.Set{
+									setvalidator.SizeBetween(1, 100),
+									setvalidator.ValueStringsAre(
+										validate.CIDR(),
+									),
+								},
+							},
 						},
 					},
 					"ephemeral_address": schema.BoolAttribute{
@@ -955,13 +968,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"private_address": schema.StringAttribute{
 				Description: descriptions["private_address"],
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"status": schema.StringAttribute{
-				Description: descriptions["status"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -1736,13 +1742,18 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 	}
 
 	accessControlPayload := &albSdk.LoadbalancerOptionAccessControl{}
-	if !(optionsModel.ACL.IsNull() || optionsModel.ACL.IsUnknown()) {
-		var aclModel []string
-		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
+	if !(optionsModel.AccessControl.IsNull() || optionsModel.AccessControl.IsUnknown()) {
+		accessControlModel := accessControl{}
+		diags := optionsModel.AccessControl.As(ctx, &accessControlModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
+			return nil, fmt.Errorf("converting access control: %w", core.DiagsToError(diags))
 		}
-		accessControlPayload.AllowedSourceRanges = &aclModel
+		var allowedSourceRangesModel []string
+		diags = accessControlModel.AllowedSourceRanges.ElementsAs(ctx, &allowedSourceRangesModel, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting allowed source ranges: %w", core.DiagsToError(diags))
+		}
+		accessControlPayload.AllowedSourceRanges = &allowedSourceRangesModel
 	}
 
 	observabilityPayload := &albSdk.LoadbalancerOptionObservability{}
@@ -2023,7 +2034,6 @@ func mapFields(ctx context.Context, alb *albSdk.LoadBalancer, m *Model, region s
 	m.PrivateAddress = types.StringPointerValue(alb.PrivateAddress)
 	m.ExternalAddress = types.StringPointerValue(alb.ExternalAddress)
 	m.Version = types.StringPointerValue(alb.Version)
-	m.Status = types.StringPointerValue((*string)(alb.Status))
 	mapDisableSecurityGroupAssignment(alb, m)
 	err := mapErrors(alb, m)
 	if err != nil {
@@ -2597,7 +2607,7 @@ func mapOptions(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadBal
 		"ephemeral_address":    ephemeralAddressTF,
 	}
 
-	err := mapACL(opt.AccessControl, optionsMap)
+	err := mapAccessControl(opt.AccessControl, optionsMap)
 	if err != nil {
 		return fmt.Errorf("mapping field ACL: %w", err)
 	}
@@ -2661,24 +2671,35 @@ func mapObservability(observabilityResp *albSdk.LoadbalancerOptionObservability,
 	return nil
 }
 
-func mapACL(accessControlResp *albSdk.LoadbalancerOptionAccessControl, o map[string]attr.Value) error {
+func mapAccessControl(accessControlResp *albSdk.LoadbalancerOptionAccessControl, o map[string]attr.Value) error {
 	if accessControlResp == nil || accessControlResp.AllowedSourceRanges == nil {
-		o["acl"] = types.SetNull(types.StringType)
+		o["access_control"] = types.ObjectNull(accessControlTypes)
 		return nil
 	}
 
-	aclSet := []attr.Value{}
-	for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
-		rangeTF := types.StringValue(rangeResp)
-		aclSet = append(aclSet, rangeTF)
+	accessControlMap := map[string]attr.Value{
+		"allowed_source_ranges": types.SetNull(types.StringType),
 	}
+	if accessControlResp.HasAllowedSourceRanges() {
+		allowedSourceRangesSet := []attr.Value{}
+		for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
+			rangeTF := types.StringValue(rangeResp)
+			allowedSourceRangesSet = append(allowedSourceRangesSet, rangeTF)
+		}
 
-	aclTF, diags := types.SetValue(types.StringType, aclSet)
+		allowedSourceRangesTF, diags := types.SetValue(types.StringType, allowedSourceRangesSet)
+		if diags.HasError() {
+			return fmt.Errorf("mapping allowed source ranges: %w", core.DiagsToError(diags))
+		}
+
+		accessControlMap["allowed_source_ranges"] = allowedSourceRangesTF
+	}
+	accessControlTF, diags := types.ObjectValue(accessControlTypes, accessControlMap)
 	if diags.HasError() {
-		return fmt.Errorf("mapping ALC: %w", core.DiagsToError(diags))
+		return fmt.Errorf("mapping access control: %w", core.DiagsToError(diags))
 	}
 
-	o["acl"] = aclTF
+	o["access_control"] = accessControlTF
 	return nil
 }
 
