@@ -77,7 +77,7 @@ var descriptions = map[string]string{
 	"for":         "Alerts are considered firing once they have been returned for this long. Alerts which have not yet fired for long enough are considered pending. Default is 0s",
 	"labels":      "A map of key:value. Labels to add or overwrite for each alert",
 	"annotations": "A map of key:value. Annotations to add or overwrite for each alert",
-	"record":      "The name of the metric. Is the identifier and must be unique in the group.",
+	"record":      "The name of the metric. It's the identifier and must be unique in the group.",
 }
 
 // NewAlertGroupResource is a helper function to simplify the provider implementation.

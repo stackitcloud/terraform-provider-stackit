@@ -79,4 +79,4 @@ Optional:
 - `annotations` (Map of String) A map of key:value. Annotations to add or overwrite for each alert
 - `for` (String) Alerts are considered firing once they have been returned for this long. Alerts which have not yet fired for long enough are considered pending. Default is 0s
 - `labels` (Map of String) A map of key:value. Labels to add or overwrite for each alert
-- `record` (String) The name of the metric. Is the identifier and must be unique in the group.
+- `record` (String) The name of the metric. It's the identifier and must be unique in the group.
