@@ -55,6 +55,7 @@ func Test_mapFields(t *testing.T) {
 				model: &Model{
 					OrganizationId: types.StringValue(organizationId),
 					NetworkAreaId:  types.StringValue(networkAreaId),
+					Ipv4:           &ipv4Model{},
 				},
 				networkAreaRegion: &iaas.RegionalArea{
 					Ipv4: &iaas.RegionalAreaIPv4{
@@ -117,6 +118,28 @@ func Test_mapFields(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
+		},
+		{
+			name: "model.Ipv4 is nil",
+			args: args{
+				model: &Model{
+					OrganizationId: types.StringValue(organizationId),
+					NetworkAreaId:  types.StringValue(networkAreaId),
+					Ipv4:           nil,
+				},
+				networkAreaRegion: &iaas.RegionalArea{},
+				region:            "eu01",
+			},
+			want: &Model{
+				Id:             types.StringValue(fmt.Sprintf("%s,%s,eu01", organizationId, networkAreaId)),
+				OrganizationId: types.StringValue(organizationId),
+				NetworkAreaId:  types.StringValue(networkAreaId),
+				Region:         types.StringValue("eu01"),
+				Ipv4: &ipv4Model{
+					DefaultNameservers: types.ListNull(types.StringType),
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name: "network area region response is nil",

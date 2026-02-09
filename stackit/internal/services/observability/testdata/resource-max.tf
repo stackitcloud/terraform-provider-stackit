@@ -8,6 +8,7 @@ variable "alert_for_time" {}
 variable "alert_label" {}
 variable "alert_annotation" {}
 variable "alert_interval" {}
+variable "record_rule_name" {}
 
 variable "instance_name" {}
 variable "plan_name" {}
@@ -88,6 +89,13 @@ resource "stackit_observability_alertgroup" "alertgroup" {
       },
       annotations = {
         annotation1 = var.alert_annotation
+      }
+    },
+    {
+      record     = var.record_rule_name
+      expression = var.alert_rule_expression
+      labels = {
+        label1 = var.alert_label
       }
     }
   ]

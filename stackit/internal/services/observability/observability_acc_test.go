@@ -39,6 +39,7 @@ var testConfigVarsMin = config.Variables{
 	"alertgroup_name":           config.StringVariable(fmt.Sprintf("tf-acc-ag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"alert_rule_name":           config.StringVariable("alert1"),
 	"alert_rule_expression":     config.StringVariable(alert_rule_expression),
+	"record_rule_name":          config.StringVariable("record1"),
 	"instance_name":             config.StringVariable(fmt.Sprintf("tf-acc-i%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"plan_name":                 config.StringVariable("Observability-Medium-EU01"),
 	"logalertgroup_name":        config.StringVariable(fmt.Sprintf("tf-acc-lag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
@@ -55,6 +56,7 @@ var testConfigVarsMax = config.Variables{
 	"alertgroup_name":            config.StringVariable(fmt.Sprintf("tf-acc-ag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"alert_rule_name":            config.StringVariable("alert1"),
 	"alert_rule_expression":      config.StringVariable(alert_rule_expression),
+	"record_rule_name":           config.StringVariable("record1"),
 	"instance_name":              config.StringVariable(fmt.Sprintf("tf-acc-i%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"plan_name":                  config.StringVariable("Observability-Medium-EU01"),
 	"logalertgroup_name":         config.StringVariable(fmt.Sprintf("tf-acc-lag%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
@@ -169,6 +171,8 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "is_updatable"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_public_read_access"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_password"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "targets_url"),
@@ -213,6 +217,8 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["alertgroup_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["alert_rule_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.expression", alert_rule_expression),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.record", testutil.ConvertConfigVariable(testConfigVarsMin["record_rule_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.expression", alert_rule_expression),
 
 					// logalertgroup
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -300,6 +306,8 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["alertgroup_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.0.alert", testutil.ConvertConfigVariable(testConfigVarsMin["alert_rule_name"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.0.expression", alert_rule_expression),
+					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.1.record", testutil.ConvertConfigVariable(testConfigVarsMin["record_rule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.1.expression", alert_rule_expression),
 
 					// logalertgroup
 					resource.TestCheckResourceAttr("data.stackit_observability_logalertgroup.logalertgroup", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -412,6 +420,8 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "is_updatable"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_public_read_access"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_password"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "targets_url"),
@@ -456,6 +466,8 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "name", testutil.ConvertConfigVariable(testConfigVarsMin["alertgroup_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.alert", testutil.ConvertConfigVariable(configVarsMinUpdated()["alert_rule_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.expression", alert_rule_expression),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.record", testutil.ConvertConfigVariable(configVarsMinUpdated()["record_rule_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.expression", alert_rule_expression),
 
 					// logalertgroup
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -492,6 +504,8 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "is_updatable"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_public_read_access"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_password"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "targets_url"),
@@ -600,6 +614,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.expression", alert_rule_expression),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.for", testutil.ConvertConfigVariable(testConfigVarsMax["alert_for_time"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_label"])),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.record", testutil.ConvertConfigVariable(testConfigVarsMax["record_rule_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.expression", alert_rule_expression),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_label"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.annotations.annotation1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_annotation"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "interval", testutil.ConvertConfigVariable(testConfigVarsMax["alert_interval"])),
@@ -661,6 +678,8 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "is_updatable"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "grafana_public_read_access"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "grafana_initial_admin_password"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "targets_url"),
@@ -768,6 +787,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.0.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_label"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.0.annotations.annotation1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_annotation"])),
 					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "interval", testutil.ConvertConfigVariable(testConfigVarsMax["alert_interval"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.1.record", testutil.ConvertConfigVariable(testConfigVarsMax["record_rule_name"])),
+					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.1.expression", alert_rule_expression),
+					resource.TestCheckResourceAttr("data.stackit_observability_alertgroup.alertgroup", "rules.1.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_label"])),
 
 					// logalertgroup
 					resource.TestCheckResourceAttr("stackit_observability_logalertgroup.logalertgroup", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -888,6 +910,8 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "is_updatable"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_public_read_access"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_user"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "grafana_initial_admin_password"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "metrics_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "targets_url"),
@@ -996,6 +1020,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.expression", alert_rule_expression_updated),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.for", testutil.ConvertConfigVariable(testConfigVarsMax["alert_for_time"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_label"])),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.record", testutil.ConvertConfigVariable(testConfigVarsMax["record_rule_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.expression", alert_rule_expression_updated),
+					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.1.labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_label"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "rules.0.annotations.annotation1", testutil.ConvertConfigVariable(testConfigVarsMax["alert_annotation"])),
 					resource.TestCheckResourceAttr("stackit_observability_alertgroup.alertgroup", "interval", testutil.ConvertConfigVariable(configVarsMaxUpdated()["alert_interval"])),

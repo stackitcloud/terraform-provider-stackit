@@ -123,6 +123,17 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "Specifies Grafana URL.",
 				Computed:    true,
 			},
+			"grafana_initial_admin_user": schema.StringAttribute{
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin username.",
+				Computed:           true,
+			},
+			"grafana_initial_admin_password": schema.StringAttribute{
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin password.",
+				Computed:           true,
+				Sensitive:          true,
+			},
 			"grafana_admin_enabled": schema.BoolAttribute{
 				Description: "If true, a default Grafana server admin user was created.",
 				Computed:    true,
