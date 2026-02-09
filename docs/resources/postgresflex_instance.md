@@ -43,11 +43,11 @@ import {
 ### Required
 
 - `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
-- `backup_schedule` (String)
+- `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `name` (String) Instance name.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
-- `replicas` (Number)
+- `replicas` (Number) How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 
