@@ -4,6 +4,7 @@ variable "project_id" {}
 variable "alertgroup_name" {}
 variable "alert_rule_name" {}
 variable "alert_rule_expression" {}
+variable "record_rule_name" {}
 
 variable "instance_name" {}
 variable "plan_name" {}
@@ -26,6 +27,10 @@ resource "stackit_observability_alertgroup" "alertgroup" {
   rules = [
     {
       alert      = var.alert_rule_name
+      expression = var.alert_rule_expression
+    },
+    {
+      record     = var.record_rule_name
       expression = var.alert_rule_expression
     }
   ]

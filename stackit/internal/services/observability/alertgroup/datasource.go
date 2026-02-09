@@ -123,6 +123,10 @@ func (a *alertGroupDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 							ElementType: types.StringType,
 							Computed:    true,
 						},
+						"record": schema.StringAttribute{
+							Description: descriptions["record"],
+							Computed:    true,
+						},
 					},
 				},
 			},
