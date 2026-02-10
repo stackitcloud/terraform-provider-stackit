@@ -153,8 +153,8 @@ github.com/stackitcloud/stackit-sdk-go/core v0.21.1 h1:Y/PcAgM7DPYMNqum0MLv4n1mF
 github.com/stackitcloud/stackit-sdk-go/core v0.21.1/go.mod h1:osMglDby4csGZ5sIfhNyYq1bS1TxIdPY88+skE/kkmI=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.11.3 h1:JMKEeNQpA+Mb1DRpY3MRQL3pko5JjUWGrevN0xOrx+4=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.11.3/go.mod h1:uYI9pHAA2g84jJN25ejFUxa0/JtfpPZqMDkctQ1BzJk=
-github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.2 h1:Xp4FxCBiTQhqed2tB26fRJJTQST2NwDTiXiacqeTfMI=
-github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.2/go.mod h1:aoFctJ6HPLUqJxOumwFFTPHykpSBx35wR/raw7rjp9k=
+github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.4 h1:6xBogGvhlw/F74g2aK1iSRoOUdiP37pjRK9DTgNZF3o=
+github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.4/go.mod h1:vvWMnaLTsgAj9bTUwrCkC9NN+U4NCXMCOAkU8ExlReE=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.6 h1:GBRb49x5Nax/oQQaaf2F3kKwv8DQQOL0TQOC0C/v/Ew=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.6/go.mod h1:IX9iL3MigDZUmzwswTJMfYvyi118KAHrFMfjJUy5NYk=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.1 h1:BniqPDK1pjqXFq07JL5L9IpWFxaOp/5kxptnXKsb/Ks=
@@ -179,8 +179,8 @@ github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.8 h1:S7t4wcT6SN
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.8/go.mod h1:CdrhFUsBO7/iJleCc2yQjDChIbG6YaxKNBQRNCjgcF4=
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5 h1:4gpvB6t7d2lLjInoTxcvjL9jCpBl5EDfYe5yUtR1MvA=
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5/go.mod h1:Bdcd59sRySyhfSUCy+5BNkp5w9PECmrywdvt+ORMKnI=
-github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.1 h1:FKeW3uiMXRl6Oau3xE6yBriXh4t7CwPb8QH6PR0uQXM=
-github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.1/go.mod h1:RiknJnL3OuU9wb2lyb80Hu+EnlyDQMG8vejDV7B9a5U=
+github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.3 h1:J/R6iBALMiNpg+JDEx1adH50TM4UTF/KBYFuHENMKIs=
+github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.3/go.mod h1:9KdrXC5JS30Ay3mR0adb3vNdhca+qxiy/cPF5P4wehQ=
 github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.6 h1:oTVx1+O177Ojn8OvXIOUbRSwtx7L59jhxDPrZEQFOfQ=
 github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.6/go.mod h1:6ZBeCCY6qG8w1oK7osf61Egyv3mp7Ahv6GDGxiarDGo=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.3 h1:SsjJQPQ7Xtpr64CH1Cjifs5r2ogfzrFzHBWOtNmilSA=
