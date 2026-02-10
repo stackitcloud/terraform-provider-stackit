@@ -6,18 +6,18 @@ provider "stackit" {
 
 # Workload Identity Federation flow 
 provider "stackit" {
-  default_region                        = "eu01"
-  service_account_email                 = var.service_account_email
-  service_account_federated_token       = var.service_account_federated_token
-  use_oidc                              = true
+  default_region                  = "eu01"
+  service_account_email           = var.service_account_email
+  service_account_federated_token = var.service_account_federated_token
+  use_oidc                        = true
 }
 
 # Workload Identity Federation flow (using path)
 provider "stackit" {
-  default_region                        = "eu01"
-  service_account_email                 = var.service_account_email
-  service_account_federated_token_path  = var.service_account_federated_token_path 
-  use_oidc                              = true
+  default_region                       = "eu01"
+  service_account_email                = var.service_account_email
+  service_account_federated_token_path = var.service_account_federated_token_path
+  use_oidc                             = true
 }
 
 # Key flow
