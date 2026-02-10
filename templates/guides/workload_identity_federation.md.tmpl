@@ -119,15 +119,4 @@ jobs:
         env:
           STACKIT_USE_OIDC: "1"
           STACKIT_SERVICE_ACCOUNT_EMAIL: "terraform-example@sa.stackit.cloud"
-      - name: Terraform Destroy
-        if: always() 
-        run: |
-          if [ -f terraform.tfstate ]; then
-            terraform destroy -auto-approve
-          else
-            echo "No state file found, skipping destroy."
-          fi
-        env:
-          STACKIT_USE_OIDC: "1"
-          STACKIT_SERVICE_ACCOUNT_EMAIL: "terraform-example@sa.stackit.cloud"
 ```
