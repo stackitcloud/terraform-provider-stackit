@@ -5,7 +5,7 @@ name: Build and Validate Provider
 on:
   push:
     branches:
-      - '**' 
+      - "**"
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
     name: Build Provider & Test Plan
     runs-on: ubuntu-latest
     permissions:
-      contents: read     
+      contents: read
       id-token: write
 
     steps:
@@ -23,7 +23,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
 
       - name: Build Provider
         run: |
@@ -42,7 +42,7 @@ jobs:
             direct {}
           }
           EOF
-          
+
           echo "Terraform RC content:"
           cat ~/.terraformrc
 
@@ -51,7 +51,7 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Create Test Configuration        
+      - name: Create Test Configuration
         run: |
           cat <<EOF > main.tf
           terraform {
@@ -67,7 +67,6 @@ jobs:
             enable_beta_resources            = true
             service_account_custom_endpoint  = "https://service-account.api.qa.stackit.cloud"
             token_custom_endpoint            = "https://accounts.qa.stackit.cloud/oauth/v2/token"
-            service_account_email            = "test-idp-njf5pc1@sa.stackit.cloud"
           }
 
           resource "stackit_service_account" "sa"   {
@@ -80,19 +79,21 @@ jobs:
         run: |
           # Inicializamos sin backend para pruebas rápidas
           terraform init -backend=false
-          
+
           # Ejecutamos plan. Si el provider carga y la API responde, esto pasará.
           terraform plan -out=tfplan
         env:
           STACKIT_USE_OIDC: "1"
+          STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
         env:
           STACKIT_USE_OIDC: "1"
+          STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
 
       - name: Terraform Destroy
-        if: always() 
+        if: always()
         run: |
           if [ -f terraform.tfstate ]; then
             terraform destroy -auto-approve
@@ -101,3 +102,4 @@ jobs:
           fi
         env:
           STACKIT_USE_OIDC: "1"
+          STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
