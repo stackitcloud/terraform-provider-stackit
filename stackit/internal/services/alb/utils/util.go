@@ -28,15 +28,3 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 
 	return apiClient
 }
-
-type sdkEnums interface {
-	albSdk.ListenerProtocol | albSdk.LoadBalancerErrorTypes | albSdk.NetworkRole
-}
-
-func ToStringList[T sdkEnums](in []T) []string {
-	out := make([]string, len(in))
-	for i, o := range in {
-		out[i] = string(o)
-	}
-	return out
-}

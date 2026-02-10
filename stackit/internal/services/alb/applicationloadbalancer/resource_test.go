@@ -306,8 +306,6 @@ func fixtureModelNull(mods ...func(m *Model)) *Model {
 }
 
 func fixtureCreatePayload(lb *albSdk.LoadBalancer) *albSdk.CreateLoadBalancerPayload {
-	(*lb.Listeners)[0].Name = nil // will be required in ALB API V2
-
 	return &albSdk.CreateLoadBalancerPayload{
 		DisableTargetSecurityGroupAssignment: lb.DisableTargetSecurityGroupAssignment,
 		ExternalAddress:                      lb.ExternalAddress,
@@ -322,8 +320,6 @@ func fixtureCreatePayload(lb *albSdk.LoadBalancer) *albSdk.CreateLoadBalancerPay
 }
 
 func fixtureUpdatePayload(lb *albSdk.LoadBalancer) *albSdk.UpdateLoadBalancerPayload {
-	(*lb.Listeners)[0].Name = nil // will be required in ALB API V2
-
 	return &albSdk.UpdateLoadBalancerPayload{
 		DisableTargetSecurityGroupAssignment: lb.DisableTargetSecurityGroupAssignment,
 		ExternalAddress:                      lb.ExternalAddress,
@@ -1530,8 +1526,8 @@ func Test_toPathPayload(t *testing.T) {
 					}),
 			},
 			expected: &albSdk.Path{
-				Exact:  nil,
-				Prefix: utils.Ptr("/"),
+				ExactMatch: nil,
+				Prefix:     utils.Ptr("/"),
 			},
 			isValid: true,
 		},
@@ -1545,8 +1541,8 @@ func Test_toPathPayload(t *testing.T) {
 					}),
 			},
 			expected: &albSdk.Path{
-				Exact:  utils.Ptr("exact-match"),
-				Prefix: nil,
+				ExactMatch: utils.Ptr("exact-match"),
+				Prefix:     nil,
 			},
 			isValid: true,
 		},

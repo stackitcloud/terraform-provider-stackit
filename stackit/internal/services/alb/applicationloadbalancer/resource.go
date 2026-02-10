@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb"
 	"github.com/stackitcloud/stackit-sdk-go/services/alb/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -69,7 +70,7 @@ type Model struct {
 	Version                        types.String `tfsdk:"version"`
 }
 
-type errors struct {
+type errorsALB struct {
 	Description types.String `tfsdk:"description"`
 	Type        types.String `tfsdk:"type"`
 }
@@ -385,14 +386,6 @@ func (r *applicationLoadBalancerResource) ModifyPlan(ctx context.Context, req re
 	}
 }
 
-func (r *applicationLoadBalancerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	// Do nothing!
-	// We do not validate the TF input, because the API does that and
-	// maintaining and syncing between them is not worth it, because
-	// 400 Bad Request error gives all the details the user needs via the API in TF, which
-	// also is the single source of truth.
-}
-
 // Configure adds the provider configured client to the resource.
 func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
@@ -411,10 +404,9 @@ func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req res
 
 // Schema defines the schema for the resource.
 func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	protocolOptions := albUtils.ToStringList(albSdk.AllowedListenerProtocolEnumValues)
-	roleOptions := albUtils.ToStringList(albSdk.AllowedNetworkRoleEnumValues)
-	errorOptions := albUtils.ToStringList(albSdk.AllowedLoadBalancerErrorTypesEnumValues)
-	servicePlanOptions := []string{"p10"}
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypesEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
@@ -471,7 +463,7 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"observability_metrics":                  "Observability metrics configuration.",
 		"observability_metrics_credentials_ref":  "Credentials reference for metrics. This reference is created via the observability create endpoint and the credential needs to contain the basic auth username and password for the metrics solution the push URL points to. Then this enables monitoring via remote write for the Application Load Balancer.",
 		"observability_metrics_push_url":         "The Observability(Metrics)/Prometheus remote write push URL you want the metrics to be shipped to.",
-		"plan_id":                                "Service Plan configures the size of the Application Load Balancer. " + utils.FormatPossibleValues(servicePlanOptions...) + ". See available plans via STACKIT CLI 'stackit alb plans' or API https://docs.api.stackit.cloud/documentation/alb/version/v2#tag/Project/operation/APIService_ListPlans",
+		"plan_id":                                "Service Plan configures the size of the Application Load Balancer e.g. 'p10'. See available plans via STACKIT CLI 'stackit beta alb plans' or API https://docs.api.stackit.cloud/documentation/alb/version/v2#tag/Project/operation/APIService_ListPlans",
 		"private_network_only":                   "Application Load Balancer is accessible only via a private network ip address. Not changeable after creation.",
 		"target_pools":                           "List of all target pools which will be used in the Application Load Balancer. Limited to 20.",
 		"active_health_checks":                   "Set this to customize active health checks for targets in this pool.",
@@ -548,24 +540,15 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			"errors": schema.SetNestedAttribute{
 				Description: descriptions["errors"],
 				Computed:    true,
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.UseStateForUnknown(),
-				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
 							Description: descriptions["errors.type"],
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"description": schema.StringAttribute{
 							Description: descriptions["errors.description"],
 							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 					},
 				},
@@ -596,7 +579,10 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Description: descriptions["plan_id"],
 				Required:    true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(servicePlanOptions...),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^p\d{2,4}$`),
+						"Must be an available service plan e.g. p10",
+					),
 				},
 			},
 			"listeners": schema.ListNestedAttribute{
@@ -609,15 +595,12 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							Description: descriptions["listeners.name"],
-							Computed:    true, // will be required in v2
+							Required:    true,
 							Validators: []validator.String{
 								stringvalidator.RegexMatches(
 									regexp.MustCompile(`^[0-9a-z](?:(?:[0-9a-z]|-){0,61}[0-9a-z])?$`),
 									"1-63 characters [0-9] & [a-z] also [-] but not at the beginning or end",
 								),
-							},
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 						"port": schema.Int64Attribute{
@@ -1164,8 +1147,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
 	var model Model
-	diags := req.Plan.Get(ctx, &model)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1185,14 +1167,23 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 	}
 
 	// Create a new Application Load Balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := prettyApiErr(err)
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id": projectId,
+		"region":     region,
+		"name":       *createResp.Name,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -1206,10 +1197,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
-
-	// Set state to fully populated data
-	diags = resp.State.Set(ctx, model)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -1238,10 +1226,12 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 
 	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				resp.State.RemoveResource(ctx)
+				return
+			}
 		}
 		errStr := prettyApiErr(err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Application Load Balancer", fmt.Sprintf("Calling API: %v", errStr))
@@ -1310,6 +1300,15 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id": projectId,
+		"region":     region,
+		"name":       *updateResp.Name,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -1391,15 +1390,15 @@ func (r *applicationLoadBalancerResource) ImportState(ctx context.Context, req r
 }
 
 func prettyApiErr(err error) string {
-	oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-	if !ok {
-		return err.Error()
+	var oapiErr *oapierror.GenericOpenAPIError
+	if errors.As(err, &oapiErr) {
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, oapiErr.Body, "", "  "); err != nil {
+			return err.Error()
+		}
+		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
 	}
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, oapiErr.Body, "", "  "); err != nil {
-		return err.Error()
-	}
-	return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
+	return err.Error()
 }
 
 // toCreatePayload and all other toX functions in this file turn a Terraform Application Load Balancer model into a createLoadBalancerPayload to be used with the Application Load Balancer API.
@@ -1443,26 +1442,20 @@ func toCreatePayload(ctx context.Context, model *Model) (*albSdk.CreateLoadBalan
 }
 
 func toLabelPayload(ctx context.Context, model *Model) (albSdk.CreateLoadBalancerPayloadGetLabelsAttributeType, error) {
-	if model.Labels.IsNull() || model.Labels.IsUnknown() {
+	if utils.IsUndefined(model.Labels) {
 		return nil, nil
 	}
-	var labels map[string]string
+	var payload map[string]string
 	// Unpack types.Map -> map[string]string
-	diags := model.Labels.ElementsAs(ctx, &labels, false)
+	diags := model.Labels.ElementsAs(ctx, &payload, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
 	}
-
-	payload := albSdk.CreateLoadBalancerPayloadGetLabelsArgType{}
-	for key, value := range labels {
-		payload[key] = value
-	}
-
 	return &payload, nil
 }
 
 func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, error) {
-	if model.Listeners.IsNull() || model.Listeners.IsUnknown() {
+	if utils.IsUndefined(model.Listeners) {
 		return nil, nil
 	}
 
@@ -1484,9 +1477,9 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, 
 			return nil, fmt.Errorf("converting https payload: %w", err)
 		}
 		payload = append(payload, albSdk.Listener{
-			Http:  httpPayload,
-			Https: httpsPayload,
-			//Name:          conversion.StringValueToPointer(listenerModel.Name), will be added in v2
+			Http:          httpPayload,
+			Https:         httpsPayload,
+			Name:          conversion.StringValueToPointer(listenerModel.Name),
 			Port:          conversion.Int64ValueToPointer(listenerModel.Port),
 			Protocol:      albSdk.ListenerGetProtocolAttributeType(conversion.StringValueToPointer(listenerModel.Protocol)),
 			WafConfigName: conversion.StringValueToPointer(listenerModel.WafConfigName),
@@ -1497,8 +1490,8 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, 
 }
 
 func toHttpPayload(ctx context.Context, listenerModel *listener) (albSdk.ListenerGetHttpAttributeType, error) {
-	if listenerModel.Http.IsNull() || listenerModel.Http.IsUnknown() {
-		return nil, nil
+	if utils.IsUndefined(listenerModel.Http) {
+		return nil, errors.New("http is required")
 	}
 
 	httpModel := httpALB{}
@@ -1519,7 +1512,7 @@ func toHttpPayload(ctx context.Context, listenerModel *listener) (albSdk.Listene
 }
 
 func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOptionsHTTPGetHostsAttributeType, error) {
-	if httpModel.Hosts.IsNull() || httpModel.Hosts.IsUnknown() {
+	if utils.IsUndefined(httpModel.Hosts) {
 		return nil, nil
 	}
 
@@ -1532,7 +1525,7 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOpt
 	payload := albSdk.ProtocolOptionsHTTPGetHostsArgType{}
 	for i := range hostsModel {
 		hostModel := hostsModel[i]
-		if hostModel.Host.IsNull() || hostModel.Host.IsUnknown() {
+		if utils.IsUndefined(hostModel.Host) {
 			return nil, fmt.Errorf("no hosts specified")
 		}
 		rulesPayload, err := toRulesPayload(ctx, &hostModel)
@@ -1548,7 +1541,7 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOpt
 }
 
 func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) (albSdk.HostConfigGetRulesAttributeType, error) {
-	if hostConfigModel.Rules.IsNull() || hostConfigModel.Rules.IsUnknown() {
+	if utils.IsUndefined(hostConfigModel.Rules) {
 		return nil, nil
 	}
 
@@ -1581,7 +1574,6 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) (albSdk.Ho
 			CookiePersistence: cookiePersistencePayload,
 			Headers:           headersPayload,
 			Path:              pathPayload,
-			PathPrefix:        nil, // will be removed in v2
 			QueryParameters:   queryParametersPayload,
 			TargetPool:        conversion.StringValueToPointer(ruleModel.TargetPool),
 			WebSocket:         conversion.BoolValueToPointer(ruleModel.WebSocket),
@@ -1591,7 +1583,7 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) (albSdk.Ho
 }
 
 func toQueryParametersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetQueryParametersAttributeType, error) {
-	if ruleModel.QueryParameters.IsNull() || ruleModel.QueryParameters.IsUnknown() {
+	if utils.IsUndefined(ruleModel.QueryParameters) {
 		return nil, nil
 	}
 
@@ -1614,7 +1606,7 @@ func toQueryParametersPayload(ctx context.Context, ruleModel *rule) (albSdk.Rule
 }
 
 func toPathPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetPathAttributeType, error) {
-	if ruleModel.Path.IsNull() || ruleModel.Path.IsUnknown() {
+	if utils.IsUndefined(ruleModel.Path) {
 		return nil, nil
 	}
 
@@ -1624,22 +1616,22 @@ func toPathPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetPathAttr
 		return nil, fmt.Errorf("converting path: %w", core.DiagsToError(diags))
 	}
 
-	if (pathModel.Exact.IsNull() || pathModel.Exact.IsUnknown()) && (pathModel.Prefix.IsNull() || pathModel.Prefix.IsUnknown()) {
+	if utils.IsUndefined(pathModel.Exact) && utils.IsUndefined(pathModel.Prefix) {
 		return nil, fmt.Errorf("no path prefix or exact match specified")
 	}
-	if !(pathModel.Exact.IsNull() || pathModel.Exact.IsUnknown()) && !(pathModel.Prefix.IsNull() || pathModel.Prefix.IsUnknown()) {
+	if !utils.IsUndefined(pathModel.Exact) && !utils.IsUndefined(pathModel.Prefix) {
 		return nil, fmt.Errorf("path prefix and exact match are specified at the same time")
 	}
 
 	payload := albSdk.RuleGetPathArgType{
-		Exact:  conversion.StringValueToPointer(pathModel.Exact),
-		Prefix: conversion.StringValueToPointer(pathModel.Prefix),
+		ExactMatch: conversion.StringValueToPointer(pathModel.Exact),
+		Prefix:     conversion.StringValueToPointer(pathModel.Prefix),
 	}
 	return &payload, nil
 }
 
 func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetCookiePersistenceAttributeType, error) {
-	if ruleModel.CookiePersistence.IsNull() || ruleModel.CookiePersistence.IsUnknown() {
+	if utils.IsUndefined(ruleModel.CookiePersistence) {
 		return nil, nil
 	}
 
@@ -1658,7 +1650,7 @@ func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (albSdk.Ru
 }
 
 func toHeadersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetHeadersAttributeType, error) {
-	if ruleModel.Headers.IsNull() || ruleModel.Headers.IsUnknown() {
+	if utils.IsUndefined(ruleModel.Headers) {
 		return nil, nil
 	}
 
@@ -1680,7 +1672,7 @@ func toHeadersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetHeade
 }
 
 func toHttpsPayload(ctx context.Context, listenerModel *listener) (albSdk.ListenerGetHttpsAttributeType, error) {
-	if listenerModel.Https.IsNull() || listenerModel.Https.IsUnknown() {
+	if utils.IsUndefined(listenerModel.Https) {
 		return nil, nil
 	}
 
@@ -1703,7 +1695,7 @@ func toHttpsPayload(ctx context.Context, listenerModel *listener) (albSdk.Listen
 }
 
 func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.CertificateConfig, error) {
-	if https.CertificateConfig.IsNull() || https.CertificateConfig.IsUnknown() {
+	if utils.IsUndefined(https.CertificateConfig) {
 		return nil, nil
 	}
 
@@ -1712,7 +1704,7 @@ func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.Cert
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting certificate config: %w", core.DiagsToError(diags))
 	}
-	if certificateConfigModel.CertificateConfigIDs.IsNull() || certificateConfigModel.CertificateConfigIDs.IsUnknown() {
+	if utils.IsUndefined(certificateConfigModel.CertificateConfigIDs) {
 		return nil, fmt.Errorf("converting certificate config: no certificate config found")
 	}
 
@@ -1728,7 +1720,7 @@ func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.Cert
 }
 
 func toNetworksPayload(ctx context.Context, model *Model) (*[]albSdk.Network, error) {
-	if model.Networks.IsNull() || model.Networks.IsUnknown() {
+	if utils.IsUndefined(model.Networks) {
 		return nil, nil
 	}
 
@@ -1751,7 +1743,7 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]albSdk.Network, er
 }
 
 func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOptions, error) {
-	if model.Options.IsNull() || model.Options.IsUnknown() {
+	if utils.IsUndefined(model.Options) {
 		return nil, nil
 	}
 
@@ -1762,7 +1754,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 	}
 
 	accessControlPayload := &albSdk.LoadbalancerOptionAccessControl{}
-	if !(optionsModel.AccessControl.IsNull() || optionsModel.AccessControl.IsUnknown()) {
+	if !utils.IsUndefined(optionsModel.AccessControl) {
 		accessControlModel := accessControl{}
 		diags := optionsModel.AccessControl.As(ctx, &accessControlModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1777,7 +1769,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 	}
 
 	observabilityPayload := &albSdk.LoadbalancerOptionObservability{}
-	if !(optionsModel.Observability.IsNull() || optionsModel.Observability.IsUnknown()) {
+	if !utils.IsUndefined(optionsModel.Observability) {
 		observabilityModel := observability{}
 		diags := optionsModel.Observability.As(ctx, &observabilityModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -1818,7 +1810,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 }
 
 func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]albSdk.TargetPool, error) {
-	if model.TargetPools.IsNull() || model.TargetPools.IsUnknown() {
+	if utils.IsUndefined(model.TargetPools) {
 		return nil, nil
 	}
 
@@ -1858,7 +1850,7 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]albSdk.TargetPo
 }
 
 func toTlsConfigPayload(ctx context.Context, tp *targetPool) (albSdk.TargetPoolGetTlsConfigAttributeType, error) {
-	if tp.TLSConfig.IsNull() || tp.TLSConfig.IsUnknown() {
+	if utils.IsUndefined(tp.TLSConfig) {
 		return nil, nil
 	}
 
@@ -1928,7 +1920,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albSdk.UpdateLoadBalan
 // toExternalAddress needs to exist because during UPDATE the model will always have it, but
 // we do not send it if ephemeral_address or private_network_only options are set.
 func toExternalAddress(ctx context.Context, m *Model) (albSdk.UpdateLoadBalancerPayloadGetExternalAddressAttributeType, error) {
-	if m.Options.IsNull() || m.Options.IsUnknown() {
+	if utils.IsUndefined(m.Options) {
 		// no ephemeral or private option are set
 		return conversion.StringValueToPointer(m.ExternalAddress), nil
 	}
@@ -1937,7 +1929,7 @@ func toExternalAddress(ctx context.Context, m *Model) (albSdk.UpdateLoadBalancer
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting options: %w", core.DiagsToError(diags))
 	}
-	if (o.EphemeralAddress.IsNull() || o.EphemeralAddress.IsUnknown()) && (o.PrivateNetworkOnly.IsNull() || o.PrivateNetworkOnly.IsUnknown()) {
+	if utils.IsUndefined(o.EphemeralAddress) && utils.IsUndefined(o.PrivateNetworkOnly) {
 		// options exist but ephemeral or private option are set (default false) so use external address
 		return conversion.StringValueToPointer(m.ExternalAddress), nil
 	}
@@ -1958,7 +1950,7 @@ func toExternalAddress(ctx context.Context, m *Model) (albSdk.UpdateLoadBalancer
 }
 
 func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*albSdk.ActiveHealthCheck, error) {
-	if tp.ActiveHealthCheck.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
+	if utils.IsUndefined(tp.ActiveHealthCheck) {
 		return nil, nil
 	}
 
@@ -1984,7 +1976,7 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*albSdk.Ac
 }
 
 func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (albSdk.ActiveHealthCheckGetHttpHealthChecksAttributeType, error) {
-	if check.HttpHealthChecks.IsNull() || check.HttpHealthChecks.IsUnknown() {
+	if utils.IsUndefined(check.HttpHealthChecks) {
 		return nil, nil
 	}
 
@@ -2007,7 +1999,7 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (a
 }
 
 func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]albSdk.Target, error) {
-	if tp.Targets.IsNull() || tp.Targets.IsUnknown() {
+	if utils.IsUndefined(tp.Targets) {
 		return nil, nil
 	}
 
@@ -2421,7 +2413,7 @@ func mapPath(pathResp albSdk.RuleGetPathAttributeType, r map[string]attr.Value) 
 	}
 
 	pathMap := map[string]attr.Value{
-		"exact_match": types.StringPointerValue(pathResp.Exact),
+		"exact_match": types.StringPointerValue(pathResp.ExactMatch),
 		"prefix":      types.StringPointerValue(pathResp.Prefix),
 	}
 
@@ -2607,7 +2599,7 @@ func mapOptions(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadBal
 	opt := applicationLoadBalancerResp.Options
 	// If no options are set in the model and the response has no fields filed,
 	// leave the option out of the model to prevent an inconsistent result after apply error
-	if (m.Options.IsNull() || m.Options.IsUnknown()) && !opt.HasEphemeralAddress() && !opt.HasPrivateNetworkOnly() && !opt.HasAccessControl() && !opt.HasObservability() {
+	if utils.IsUndefined(m.Options) && !opt.HasEphemeralAddress() && !opt.HasPrivateNetworkOnly() && !opt.HasAccessControl() && !opt.HasObservability() {
 		return nil
 	}
 

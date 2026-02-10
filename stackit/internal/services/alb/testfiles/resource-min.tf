@@ -29,13 +29,12 @@ variable "loadbalancer_name" {}
 variable "network_role" {}
 variable "network_name" {}
 variable "plan_id" {}
+variable "listener_name" {}
 variable "listener_port" {}
 variable "host" {}
-variable "path_prefix" {}
 variable "protocol_http" {}
 variable "target_pool_name" {}
 variable "target_pool_port" {}
-variable "target_display_name" {}
 
 resource "stackit_network" "network" {
   project_id       = var.project_id
@@ -97,22 +96,19 @@ resource "stackit_application_load_balancer" "loadbalancer" {
       target_port = var.target_pool_port
       targets = [
         {
-          display_name = var.target_display_name
-          ip           = stackit_network_interface.network_interface.ipv4
+          ip = stackit_network_interface.network_interface.ipv4
         }
       ]
     }
   ]
   listeners = [{
+    name = var.listener_name
     port = var.listener_port
     http = {
       hosts = [{
         host = var.host
         rules = [{
           target_pool = var.target_pool_name
-          path = {
-            prefix = var.path_prefix
-          }
         }]
       }]
     }

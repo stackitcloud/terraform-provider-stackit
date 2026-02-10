@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	albUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/utils"
 
@@ -56,8 +57,9 @@ func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 
 // Schema defines the schema for the resource.
 func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	protocolOptions := albUtils.ToStringList(albSdk.AllowedListenerProtocolEnumValues)
-	roleOptions := albUtils.ToStringList(albSdk.AllowedNetworkRoleEnumValues)
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypesEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
@@ -66,7 +68,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 		"region":     "The resource region. If not defined, the provider region is used.",
 		"disable_target_security_group_assignment": "Disable target security group assignemt to allow targets outside of the given network. Connectivity to targets need to be ensured by the customer, including routing and Security Groups (targetSecurityGroup can be assigned). Not changeable after creation.",
 		"errors":                            "Reports all errors a Application Load Balancer has.",
-		"errors.type":                       "Enum: \"TYPE_UNSPECIFIED\" \"TYPE_INTERNAL\" \"TYPE_QUOTA_SECGROUP_EXCEEDED\" \"TYPE_QUOTA_SECGROUPRULE_EXCEEDED\" \"TYPE_PORT_NOT_CONFIGURED\" \"TYPE_FIP_NOT_CONFIGURED\" \"TYPE_TARGET_NOT_ACTIVE\" \"TYPE_METRICS_MISCONFIGURED\" \"TYPE_LOGS_MISCONFIGURED\"\nThe error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.",
+		"errors.type":                       "Enum: " + utils.FormatPossibleValues(errorOptions...) + "\nThe error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.",
 		"errors.description":                "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
 		"external_address":                  "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
 		"labels":                            "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",

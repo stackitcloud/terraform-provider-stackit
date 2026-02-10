@@ -73,6 +73,8 @@ variable "target_pool_port_3" {}
 variable "listener_port_4" {}
 variable "host_4" {}
 variable "path_prefix_4" {}
+variable "listener_name_1" {}
+variable "listener_name_2" {}
 variable "target_pool_name_4" {}
 variable "target_pool_port_4" {}
 variable "network_name_listener" {}
@@ -217,6 +219,7 @@ resource "stackit_application_load_balancer" "loadbalancer" {
     }
   ]
   listeners = [{
+    name = var.listener_name_1
     port = var.listener_port_1
     http = {
       hosts = [{
@@ -261,6 +264,7 @@ resource "stackit_application_load_balancer" "loadbalancer" {
     }
     protocol = var.protocol_http
     }, {
+    name = var.listener_name_2
     port = var.listener_port_4
     http = {
       hosts = [{
