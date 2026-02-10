@@ -24,7 +24,7 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       type       = "bucket"
       bucket_url = "https://my-private-bucket.s3.eu-central-1.amazonaws.com"
       region     = "eu01"
-      
+
       # Credentials are required for bucket backends
       # It is strongly recommended to use variables for secrets
       access_key = var.bucket_access_key

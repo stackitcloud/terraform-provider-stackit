@@ -506,12 +506,11 @@ const (
 )
 
 func blockUntilDomainResolves(domain string) (net.IP, error) {
-
 	// Create a custom resolver that bypasses the local system DNS settings/cache
 	// and queries Google DNS (8.8.8.8) directly.
 	r := &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{
 				Timeout: time.Millisecond * time.Duration(10000),
 			}

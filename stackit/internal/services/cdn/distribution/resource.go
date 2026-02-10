@@ -820,7 +820,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 			"secret_key": types.StringNull(),
 		}
 	} else if distribution.Config.Backend.BucketBackend != nil {
-		// Preserve secrets from previos state beacuse API does not return them
+		// Preserve secrets from previous state because API does not return them
 		accessKeyVal := types.StringNull()
 		secretKeyVal := types.StringNull()
 
@@ -1049,7 +1049,6 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			Type:                 cdn.PtrString("http"),
 			Geofencing:           &geofencing,
 		}
-
 	} else if configModel.Backend.Type == "bucket" {
 		cdnConfig.Backend.BucketBackend = &cdn.BucketBackend{
 			Type:      cdn.PtrString("bucket"),
