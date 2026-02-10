@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -71,6 +72,7 @@ type Model struct {
 	NoIPv6Gateway    types.Bool   `tfsdk:"no_ipv6_gateway"`
 	Region           types.String `tfsdk:"region"`
 	RoutingTableID   types.String `tfsdk:"routing_table_id"`
+	DHCP             types.Bool   `tfsdk:"dhcp"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -376,6 +378,15 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "The resource region. If not defined, the provider region is used.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
+			},
+			"dhcp": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "If the network has DHCP enabled. Default value is `true`.",
+				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -747,6 +758,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
+	model.DHCP = types.BoolPointerValue(networkResp.Dhcp)
 
 	return nil
 }
@@ -862,6 +874,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		Ipv4:           ipv4Body,
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),
+		Dhcp:           conversion.BoolValueToPointer(model.DHCP),
 	}
 
 	return &payload, nil
@@ -944,6 +957,7 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		Ipv4:           ipv4Body,
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),
+		Dhcp:           conversion.BoolValueToPointer(model.DHCP),
 	}
 
 	return &payload, nil
