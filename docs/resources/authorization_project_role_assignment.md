@@ -3,23 +3,30 @@
 page_title: "stackit_authorization_project_role_assignment Resource - stackit"
 subcategory: ""
 description: |-
-  project Role Assignment resource schema.
+  Project Role Assignment resource schema.
   ~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_authorization_project_role_assignment (Resource)
 
-project Role Assignment resource schema.
+Project Role Assignment resource schema.
 
 ~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 
 ```terraform
-resource "stackit_authorization_project_role_assignment" "example" {
-  resource_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  role        = "owner"
-  subject     = "john.doe@stackit.cloud"
+resource "stackit_resourcemanager_project" "example" {
+  name        = "example_project"
+  owner_email = "foo.bar@stackit.cloud"
+  # in this case a folder or a org-id
+  parent_container_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+
+resource "stackit_authorization_project_role_assignment" "pra" {
+  resource_id = stackit_resourcemanager_project.example.folder_id
+  role        = "reader"
+  subject     = "foo.bar@stackit.cloud"
 }
 
 # Only use the import statement, if you want to import an existing project role assignment
@@ -35,9 +42,9 @@ import {
 ### Required
 
 - `resource_id` (String) project Resource to assign the role to.
-- `role` (String) Role to be assigned
+- `role` (String) Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/permissions`
 - `subject` (String) Identifier of user, service account or client. Usually email address or name in case of clients
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "[resource_id],[role],[subject]".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`resource_id`,`role`,`subject`".

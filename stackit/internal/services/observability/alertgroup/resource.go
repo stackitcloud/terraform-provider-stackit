@@ -53,6 +53,7 @@ type rule struct {
 	Labels      types.Map    `tfsdk:"labels"`
 	Expression  types.String `tfsdk:"expression"`
 	For         types.String `tfsdk:"for"`
+	Record      types.String `tfsdk:"record"`
 }
 
 var ruleTypes = map[string]attr.Type{
@@ -61,6 +62,7 @@ var ruleTypes = map[string]attr.Type{
 	"labels":      basetypes.MapType{ElemType: types.StringType},
 	"expression":  basetypes.StringType{},
 	"for":         basetypes.StringType{},
+	"record":      basetypes.StringType{},
 }
 
 // Descriptions for the resource and data source schemas are centralized here.
@@ -75,6 +77,7 @@ var descriptions = map[string]string{
 	"for":         "Alerts are considered firing once they have been returned for this long. Alerts which have not yet fired for long enough are considered pending. Default is 0s",
 	"labels":      "A map of key:value. Labels to add or overwrite for each alert",
 	"annotations": "A map of key:value. Annotations to add or overwrite for each alert",
+	"record":      "The name of the metric. It's the identifier and must be unique in the group.",
 }
 
 // NewAlertGroupResource is a helper function to simplify the provider implementation.
@@ -105,6 +108,40 @@ func (a *alertGroupResource) Configure(ctx context.Context, req resource.Configu
 	}
 	a.client = apiClient
 	tflog.Info(ctx, "Observability alert group client configured")
+}
+
+func (a *alertGroupResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var resourceModel Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	rules := &[]rule{}
+	diags := resourceModel.Rules.ElementsAs(ctx, rules, false)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// check every rule if the requirements are met, if one fails the whole config fails
+	rs := *rules
+	for i := range rs {
+		// either `alert` or `record` is needed
+		if rs[i].Alert.IsNull() && rs[i].Record.IsNull() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring alertgroup", "You need to provide either `alert` or `record` for a `rule`.")
+		}
+
+		// both are set, only one is allowed
+		if !rs[i].Alert.IsNull() && !rs[i].Record.IsNull() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring alertgroup", "Both `alert` and `record` were set for a`rule`. Only one is allowed.")
+		}
+
+		// if record is set, `annotations` and `for` are not allowed
+		if (!rs[i].Record.IsNull() && !rs[i].Record.IsUnknown()) && ((!rs[i].Annotations.IsNull() && !rs[i].Annotations.IsUnknown()) || (!rs[i].For.IsNull() && !rs[i].For.IsUnknown())) {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring alertgroup", "Setting either `annotations` or `for` when using `record` is not allowed.")
+		}
+	}
 }
 
 // Schema defines the schema for the resource.
@@ -174,7 +211,7 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					Attributes: map[string]schema.Attribute{
 						"alert": schema.StringAttribute{
 							Description: descriptions["alert"],
-							Required:    true,
+							Optional:    true,
 							Validators: []validator.String{
 								stringvalidator.RegexMatches(
 									regexp.MustCompile(`^[a-zA-Z0-9-]+$`),
@@ -222,6 +259,17 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 								mapvalidator.SizeAtMost(5),
 							},
 						},
+						"record": schema.StringAttribute{
+							Description: descriptions["record"],
+							Optional:    true,
+							Validators: []validator.String{
+								stringvalidator.RegexMatches(
+									regexp.MustCompile(`^[a-zA-Z0-9:_]+$`),
+									"must match expression",
+								),
+								stringvalidator.LengthBetween(1, 300),
+							},
+						},
 					},
 				},
 			},
@@ -238,6 +286,8 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
@@ -257,6 +307,8 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// all alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
@@ -289,6 +341,8 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -307,6 +361,8 @@ func (a *alertGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {
@@ -337,6 +393,8 @@ func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -349,6 +407,8 @@ func (a *alertGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Alert group deleted")
 }
@@ -456,6 +516,14 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 			oarr.Annotations = &annotations
 		}
 
+		if !utils.IsUndefined(rule.Record) {
+			record := conversion.StringValueToPointer(rule.Record)
+			if record == nil {
+				return nil, fmt.Errorf("found nil record for rule[%d]", i)
+			}
+			oarr.Record = record
+		}
+
 		oarrs = append(oarrs, oarr)
 	}
 
@@ -527,6 +595,7 @@ func mapRules(_ context.Context, alertGroup *observability.AlertGroup, model *Mo
 			"for":         types.StringPointerValue(r.For),
 			"labels":      types.MapNull(types.StringType),
 			"annotations": types.MapNull(types.StringType),
+			"record":      types.StringPointerValue(r.Record),
 		}
 
 		if r.Labels != nil {

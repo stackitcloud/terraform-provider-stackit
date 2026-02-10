@@ -147,13 +147,15 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id": "ID of the PostgresFlex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acl":         "The Access Control List (ACL) for the PostgresFlex instance.",
-		"region":      "The resource region. If not defined, the provider region is used.",
+		"main":            "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":     "ID of the PostgresFlex instance.",
+		"project_id":      "STACKIT project ID to which the instance is associated.",
+		"name":            "Instance name.",
+		"acl":             "The Access Control List (ACL) for the PostgresFlex instance.",
+		"region":          "The resource region. If not defined, the provider region is used.",
+		"backup_schedule": "The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.",
+		"replicas":        "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -206,7 +208,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Required:    true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Required: true,
+				Description: descriptions["backup_schedule"],
+				Required:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
@@ -232,7 +235,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"replicas": schema.Int64Attribute{
-				Required: true,
+				Description: descriptions["replicas"],
+				Required:    true,
 			},
 			"storage": schema.SingleNestedAttribute{
 				Required: true,
@@ -273,6 +277,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -320,6 +327,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
@@ -351,6 +361,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -385,6 +398,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", err.Error())
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if instanceResp != nil && instanceResp.Item != nil && instanceResp.Item.Status != nil && *instanceResp.Item.Status == wait.InstanceStateDeleted {
 		resp.State.RemoveResource(ctx)
 		return
@@ -414,6 +430,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
@@ -463,6 +482,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
@@ -492,6 +514,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
@@ -505,6 +530,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
@@ -675,11 +703,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &postgresflex.Storage{
-			Class: conversion.StringValueToPointer(storage.Class),
-			Size:  conversion.Int64ValueToPointer(storage.Size),
-		},
-		Version: conversion.StringValueToPointer(model.Version),
+		Version:        conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 

@@ -1169,6 +1169,9 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -1188,6 +1191,8 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -1220,6 +1225,9 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -1239,6 +1247,8 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Application Load Balancer", fmt.Sprintf("Calling API: %v", errStr))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, lbResp, &model, region)
@@ -1265,6 +1275,9 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -1295,6 +1308,8 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for update: %v", errStr))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
@@ -1327,6 +1342,9 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -1341,6 +1359,8 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Calling API for delete: %v", errStr))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {

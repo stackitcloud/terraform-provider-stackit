@@ -284,6 +284,8 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -300,9 +302,11 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	zoneId := *createResp.Zone.Id
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id": projectId,
 		"zone_id":    zoneId,
 	})
@@ -338,6 +342,9 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -348,6 +355,9 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
@@ -377,6 +387,9 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -394,6 +407,9 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
@@ -423,6 +439,8 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -434,6 +452,9 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
@@ -456,7 +477,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id": idParts[0],
 		"zone_id":    idParts[1],
 	})

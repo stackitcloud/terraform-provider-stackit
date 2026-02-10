@@ -8,9 +8,11 @@ variable "alert_for_time" {}
 variable "alert_label" {}
 variable "alert_annotation" {}
 variable "alert_interval" {}
+variable "record_rule_name" {}
 
 variable "instance_name" {}
 variable "plan_name" {}
+variable "grafana_admin_enabled" {}
 variable "logs_retention_days" {}
 variable "traces_retention_days" {}
 variable "metrics_retention_days" {}
@@ -88,6 +90,13 @@ resource "stackit_observability_alertgroup" "alertgroup" {
       annotations = {
         annotation1 = var.alert_annotation
       }
+    },
+    {
+      record     = var.record_rule_name
+      expression = var.alert_rule_expression
+      labels = {
+        label1 = var.alert_label
+      }
     }
   ]
   interval = var.alert_interval
@@ -100,9 +109,10 @@ resource "stackit_observability_credential" "credential" {
 }
 
 resource "stackit_observability_instance" "instance" {
-  project_id = var.project_id
-  name       = var.instance_name
-  plan_name  = var.plan_name
+  project_id            = var.project_id
+  name                  = var.instance_name
+  plan_name             = var.plan_name
+  grafana_admin_enabled = var.grafana_admin_enabled
 
   logs_retention_days                    = var.logs_retention_days
   traces_retention_days                  = var.traces_retention_days

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
@@ -51,19 +52,22 @@ var (
 )
 
 type Model struct {
-	Id                                 types.String `tfsdk:"id"` // needed by TF
-	ProjectId                          types.String `tfsdk:"project_id"`
-	InstanceId                         types.String `tfsdk:"instance_id"`
-	Name                               types.String `tfsdk:"name"`
-	PlanName                           types.String `tfsdk:"plan_name"`
-	PlanId                             types.String `tfsdk:"plan_id"`
-	Parameters                         types.Map    `tfsdk:"parameters"`
-	DashboardURL                       types.String `tfsdk:"dashboard_url"`
-	IsUpdatable                        types.Bool   `tfsdk:"is_updatable"`
-	GrafanaURL                         types.String `tfsdk:"grafana_url"`
-	GrafanaPublicReadAccess            types.Bool   `tfsdk:"grafana_public_read_access"`
-	GrafanaInitialAdminPassword        types.String `tfsdk:"grafana_initial_admin_password"`
+	Id                      types.String `tfsdk:"id"` // needed by TF
+	ProjectId               types.String `tfsdk:"project_id"`
+	InstanceId              types.String `tfsdk:"instance_id"`
+	Name                    types.String `tfsdk:"name"`
+	PlanName                types.String `tfsdk:"plan_name"`
+	PlanId                  types.String `tfsdk:"plan_id"`
+	Parameters              types.Map    `tfsdk:"parameters"`
+	DashboardURL            types.String `tfsdk:"dashboard_url"`
+	IsUpdatable             types.Bool   `tfsdk:"is_updatable"`
+	GrafanaURL              types.String `tfsdk:"grafana_url"`
+	GrafanaPublicReadAccess types.Bool   `tfsdk:"grafana_public_read_access"`
+	// Deprecated: GrafanaInitialAdminPassword is deprecated and will be removed after 5th July 2026. Use GrafanaAdminEnabled instead.
+	GrafanaInitialAdminPassword types.String `tfsdk:"grafana_initial_admin_password"`
+	// Deprecated: GrafanaInitialAdminUser is deprecated and will be removed after 5th July 2026. Use GrafanaAdminEnabled instead.
 	GrafanaInitialAdminUser            types.String `tfsdk:"grafana_initial_admin_user"`
+	GrafanaAdminEnabled                types.Bool   `tfsdk:"grafana_admin_enabled"`
 	MetricsRetentionDays               types.Int64  `tfsdk:"metrics_retention_days"`
 	MetricsRetentionDays5mDownsampling types.Int64  `tfsdk:"metrics_retention_days_5m_downsampling"`
 	MetricsRetentionDays1hDownsampling types.Int64  `tfsdk:"metrics_retention_days_1h_downsampling"`
@@ -500,19 +504,27 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"grafana_initial_admin_user": schema.StringAttribute{
-				Description: "Specifies an initial Grafana admin username.",
-				Computed:    true,
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin username.",
+				Computed:           true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"grafana_initial_admin_password": schema.StringAttribute{
-				Description: "Specifies an initial Grafana admin password.",
-				Computed:    true,
-				Sensitive:   true,
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin password.",
+				Computed:           true,
+				Sensitive:          true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"grafana_admin_enabled": schema.BoolAttribute{
+				Description: "If true, a default Grafana server admin user is created. It's recommended to set this to false and use STACKIT SSO (Owner or Observability Grafana Server Admin role) instead. It is still possible to manually create a new Grafana admin user via the Grafana UI later.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
 			},
 			"traces_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the traces are kept. Default is set to `7`.",
@@ -528,16 +540,25 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
 				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
 				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"metrics_url": schema.StringAttribute{
 				Description: "Specifies metrics URL.",
@@ -659,6 +680,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"send_resolved": schema.BoolAttribute{
 												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(true),
 											},
 											"smart_host": schema.StringAttribute{
 												Description: "The SMTP host through which emails are sent.",
@@ -698,6 +721,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"send_resolved": schema.BoolAttribute{
 												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(true),
 											},
 										},
 									},
@@ -733,6 +758,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 											"send_resolved": schema.BoolAttribute{
 												Description: "Whether to notify about resolved alerts.",
 												Optional:    true,
+												Computed:    true,
+												Default:     booldefault.StaticBool(true),
 											},
 										},
 									},
@@ -789,10 +816,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Description: "The API key for OpsGenie.",
 								Optional:    true,
 								Sensitive:   true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"opsgenie_api_url": schema.StringAttribute{
 								Description: "The host to send OpsGenie API requests to. Must be a valid URL",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"resolve_timeout": schema.StringAttribute{
 								Description: "The default value used by alertmanager if the alert does not include EndsAt. After this time passes, it can declare the alert as resolved if it has not been updated. This has no impact on alerts from Prometheus, as they always include EndsAt.",
@@ -805,24 +840,43 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							"smtp_auth_identity": schema.StringAttribute{
 								Description: "SMTP authentication information. Must be a valid email address",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_auth_password": schema.StringAttribute{
 								Description: "SMTP Auth using LOGIN and PLAIN.",
 								Optional:    true,
 								Sensitive:   true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_auth_username": schema.StringAttribute{
 								Description: "SMTP Auth using CRAM-MD5, LOGIN and PLAIN. If empty, Alertmanager doesn't authenticate to the SMTP server.",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_from": schema.StringAttribute{
 								Description: "The default SMTP From header field. Must be a valid email address",
 								Optional:    true,
 								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 							"smtp_smart_host": schema.StringAttribute{
 								Description: "The default SMTP smarthost used for sending emails, including port number in format `host:port` (eg. `smtp.example.com:587`). Port number usually is 25, or 587 for SMTP over TLS (sometimes referred to as STARTTLS).",
 								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+								},
 							},
 						},
 					},
@@ -865,13 +919,20 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		}
 	}
 
+	// Plan does not support metrics retention
+	if plan.GetTotalMetricSamples() == 0 {
+		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
+		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
+		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
+		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
+		}
+	}
+
 	// Plan does not support log storage and trace storage
 	if plan.GetLogsStorage() == 0 && plan.GetTracesStorage() == 0 {
 		logsRetentionDays := conversion.Int64ValueToPointer(configModel.LogsRetentionDays)
 		tracesRetentionDays := conversion.Int64ValueToPointer(configModel.TracesRetentionDays)
-		metricsRetentionDays := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays)
-		metricsRetentionDays5mDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays5mDownsampling)
-		metricsRetentionDays1hDownsampling := conversion.Int64ValueToPointer(configModel.MetricsRetentionDays1hDownsampling)
 		// If logs retention days are set, return an error to the user
 		if logsRetentionDays != nil {
 			resp.Diagnostics.AddAttributeError(path.Root("logs_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring logs retention days. Remove this from your config or use a different plan.", *plan.Name))
@@ -879,10 +940,6 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		// If traces retention days are set, return an error to the user
 		if tracesRetentionDays != nil {
 			resp.Diagnostics.AddAttributeError(path.Root("traces_retention_days"), "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring trace retention days. Remove this from your config or use a different plan.", *plan.Name))
-		}
-		// If any of the metrics retention days are set, return an error to the user
-		if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) does not support configuring metrics retention days. Remove this from your config or use a different plan.", *plan.Name))
 		}
 	}
 }
@@ -896,6 +953,8 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
 
 	acl := []string{}
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -934,6 +993,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	instanceId := createResp.InstanceId
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, *instanceId, projectId).WaitWithContext(ctx)
@@ -982,9 +1044,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
-	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
-		err := r.getMetricsRetention(ctx, &model)
+	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetTotalMetricSamples() != 0 {
+		err = r.getMetricsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
 		}
@@ -995,7 +1057,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	} else {
+		// Set metric retention days to zero
+		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
 		err = r.getLogsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
@@ -1018,12 +1090,6 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	} else {
-		// Set metric retention days to zero
-		diags = setMetricsRetentionsZero(ctx, &resp.State)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 		// Set logs retention days to zero
 		diags = setLogsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
@@ -1064,6 +1130,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -1079,6 +1148,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == observability.GETINSTANCERESPONSESTATUS_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
@@ -1124,8 +1196,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
-	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
+	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetTotalMetricSamples() != 0 {
 		metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
@@ -1143,7 +1215,10 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	}
 
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
 		logsRetentionResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
@@ -1215,6 +1290,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 
@@ -1268,6 +1346,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
+
+		ctx = core.LogResponse(ctx)
+
 		instance, err = wait.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
@@ -1317,9 +1398,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
-	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
-		err := r.getMetricsRetention(ctx, &model)
+	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetTotalMetricSamples() != 0 {
+		err = r.getMetricsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("%v", err))
 		}
@@ -1330,7 +1411,17 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
+	} else {
+		// Set metric retention days to zero
+		diags = setMetricsRetentionsZero(ctx, &resp.State)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 
+	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
+	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
 		err = r.getLogsRetention(ctx, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("%v", err))
@@ -1353,13 +1444,6 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 			return
 		}
 	} else {
-		// Set metric retention days to zero
-		diags = setMetricsRetentionsZero(ctx, &resp.State)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
 		diags = setLogsRetentionsZero(ctx, &resp.State)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -1401,6 +1485,8 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 
@@ -1410,6 +1496,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
@@ -1480,7 +1569,9 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		i := *r.Instance
 		model.GrafanaURL = types.StringPointerValue(i.GrafanaUrl)
 		model.GrafanaPublicReadAccess = types.BoolPointerValue(i.GrafanaPublicReadAccess)
+		//nolint:staticcheck // SA1019: This field deprecated but needs to be supported. It is removed on 5th July 2026.
 		model.GrafanaInitialAdminPassword = types.StringPointerValue(i.GrafanaAdminPassword)
+		//nolint:staticcheck // SA1019: This field deprecated but needs to be supported. It is removed on 5th July 2026.
 		model.GrafanaInitialAdminUser = types.StringPointerValue(i.GrafanaAdminUser)
 		model.MetricsURL = types.StringPointerValue(i.MetricsUrl)
 		model.MetricsPushURL = types.StringPointerValue(i.PushMetricsUrl)
@@ -1492,6 +1583,7 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		model.JaegerUIURL = types.StringPointerValue(i.JaegerUiUrl)
 		model.OtlpTracesURL = types.StringPointerValue(i.OtlpTracesUrl)
 		model.ZipkinSpansURL = types.StringPointerValue(i.ZipkinSpansUrl)
+		model.GrafanaAdminEnabled = types.BoolPointerValue(i.GrafanaAdminEnabled)
 	}
 
 	return nil
@@ -1776,6 +1868,8 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 	smtpAuthIdentity := respGlobalConfigs.SmtpAuthIdentity
 	smtpAuthPassword := respGlobalConfigs.SmtpAuthPassword
 	smtpAuthUsername := respGlobalConfigs.SmtpAuthUsername
+	opsgenieApiKey := respGlobalConfigs.OpsgenieApiKey
+	opsgenieApiUrl := respGlobalConfigs.OpsgenieApiUrl
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
@@ -1793,11 +1887,17 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
 			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
+		if respGlobalConfigs.OpsgenieApiKey == nil {
+			opsgenieApiKey = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiKey.ValueString())
+		}
+		if respGlobalConfigs.OpsgenieApiUrl == nil {
+			opsgenieApiUrl = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiUrl.ValueString())
+		}
 	}
 
 	globalConfigObject, diags := types.ObjectValue(globalConfigurationTypes, map[string]attr.Value{
-		"opsgenie_api_key":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiKey),
-		"opsgenie_api_url":   types.StringPointerValue(respGlobalConfigs.OpsgenieApiUrl),
+		"opsgenie_api_key":   types.StringPointerValue(opsgenieApiKey),
+		"opsgenie_api_url":   types.StringPointerValue(opsgenieApiUrl),
 		"resolve_timeout":    types.StringPointerValue(respGlobalConfigs.ResolveTimeout),
 		"smtp_from":          types.StringPointerValue(respGlobalConfigs.SmtpFrom),
 		"smtp_auth_identity": types.StringPointerValue(smtpAuthIdentity),
@@ -2042,9 +2142,10 @@ func toCreatePayload(model *Model) (*observability.CreateInstancePayload, error)
 		pa[k] = elements[k].String()
 	}
 	return &observability.CreateInstancePayload{
-		Name:      conversion.StringValueToPointer(model.Name),
-		PlanId:    conversion.StringValueToPointer(model.PlanId),
-		Parameter: &pa,
+		GrafanaAdminEnabled: conversion.BoolValueToPointer(model.GrafanaAdminEnabled),
+		Name:                conversion.StringValueToPointer(model.Name),
+		PlanId:              conversion.StringValueToPointer(model.PlanId),
+		Parameter:           &pa,
 	}, nil
 }
 

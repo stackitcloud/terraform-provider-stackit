@@ -162,6 +162,8 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Set logging context with the project ID and service account email.
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
@@ -181,6 +183,8 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 
 	// Initialize the API request with the required parameters.
 	saAccountKeyResp, err := r.client.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
+
+	ctx = core.LogResponse(ctx)
 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Failed to create service account key", fmt.Sprintf("API call error: %v", err))
@@ -213,6 +217,8 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	keyId := model.KeyId.ValueString()
@@ -229,6 +235,8 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// No mapping needed for read response, as private_key is excluded and ID remains unchanged.
 	diags = resp.State.Set(ctx, &model)
@@ -260,6 +268,8 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	keyId := model.KeyId.ValueString()
@@ -273,6 +283,8 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Service account key deleted")
 }

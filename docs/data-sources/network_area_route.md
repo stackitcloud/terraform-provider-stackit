@@ -29,9 +29,30 @@ data "stackit_network_area_route" "example" {
 - `network_area_route_id` (String) The network area route ID.
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal data source ID. It is structured as "`organization_id`,`network_area_id`,`network_area_route_id`".
+- `destination` (Attributes) Destination of the route. (see [below for nested schema](#nestedatt--destination))
+- `id` (String) Terraform's internal data source ID. It is structured as "`organization_id`,`region`,`network_area_id`,`network_area_route_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `next_hop` (String) The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.
-- `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.
+- `next_hop` (Attributes) Next hop destination. (see [below for nested schema](#nestedatt--next_hop))
+
+<a id="nestedatt--destination"></a>
+### Nested Schema for `destination`
+
+Read-Only:
+
+- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`.
+- `value` (String) An CIDR string.
+
+
+<a id="nestedatt--next_hop"></a>
+### Nested Schema for `next_hop`
+
+Read-Only:
+
+- `type` (String) Type of the next hop. Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`.
+- `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet).

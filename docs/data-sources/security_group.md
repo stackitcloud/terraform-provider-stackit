@@ -27,10 +27,14 @@ data "stackit_security_group" "example" {
 - `project_id` (String) STACKIT project ID to which the security group is associated.
 - `security_group_id` (String) The security group ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `description` (String) The description of the security group.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`security_group_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`security_group_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the security group.
 - `stateful` (Boolean) Configures if a security group is stateful or stateless. There can only be one type of security groups per network interface/server.

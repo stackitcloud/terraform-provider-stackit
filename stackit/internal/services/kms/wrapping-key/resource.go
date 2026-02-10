@@ -248,6 +248,8 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyRingId := model.KeyRingId.ValueString()
@@ -268,6 +270,8 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	if createWrappingKeyResp == nil || createWrappingKeyResp.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", "API returned empty response")
 		return
@@ -276,7 +280,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 	wrappingKeyId := *createWrappingKeyResp.Id
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id":      projectId,
 		"region":          region,
 		"keyring_id":      keyRingId,
@@ -311,6 +315,8 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -332,6 +338,8 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error reading wrapping key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(wrappingKeyResponse, &model, region)
 	if err != nil {
@@ -359,6 +367,8 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -368,6 +378,8 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting wrapping key", fmt.Sprintf("Calling API: %v", err))
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "wrapping key deleted")
 }
@@ -383,7 +395,7 @@ func (r *wrappingKeyResource) ImportState(ctx context.Context, req resource.Impo
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      idParts[0],
 		"region":          idParts[1],
 		"keyring_id":      idParts[2],

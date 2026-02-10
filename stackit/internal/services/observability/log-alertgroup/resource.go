@@ -239,6 +239,8 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -257,6 +259,8 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// all log alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
@@ -289,6 +293,8 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -307,6 +313,8 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, readAlertGroupResp.Data, &model)
 	if err != nil {
@@ -337,6 +345,8 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	alertGroupName := model.Name.ValueString()
@@ -349,6 +359,8 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting log alert group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "log alert group deleted")
 }
@@ -400,9 +412,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateLo
 }
 
 // toRulesPayload generates rules for create payload.
-func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAlertgroupsRequestInnerRulesInner, error) {
+func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLogsAlertgroupsPayloadRulesInner, error) {
 	if model.Rules.Elements() == nil || len(model.Rules.Elements()) == 0 {
-		return []observability.UpdateAlertgroupsRequestInnerRulesInner{}, nil
+		return []observability.CreateLogsAlertgroupsPayloadRulesInner{}, nil
 	}
 
 	var rules []rule
@@ -411,10 +423,10 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.UpdateAl
 		return nil, core.DiagsToError(diags)
 	}
 
-	var oarrs []observability.UpdateAlertgroupsRequestInnerRulesInner
+	var oarrs []observability.CreateLogsAlertgroupsPayloadRulesInner
 	for i := range rules {
 		rule := &rules[i]
-		oarr := observability.UpdateAlertgroupsRequestInnerRulesInner{}
+		oarr := observability.CreateLogsAlertgroupsPayloadRulesInner{}
 
 		if !utils.IsUndefined(rule.Alert) {
 			alert := conversion.StringValueToPointer(rule.Alert)

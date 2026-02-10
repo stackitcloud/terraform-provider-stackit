@@ -27,14 +27,19 @@ data "stackit_volume" "example" {
 - `project_id` (String) STACKIT project ID to which the volume is associated.
 - `volume_id` (String) The volume ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `availability_zone` (String) The availability zone of the volume.
 - `description` (String) The description of the volume.
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`volume_id`".
+- `encrypted` (Boolean) Indicates if the volume is encrypted.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`volume_id`".
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
 - `name` (String) The name of the volume.
-- `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/stackit/en/service-plans-blockstorage-75137974.html#ServiceplansBlockStorage-CurrentlyavailableServicePlans%28performanceclasses%29)
+- `performance_class` (String) The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/products/storage/block-storage/basics/service-plans/#currently-available-service-plans-performance-classes)
 - `server_id` (String) The server ID of the server to which the volume is attached to.
 - `size` (Number) The size of the volume in GB. It can only be updated to a larger value than the current size
 - `source` (Attributes) The source of the volume. It can be either a volume, an image, a snapshot or a backup (see [below for nested schema](#nestedatt--source))

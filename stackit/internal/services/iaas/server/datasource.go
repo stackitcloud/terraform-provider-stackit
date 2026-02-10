@@ -30,6 +30,7 @@ var (
 type DataSourceModel struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
 	ProjectId         types.String `tfsdk:"project_id"`
+	Region            types.String `tfsdk:"region"`
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
@@ -58,7 +59,8 @@ func NewServerDataSource() datasource.DataSource {
 
 // serverDataSource is the data source implementation.
 type serverDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -67,12 +69,13 @@ func (d *serverDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 }
 
 func (d *serverDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -81,14 +84,14 @@ func (d *serverDataSource) Configure(ctx context.Context, req datasource.Configu
 }
 
 // Schema defines the schema for the datasource.
-func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Server datasource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`server_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -98,6 +101,11 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"server_id": schema.StringAttribute{
 				Description: "The server ID.",
@@ -112,7 +120,7 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Computed:    true,
 			},
 			"machine_type": schema.StringAttribute{
-				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)",
+				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)",
 				Computed:            true,
 			},
 			"availability_zone": schema.StringAttribute{
@@ -175,8 +183,8 @@ func (r *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	}
 }
 
-// // Read refreshes the Terraform state with the latest data.
-func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+// Read refreshes the Terraform state with the latest data.
+func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -184,11 +192,16 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := r.client.GetServer(ctx, projectId, serverId)
+	serverReq := d.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
@@ -206,8 +219,10 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
-	err = mapDataSourceFields(ctx, serverResp, &model)
+	err = mapDataSourceFields(ctx, serverResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -221,7 +236,7 @@ func (r *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	tflog.Info(ctx, "server read")
 }
 
-func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *DataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *DataSourceModel, region string) error {
 	if serverResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -238,7 +253,8 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		return fmt.Errorf("server id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), serverId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, serverId)
+	model.Region = types.StringValue(region)
 
 	labels, err := iaasUtils.MapLabels(ctx, serverResp.Labels, model.Labels)
 	if err != nil {

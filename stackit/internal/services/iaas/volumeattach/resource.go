@@ -11,7 +11,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -32,11 +31,13 @@ var (
 	_ resource.Resource                = &volumeAttachResource{}
 	_ resource.ResourceWithConfigure   = &volumeAttachResource{}
 	_ resource.ResourceWithImportState = &volumeAttachResource{}
+	_ resource.ResourceWithModifyPlan  = &volumeAttachResource{}
 )
 
 type Model struct {
 	Id        types.String `tfsdk:"id"` // needed by TF
 	ProjectId types.String `tfsdk:"project_id"`
+	Region    types.String `tfsdk:"region"`
 	ServerId  types.String `tfsdk:"server_id"`
 	VolumeId  types.String `tfsdk:"volume_id"`
 }
@@ -48,7 +49,8 @@ func NewVolumeAttachResource() resource.Resource {
 
 // volumeAttachResource is the resource implementation.
 type volumeAttachResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -56,14 +58,45 @@ func (r *volumeAttachResource) Metadata(_ context.Context, req resource.Metadata
 	resp.TypeName = req.ProviderTypeName + "_server_volume_attach"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *volumeAttachResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *volumeAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -79,7 +112,7 @@ func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaReques
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`server_id`,`volume_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`server_id`,`volume_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -94,6 +127,15 @@ func (r *volumeAttachResource) Schema(_ context.Context, _ resource.SchemaReques
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"server_id": schema.StringAttribute{
@@ -132,11 +174,15 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 	volumeId := model.VolumeId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Create new Volume attachment
@@ -144,19 +190,22 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	payload := iaas.AddVolumeToServerPayload{
 		DeleteOnTermination: sdkUtils.Ptr(false),
 	}
-	_, err := r.client.AddVolumeToServer(ctx, projectId, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
+	_, err := r.client.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client, projectId, serverId, volumeId).WaitWithContext(ctx)
+	ctx = core.LogResponse(ctx)
+
+	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client, projectId, region, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
 		return
 	}
 
-	model.Id = utils.BuildInternalTerraformId(projectId, serverId, volumeId)
+	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, volumeId)
+	model.Region = types.StringValue(region)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, model)
@@ -175,14 +224,19 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 	volumeId := model.VolumeId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	_, err := r.client.GetAttachedVolume(ctx, projectId, serverId, volumeId).Execute()
+	_, err := r.client.GetAttachedVolume(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -192,6 +246,12 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume attachment", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
+	// Update region in model
+	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, volumeId)
 
 	// Set refreshed state
 	diags = resp.State.Set(ctx, model)
@@ -217,21 +277,27 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 	volumeId := model.VolumeId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Remove volume from server
-	err := r.client.RemoveVolumeFromServer(ctx, projectId, serverId, volumeId).Execute()
+	err := r.client.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	_, err = wait.RemoveVolumeFromServerWaitHandler(ctx, r.client, projectId, serverId, volumeId).WaitWithContext(ctx)
+	ctx = core.LogResponse(ctx)
+
+	_, err = wait.RemoveVolumeFromServerWaitHandler(ctx, r.client, projectId, region, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
 		return
@@ -245,23 +311,20 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 func (r *volumeAttachResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing volume attachment",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[server_id],[volume_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[server_id],[volume_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	serverId := idParts[1]
-	volumeId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "server_id", serverId)
-	ctx = tflog.SetField(ctx, "volume_id", volumeId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"server_id":  idParts[2],
+		"volume_id":  idParts[3],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("server_id"), serverId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("volume_id"), volumeId)...)
 	tflog.Info(ctx, "Volume attachment state imported")
 }

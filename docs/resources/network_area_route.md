@@ -3,7 +3,7 @@
 page_title: "stackit_network_area_route Resource - stackit"
 subcategory: ""
 description: |-
-  Network area route resource schema. Must have a region specified in the provider configuration.
+  Network area route resource schema. Must have a `region` specified in the provider configuration.
 ---
 
 # stackit_network_area_route (Resource)
@@ -16,8 +16,14 @@ Network area route resource schema. Must have a `region` specified in the provid
 resource "stackit_network_area_route" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  prefix          = "192.168.0.0/24"
-  next_hop        = "192.168.0.0"
+  destination = {
+    type  = "cidrv4"
+    value = "192.168.0.0/24"
+  }
+  next_hop = {
+    type  = "ipv4"
+    value = "192.168.0.0"
+  }
   labels = {
     "key" = "value"
   }
@@ -26,7 +32,43 @@ resource "stackit_network_area_route" "example" {
 # Only use the import statement, if you want to import an existing network area route
 import {
   to = stackit_network_area_route.import-example
-  id = "${var.organization_id},${var.network_area_id},${var.network_area_route_id}"
+  id = "${var.organization_id},${var.network_area_id},${var.region},${var.network_area_route_id}"
+}
+```
+
+## Migration of IaaS resources from versions <= v0.74.0
+
+The release of the STACKIT IaaS API v2 provides a lot of new features, but also includes some breaking changes
+(when coming from v1 of the STACKIT IaaS API) which must be somehow represented on Terraform side. The 
+`stackit_network_area_route` resource did undergo some changes. See the example below how to migrate your resources.
+
+### Breaking change: Network area route resource (stackit_network_area_route)
+
+**Configuration for <= v0.74.0**
+
+```terraform
+resource "stackit_network_area_route" "example" {
+  organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  prefix          = "192.168.0.0/24" # prefix field got removed for provider versions > v0.74.0, use the new destination field instead
+  next_hop        = "192.168.0.0" # schema of the next_hop field changed, see below
+}
+```
+
+**Configuration for > v0.74.0**
+
+```terraform
+resource "stackit_network_area_route" "example" {
+  organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  network_area_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  destination = { # the new 'destination' field replaces the old 'prefix' field
+    type  = "cidrv4"
+    value = "192.168.0.0/24" # migration: put the value of the old 'prefix' field here
+  }
+  next_hop = {
+    type  = "ipv4"
+    value = "192.168.0.0" # migration: put the value of the old 'next_hop' field here
+  }
 }
 ```
 
@@ -35,16 +77,38 @@ import {
 
 ### Required
 
+- `destination` (Attributes) Destination of the route. (see [below for nested schema](#nestedatt--destination))
 - `network_area_id` (String) The network area ID to which the network area route is associated.
-- `next_hop` (String) The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.
+- `next_hop` (Attributes) Next hop destination. (see [below for nested schema](#nestedatt--next_hop))
 - `organization_id` (String) STACKIT organization ID to which the network area is associated.
-- `prefix` (String) The network, that is reachable though the Next Hop. Should use CIDR notation.
 
 ### Optional
 
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
+- `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`,`network_area_route_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`organization_id`,`network_area_id`,`region`,`network_area_route_id`".
 - `network_area_route_id` (String) The network area route ID.
+
+<a id="nestedatt--destination"></a>
+### Nested Schema for `destination`
+
+Required:
+
+- `type` (String) CIDRV type. Possible values are: `cidrv4`, `cidrv6`. Only `cidrv4` is supported currently.
+- `value` (String) An CIDR string.
+
+
+<a id="nestedatt--next_hop"></a>
+### Nested Schema for `next_hop`
+
+Required:
+
+- `type` (String) Type of the next hop. Possible values are: `blackhole`, `internet`, `ipv4`, `ipv6`. Only `ipv4` supported currently.
+
+Optional:
+
+- `value` (String) Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported currently.
+

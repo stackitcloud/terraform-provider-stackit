@@ -132,6 +132,8 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
@@ -148,6 +150,8 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading git instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, gitInstanceResp, &model)
 	if err != nil {

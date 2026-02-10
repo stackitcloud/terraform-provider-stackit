@@ -188,6 +188,9 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -206,6 +209,9 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	ctx = tflog.SetField(ctx, "credentials_ref", createResp.Credential.CredentialsRef)
 
 	// Map response body to schema
@@ -233,6 +239,9 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -251,6 +260,8 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(credResp.Credential, &model, region)
@@ -281,6 +292,9 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	credentialsRef := model.CredentialsRef.ValueString()
 	region := model.Region.ValueString()
@@ -294,6 +308,8 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Load balancer observability credential deleted")
 }

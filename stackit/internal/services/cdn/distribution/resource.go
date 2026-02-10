@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -281,8 +282,18 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 					},
 					"blocked_countries": schema.ListAttribute{
 						Optional:    true,
+						Computed:    true, // Required when using Default
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
+						// The API returns an empty list for blocked_countries even if the field is omitted
+						// (null) in the request. This causes an "inconsistent result" error in Terraform
+						// because the config is null but the state is [].
+						//
+						// By setting a Default value of an empty list, we tell Terraform to treat a missing
+						// blocked_countries block in the HCL as if the user explicitly defined
+						// blocked_countries = []. This ensures the config (empty list) matches the
+						// API response (empty list).
+						Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 					},
 				},
 			},
@@ -334,6 +345,9 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
@@ -348,6 +362,9 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, *createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
@@ -376,6 +393,8 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -394,6 +413,9 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	err = mapFields(ctx, cdnResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN ditribution", fmt.Sprintf("Processing API payload: %v", err))
@@ -415,6 +437,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
@@ -516,6 +540,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Waiting for update: %v", err))
@@ -543,6 +569,9 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -552,6 +581,9 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Delete distribution: %v", err))
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Waiting for deletion: %v", err))
@@ -791,13 +823,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	}
 
 	payload := &cdn.CreateDistributionPayload{
-		IntentId:             cdn.PtrString(uuid.NewString()),
-		OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
-		Regions:              cfg.Regions,
-		BlockedCountries:     cfg.BlockedCountries,
-		OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
-		Geofencing:           cfg.Backend.HttpBackend.Geofencing,
-		Optimizer:            optimizer,
+		Backend: &cdn.CreateDistributionPayloadBackend{
+			HttpBackendCreate: &cdn.HttpBackendCreate{
+				OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
+				OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
+				Geofencing:           cfg.Backend.HttpBackend.Geofencing,
+				Type:                 cfg.Backend.HttpBackend.Type,
+			},
+		},
+		IntentId:         cdn.PtrString(uuid.NewString()),
+		Regions:          cfg.Regions,
+		BlockedCountries: cfg.BlockedCountries,
+		Optimizer:        optimizer,
 	}
 
 	return payload, nil

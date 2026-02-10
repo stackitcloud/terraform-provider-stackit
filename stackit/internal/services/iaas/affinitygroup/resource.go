@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -33,12 +32,14 @@ var (
 	_ resource.Resource                = &affinityGroupResource{}
 	_ resource.ResourceWithConfigure   = &affinityGroupResource{}
 	_ resource.ResourceWithImportState = &affinityGroupResource{}
+	_ resource.ResourceWithModifyPlan  = &affinityGroupResource{}
 )
 
 // Model is the provider's internal model
 type Model struct {
 	Id              types.String `tfsdk:"id"`
 	ProjectId       types.String `tfsdk:"project_id"`
+	Region          types.String `tfsdk:"region"`
 	AffinityGroupId types.String `tfsdk:"affinity_group_id"`
 	Name            types.String `tfsdk:"name"`
 	Policy          types.String `tfsdk:"policy"`
@@ -51,7 +52,8 @@ func NewAffinityGroupResource() resource.Resource {
 
 // affinityGroupResource is the resource implementation.
 type affinityGroupResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -59,14 +61,45 @@ func (r *affinityGroupResource) Metadata(_ context.Context, req resource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_affinity_group"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *affinityGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *affinityGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -75,13 +108,13 @@ func (r *affinityGroupResource) Configure(ctx context.Context, req resource.Conf
 }
 
 func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Affinity Group schema. Must have a `region` specified in the provider configuration."
+	description := "Affinity Group schema."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description + "\n\n" + exampleUsageWithServer + policies,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`affinity_group_id`\".",
+				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`affinity_group_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -96,6 +129,15 @@ func (r *affinityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"affinity_group_id": schema.StringAttribute{
@@ -153,8 +195,13 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	ctx = core.InitProviderContext(ctx)
 
 	// Create new affinityGroup
 	payload, err := toCreatePayload(&model)
@@ -162,15 +209,18 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId).CreateAffinityGroupPayload(*payload).Execute()
+	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId, region).CreateAffinityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupResp.Id)
 
 	// Map response body to schema
-	err = mapFields(ctx, affinityGroupResp, &model)
+	err = mapFields(ctx, affinityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -193,11 +243,16 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	affinityGroupId := model.AffinityGroupId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
-	affinityGroupResp, err := r.client.GetAffinityGroupExecute(ctx, projectId, affinityGroupId)
+	affinityGroupResp, err := r.client.GetAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -208,7 +263,9 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	err = mapFields(ctx, affinityGroupResp, &model)
+	ctx = core.LogResponse(ctx)
+
+	err = mapFields(ctx, affinityGroupResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading affinity group", fmt.Sprintf("Processing API payload: %v", err))
 	}
@@ -236,16 +293,23 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	affinityGroupId := model.AffinityGroupId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
 	// Delete existing affinity group
-	err := r.client.DeleteAffinityGroupExecute(ctx, projectId, affinityGroupId)
+	err := r.client.DeleteAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Affinity group deleted")
 }
@@ -253,21 +317,20 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 func (r *affinityGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing affinity group",
-			fmt.Sprintf("Expected import indentifier with format: [project_id],[affinity_group_id], got: %q", req.ID),
+			fmt.Sprintf("Expected import indentifier with format: [project_id],[region],[affinity_group_id], got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	affinityGroupId := idParts[1]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":        idParts[0],
+		"region":            idParts[1],
+		"affinity_group_id": idParts[2],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("affinity_group_id"), affinityGroupId)...)
 	tflog.Info(ctx, "affinity group state imported")
 }
 
@@ -285,7 +348,7 @@ func toCreatePayload(model *Model) (*iaas.CreateAffinityGroupPayload, error) {
 	}, nil
 }
 
-func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model *Model) error {
+func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model *Model, region string) error {
 	if affinityGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -303,7 +366,8 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 		return fmt.Errorf("affinity group id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), affinityGroupId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, affinityGroupId)
+	model.Region = types.StringValue(region)
 
 	if affinityGroupResp.Members != nil && len(*affinityGroupResp.Members) > 0 {
 		members, diags := types.ListValueFrom(ctx, types.StringType, *affinityGroupResp.Members)

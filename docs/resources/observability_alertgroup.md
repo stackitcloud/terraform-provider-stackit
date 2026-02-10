@@ -32,16 +32,11 @@ resource "stackit_observability_alertgroup" "example" {
       }
     },
     {
-      alert      = "example-alert-name-2"
       expression = "kube_node_status_condition{condition=\"Ready\", status=\"false\"} > 0"
-      for        = "1m"
       labels = {
         severity = "critical"
       },
-      annotations = {
-        summary : "example summary"
-        description : "example description"
-      }
+      record = "example_record_name"
     },
   ]
 }
@@ -76,11 +71,12 @@ import {
 
 Required:
 
-- `alert` (String) The name of the alert rule. Is the identifier and must be unique in the group.
 - `expression` (String) The PromQL expression to evaluate. Every evaluation cycle this is evaluated at the current time, and all resultant time series become pending/firing alerts.
 
 Optional:
 
+- `alert` (String) The name of the alert rule. Is the identifier and must be unique in the group.
 - `annotations` (Map of String) A map of key:value. Annotations to add or overwrite for each alert
 - `for` (String) Alerts are considered firing once they have been returned for this long. Alerts which have not yet fired for long enough are considered pending. Default is 0s
 - `labels` (Map of String) A map of key:value. Labels to add or overwrite for each alert
+- `record` (String) The name of the metric. It's the identifier and must be unique in the group.

@@ -40,6 +40,7 @@ type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	ProjectId          types.String `tfsdk:"project_id"`
 	NetworkId          types.String `tfsdk:"network_id"`
+	Region             types.String `tfsdk:"region"`
 	NetworkInterfaceId types.String `tfsdk:"network_interface_id"`
 	Name               types.String `tfsdk:"name"`
 	AllowedAddresses   types.List   `tfsdk:"allowed_addresses"`
@@ -59,7 +60,8 @@ func NewNetworkInterfaceResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkInterfaceResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -92,6 +94,17 @@ func (r *networkInterfaceResource) ModifyPlan(ctx context.Context, req resource.
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Use the modifier to set the effective region in the current plan.
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Metadata returns the resource type name.
@@ -101,12 +114,13 @@ func (r *networkInterfaceResource) Metadata(_ context.Context, req resource.Meta
 
 // Configure adds the provider configured client to the resource.
 func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -124,7 +138,7 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`network_id`,`network_interface_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`network_id`,`network_interface_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -162,6 +176,15 @@ func (r *networkInterfaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -257,9 +280,13 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
 	// Generate API request body from model
@@ -270,18 +297,20 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network interface
-	networkInterface, err := r.client.CreateNic(ctx, projectId, networkId).CreateNicPayload(*payload).Execute()
+	networkInterface, err := r.client.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	networkInterfaceId := *networkInterface.Id
 
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Map response body to schema
-	err = mapFields(ctx, networkInterface, &model)
+	err = mapFields(ctx, networkInterface, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -304,13 +333,18 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -321,8 +355,10 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
-	err = mapFields(ctx, networkInterfaceResp, &model)
+	err = mapFields(ctx, networkInterfaceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -346,9 +382,14 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
@@ -367,13 +408,15 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	nicResp, err := r.client.UpdateNic(ctx, projectId, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
+	nicResp, err := r.client.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, nicResp, &model)
+	ctx = core.LogResponse(ctx)
+
+	err = mapFields(ctx, nicResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -397,18 +440,25 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Delete existing network interface
-	err := r.client.DeleteNic(ctx, projectId, networkId, networkInterfaceId).Execute()
+	err := r.client.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network interface", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Network interface deleted")
 }
@@ -418,28 +468,25 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 func (r *networkInterfaceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing network interface",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[network_id],[network_interface_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[network_id],[network_interface_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	networkId := idParts[1]
-	networkInterfaceId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "network_id", networkId)
-	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":           idParts[0],
+		"region":               idParts[1],
+		"network_id":           idParts[2],
+		"network_interface_id": idParts[3],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_interface_id"), networkInterfaceId)...)
 	tflog.Info(ctx, "Network interface state imported")
 }
 
-func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model) error {
+func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model, region string) error {
 	if networkInterfaceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -456,7 +503,8 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		return fmt.Errorf("network interface id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.NetworkId.ValueString(), networkInterfaceId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.NetworkId.ValueString(), networkInterfaceId)
+	model.Region = types.StringValue(region)
 
 	respAllowedAddresses := []string{}
 	var diags diag.Diagnostics

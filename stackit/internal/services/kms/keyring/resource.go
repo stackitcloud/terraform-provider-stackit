@@ -178,6 +178,8 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
@@ -195,6 +197,8 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	if createResponse == nil || createResponse.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", "API returned empty response")
 		return
@@ -202,7 +206,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 
 	keyRingId := *createResponse.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 		"keyring_id": keyRingId,
@@ -236,6 +240,8 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -255,6 +261,8 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading keyring", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(keyRingResponse, &model, region)
 	if err != nil {
@@ -300,7 +308,7 @@ func (r *keyRingResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": idParts[0],
 		"region":     idParts[1],
 		"keyring_id": idParts[2],

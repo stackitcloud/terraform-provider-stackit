@@ -7,6 +7,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
@@ -37,22 +42,36 @@ var (
 	_ resource.Resource                = &volumeResource{}
 	_ resource.ResourceWithConfigure   = &volumeResource{}
 	_ resource.ResourceWithImportState = &volumeResource{}
+	_ resource.ResourceWithModifyPlan  = &volumeResource{}
 
 	SupportedSourceTypes = []string{"volume", "image", "snapshot", "backup"}
 )
 
 type Model struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	VolumeId         types.String `tfsdk:"volume_id"`
-	Name             types.String `tfsdk:"name"`
-	AvailabilityZone types.String `tfsdk:"availability_zone"`
-	Labels           types.Map    `tfsdk:"labels"`
-	Description      types.String `tfsdk:"description"`
-	PerformanceClass types.String `tfsdk:"performance_class"`
-	Size             types.Int64  `tfsdk:"size"`
-	ServerId         types.String `tfsdk:"server_id"`
-	Source           types.Object `tfsdk:"source"`
+	Id                   types.String               `tfsdk:"id"` // needed by TF
+	ProjectId            types.String               `tfsdk:"project_id"`
+	Region               types.String               `tfsdk:"region"`
+	VolumeId             types.String               `tfsdk:"volume_id"`
+	Name                 types.String               `tfsdk:"name"`
+	AvailabilityZone     types.String               `tfsdk:"availability_zone"`
+	Labels               types.Map                  `tfsdk:"labels"`
+	Description          types.String               `tfsdk:"description"`
+	PerformanceClass     types.String               `tfsdk:"performance_class"`
+	Size                 types.Int64                `tfsdk:"size"`
+	ServerId             types.String               `tfsdk:"server_id"`
+	Source               types.Object               `tfsdk:"source"`
+	EncryptionParameters *encryptionParametersModel `tfsdk:"encryption_parameters"`
+	Encrypted            types.Bool                 `tfsdk:"encrypted"`
+}
+
+type encryptionParametersModel struct {
+	KekKeyId                         types.String `tfsdk:"kek_key_id"`
+	KekKeyVersion                    types.Int64  `tfsdk:"kek_key_version"`
+	KekKeyringId                     types.String `tfsdk:"kek_keyring_id"`
+	KeyPayloadBase64                 types.String `tfsdk:"key_payload_base64"`
+	KeyPayloadBase64WriteOnly        types.String `tfsdk:"key_payload_base64_wo"`
+	KeyPayloadBase64WriteOnlyVersion types.Int64  `tfsdk:"key_payload_base64_wo_version"`
+	ServiceAccount                   types.String `tfsdk:"service_account"`
 }
 
 // Struct corresponding to Model.Source
@@ -74,12 +93,43 @@ func NewVolumeResource() resource.Resource {
 
 // volumeResource is the resource implementation.
 type volumeResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
 func (r *volumeResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_volume"
+}
+
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *volumeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // ConfigValidators validates the resource configuration
@@ -94,12 +144,13 @@ func (r *volumeResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 
 // Configure adds the provider configured client to the resource.
 func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -111,11 +162,11 @@ func (r *volumeResource) Configure(ctx context.Context, req resource.ConfigureRe
 func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Volume resource schema. Must have a `region` specified in the provider configuration."
 	resp.Schema = schema.Schema{
-		MarkdownDescription: description,
+		MarkdownDescription: fmt.Sprintf("%s \n\n-> **Note:** Write-Only argument `key_payload_base64_wo` is available to use in place of `key_payload_base64`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", description),
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`volume_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`volume_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -130,6 +181,15 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"volume_id": schema.StringAttribute{
@@ -194,7 +254,7 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:    true,
 			},
 			"performance_class": schema.StringAttribute{
-				MarkdownDescription: "The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/stackit/en/service-plans-blockstorage-75137974.html#ServiceplansBlockStorage-CurrentlyavailableServicePlans%28performanceclasses%29)",
+				MarkdownDescription: "The performance class of the volume. Possible values are documented in [Service plans BlockStorage](https://docs.stackit.cloud/products/storage/block-storage/basics/service-plans/#currently-available-service-plans-performance-classes)",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -239,6 +299,91 @@ func (r *volumeResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						},
 					},
 				},
+			},
+			"encryption_parameters": schema.SingleNestedAttribute{
+				Description: "Parameter to connect to a key-encryption-key within the STACKIT-KMS to create encrypted volumes. These parameters never leave the backend again. So these parameters are not present on imports or in the datasource. They live only in your Terraform state after creation of the resource.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"kek_key_id": schema.StringAttribute{
+						Description: "UUID of the key within the STACKIT-KMS to use for the encryption.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"kek_key_version": schema.Int64Attribute{
+						Description: "Version of the key within the STACKIT-KMS to use for the encryption.",
+						Required:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
+					},
+					"kek_keyring_id": schema.StringAttribute{
+						Description: "UUID of the keyring where the key is located within the STACKTI-KMS.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"key_payload_base64": schema.StringAttribute{
+						Description: "Optional predefined secret, which will be encrypted against the key-encryption-key within the STACKIT-KMS. If not defined, a random secret will be generated by the API and encrypted against the STACKIT-KMS. If a key-payload is provided here, it must be base64 encoded.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							stringvalidator.ConflictsWith(
+								path.MatchRelative().AtParent().AtName("key_payload_base64_wo"),
+								path.MatchRelative().AtParent().AtName("key_payload_base64_wo_version"),
+							),
+							stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot("encryption_parameters").AtName("key_payload_base64_wo")),
+						},
+						Sensitive: true,
+					},
+					"key_payload_base64_wo": schema.StringAttribute{
+						Description: "Optional predefined secret, which will be encrypted against the key-encryption-key within the STACKIT-KMS. If not defined, a random secret will be generated by the API and encrypted against the STACKIT-KMS. If a key-payload is provided here, it must be base64 encoded.",
+						WriteOnly:   true,
+						Optional:    true,
+						Sensitive:   true,
+						Validators: []validator.String{
+							stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("key_payload_base64")),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("key_payload_base64_wo_version")),
+						},
+					},
+					"key_payload_base64_wo_version": schema.Int64Attribute{
+						Description: "Used together with `key_payload_base64_wo` to trigger an re-create. Increment this value when an update to `key_payload_base64_wo` is required.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.RequiresReplace(),
+						},
+						Validators: []validator.Int64{
+							int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("key_payload_base64_wo")),
+							int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("key_payload_base64")),
+						},
+					},
+					"service_account": schema.StringAttribute{
+						Description: "Service-Account linked to the Key within the STACKIT-KMS.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+				},
+			},
+			"encrypted": schema.BoolAttribute{
+				Description: "Indicates if the volume is encrypted.",
+				Computed:    true,
 			},
 		},
 	}
@@ -287,8 +432,12 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var source = &sourceModel{}
 	if !(model.Source.IsNull() || model.Source.IsUnknown()) {
@@ -308,14 +457,16 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new volume
 
-	volume, err := r.client.CreateVolume(ctx, projectId).CreateVolumePayload(*payload).Execute()
+	volume, err := r.client.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	volumeId := *volume.Id
-	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, volumeId).WaitWithContext(ctx)
+	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("volume creation waiting: %v", err))
 		return
@@ -324,7 +475,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Map response body to schema
-	err = mapFields(ctx, volume, &model)
+	err = mapFields(ctx, volume, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -346,12 +497,18 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := r.client.GetVolume(ctx, projectId, volumeId).Execute()
+	volumeResp, err := r.client.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -362,8 +519,10 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
-	err = mapFields(ctx, volumeResp, &model)
+	err = mapFields(ctx, volumeResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -386,9 +545,14 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Retrieve values from state
@@ -406,11 +570,13 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing volume
-	updatedVolume, err := r.client.UpdateVolume(ctx, projectId, volumeId).UpdateVolumePayload(*payload).Execute()
+	updatedVolume, err := r.client.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Resize existing volume
 	modelSize := conversion.Int64ValueToPointer(model.Size)
@@ -422,7 +588,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			payload := iaas.ResizeVolumePayload{
 				Size: modelSize,
 			}
-			err := r.client.ResizeVolume(ctx, projectId, volumeId).ResizeVolumePayload(payload).Execute()
+			err := r.client.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(payload).Execute()
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Resizing the volume, calling API: %v", err))
 			}
@@ -430,7 +596,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			updatedVolume.Size = modelSize
 		}
 	}
-	err = mapFields(ctx, updatedVolume, &model)
+	err = mapFields(ctx, updatedVolume, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -454,17 +620,25 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Delete existing volume
-	err := r.client.DeleteVolume(ctx, projectId, volumeId).Execute()
+	err := r.client.DeleteVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, volumeId).WaitWithContext(ctx)
+
+	ctx = core.LogResponse(ctx)
+
+	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("volume deletion waiting: %v", err))
 		return
@@ -478,25 +652,24 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 func (r *volumeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing volume",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[volume_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[volume_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	volumeId := idParts[1]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "volume_id", volumeId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"volume_id":  idParts[2],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("volume_id"), volumeId)...)
 	tflog.Info(ctx, "volume state imported")
 }
 
-func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error {
+func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, region string) error {
 	if volumeResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -513,7 +686,8 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error
 		return fmt.Errorf("Volume id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), volumeId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, volumeId)
+	model.Region = types.StringValue(region)
 
 	labels, err := iaasUtils.MapLabels(ctx, volumeResp.Labels, model.Labels)
 	if err != nil {
@@ -549,6 +723,10 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model) error
 	model.ServerId = types.StringPointerValue(volumeResp.ServerId)
 	model.Size = types.Int64PointerValue(volumeResp.Size)
 	model.Source = sourceObject
+	model.Encrypted = types.BoolPointerValue(volumeResp.Encrypted)
+
+	// no need to map encryption parameters as they are only **sent** to the API but **never returned**
+
 	return nil
 }
 
@@ -571,7 +749,7 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		}
 	}
 
-	return &iaas.CreateVolumePayload{
+	payload := iaas.CreateVolumePayload{
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
 		Description:      conversion.StringValueToPointer(model.Description),
 		Labels:           &labels,
@@ -579,7 +757,27 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		PerformanceClass: conversion.StringValueToPointer(model.PerformanceClass),
 		Size:             conversion.Int64ValueToPointer(model.Size),
 		Source:           sourcePayload,
-	}, nil
+	}
+
+	if model.EncryptionParameters != nil {
+		var keyPayload *[]byte
+		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
+			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString()))
+		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
+			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64.ValueString()))
+		}
+
+		payload.EncryptionParameters = &iaas.VolumeEncryptionParameter{
+			KekKeyId:       conversion.StringValueToPointer(model.EncryptionParameters.KekKeyId),
+			KekKeyVersion:  conversion.Int64ValueToPointer(model.EncryptionParameters.KekKeyVersion),
+			KekKeyringId:   conversion.StringValueToPointer(model.EncryptionParameters.KekKeyringId),
+			KekProjectId:   nil,
+			KeyPayload:     keyPayload,
+			ServiceAccount: conversion.StringValueToPointer(model.EncryptionParameters.ServiceAccount),
+		}
+	}
+
+	return &payload, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateVolumePayload, error) {

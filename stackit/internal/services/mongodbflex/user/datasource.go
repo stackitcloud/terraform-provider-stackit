@@ -146,6 +146,9 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
@@ -170,6 +173,8 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema and populate Computed attribute values
 	err = mapDataSourceFields(recordSetResp, &model, region)

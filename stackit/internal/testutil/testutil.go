@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
@@ -28,6 +29,18 @@ var (
 	// reattach.
 	TestAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 		"stackit": providerserver.NewProtocol6WithError(stackit.New("test-version")()),
+	}
+
+	// TestEphemeralAccProtoV6ProviderFactories is used to instantiate a provider during
+	// acceptance testing. The factory function will be invoked for every Terraform
+	// CLI command executed to create a provider server to which the CLI can
+	// reattach.
+	//
+	// See the Terraform acceptance test documentation on ephemeral resources for more information:
+	// https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests/ephemeral-resources
+	TestEphemeralAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+		"stackit": providerserver.NewProtocol6WithError(stackit.New("test-version")()),
+		"echo":    echoprovider.NewProviderServer(),
 	}
 
 	// E2ETestsEnabled checks if end-to-end tests should be run.
@@ -55,14 +68,16 @@ var (
 	ALBCustomEndpoint             = os.Getenv("TF_ACC_ALB_CUSTOM_ENDPOINT")
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
+	EdgeCloudCustomEndpoint       = os.Getenv("TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT")
 	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
 	IaaSCustomEndpoint            = os.Getenv("TF_ACC_IAAS_CUSTOM_ENDPOINT")
 	KMSCustomEndpoint             = os.Getenv("TF_ACC_KMS_CUSTOM_ENDPOINT")
 	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
 	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
+	LogsCustomEndpoint            = os.Getenv("TF_ACC_LOGS_CUSTOM_ENDPOINT")
 	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
 	ModelServingCustomEndpoint    = os.Getenv("TF_ACC_MODELSERVING_CUSTOM_ENDPOINT")
-	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_authorization_custom_endpoint")
+	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT")
 	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
 	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
 	ObservabilityCustomEndpoint   = os.Getenv("TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT")
@@ -76,7 +91,9 @@ var (
 	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
 	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
 	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
+	SFSCustomEndpoint             = os.Getenv("TF_ACC_SFS_CUSTOM_ENDPOINT")
 	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
+	TokenCustomEndpoint           = os.Getenv("TF_ACC_TOKEN_CUSTOM_ENDPOINT")
 	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
 )
 
@@ -134,6 +151,27 @@ func DnsProviderConfig() string {
 			dns_custom_endpoint = "%s"
 		}`,
 		DnsCustomEndpoint,
+	)
+}
+
+func EdgeCloudProviderConfig() string {
+	if EdgeCloudCustomEndpoint == "" {
+		return fmt.Sprintf(`
+			provider "stackit" {
+				enable_beta_resources = true
+				default_region 		    = "%s"
+			}`,
+			Region,
+		)
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			edgecloud_custom_endpoint = "%s"
+			enable_beta_resources = true
+			default_region 		    = "%s"
+		}`,
+		EdgeCloudCustomEndpoint,
+		Region,
 	)
 }
 
@@ -228,6 +266,23 @@ func LogMeProviderConfig() string {
 			logme_custom_endpoint = "%s"
 		}`,
 		LogMeCustomEndpoint,
+	)
+}
+
+func LogsProviderConfig() string {
+	if LogsCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			enable_beta_resources = true
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			enable_beta_resources = true
+			logs_custom_endpoint = "%s"
+		}`,
+		LogsCustomEndpoint,
 	)
 }
 
@@ -438,6 +493,26 @@ func ServerUpdateProviderConfig() string {
 	)
 }
 
+func SFSProviderConfig() string {
+	if SFSCustomEndpoint == "" || TokenCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			region = "eu01"
+			enable_beta_resources = true
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			region = "eu01"
+			sfs_custom_endpoint = "%s"
+			token_custom_endpoint = "%s"
+			enable_beta_resources = true
+		}`,
+		SFSCustomEndpoint,
+		TokenCustomEndpoint,
+	)
+}
+
 func SKEProviderConfig() string {
 	if SKECustomEndpoint == "" {
 		return `
@@ -454,7 +529,7 @@ func SKEProviderConfig() string {
 }
 
 func AuthorizationProviderConfig() string {
-	if AuthorizationCustomEndpoint == "" {
+	if AuthorizationCustomEndpoint == "" || ServiceAccountCustomEndpoint == "" || ResourceManagerCustomEndpoint == "" || TokenCustomEndpoint == "" {
 		return `
 		provider "stackit" {
 			default_region = "eu01"
@@ -464,9 +539,15 @@ func AuthorizationProviderConfig() string {
 	return fmt.Sprintf(`
 		provider "stackit" {
 			authorization_custom_endpoint = "%s"
+			service_account_custom_endpoint = "%s"
+			resourcemanager_custom_endpoint = "%s"
+			token_custom_endpoint = "%s"
 			experiments = ["iam"]
 		}`,
 		AuthorizationCustomEndpoint,
+		ServiceAccountCustomEndpoint,
+		ResourceManagerCustomEndpoint,
+		TokenCustomEndpoint,
 	)
 }
 

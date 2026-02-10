@@ -17,16 +17,11 @@ resource "stackit_observability_alertgroup" "example" {
       }
     },
     {
-      alert      = "example-alert-name-2"
       expression = "kube_node_status_condition{condition=\"Ready\", status=\"false\"} > 0"
-      for        = "1m"
       labels = {
         severity = "critical"
       },
-      annotations = {
-        summary : "example summary"
-        description : "example description"
-      }
+      record = "example_record_name"
     },
   ]
 }

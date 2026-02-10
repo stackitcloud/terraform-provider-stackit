@@ -543,6 +543,9 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -565,6 +568,8 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, albResp, &model, region)

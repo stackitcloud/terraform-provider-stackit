@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -27,19 +28,46 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &networkAreaRouteResource{}
-	_ resource.ResourceWithConfigure   = &networkAreaRouteResource{}
-	_ resource.ResourceWithImportState = &networkAreaRouteResource{}
+	_ resource.Resource                 = &networkAreaRouteResource{}
+	_ resource.ResourceWithConfigure    = &networkAreaRouteResource{}
+	_ resource.ResourceWithImportState  = &networkAreaRouteResource{}
+	_ resource.ResourceWithModifyPlan   = &networkAreaRouteResource{}
+	_ resource.ResourceWithUpgradeState = &networkAreaRouteResource{}
 )
 
-type Model struct {
-	Id                 types.String `tfsdk:"id"` // needed by TF
+// ModelV1 is the currently used model
+type ModelV1 struct {
+	Id                 types.String        `tfsdk:"id"` // needed by TF
+	OrganizationId     types.String        `tfsdk:"organization_id"`
+	Region             types.String        `tfsdk:"region"`
+	NetworkAreaId      types.String        `tfsdk:"network_area_id"`
+	NetworkAreaRouteId types.String        `tfsdk:"network_area_route_id"`
+	NextHop            *NexthopModelV1     `tfsdk:"next_hop"`
+	Destination        *DestinationModelV1 `tfsdk:"destination"`
+	Labels             types.Map           `tfsdk:"labels"`
+}
+
+// ModelV0 is the old model (only needed for state upgrade)
+type ModelV0 struct {
+	Id                 types.String `tfsdk:"id"`
 	OrganizationId     types.String `tfsdk:"organization_id"`
 	NetworkAreaId      types.String `tfsdk:"network_area_id"`
 	NetworkAreaRouteId types.String `tfsdk:"network_area_route_id"`
 	NextHop            types.String `tfsdk:"next_hop"`
 	Prefix             types.String `tfsdk:"prefix"`
 	Labels             types.Map    `tfsdk:"labels"`
+}
+
+// DestinationModelV1 maps the route destination data
+type DestinationModelV1 struct {
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
+}
+
+// NexthopModelV1 maps the route nexthop data
+type NexthopModelV1 struct {
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
 }
 
 // NewNetworkAreaRouteResource is a helper function to simplify the provider implementation.
@@ -49,7 +77,8 @@ func NewNetworkAreaRouteResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type networkAreaRouteResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -57,14 +86,45 @@ func (r *networkAreaRouteResource) Metadata(_ context.Context, req resource.Meta
 	resp.TypeName = req.ProviderTypeName + "_network_area_route"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *networkAreaRouteResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel ModelV1
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel ModelV1
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -78,9 +138,10 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,
+		Version:             1,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`network_area_id`,`network_area_route_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`organization_id`,`network_area_id`,`region`,`network_area_route_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -95,6 +156,15 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"network_area_id": schema.StringAttribute{
@@ -121,24 +191,50 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 					validate.NoSeparator(),
 				},
 			},
-			"next_hop": schema.StringAttribute{
-				Description: "The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.",
+			"next_hop": schema.SingleNestedAttribute{
+				Description: "Next hop destination.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validate.IP(false),
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: fmt.Sprintf("Type of the next hop. %s %s", utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"), "Only `ipv4` supported currently."),
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"value": schema.StringAttribute{
+						Description: "Either IPv4 or IPv6 (not set for blackhole and internet). Only IPv4 supported currently.",
+						Optional:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.IP(false),
+						},
+					},
 				},
 			},
-			"prefix": schema.StringAttribute{
-				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
+			"destination": schema.SingleNestedAttribute{
+				Description: "Destination of the route.",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validate.CIDR(),
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: fmt.Sprintf("CIDRV type. %s %s", utils.FormatPossibleValues("cidrv4", "cidrv6"), "Only `cidrv4` is supported currently."),
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"value": schema.StringAttribute{
+						Description: "An CIDR string.",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.CIDR(),
+						},
+					},
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -150,19 +246,104 @@ func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRe
 	}
 }
 
+func (r *networkAreaRouteResource) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		0: {
+			// This handles moving from version 0 to 1
+			PriorSchema: &schema.Schema{
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Computed: true,
+					},
+					"organization_id": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"network_area_id": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"network_area_route_id": schema.StringAttribute{
+						Computed: true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"next_hop": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							validate.IP(false),
+						},
+					},
+					"prefix": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							validate.CIDR(),
+						},
+					},
+					"labels": schema.MapAttribute{
+						ElementType: types.StringType,
+						Optional:    true,
+					},
+				},
+			},
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var priorStateData ModelV0
+				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				nexthopValue := priorStateData.NextHop.ValueString()
+				prefixValue := priorStateData.Prefix.ValueString()
+
+				newStateData := ModelV1{
+					Id:                 priorStateData.Id,
+					OrganizationId:     priorStateData.OrganizationId,
+					NetworkAreaId:      priorStateData.NetworkAreaId,
+					NetworkAreaRouteId: priorStateData.NetworkAreaRouteId,
+					Labels:             priorStateData.Labels,
+
+					NextHop: &NexthopModelV1{
+						Type:  types.StringValue("ipv4"),
+						Value: types.StringValue(nexthopValue),
+					},
+					Destination: &DestinationModelV1{
+						Type:  types.StringValue("cidrv4"),
+						Value: types.StringValue(prefixValue),
+					},
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, newStateData)...)
+			},
+		},
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model Model
+	var model ModelV1
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	organizationId := model.OrganizationId.ValueString()
-	ctx = tflog.SetField(ctx, "organization_id", organizationId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkAreaId := model.NetworkAreaId.ValueString()
+	ctx = tflog.SetField(ctx, "organization_id", organizationId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
 	// Generate API request body from model
@@ -173,11 +354,14 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network area route
-	routes, err := r.client.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId).CreateNetworkAreaRoutePayload(*payload).Execute()
+	routes, err := r.client.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if routes.Items == nil || len(*routes.Items) == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
 		return
@@ -191,12 +375,12 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	// Gets the route ID from the first element, routes.Items[0]
 	routeItems := *routes.Items
 	route := routeItems[0]
-	routeId := *route.RouteId
+	routeId := *route.Id
 
 	ctx = tflog.SetField(ctx, "network_area_route_id", routeId)
 
 	// Map response body to schema
-	err = mapFields(ctx, &route, &model)
+	err = mapFields(ctx, &route, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -212,7 +396,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 
 // Read refreshes the Terraform state with the latest data.
 func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ModelV1
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -220,12 +404,17 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	}
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
-	networkAreaRouteResp, err := r.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, networkAreaRouteId).Execute()
+	networkAreaRouteResp, err := r.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -236,8 +425,10 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
-	err = mapFields(ctx, networkAreaRouteResp, &model)
+	err = mapFields(ctx, networkAreaRouteResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -254,7 +445,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from state
-	var model Model
+	var model ModelV1
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -263,17 +454,24 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
 	// Delete existing network
-	err := r.client.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, networkAreaRouteId).Execute()
+	err := r.client.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "Network area route deleted")
 }
@@ -281,7 +479,7 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model Model
+	var model ModelV1
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -290,13 +488,18 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
 	// Retrieve values from state
-	var stateModel Model
+	var stateModel ModelV1
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -310,13 +513,15 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network area route
-	networkAreaRouteResp, err := r.client.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
+	networkAreaRouteResp, err := r.client.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, networkAreaRouteResp, &model)
+	ctx = core.LogResponse(ctx)
+
+	err = mapFields(ctx, networkAreaRouteResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -334,28 +539,25 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 func (r *networkAreaRouteResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing network area route",
-			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id],[network_area_route_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [organization_id],[network_area_id],[region],[network_area_route_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	organizationId := idParts[0]
-	networkAreaId := idParts[1]
-	networkAreaRouteId := idParts[2]
-	ctx = tflog.SetField(ctx, "organization_id", organizationId)
-	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
-	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"organization_id":       idParts[0],
+		"network_area_id":       idParts[1],
+		"region":                idParts[2],
+		"network_area_route_id": idParts[3],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_id"), organizationId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_area_id"), networkAreaId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_area_route_id"), networkAreaRouteId)...)
 	tflog.Info(ctx, "Network area route state imported")
 }
 
-func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) error {
+func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *ModelV1, region string) error {
 	if networkAreaRoute == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -366,13 +568,14 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) 
 	var networkAreaRouteId string
 	if model.NetworkAreaRouteId.ValueString() != "" {
 		networkAreaRouteId = model.NetworkAreaRouteId.ValueString()
-	} else if networkAreaRoute.RouteId != nil {
-		networkAreaRouteId = *networkAreaRoute.RouteId
+	} else if networkAreaRoute.Id != nil {
+		networkAreaRouteId = *networkAreaRoute.Id
 	} else {
 		return fmt.Errorf("network area route id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), model.NetworkAreaId.ValueString(), networkAreaRouteId)
+	model.Id = utils.BuildInternalTerraformId(model.OrganizationId.ValueString(), model.NetworkAreaId.ValueString(), region, networkAreaRouteId)
+	model.Region = types.StringValue(region)
 
 	labels, err := iaasUtils.MapLabels(ctx, networkAreaRoute.Labels, model.Labels)
 	if err != nil {
@@ -380,13 +583,22 @@ func mapFields(ctx context.Context, networkAreaRoute *iaas.Route, model *Model) 
 	}
 
 	model.NetworkAreaRouteId = types.StringValue(networkAreaRouteId)
-	model.NextHop = types.StringPointerValue(networkAreaRoute.Nexthop)
-	model.Prefix = types.StringPointerValue(networkAreaRoute.Prefix)
 	model.Labels = labels
+
+	model.NextHop, err = mapRouteNextHop(networkAreaRoute)
+	if err != nil {
+		return err
+	}
+
+	model.Destination, err = mapRouteDestination(networkAreaRoute)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkAreaRoutePayload, error) {
+func toCreatePayload(ctx context.Context, model *ModelV1) (*iaas.CreateNetworkAreaRoutePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -396,18 +608,28 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
+	nextHopPayload, err := toNextHopPayload(model)
+	if err != nil {
+		return nil, err
+	}
+
+	destinationPayload, err := toDestinationPayload(model)
+	if err != nil {
+		return nil, err
+	}
+
 	return &iaas.CreateNetworkAreaRoutePayload{
-		Ipv4: &[]iaas.Route{
+		Items: &[]iaas.Route{
 			{
-				Prefix:  conversion.StringValueToPointer(model.Prefix),
-				Nexthop: conversion.StringValueToPointer(model.NextHop),
-				Labels:  &labels,
+				Destination: destinationPayload,
+				Labels:      &labels,
+				Nexthop:     nextHopPayload,
 			},
 		},
 	}, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map) (*iaas.UpdateNetworkAreaRoutePayload, error) {
+func toUpdatePayload(ctx context.Context, model *ModelV1, currentLabels types.Map) (*iaas.UpdateNetworkAreaRoutePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -420,4 +642,98 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	return &iaas.UpdateNetworkAreaRoutePayload{
 		Labels: &labels,
 	}, nil
+}
+
+func toNextHopPayload(model *ModelV1) (*iaas.RouteNexthop, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	} else if model.NextHop == nil {
+		return nil, fmt.Errorf("nexthop is nil in model")
+	}
+
+	switch model.NextHop.Type.ValueString() {
+	case "blackhole":
+		return sdkUtils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
+	case "internet":
+		return sdkUtils.Ptr(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
+	case "ipv4":
+		return sdkUtils.Ptr(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", model.NextHop.Value.ValueString()))), nil
+	case "ipv6":
+		return sdkUtils.Ptr(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", model.NextHop.Value.ValueString()))), nil
+	}
+	return nil, fmt.Errorf("unknown nexthop type: %s", model.NextHop.Type.ValueString())
+}
+
+func toDestinationPayload(model *ModelV1) (*iaas.RouteDestination, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	} else if model.Destination == nil {
+		return nil, fmt.Errorf("destination is nil in model")
+	}
+
+	switch model.Destination.Type.ValueString() {
+	case "cidrv4":
+		return sdkUtils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", model.Destination.Value.ValueString()))), nil
+	case "cidrv6":
+		return sdkUtils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", model.Destination.Value.ValueString()))), nil
+	}
+	return nil, fmt.Errorf("unknown destination type: %s", model.Destination.Type.ValueString())
+}
+
+func mapRouteNextHop(routeResp *iaas.Route) (*NexthopModelV1, error) {
+	if routeResp.Nexthop == nil {
+		return &NexthopModelV1{
+			Type:  types.StringNull(),
+			Value: types.StringNull(),
+		}, nil
+	}
+
+	switch i := routeResp.Nexthop.GetActualInstance().(type) {
+	case *iaas.NexthopIPv4:
+		return &NexthopModelV1{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	case *iaas.NexthopIPv6:
+		return &NexthopModelV1{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	case *iaas.NexthopBlackhole:
+		return &NexthopModelV1{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringNull(),
+		}, nil
+	case *iaas.NexthopInternet:
+		return &NexthopModelV1{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringNull(),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected nexthop type: %T", i)
+	}
+}
+
+func mapRouteDestination(routeResp *iaas.Route) (*DestinationModelV1, error) {
+	if routeResp.Destination == nil {
+		return &DestinationModelV1{
+			Type:  types.StringNull(),
+			Value: types.StringNull(),
+		}, nil
+	}
+
+	switch i := routeResp.Destination.GetActualInstance().(type) {
+	case *iaas.DestinationCIDRv4:
+		return &DestinationModelV1{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	case *iaas.DestinationCIDRv6:
+		return &DestinationModelV1{
+			Type:  types.StringPointerValue(i.Type),
+			Value: types.StringPointerValue(i.Value),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unexpected Destionation type: %T", i)
+	}
 }

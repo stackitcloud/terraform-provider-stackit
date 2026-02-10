@@ -261,7 +261,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_syslog1"])),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_syslog2"])),
 
-					// // Credential data
+					// Credential data
 					resource.TestCheckResourceAttrPair(
 						"stackit_logme_credential.credential", "project_id",
 						"stackit_logme_instance.instance", "project_id",

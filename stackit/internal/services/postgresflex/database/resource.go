@@ -198,6 +198,9 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	instanceId := model.InstanceId.ValueString()
@@ -217,6 +220,9 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if databaseResp == nil || databaseResp.Id == nil || *databaseResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", "API didn't return database Id. A database might have been created")
 		return
@@ -253,6 +259,9 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
@@ -272,6 +281,8 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(databaseResp, &model, region)
@@ -305,6 +316,8 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
@@ -319,6 +332,9 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	tflog.Info(ctx, "Postgres Flex database deleted")
 }
 

@@ -388,7 +388,7 @@ resource "stackit_server" "example" {
 # }
 import {
   to = stackit_server.import-example
-  id = "${var.project_id},${var.server_id}"
+  id = "${var.project_id},${var.region},${var.server_id}"
 }
 ```
 
@@ -397,7 +397,7 @@ import {
 
 ### Required
 
-- `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/stackit/en/virtual-machine-flavors-75137231.html)
+- `machine_type` (String) Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)
 - `name` (String) The name of the server.
 - `project_id` (String) STACKIT project ID to which the server is associated.
 
@@ -410,13 +410,14 @@ import {
 - `image_id` (String) The image ID to be used for an ephemeral disk on the server.
 - `keypair_name` (String) The name of the keypair used during server creation.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server.
+- `network_interfaces` (List of String) The IDs of network interfaces which should be attached to the server. Updating it will recreate the server. **Required when (re-)creating servers. Still marked as optional in the schema to not introduce breaking changes. There will be a migration path for this field soon.**
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `user_data` (String) User data that is passed via cloud-init to the server.
 
 ### Read-Only
 
 - `created_at` (String) Date-time when the server was created
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`".
 - `launched_at` (String) Date-time when the server was launched
 - `server_id` (String) The server ID.
 - `updated_at` (String) Date-time when the server was updated

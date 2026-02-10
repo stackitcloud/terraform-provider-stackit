@@ -31,7 +31,8 @@ func NewNetworkAreaRouteDataSource() datasource.DataSource {
 
 // networkDataSource is the data source implementation.
 type networkAreaRouteDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -40,12 +41,13 @@ func (d *networkAreaRouteDataSource) Metadata(_ context.Context, req datasource.
 }
 
 func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -61,7 +63,7 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 		MarkdownDescription: description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal data source ID. It is structured as \"`organization_id`,`network_area_id`,`network_area_route_id`\".",
+				Description: "Terraform's internal data source ID. It is structured as \"`organization_id`,`region`,`network_area_id`,`network_area_route_id`\".",
 				Computed:    true,
 			},
 			"organization_id": schema.StringAttribute{
@@ -80,6 +82,11 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 					validate.NoSeparator(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
+			},
 			"network_area_route_id": schema.StringAttribute{
 				Description: "The network area route ID.",
 				Required:    true,
@@ -88,13 +95,33 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 					validate.NoSeparator(),
 				},
 			},
-			"next_hop": schema.StringAttribute{
-				Description: "The IP address of the routing system, that will route the prefix configured. Should be a valid IPv4 address.",
+			"destination": schema.SingleNestedAttribute{
+				Description: "Destination of the route.",
 				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: fmt.Sprintf("CIDRV type. %s", utils.FormatPossibleValues("cidrv4", "cidrv6")),
+						Computed:    true,
+					},
+					"value": schema.StringAttribute{
+						Description: "An CIDR string.",
+						Computed:    true,
+					},
+				},
 			},
-			"prefix": schema.StringAttribute{
-				Description: "The network, that is reachable though the Next Hop. Should use CIDR notation.",
+			"next_hop": schema.SingleNestedAttribute{
+				Description: "Next hop destination.",
 				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Description: "Type of the next hop. " + utils.FormatPossibleValues("blackhole", "internet", "ipv4", "ipv6"),
+						Computed:    true,
+					},
+					"value": schema.StringAttribute{
+						Description: "Either IPv4 or IPv6 (not set for blackhole and internet).",
+						Computed:    true,
+					},
+				},
 			},
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
@@ -107,20 +134,26 @@ func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.Sche
 
 // Read refreshes the Terraform state with the latest data.
 func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model ModelV1
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkAreaRouteId := model.NetworkAreaRouteId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
-	networkAreaRouteResp, err := d.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, networkAreaRouteId).Execute()
+	networkAreaRouteResp, err := d.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -136,11 +169,14 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	err = mapFields(ctx, networkAreaRouteResp, &model)
+	ctx = core.LogResponse(ctx)
+
+	err = mapFields(ctx, networkAreaRouteResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area route", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

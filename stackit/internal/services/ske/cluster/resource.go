@@ -54,7 +54,7 @@ const (
 	VersionStatePreview          = "preview"
 	VersionStateDeprecated       = "deprecated"
 
-	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [Updates for Kubernetes versions and Operating System versions in SKE](https://docs.stackit.cloud/stackit/en/version-updates-in-ske-10125631.html)."
+	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/)."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -368,6 +368,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					utils.UseStateForUnknownIf(hasKubernetesMinChanged, "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
+				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
 				Description: "The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.",
@@ -454,6 +457,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"os_version_used": schema.StringAttribute{
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								utils.UseStateForUnknownIf(hasOsVersionMinChanged, "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+							},
 						},
 						"volume_type": schema.StringAttribute{
 							Description: "Specifies the volume type. Defaults to `storage_premium_perf1`.",
@@ -721,6 +727,8 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	clusterName := model.Name.ValueString()
@@ -889,6 +897,12 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
+	// The passed context to createOrUpdateCluster will not be updated outside of this function.
+	// Call tflog.Info here, to log the information of the updated context
+	tflog.Info(ctx, "Triggered create/update cluster")
 
 	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
@@ -2097,6 +2111,52 @@ func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*str
 	return latestVersion, nil
 }
 
+func hasKubernetesMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
+	dependencyPath := path.Root("kubernetes_version_min")
+
+	var minVersionPlan types.String
+	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	var minVersionState types.String
+	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if minVersionState == minVersionPlan {
+		response.UseStateForUnknown = true
+		return
+	}
+}
+
+func hasOsVersionMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
+	dependencyPath := request.Path.ParentPath().AtName("os_version_min")
+
+	var minVersionPlan types.String
+	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	var minVersionState types.String
+	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if minVersionState == minVersionPlan {
+		response.UseStateForUnknown = true
+		return
+	}
+}
+
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var state Model
 	diags := req.State.Get(ctx, &state)
@@ -2104,6 +2164,9 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := state.ProjectId.ValueString()
 	name := state.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(state.Region)
@@ -2121,6 +2184,8 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapFields(ctx, clResp, &state, region)
 	if err != nil {
@@ -2143,6 +2208,8 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	clName := model.Name.ValueString()
@@ -2178,6 +2245,9 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	name := model.Name.ValueString()
 	region := model.Region.ValueString()
@@ -2191,6 +2261,9 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))

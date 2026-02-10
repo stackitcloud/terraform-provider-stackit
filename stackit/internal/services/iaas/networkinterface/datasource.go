@@ -24,14 +24,15 @@ var (
 	_ datasource.DataSource = &networkInterfaceDataSource{}
 )
 
-// NewNetworkDataSource is a helper function to simplify the provider implementation.
+// NewNetworkInterfaceDataSource is a helper function to simplify the provider implementation.
 func NewNetworkInterfaceDataSource() datasource.DataSource {
 	return &networkInterfaceDataSource{}
 }
 
 // networkInterfaceDataSource is the data source implementation.
 type networkInterfaceDataSource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -40,12 +41,13 @@ func (d *networkInterfaceDataSource) Metadata(_ context.Context, req datasource.
 }
 
 func (d *networkInterfaceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -63,7 +65,7 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal data source ID. It is structured as \"`project_id`,`network_id`,`network_interface_id`\".",
+				Description: "Terraform's internal data source ID. It is structured as \"`project_id`,`region`,`network_id`,`network_interface_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
@@ -73,6 +75,11 @@ func (d *networkInterfaceDataSource) Schema(_ context.Context, _ datasource.Sche
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"network_id": schema.StringAttribute{
 				Description: "The network ID to which the network interface is associated.",
@@ -141,14 +148,20 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	networkId := model.NetworkId.ValueString()
 	networkInterfaceId := model.NetworkInterfaceId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := d.client.GetNic(ctx, projectId, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := d.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -164,7 +177,9 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 
-	err = mapFields(ctx, networkInterfaceResp, &model)
+	ctx = core.LogResponse(ctx)
+
+	err = mapFields(ctx, networkInterfaceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network interface", fmt.Sprintf("Processing API payload: %v", err))
 		return

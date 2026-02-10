@@ -8,8 +8,6 @@ import (
 
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -115,15 +113,13 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Schema defines the schema for the resource.
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	rolesOptions := []string{"login", "createdb"}
-
 	descriptions := map[string]string{
 		"main":        "Postgres Flex user resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
 		"user_id":     "User ID.",
 		"instance_id": "ID of the PostgresFlex instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"roles":       "Database access levels for the user. " + utils.FormatPossibleValues(rolesOptions...),
+		"roles":       "Database access levels for the user.",
 		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
@@ -181,11 +177,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: descriptions["roles"],
 				ElementType: types.StringType,
 				Required:    true,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(
-						stringvalidator.OneOf("login", "createdb"),
-					),
-				},
 			},
 			"password": schema.StringAttribute{
 				Computed:  true,
@@ -222,6 +213,9 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	region := model.Region.ValueString()
@@ -250,6 +244,9 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if userResp == nil || userResp.Item == nil || userResp.Item.Id == nil || *userResp.Item.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
 		return
@@ -280,6 +277,9 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -299,6 +299,8 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(recordSetResp, &model, region)
@@ -325,6 +327,9 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -365,6 +370,8 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	userResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
@@ -397,6 +404,8 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
@@ -411,6 +420,9 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))

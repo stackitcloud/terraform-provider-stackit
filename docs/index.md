@@ -34,7 +34,7 @@ provider "stackit" {
 
 ## Authentication
 
-To authenticate, you will need a [service account](https://docs.stackit.cloud/stackit/en/service-accounts-134415819.html). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign it the necessary permissions, e.g. `project.owner`. There are multiple ways to authenticate:
+To authenticate, you will need a [service account](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign the necessary permissions to it, e.g. `project.owner`. There are multiple ways to authenticate:
 
 - Key flow (recommended)
 - Token flow (is scheduled for deprecation and will be removed on December 17, 2025)
@@ -65,13 +65,13 @@ To use the key flow, you need to have a service account key, which must have an 
 
 When creating the service account key, a new pair can be created automatically, which will be included in the service account key. This will make it much easier to configure the key flow authentication in the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), by just providing the service account key.
 
-**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), additionally to the service account key. Check the STACKIT Knowledge Base for an [example of how to create your own key-pair](https://docs.stackit.cloud/stackit/en/usage-of-the-service-account-keys-in-stackit-175112464.html#UsageoftheserviceaccountkeysinSTACKIT-CreatinganRSAkey-pair).
+**Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), additionally to the service account key. Check the STACKIT Docs for an [example of how to create your own key-pair](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-keys/).
 
 To configure the key flow, follow this steps:
 
 1.  Create a service account key:
 
-- Use the [STACKIT Portal](https://portal.stackit.cloud/): go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/stackit/en/create-a-service-account-key-175112456.html)
+- Use the [STACKIT Portal](https://portal.stackit.cloud/): go to the `Service Accounts` tab, choose a `Service Account` and go to `Service Account Keys` to create a key. For more details, see [Create a service account key](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-keys/)
 
 2.  Save the content of the service account key by copying it and saving it in a JSON file.
 
@@ -122,9 +122,9 @@ Using this flow is less secure since the token is long-lived. You can provide th
 
 # Backend configuration
 
-To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/stackit/en/object-storage-s3-compatible-71009778.html).
+To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/products/storage/object-storage).
 
-To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Buckets) and [credentials](https://docs.stackit.cloud/stackit/en/basic-concept-objectstorage-71009785.html#BasicConceptObjectStorage-Credentials) to access it. If you need to create them, check [Getting Started - Object Storage](https://docs.stackit.cloud/stackit/en/getting-started-objectstorage-71009792.html).
+To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/products/storage/object-storage/basics/concepts/#buckets) and [credentials](https://docs.stackit.cloud/products/storage/object-storage/basics/concepts/#credentials) to access it. If you need to create them, check [Create and delete Object Storage buckets](https://docs.stackit.cloud/products/storage/object-storage/how-tos/create-and-manage-object-storage-buckets/) and [Create and delete Object Storage credentials](https://docs.stackit.cloud/products/storage/object-storage/how-tos/create-and-delete-object-storage-credentials/).
 
 Once you have everything setup, you can configure the backend by adding the following block to your terraform configuration:
 
@@ -159,6 +159,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
+- `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
 - `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: iam, routing-tables, network
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
@@ -166,6 +167,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `kms_custom_endpoint` (String) Custom endpoint for the KMS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
+- `logs_custom_endpoint` (String) Custom endpoint for the Logs service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
 - `modelserving_custom_endpoint` (String) Custom endpoint for the AI Model Serving service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
@@ -189,6 +191,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String, Deprecated) Token used for authentication. If set, the token flow will be used to authenticate all operations.
 - `service_enablement_custom_endpoint` (String) Custom endpoint for the Service Enablement API
+- `sfs_custom_endpoint` (String) Custom endpoint for the Stackit Filestorage API
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow

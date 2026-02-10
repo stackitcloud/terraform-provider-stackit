@@ -21,7 +21,7 @@ var (
 	_ datasource.DataSource = &keyPairDataSource{}
 )
 
-// NewVolumeDataSource is a helper function to simplify the provider implementation.
+// NewKeyPairDataSource is a helper function to simplify the provider implementation.
 func NewKeyPairDataSource() datasource.DataSource {
 	return &keyPairDataSource{}
 }
@@ -51,7 +51,7 @@ func (d *keyPairDataSource) Configure(ctx context.Context, req datasource.Config
 }
 
 // Schema defines the schema for the resource.
-func (r *keyPairDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *keyPairDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	description := "Key pair resource schema. Must have a `region` specified in the provider configuration."
 
 	resp.Schema = schema.Schema{
@@ -84,7 +84,7 @@ func (r *keyPairDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -92,9 +92,12 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 	name := model.Name.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "name", name)
 
-	keypairResp, err := r.client.GetKeyPair(ctx, name).Execute()
+	keypairResp, err := d.client.GetKeyPair(ctx, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -107,6 +110,8 @@ func (r *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, keypairResp, &model)

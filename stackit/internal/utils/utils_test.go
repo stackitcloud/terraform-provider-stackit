@@ -610,3 +610,50 @@ func TestSetAndLogStateFields(t *testing.T) {
 		})
 	}
 }
+
+func TestJoin(t *testing.T) {
+	tests := []struct {
+		name  string
+		parts []types.String
+		want  types.String
+	}{
+		{"non-empty list", []types.String{types.StringValue("foo"), types.StringValue("bar"), types.StringValue("baz")}, types.StringValue("foo,bar,baz")},
+		{"empty list", []types.String{}, types.StringValue("")},
+		{"single element list", []types.String{types.StringValue("foo")}, types.StringValue("foo")},
+		{"list with empty elements", []types.String{types.StringValue("foo"), types.StringNull(), types.StringValue("baz")}, types.StringValue("foo,baz")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Join(",", tt.parts...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Join() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCoalesce(t *testing.T) {
+	var (
+		foo  = types.StringValue("foo")
+		bar  = types.StringValue("bar")
+		baz  = types.StringValue("baz")
+		null = types.StringNull()
+	)
+	tests := []struct {
+		name string
+		vals []attr.Value
+		want attr.Value
+	}{
+		{"list with all defined elements", []attr.Value{foo, bar, baz}, foo},
+		{"empty list", []attr.Value{}, nil},
+		{"first element undefined", []attr.Value{null, bar, baz}, bar},
+		{"first and second element undefined", []attr.Value{null, null, baz}, baz},
+		{"all elements undefined", []attr.Value{null, null, null}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotR := Coalesce(tt.vals...); !reflect.DeepEqual(gotR, tt.want) {
+				t.Errorf("Coalesce() = %v, want %v", gotR, tt.want)
+			}
+		})
+	}
+}

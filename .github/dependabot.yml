@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/" 
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 7
+      exclude: ["github.com/stackitcloud*"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    cooldown:
+        default-days: 7

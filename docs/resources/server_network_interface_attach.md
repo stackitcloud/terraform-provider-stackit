@@ -3,12 +3,12 @@
 page_title: "stackit_server_network_interface_attach Resource - stackit"
 subcategory: ""
 description: |-
-  Network interface attachment resource schema. Attaches a network interface to a server. Must have a region specified in the provider configuration. The attachment only takes full effect after server reboot.
+  Network interface attachment resource schema. Attaches a network interface to a server. The attachment only takes full effect after server reboot.
 ---
 
 # stackit_server_network_interface_attach (Resource)
 
-Network interface attachment resource schema. Attaches a network interface to a server. Must have a `region` specified in the provider configuration. The attachment only takes full effect after server reboot.
+Network interface attachment resource schema. Attaches a network interface to a server. The attachment only takes full effect after server reboot.
 
 ## Example Usage
 
@@ -22,7 +22,7 @@ resource "stackit_server_network_interface_attach" "attached_network_interface" 
 # Only use the import statement, if you want to import an existing server network interface attachment
 import {
   to = stackit_server_network_interface_attach.import-example
-  id = "${var.project_id},${var.server_id},${var.network_interface_id}"
+  id = "${var.project_id},${var.region},${var.server_id},${var.network_interface_id}"
 }
 ```
 
@@ -35,6 +35,10 @@ import {
 - `project_id` (String) STACKIT project ID to which the network interface attachment is associated.
 - `server_id` (String) The server ID.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`server_id`,`network_interface_id`".
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`server_id`,`network_interface_id`".

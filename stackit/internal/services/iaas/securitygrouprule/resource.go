@@ -34,11 +34,13 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_                       resource.Resource                = &securityGroupRuleResource{}
-	_                       resource.ResourceWithConfigure   = &securityGroupRuleResource{}
-	_                       resource.ResourceWithImportState = &securityGroupRuleResource{}
-	icmpProtocols                                            = []string{"icmp", "ipv6-icmp"}
-	protocolsPossibleValues                                  = []string{
+	_ resource.Resource                = &securityGroupRuleResource{}
+	_ resource.ResourceWithConfigure   = &securityGroupRuleResource{}
+	_ resource.ResourceWithImportState = &securityGroupRuleResource{}
+	_ resource.ResourceWithModifyPlan  = &securityGroupRuleResource{}
+
+	icmpProtocols           = []string{"icmp", "ipv6-icmp"}
+	protocolsPossibleValues = []string{
 		"ah", "dccp", "egp", "esp", "gre", "icmp", "igmp", "ipip", "ipv6-encap", "ipv6-frag", "ipv6-icmp",
 		"ipv6-nonxt", "ipv6-opts", "ipv6-route", "ospf", "pgm", "rsvp", "sctp", "tcp", "udp", "udplite", "vrrp",
 	}
@@ -47,6 +49,7 @@ var (
 type Model struct {
 	Id                    types.String `tfsdk:"id"` // needed by TF
 	ProjectId             types.String `tfsdk:"project_id"`
+	Region                types.String `tfsdk:"region"`
 	SecurityGroupId       types.String `tfsdk:"security_group_id"`
 	SecurityGroupRuleId   types.String `tfsdk:"security_group_rule_id"`
 	Direction             types.String `tfsdk:"direction"`
@@ -99,7 +102,8 @@ func NewSecurityGroupRuleResource() resource.Resource {
 
 // securityGroupRuleResource is the resource implementation.
 type securityGroupRuleResource struct {
-	client *iaas.APIClient
+	client       *iaas.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -107,14 +111,45 @@ func (r *securityGroupRuleResource) Metadata(_ context.Context, req resource.Met
 	resp.TypeName = req.ProviderTypeName + "_security_group_rule"
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (r *securityGroupRuleResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Configure adds the provider configured client to the resource.
 func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -122,7 +157,7 @@ func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.
 	tflog.Info(ctx, "iaas client configured")
 }
 
-func (r securityGroupRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+func (r *securityGroupRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var model Model
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
@@ -178,7 +213,7 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 		Description:         description,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`security_group_id`,`security_group_rule_id`\".",
+				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`security_group_id`,`security_group_rule_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -194,6 +229,15 @@ func (r *securityGroupRuleResource) Schema(_ context.Context, _ resource.SchemaR
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "The resource region. If not defined, the provider region is used.",
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"security_group_id": schema.StringAttribute{
@@ -389,9 +433,13 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	var icmpParameters *icmpParametersModel
@@ -432,16 +480,18 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create new security group rule
-	securityGroupRule, err := r.client.CreateSecurityGroupRule(ctx, projectId, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
+	securityGroupRule, err := r.client.CreateSecurityGroupRule(ctx, projectId, region, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	ctx = tflog.SetField(ctx, "security_group_rule_id", *securityGroupRule.Id)
 
 	// Map response body to schema
-	err = mapFields(securityGroupRule, &model)
+	err = mapFields(securityGroupRule, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -464,13 +514,18 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := r.client.GetSecurityGroupRule(ctx, projectId, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, err := r.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -481,8 +536,10 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
-	err = mapFields(securityGroupRuleResp, &model)
+	err = mapFields(securityGroupRuleResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading security group rule", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -513,18 +570,25 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
+
+	ctx = core.InitProviderContext(ctx)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
 	// Delete existing security group rule
-	err := r.client.DeleteSecurityGroupRule(ctx, projectId, securityGroupId, securityGroupRuleId).Execute()
+	err := r.client.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "security group rule deleted")
 }
@@ -534,28 +598,25 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 func (r *securityGroupRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing security group rule",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[security_group_id],[security_group_rule_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[security_group_id],[security_group_rule_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
-	projectId := idParts[0]
-	securityGroupId := idParts[1]
-	securityGroupRuleId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
-	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":             idParts[0],
+		"region":                 idParts[1],
+		"security_group_id":      idParts[2],
+		"security_group_rule_id": idParts[3],
+	})
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("security_group_id"), securityGroupId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("security_group_rule_id"), securityGroupRuleId)...)
 	tflog.Info(ctx, "security group rule state imported")
 }
 
-func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) error {
+func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model, region string) error {
 	if securityGroupRuleResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -572,7 +633,8 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model) erro
 		return fmt.Errorf("security group rule id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.SecurityGroupId.ValueString(), securityGroupRuleId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.SecurityGroupId.ValueString(), securityGroupRuleId)
+	model.Region = types.StringValue(region)
 	model.SecurityGroupRuleId = types.StringValue(securityGroupRuleId)
 	model.Direction = types.StringPointerValue(securityGroupRuleResp.Direction)
 	model.Description = types.StringPointerValue(securityGroupRuleResp.Description)

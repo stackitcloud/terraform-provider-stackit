@@ -124,13 +124,19 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"grafana_initial_admin_user": schema.StringAttribute{
-				Description: "Specifies an initial Grafana admin username.",
-				Computed:    true,
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin username.",
+				Computed:           true,
 			},
 			"grafana_initial_admin_password": schema.StringAttribute{
-				Description: "Specifies an initial Grafana admin password.",
+				DeprecationMessage: "This attribute is deprecated and will be removed on July 5, 2026. Use `grafana_admin_enabled` instead.",
+				Description:        "Specifies an initial Grafana admin password.",
+				Computed:           true,
+				Sensitive:          true,
+			},
+			"grafana_admin_enabled": schema.BoolAttribute{
+				Description: "If true, a default Grafana server admin user was created.",
 				Computed:    true,
-				Sensitive:   true,
 			},
 			"traces_retention_days": schema.Int64Attribute{
 				Description: "Specifies for how many days the traces are kept. Default is set to `7`.",
@@ -381,6 +387,9 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	instanceResp, err := d.client.GetInstance(ctx, instanceId, projectId).Execute()
@@ -398,6 +407,9 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == observability.GETINSTANCERESPONSESTATUS_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
