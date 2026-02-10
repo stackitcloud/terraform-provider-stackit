@@ -1,0 +1,105 @@
+# Ignore this file, it is a temporary workflow for testing purposes.
+
+name: Build and Validate Provider
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build Provider & Test Plan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Build Provider
+        run: |
+          go build -o terraform-provider-stackit
+          chmod +x terraform-provider-stackit
+          echo "BINARY_PATH=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+
+      - name: Configure Terraform Dev Overrides
+        run: |
+          cat <<EOF > ~/.terraformrc
+          provider_installation {
+            dev_overrides {
+              "stackitcloud/stackit" = "${{ env.BINARY_PATH }}"
+            }
+            # Para otros providers (random, null, etc), usa el registro normal
+            direct {}
+          }
+          EOF
+
+          echo "Terraform RC content:"
+          cat ~/.terraformrc
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Create Test Configuration
+        run: |
+          cat <<EOF > main.tf
+          terraform {
+            required_providers {
+              stackit = {
+                source = "stackitcloud/stackit"
+              }
+            }
+          }
+
+          provider "stackit" {
+            default_region                   = "eu01"
+            enable_beta_resources            = true
+            service_account_custom_endpoint  = "https://service-account.api.qa.stackit.cloud"
+            token_custom_endpoint            = "https://accounts.qa.stackit.cloud/oauth/v2/token"
+          }
+
+          resource "stackit_service_account" "sa"   {
+            project_id = "62675838-7758-4b99-a4eb-84b20ac8626b"
+            name       = "terraform-wif-ci"
+          }
+          EOF
+
+      - name: Terraform Plan
+        run: |
+          # Inicializamos sin backend para pruebas rápidas
+          terraform init
+
+          # Ejecutamos plan. Si el provider carga y la API responde, esto pasará.
+          terraform plan -out=tfplan
+        env:
+          STACKIT_USE_OIDC: "1"
+          STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        env:
+          STACKIT_USE_OIDC: "1"
+          STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
+
+      - name: Terraform Destroy
+        if: always()
+        run: |
+          if [ -f terraform.tfstate ]; then
+            terraform destroy -auto-approve
+          else
+            echo "No state file found, skipping destroy."
+          fi
+        env:
+          STACKIT_USE_OIDC: "1"
+          STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"

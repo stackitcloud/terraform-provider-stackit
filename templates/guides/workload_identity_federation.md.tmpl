@@ -102,8 +102,7 @@ jobs:
 
       - name: Terraform Init
         run: |
-          # NOTE: We don't use backend for this example but you should use a backend.
-          terraform init -backend=false
+          terraform init
         env:
           STACKIT_USE_OIDC: "1"
           STACKIT_SERVICE_ACCOUNT_EMAIL: "terraform-example@sa.stackit.cloud"
