@@ -202,7 +202,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_key":                  "Service account key used for authentication. If set, the key flow will be used to authenticate all operations.",
 		"private_key_path":                     "Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
 		"private_key":                          "Private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.",
-		"service_account_email":                "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required uisng OpenID Connect authentication.",
+		"service_account_email":                "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required using OpenID Connect authentication.",
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
 		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
 		"use_oidc":                             "Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",

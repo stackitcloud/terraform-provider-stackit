@@ -11,10 +11,20 @@ provider "stackit" {
 
 # Authentication
 
-# Token flow (scheduled for deprecation and will be removed on December 17, 2025)
+# Workload Identity Federation flow 
 provider "stackit" {
-  default_region        = "eu01"
-  service_account_token = var.service_account_token
+  default_region                        = "eu01"
+  service_account_email                 = var.service_account_email
+  service_account_federated_token       = var.service_account_federated_token
+  use_oidc                              = true
+}
+
+# Workload Identity Federation flow (using path)
+provider "stackit" {
+  default_region                        = "eu01"
+  service_account_email                 = var.service_account_email
+  service_account_federated_token_path  = var.service_account_federated_token_path 
+  use_oidc                              = true
 }
 
 # Key flow
@@ -36,13 +46,13 @@ provider "stackit" {
 
 To authenticate, you will need a [service account](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign the necessary permissions to it, e.g. `project.owner`. There are multiple ways to authenticate:
 
-- Key flow (recommended)
-- Token flow (is scheduled for deprecation and will be removed on December 17, 2025)
+- Workload Identity Federation (Recommended)
+- Key flow 
 
-When setting up authentication, the provider will always try to use the key flow first and search for credentials in several locations, following a specific order:
+When setting up authentication, the provider will always try to use the workload identity federation flow first and search for credentials in several locations, following a specific order:
 
-1. Explicit configuration, e.g. by setting the field `service_account_key_path` in the provider block (see example below)
-2. Environment variable, e.g. by setting `STACKIT_SERVICE_ACCOUNT_KEY_PATH`
+1. Explicit configuration, e.g. by setting the field `use_oidc` in the provider block (see example below)
+2. Environment variable, e.g. by setting `STACKIT_USE_OIDC`
 3. Credentials file
 
    The provider will check the credentials file located in the path defined by the `STACKIT_CREDENTIALS_PATH` env var, if specified,
@@ -51,11 +61,22 @@ When setting up authentication, the provider will always try to use the key flow
 
    ```json
    {
-     "STACKIT_SERVICE_ACCOUNT_TOKEN": "foo_token",
      "STACKIT_SERVICE_ACCOUNT_KEY_PATH": "path/to/sa_key.json",
      "STACKIT_PRIVATE_KEY_PATH": "path/to/private_key.pem"
    }
    ```
+
+### Workload Identity Federation (Recommended)
+
+    The following instructions assume that you have created a service account and assigned the necessary permissions to it, e.g. `project.owner`.
+
+When using Workload Identity Federation (WIF), you don't need a static service account secret or key. Instead, the provider exchanges a short-lived OIDC token (from GitHub Actions, GitLab CI, etc.) for a STACKIT access token. This is the most secure way to authenticate in CI/CD environments as it eliminates the need for long-lived secrets.
+
+WIF can be configured to trust any public OIDC provider following the [official documentation](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-federations/#create-a-federated-identity-provider).
+
+To use WIF, set the `use_oidc` flag to `true` and provide an OIDC token for the exchange. While you can provide the token directly via `service_account_federated_token`, this is **not recommended for GitHub Actions**, as the provider will automatically fetch the token from the environment. For a complete setup, see our [Workload Identity Federation guide](./guides/workload_identity_federation.md).
+
+In addition to this, you must set the `service_account_email` to specify which service account to impersonate.
 
 ### Key flow
 
@@ -67,7 +88,7 @@ When creating the service account key, a new pair can be created automatically, 
 
 **Optionally**, you can provide your own private key when creating the service account key, which will then require you to also provide it explicitly to the [STACKIT Terraform Provider](https://github.com/stackitcloud/terraform-provider-stackit), additionally to the service account key. Check the STACKIT Docs for an [example of how to create your own key-pair](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-keys/).
 
-To configure the key flow, follow this steps:
+To configure the key flow, follow these steps:
 
 1.  Create a service account key:
 
@@ -108,17 +129,6 @@ To configure the key flow, follow this steps:
 > - setting the field in the provider block: `private_key` or `private_key_path`
 > - setting the environment variable: `STACKIT_PRIVATE_KEY_PATH`
 > - setting `STACKIT_PRIVATE_KEY_PATH` in the credentials file (see above)
-
-
-### Token flow
-
-> Is scheduled for deprecation and will be removed on December 17, 2025.
-
-Using this flow is less secure since the token is long-lived. You can provide the token in several ways:
-
-1. Setting the field `service_account_token` in the provider
-2. Setting the environment variable `STACKIT_SERVICE_ACCOUNT_TOKEN`
-3. Setting it in the credentials file (see above)
 
 # Backend configuration
 
@@ -187,7 +197,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
 - `server_update_custom_endpoint` (String) Custom endpoint for the Server Update service
 - `service_account_custom_endpoint` (String) Custom endpoint for the Service Account service
-- `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required uisng OpenID Connect authentication.
+- `service_account_email` (String) Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required using OpenID Connect authentication.
 - `service_account_federated_token` (String) The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.
 - `service_account_federated_token_path` (String) Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
