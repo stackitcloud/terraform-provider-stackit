@@ -164,7 +164,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 								ElementType: types.StringType,
 							},
 							"geofencing": schema.MapAttribute{
-								Description: "A map of URLs to a list of countries where content is allowed.",
+								Description: schemaDescriptions["config_backend_geofencing"],
 								Computed:    true,
 								ElementType: types.ListType{
 									ElemType: types.StringType,

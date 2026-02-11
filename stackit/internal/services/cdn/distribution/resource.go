@@ -56,8 +56,9 @@ var schemaDescriptions = map[string]string{
 	"config_regions":                        "The configured regions where content will be hosted",
 	"config_backend_type":                   "The configured backend type. ",
 	"config_optimizer":                      "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
-	"config_backend_origin_url":             "The configured backend type for the distribution",
-	"config_backend_origin_request_headers": "The configured origin request headers for the backend",
+	"config_backend_origin_url":             "The configured backend type http for the distribution",
+	"config_backend_origin_request_headers": "The configured type http origin request headers for the backend",
+	"config_backend_geofencing":             "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
 	"config_blocked_countries":              "The configured countries where distribution of content is blocked",
 	"domain_name":                           "The name of the domain",
 	"domain_status":                         "The status of the domain",
@@ -291,15 +292,19 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_origin_request_headers"],
 								ElementType: types.StringType,
+								Validators: []validator.Map{
+									mapvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("origin_url")),
+								},
 							},
 							"geofencing": schema.MapAttribute{
-								Description: "A map of URLs to a list of countries where content is allowed.",
+								Description: schemaDescriptions["config_backend_geofencing"],
 								Optional:    true,
 								ElementType: types.ListType{
 									ElemType: types.StringType,
 								},
 								Validators: []validator.Map{
 									mapvalidator.SizeAtLeast(1),
+									mapvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("origin_url")),
 								},
 							},
 							"bucket_url": schema.StringAttribute{
