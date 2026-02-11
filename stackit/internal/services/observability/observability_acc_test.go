@@ -110,7 +110,7 @@ var testConfigVarsMax = config.Variables{
 	"match":                                  config.StringVariable("alert1"),
 	"match_regex":                            config.StringVariable("alert1"),
 	"matchers":                               config.StringVariable("instance =~ \".*\""),
-	"continue":                               config.StringVariable("true"),
+	"continue":                               config.StringVariable("false"),
 	// credential
 	"credential_description": config.StringVariable("This is a description for the test credential."),
 	// logalertgroup
@@ -549,6 +549,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_by.0", testutil.ConvertConfigVariable(testConfigVarsMax["group_by"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_interval", testutil.ConvertConfigVariable(testConfigVarsMax["group_interval"])),
@@ -955,6 +956,7 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.group_wait", testutil.ConvertConfigVariable(testConfigVarsMax["group_wait"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.receiver", testutil.ConvertConfigVariable(testConfigVarsMax["receiver_name"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.repeat_interval", testutil.ConvertConfigVariable(testConfigVarsMax["repeat_interval"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.continue", testutil.ConvertConfigVariable(testConfigVarsMax["continue"])),
 
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_by.0", testutil.ConvertConfigVariable(testConfigVarsMax["group_by"])),
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "alert_config.route.routes.0.group_interval", testutil.ConvertConfigVariable(testConfigVarsMax["group_interval"])),

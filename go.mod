@@ -13,11 +13,11 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.21.1
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.9.3
-	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.9.4
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.6
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.3
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.2
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.3
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.6
@@ -26,20 +26,20 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.5
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.8
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.1
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.3
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.6
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.3
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.25.6
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.4
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.5
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.3
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.1
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.11.6
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.7
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.3.0
-	github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.1
+	github.com/stackitcloud/stackit-sdk-go/services/ske v1.6.3
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.3
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.32.0
