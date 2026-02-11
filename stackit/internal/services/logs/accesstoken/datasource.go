@@ -16,7 +16,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -72,8 +71,7 @@ func (d *logsAccessTokenDataSource) Configure(ctx context.Context, req datasourc
 
 func (d *logsAccessTokenDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Logs access token data source schema.", core.Datasource),
-		Description:         fmt.Sprintf("Logs access token data source schema. %s", core.DatasourceRegionFallbackDocstring),
+		Description: fmt.Sprintf("Logs access token data source schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],

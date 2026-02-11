@@ -3,15 +3,12 @@
 page_title: "stackit_logs_access_token Data Source - stackit"
 subcategory: ""
 description: |-
-  Logs access token data source schema.
-  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
+  Logs access token data source schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on datasource level.
 ---
 
 # stackit_logs_access_token (Data Source)
 
-Logs access token data source schema.
-
-~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
+Logs access token data source schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level.
 
 ## Example Usage
 
