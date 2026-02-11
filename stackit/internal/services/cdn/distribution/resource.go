@@ -65,8 +65,9 @@ var schemaDescriptions = map[string]string{
 	"domain_errors":                         "List of domain errors",
 	"config_backend_bucket_url":             "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
 	"config_backend_region":                 "The region where the bucket is hosted. Required if type is 'bucket'.",
-	"config_backend_access_key_id":          "The access key for the bucket. Required if type is 'bucket'.",
-	"config_backend_secret_key":             "The secret key for the bucket. Required if type is 'bucket'.",
+	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
+	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
+	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
 }
 
 type Model struct {
@@ -99,8 +100,12 @@ type backend struct {
 	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
 	BucketURL            *string               `tfsdk:"bucket_url"`
 	Region               *string               `tfsdk:"region"`
-	AccessKey            *string               `tfsdk:"access_key_id"`
-	SecretKey            *string               `tfsdk:"secret_key"`
+	Credentials          *backendCredentials   `tfsdk:"credentials"`
+}
+
+type backendCredentials struct {
+	AccessKey *string `tfsdk:"access_key_id"`
+	SecretKey *string `tfsdk:"secret_access_key"`
 }
 
 var configTypes = map[string]attr.Type{
@@ -127,8 +132,12 @@ var backendTypes = map[string]attr.Type{
 	"geofencing":             geofencingTypes,
 	"bucket_url":             types.StringType,
 	"region":                 types.StringType,
-	"access_key_id":          types.StringType,
-	"secret_key":             types.StringType,
+	"credentials":            types.ObjectType{AttrTypes: backendCredentialsTypes},
+}
+
+var backendCredentialsTypes = map[string]attr.Type{
+	"access_key_id":     types.StringType,
+	"secret_access_key": types.StringType,
 }
 
 var domainTypes = map[string]attr.Type{
@@ -274,8 +283,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 										// If the origin_url field is populated, no bucket fields can be used
 										path.MatchRelative().AtParent().AtName("bucket_url"),
 										path.MatchRelative().AtParent().AtName("region"),
-										path.MatchRelative().AtParent().AtName("access_key_id"),
-										path.MatchRelative().AtParent().AtName("secret_key"),
+										path.MatchRelative().AtParent().AtName("credentials"),
 									),
 								},
 							},
@@ -298,7 +306,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_bucket_url"],
 								Validators: []validator.String{
-									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("region"), path.MatchRelative().AtParent().AtName("access_key_id"), path.MatchRelative().AtParent().AtName("secret_key")),
+									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("region"), path.MatchRelative().AtParent().AtName("credentials")),
 									stringvalidator.ConflictsWith(
 										// If the origin_url is populated, bucket_url can not be used
 										path.MatchRelative().AtParent().AtName("origin_url"),
@@ -310,17 +318,23 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Description: schemaDescriptions["config_backend_region"],
 								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
-							"access_key_id": schema.StringAttribute{
+							"credentials": schema.SingleNestedAttribute{
 								Optional:    true,
-								Sensitive:   true,
-								Description: schemaDescriptions["config_backend_access_key_id"],
-								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
-							},
-							"secret_key": schema.StringAttribute{
-								Optional:    true,
-								Sensitive:   true,
-								Description: schemaDescriptions["config_backend_secret_key"],
-								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Description: schemaDescriptions["config_backend_credentials"],
+								Attributes: map[string]schema.Attribute{
+									"access_key_id": schema.StringAttribute{
+										Required:    true,
+										Sensitive:   true,
+										Description: schemaDescriptions["config_backend_credentials_access_key_id"],
+									},
+
+									"secret_access_key": schema.StringAttribute{
+										Required:    true,
+										Sensitive:   true,
+										Description: schemaDescriptions["config_backend_credentials_access_key_id"],
+									},
+								},
+								Validators: []validator.Object{objectvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
 						},
 					},
@@ -565,10 +579,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			Type:      cdn.PtrString("bucket"),
 			BucketUrl: configModel.Backend.BucketURL,
 			Region:    configModel.Backend.Region,
-			Credentials: &cdn.BucketCredentials{
-				AccessKeyId:     configModel.Backend.AccessKey,
-				SecretAccessKey: configModel.Backend.SecretKey,
-			},
+		}
+		if configModel.Backend.Credentials != nil {
+			configPatchBackend.BucketBackendPatch.Credentials = &cdn.BucketCredentials{
+				AccessKeyId:     configModel.Backend.Credentials.AccessKey,
+				SecretAccessKey: configModel.Backend.Credentials.SecretKey,
+			}
 		}
 	}
 
@@ -814,29 +830,34 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 			"origin_request_headers": originRequestHeaders,
 			"geofencing":             geofencingVal,
 			// bucket fields must be null when using HTTP
-			"bucket_url":    types.StringNull(),
-			"region":        types.StringNull(),
-			"access_key_id": types.StringNull(),
-			"secret_key":    types.StringNull(),
+			"bucket_url":  types.StringNull(),
+			"region":      types.StringNull(),
+			"credentials": types.ObjectNull(backendCredentialsTypes),
 		}
 	} else if distribution.Config.Backend.BucketBackend != nil {
 		// Preserve secrets from previous state because API does not return them
 		accessKeyVal := types.StringNull()
 		secretKeyVal := types.StringNull()
 
-		if oldConfig.Backend.AccessKey != nil {
-			accessKeyVal = types.StringValue(*oldConfig.Backend.AccessKey)
+		if oldConfig.Backend.Credentials != nil && oldConfig.Backend.Credentials.AccessKey != nil {
+			accessKeyVal = types.StringValue(*oldConfig.Backend.Credentials.AccessKey)
 		}
-		if oldConfig.Backend.SecretKey != nil {
-			secretKeyVal = types.StringValue(*oldConfig.Backend.SecretKey)
+		if oldConfig.Backend.Credentials != nil && oldConfig.Backend.Credentials.SecretKey != nil {
+			secretKeyVal = types.StringValue(*oldConfig.Backend.Credentials.SecretKey)
+		}
+		credentialsObj, diags := types.ObjectValue(backendCredentialsTypes, map[string]attr.Value{
+			"access_key_id":     accessKeyVal,
+			"secret_access_key": secretKeyVal,
+		})
+		if diags.HasError() {
+			return core.DiagsToError(diags)
 		}
 
 		backendValues = map[string]attr.Value{
-			"type":          types.StringValue("bucket"),
-			"bucket_url":    types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
-			"region":        types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
-			"access_key_id": accessKeyVal,
-			"secret_key":    secretKeyVal,
+			"type":        types.StringValue("bucket"),
+			"bucket_url":  types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
+			"region":      types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
+			"credentials": credentialsObj,
 			// HTTP field must be null when using Bucket
 			"origin_url":             types.StringNull(),
 			"origin_request_headers": types.MapNull(types.StringType),
@@ -948,15 +969,19 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
 		}
-
+		var accessKey, secretKey *string
+		if rawConfig.Backend.Credentials != nil {
+			accessKey = rawConfig.Backend.Credentials.AccessKey
+			secretKey = rawConfig.Backend.Credentials.SecretKey
+		}
 		backend = &cdn.CreateDistributionPayloadBackend{
 			BucketBackendCreate: &cdn.BucketBackendCreate{
 				Type:      cdn.PtrString("bucket"),
 				BucketUrl: cfg.Backend.BucketBackend.BucketUrl,
 				Region:    cfg.Backend.BucketBackend.Region,
 				Credentials: &cdn.BucketCredentials{
-					AccessKeyId:     rawConfig.Backend.AccessKey,
-					SecretAccessKey: rawConfig.Backend.SecretKey,
+					AccessKeyId:     accessKey,
+					SecretAccessKey: secretKey,
 				},
 			},
 		}

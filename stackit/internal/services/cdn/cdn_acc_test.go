@@ -387,9 +387,11 @@ func configBucketResources(bucketName, credentialsGroupName string) string {
 					bucket_url = "https://${stackit_objectstorage_bucket.bucket.name}.object.storage.eu01.onstackit.cloud"
 					region     = "eu01"
 					
-					# Pass the keys directly from the credential resource
-					access_key_id = stackit_objectstorage_credential.creds.access_key
-					secret_key = stackit_objectstorage_credential.creds.secret_access_key
+					# Pass the keys via credentials block
+                    credentials = {
+                        access_key_id = stackit_objectstorage_credential.creds.access_key
+                        secret_access_key = stackit_objectstorage_credential.creds.secret_access_key
+                    }
 				}
 				regions           = ["EU", "US"]
 				blocked_countries = ["CN", "RU"] 
@@ -442,11 +444,11 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					// CRITICAL: Verify that the CDN keys match the Object Storage keys
 					// We use AttrPair because the values are generated dynamically on the server side
 					resource.TestCheckResourceAttrPair(
-						"stackit_cdn_distribution.distribution", "config.backend.access_key_id",
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.access_key_id",
 						"stackit_objectstorage_credential.creds", "access_key",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_cdn_distribution.distribution", "config.backend.secret_key",
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.secret_access_key",
 						"stackit_objectstorage_credential.creds", "secret_access_key",
 					),
 				),
@@ -465,7 +467,7 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 				// We MUST ignore credentials on import verification
 				// 1. API doesn't return them (security).
 				// 2. State has them (from resource creation).
-				ImportStateVerifyIgnore: []string{"config.backend.access_key_id", "config.backend.secret_key"},
+				ImportStateVerifyIgnore: []string{"config.backend.credentials"},
 			},
 			// Step 3: Data Source
 			{
@@ -476,8 +478,8 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.bucket_url", expectedBucketUrl),
 
 					// Security Check: Secrets should NOT be in Data Source
-					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.access_key_id"),
-					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.secret_key"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.access_key_id"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.secret_access_key"),
 				),
 			},
 		},

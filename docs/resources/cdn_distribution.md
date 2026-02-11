@@ -45,8 +45,10 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
 
       # Credentials are required for bucket backends
       # It is strongly recommended to use variables for secrets
-      access_key_id = var.bucket_access_key
-      secret_key = var.bucket_secret_key
+      credentials = {
+        access_key_id     = var.bucket_access_key
+        secret_access_key = var.bucket_secret_key
+      }
     }
     regions           = ["EU", "US"]
     blocked_countries = ["CN", "RU"]
@@ -104,13 +106,21 @@ Required:
 
 Optional:
 
-- `access_key_id` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
 - `bucket_url` (String) The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.
+- `credentials` (Attributes) The credentials for the bucket. Required if type is 'bucket'. (see [below for nested schema](#nestedatt--config--backend--credentials))
 - `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend
 - `origin_url` (String) The configured backend type for the distribution
 - `region` (String) The region where the bucket is hosted. Required if type is 'bucket'.
-- `secret_key` (String, Sensitive) The secret key for the bucket. Required if type is 'bucket'.
+
+<a id="nestedatt--config--backend--credentials"></a>
+### Nested Schema for `config.backend.credentials`
+
+Required:
+
+- `access_key_id` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
+- `secret_access_key` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
+
 
 
 <a id="nestedatt--config--optimizer"></a>

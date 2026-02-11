@@ -27,8 +27,10 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
 
       # Credentials are required for bucket backends
       # It is strongly recommended to use variables for secrets
-      access_key = var.bucket_access_key
-      secret_key = var.bucket_secret_key
+      credentials = {
+        access_key_id     = var.bucket_access_key
+        secret_access_key = var.bucket_secret_key
+      }
     }
     regions           = ["EU", "US"]
     blocked_countries = ["CN", "RU"]
