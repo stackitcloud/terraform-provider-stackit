@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -357,105 +358,128 @@ func TestAccCDNDistributionResource(t *testing.T) {
 		},
 	})
 }
-func configBucketResources(bucketUrl, region, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-                %s
 
-                resource "stackit_cdn_distribution" "distribution" {
-                    project_id = "%s"
-                    config = {
-                        backend = {
-                            type       = "bucket"
-                            bucket_url = "%s"
-                            region     = "%s"
-                            access_key_id = "%s"
-                            secret_key = "%s"
-                        }
-                        regions           = ["EU", "US"]
-                        blocked_countries = ["CN", "RU"] 
-            
-                        optimizer = {
-                            enabled = false
-                        }
-                    }
-                }
-        `, testutil.CdnProviderConfig(), testutil.ProjectId, bucketUrl, region, accessKey, secretKey)
+func configBucketResources(bucketName, credentialsGroupName string) string {
+	return fmt.Sprintf(`
+		%s
+
+		resource "stackit_objectstorage_bucket" "bucket" {
+			project_id = "%s"
+			name       = "%s"
+		}
+
+		resource "stackit_objectstorage_credentials_group" "group" {
+			project_id = "%s"
+			name       = "%s"
+		}
+
+		resource "stackit_objectstorage_credential" "creds" {
+			project_id           = "%s"
+			credentials_group_id = stackit_objectstorage_credentials_group.group.credentials_group_id
+		}
+
+		resource "stackit_cdn_distribution" "distribution" {
+			project_id = "%s"
+			config = {
+				backend = {
+					type       = "bucket"
+					# Construct the URL dynamically using the bucket name
+					bucket_url = "https://${stackit_objectstorage_bucket.bucket.name}.object.storage.eu01.onstackit.cloud"
+					region     = "eu01"
+					
+					# Pass the keys directly from the credential resource
+					access_key_id = stackit_objectstorage_credential.creds.access_key
+					secret_key = stackit_objectstorage_credential.creds.secret_access_key
+				}
+				regions           = ["EU", "US"]
+				blocked_countries = ["CN", "RU"] 
+	
+				optimizer = {
+					enabled = false
+				}
+			}
+		}
+		`, testutil.CdnProviderConfig(),
+		testutil.ProjectId, bucketName,
+		testutil.ProjectId, credentialsGroupName,
+		testutil.ProjectId,
+		testutil.ProjectId,
+	)
 }
-func randomString(n int) string {
-	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	bytes := make([]byte, n)
-	if _, err := cryptoRand.Read(bytes); err != nil {
-		panic("failed to generate random string: " + err.Error())
-	}
-	for i, b := range bytes {
-		bytes[i] = letters[b%byte(len(letters))]
-	}
-	return string(bytes)
+
+func configBucketDatasource(bucketName, credentialsGroupName string) string {
+	return fmt.Sprintf(`
+		%s
+
+		data "stackit_cdn_distribution" "bucket_ds" {
+			project_id      = stackit_cdn_distribution.distribution.project_id
+			distribution_id = stackit_cdn_distribution.distribution.distribution_id
+		}
+	`, configBucketResources(bucketName, credentialsGroupName))
 }
+
 func TestAccCDNDistributionBucketResource(t *testing.T) {
-	// Define dummy bucket data
-	// Note: We use dummy credentials. The CDN API might validate format,
-	// but usually accepts valid-looking strings for async creation.
-	bucketUrl := "https://my-private-bucket.s3.eu-central-1.amazonaws.com"
-	bucketRegion := "eu01"
-	accessKey := strings.ToUpper(randomString(16))
-	secretKey := randomString(40)
+
+	bucketName := fmt.Sprintf("tf-acc-bucket-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	credentialsGroupName := fmt.Sprintf("tf-acc-group-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+
+	expectedBucketUrl := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketName)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckCDNDistributionDestroy,
 		Steps: []resource.TestStep{
-			// 1. Distribution Create with Bucket Backend
+			// Step 1: Create Resource (Real Bucket & Creds)
 			{
-				Config: configBucketResources(bucketUrl, bucketRegion, accessKey, secretKey),
+				Config: configBucketResources(bucketName, credentialsGroupName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Basic Identity Checks
-					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
-					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
-
-					// Backend Type Check
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.type", "bucket"),
 
-					// Bucket Specific Field Checks
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", bucketUrl),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", bucketRegion),
+					// Verify the Bucket URL matches the one we constructed
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", expectedBucketUrl),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", "eu01"),
 
-					// CRITICAL: Check Credentials Persistence
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.access_key_id", accessKey),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.secret_key", secretKey),
-
-					// Ensure HTTP fields are not set
-					resource.TestCheckNoResourceAttr("stackit_cdn_distribution.distribution", "config.backend.origin_url"),
+					// CRITICAL: Verify that the CDN keys match the Object Storage keys
+					// We use AttrPair because the values are generated dynamically on the server side
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.access_key_id",
+						"stackit_objectstorage_credential.creds", "access_key",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.secret_key",
+						"stackit_objectstorage_credential.creds", "secret_access_key",
+					),
 				),
 			},
-			// 2. Import Test
-			// This verifies that importing a bucket distribution works,
-			// although note that imported resources usually lose secrets (access_key_id/secret_key)
-			// because they are not in the API response.
 			{
 				ResourceName: "stackit_cdn_distribution.distribution",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_cdn_distribution.distribution"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource stackit_cdn_distribution.distribution")
+						return "", fmt.Errorf("couldn't find resource")
 					}
-					distributionId, ok := r.Primary.Attributes["distribution_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute distribution_id")
-					}
-
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, distributionId), nil
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, r.Primary.Attributes["distribution_id"]), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
 				// We MUST ignore credentials on import verification
-				// because the API does not return them, so Terraform will see them as null/empty
-				// in the new state, differing from the config.
-				ImportStateVerifyIgnore: []string{
-					"config.backend.access_key_id",
-					"config.backend.secret_key",
-				},
+				// 1. API doesn't return them (security).
+				// 2. State has them (from resource creation).
+				ImportStateVerifyIgnore: []string{"config.backend.access_key_id", "config.backend.secret_key"},
+			},
+			// Step 3: Data Source
+			{
+				Config: configBucketDatasource(bucketName, credentialsGroupName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair("data.stackit_cdn_distribution.bucket_ds", "project_id", "stackit_cdn_distribution.distribution", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.type", "bucket"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.bucket_url", expectedBucketUrl),
+
+					// Security Check: Secrets should NOT be in Data Source
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.access_key_id"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.secret_key"),
+				),
 			},
 		},
 	})
