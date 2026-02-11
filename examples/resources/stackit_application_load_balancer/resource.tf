@@ -108,6 +108,7 @@ resource "stackit_application_load_balancer" "example" {
     (var.label_key) = var.label_value
   }
   listeners = [{
+    name = "my-listener"
     port = 443
     http = {
       hosts = [{

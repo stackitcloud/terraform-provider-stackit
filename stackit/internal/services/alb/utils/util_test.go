@@ -16,7 +16,7 @@ import (
 
 const (
 	testVersion        = "1.2.3"
-	testCustomEndpoint = "https://loadbalancer-custom-endpoint.api.stackit.cloud"
+	testCustomEndpoint = "https://alb-custom-endpoint.api.stackit.cloud"
 )
 
 func TestConfigureClient(t *testing.T) {
@@ -58,8 +58,8 @@ func TestConfigureClient(t *testing.T) {
 			name: "custom endpoint",
 			args: args{
 				providerData: &core.ProviderData{
-					Version:                    testVersion,
-					LoadBalancerCustomEndpoint: testCustomEndpoint,
+					Version:           testVersion,
+					ALBCustomEndpoint: testCustomEndpoint,
 				},
 			},
 			expected: func() *albSdk.APIClient {

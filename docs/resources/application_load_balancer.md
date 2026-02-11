@@ -127,6 +127,7 @@ resource "stackit_application_load_balancer" "example" {
     (var.label_key) = var.label_value
   }
   listeners = [{
+    name = "my-listener"
     port = 443
     http = {
       hosts = [{
@@ -228,7 +229,7 @@ resource "stackit_application_load_balancer" "example" {
 - `listeners` (Attributes List) List of all listeners which will accept traffic. Limited to 20. (see [below for nested schema](#nestedatt--listeners))
 - `name` (String) Application Load balancer name.
 - `networks` (Attributes Set) List of networks that listeners and targets reside in. (see [below for nested schema](#nestedatt--networks))
-- `plan_id` (String) Service Plan configures the size of the Application Load Balancer. Possible values are: `p10`.. This list can change in the future. Therefore, this is not an enum.
+- `plan_id` (String) Service Plan configures the size of the Application Load Balancer e.g. 'p10'. See available plans via STACKIT CLI 'stackit beta alb plans' or API https://docs.api.stackit.cloud/documentation/alb/version/v2#tag/Project/operation/APIService_ListPlans
 - `project_id` (String) STACKIT project ID to which the Application Load Balancer is associated.
 - `target_pools` (Attributes List) List of all target pools which will be used in the Application Load Balancer. Limited to 20. (see [below for nested schema](#nestedatt--target_pools))
 
@@ -255,6 +256,7 @@ resource "stackit_application_load_balancer" "example" {
 Required:
 
 - `http` (Attributes) Configuration for HTTP traffic. (see [below for nested schema](#nestedatt--listeners--http))
+- `name` (String) Unique name for the listener
 - `port` (Number) Port number on which the listener receives incoming traffic.
 - `protocol` (String) Protocol is the highest network protocol we understand to load balance. Possible values are: `PROTOCOL_UNSPECIFIED`, `PROTOCOL_HTTP`, `PROTOCOL_HTTPS`.
 
@@ -262,10 +264,6 @@ Optional:
 
 - `https` (Attributes) Configuration for handling HTTPS traffic on this listener. (see [below for nested schema](#nestedatt--listeners--https))
 - `waf_config_name` (String) Enable Web Application Firewall (WAF), referenced by name. See "Application Load Balancer - Web Application Firewall API" for more information.
-
-Read-Only:
-
-- `name` (String) Unique name for the listener
 
 <a id="nestedatt--listeners--http"></a>
 ### Nested Schema for `listeners.http`
@@ -482,8 +480,7 @@ Required:
 Read-Only:
 
 - `description` (String) The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP "45.135.247.139" could not be found.
-- `type` (String) Enum: Possible values are: `TYPE_UNSPECIFIED`, `TYPE_INTERNAL`, `TYPE_QUOTA_SECGROUP_EXCEEDED`, `TYPE_QUOTA_SECGROUPRULE_EXCEEDED`, `TYPE_PORT_NOT_CONFIGURED`, `TYPE_FIP_NOT_CONFIGURED`, `TYPE_TARGET_NOT_ACTIVE`, `TYPE_METRICS_MISCONFIGURED`, `TYPE_LOGS_MISCONFIGURED`.
-The error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error.
+- `type` (String) The error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error. Possible values are: `TYPE_UNSPECIFIED`, `TYPE_INTERNAL`, `TYPE_QUOTA_SECGROUP_EXCEEDED`, `TYPE_QUOTA_SECGROUPRULE_EXCEEDED`, `TYPE_PORT_NOT_CONFIGURED`, `TYPE_FIP_NOT_CONFIGURED`, `TYPE_TARGET_NOT_ACTIVE`, `TYPE_METRICS_MISCONFIGURED`, `TYPE_LOGS_MISCONFIGURED`.
 
 
 <a id="nestedatt--load_balancer_security_group"></a>

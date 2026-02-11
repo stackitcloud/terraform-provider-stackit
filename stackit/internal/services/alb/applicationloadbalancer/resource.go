@@ -1,10 +1,8 @@
 package alb
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -70,29 +68,14 @@ type Model struct {
 	Version                        types.String `tfsdk:"version"`
 }
 
-type errorsALB struct {
-	Description types.String `tfsdk:"description"`
-	Type        types.String `tfsdk:"type"`
-}
-
 var errorsType = map[string]attr.Type{
 	"description": types.StringType,
 	"type":        types.StringType,
 }
 
-type loadBalancerSecurityGroup struct {
-	ID   types.String `tfsdk:"id"`
-	Name types.String `tfsdk:"name"`
-}
-
 var loadBalancerSecurityGroupType = map[string]attr.Type{
 	"id":   types.StringType,
 	"name": types.StringType,
-}
-
-type targetSecurityGroup struct {
-	ID   types.String `tfsdk:"id"`
-	Name types.String `tfsdk:"name"`
 }
 
 var targetSecurityGroupType = map[string]attr.Type{
@@ -415,7 +398,7 @@ func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.S
 		"region":     "The resource region (e.g. eu01). If not defined, the provider region is used.",
 		"disable_target_security_group_assignment": "Disable target security group assignemt to allow targets outside of the given network. Connectivity to targets need to be ensured by the customer, including routing and Security Groups (targetSecurityGroup can be assigned). Not changeable after creation.",
 		"errors":                                 "Reports all errors a Application Load Balancer has.",
-		"errors.type":                            "The error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error." + utils.FormatPossibleValues(errorOptions...) ,
+		"errors.type":                            "The error type specifies which part of the Application Load Balancer encountered the error. I.e. the API will not check if a provided public IP is actually available in the project. Instead the Application Load Balancer with try to use the provided IP and if not available reports TYPE_FIP_NOT_CONFIGURED error. " + utils.FormatPossibleValues(errorOptions...),
 		"errors.description":                     "The error description contains additional helpful user information to fix the error state of the Application Load Balancer. For example the IP 45.135.247.139 does not exist in the project, then the description will report: Floating IP \"45.135.247.139\" could not be found.",
 		"external_address":                       "The external IP address where this Application Load Balancer is exposed. Not changeable after creation.",
 		"labels":                                 "Labels represent user-defined metadata as key-value pairs. Label count cannot exceed 64 per ALB.",
@@ -520,9 +503,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Optional:    true,
 				// must be computed to allow for storing the override value from the provider
 				Computed: true,
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(4, 6),
-				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
@@ -1169,7 +1149,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 	// Create a new Application Load Balancer
 	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
-		errStr := prettyApiErr(err)
+		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
 		return
 	}
@@ -1233,7 +1213,7 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 				return
 			}
 		}
-		errStr := prettyApiErr(err)
+		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Application Load Balancer", fmt.Sprintf("Calling API: %v", errStr))
 		return
 	}
@@ -1294,7 +1274,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 	// Update target pool
 	updateResp, err := r.client.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
-		errStr := prettyApiErr(err)
+		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for update: %v", errStr))
 		return
 	}
@@ -1345,7 +1325,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 	// Delete Application Load Balancer
 	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
-		errStr := prettyApiErr(err)
+		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Calling API for delete: %v", errStr))
 		return
 	}
@@ -1378,18 +1358,6 @@ func (r *applicationLoadBalancerResource) ImportState(ctx context.Context, req r
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
 	tflog.Info(ctx, "Application Load Balancer state imported")
-}
-
-func prettyApiErr(err error) string {
-	var oapiErr *oapierror.GenericOpenAPIError
-	if errors.As(err, &oapiErr) {
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, oapiErr.Body, "", "  "); err != nil {
-			return err.Error()
-		}
-		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
-	}
-	return err.Error()
 }
 
 // toCreatePayload and all other toX functions in this file turn a Terraform Application Load Balancer model into a createLoadBalancerPayload to be used with the Application Load Balancer API.
@@ -1432,7 +1400,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albSdk.CreateLoadBalan
 	}, nil
 }
 
-func toLabelPayload(ctx context.Context, model *Model) (albSdk.CreateLoadBalancerPayloadGetLabelsAttributeType, error) {
+func toLabelPayload(ctx context.Context, model *Model) (albSdk.CreateLoadBalancerPayloadGetLabelsAttributeType, error) { //nolint:gocritic //This needs to be a pointer of a pointe anyway due to how the SDK works
 	if utils.IsUndefined(model.Labels) {
 		return nil, nil
 	}
@@ -1450,13 +1418,13 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, 
 		return nil, nil
 	}
 
-	listenersModel := []listener{}
+	var listenersModel []listener
 	diags := model.Listeners.ElementsAs(ctx, &listenersModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting listeners: %w", core.DiagsToError(diags))
 	}
 
-	payload := []albSdk.Listener{}
+	var payload []albSdk.Listener
 	for i := range listenersModel {
 		listenerModel := listenersModel[i]
 		httpPayload, err := toHttpPayload(ctx, &listenerModel)
@@ -1480,7 +1448,7 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, 
 	return &payload, nil
 }
 
-func toHttpPayload(ctx context.Context, listenerModel *listener) (albSdk.ListenerGetHttpAttributeType, error) {
+func toHttpPayload(ctx context.Context, listenerModel *listener) (*albSdk.ProtocolOptionsHTTP, error) {
 	if utils.IsUndefined(listenerModel.Http) {
 		return nil, errors.New("http is required")
 	}
@@ -1496,7 +1464,7 @@ func toHttpPayload(ctx context.Context, listenerModel *listener) (albSdk.Listene
 		return nil, fmt.Errorf("converting host payload: %w", err)
 	}
 
-	payload := albSdk.ListenerGetHttpArgType{
+	payload := albSdk.ProtocolOptionsHTTP{
 		Hosts: hostsPayload,
 	}
 	return &payload, nil
@@ -1507,7 +1475,7 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOpt
 		return nil, nil
 	}
 
-	hostsModel := []hostConfig{}
+	var hostsModel []hostConfig
 	diags := httpModel.Hosts.ElementsAs(ctx, &hostsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting hosts: %w", core.DiagsToError(diags))
@@ -1536,13 +1504,13 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) (albSdk.Ho
 		return nil, nil
 	}
 
-	rulesModel := []rule{}
+	var rulesModel []rule
 	diags := hostConfigModel.Rules.ElementsAs(ctx, &rulesModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting rules: %w", core.DiagsToError(diags))
 	}
 
-	payload := []albSdk.Rule{}
+	var payload []albSdk.Rule
 	for i := range rulesModel {
 		ruleModel := rulesModel[i]
 		cookiePersistencePayload, err := toCookiePersistencePayload(ctx, &ruleModel)
@@ -1578,7 +1546,7 @@ func toQueryParametersPayload(ctx context.Context, ruleModel *rule) (albSdk.Rule
 		return nil, nil
 	}
 
-	queryParametersModel := []queryParameter{}
+	var queryParametersModel []queryParameter
 	diags := ruleModel.QueryParameters.ElementsAs(ctx, &queryParametersModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting query parameter payload: %w", core.DiagsToError(diags))
@@ -1645,7 +1613,7 @@ func toHeadersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetHeade
 		return nil, nil
 	}
 
-	headersModel := []headers{}
+	var headersModel []headers
 	diags := ruleModel.Headers.ElementsAs(ctx, &headersModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting headers: %w", core.DiagsToError(diags))
@@ -1715,13 +1683,13 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]albSdk.Network, er
 		return nil, nil
 	}
 
-	networksModel := []network{}
+	var networksModel []network
 	diags := model.Networks.ElementsAs(ctx, &networksModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting networks: %w", core.DiagsToError(diags))
 	}
 
-	payload := []albSdk.Network{}
+	var payload []albSdk.Network
 	for i := range networksModel {
 		networkModel := networksModel[i]
 		payload = append(payload, albSdk.Network{
@@ -1805,13 +1773,13 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]albSdk.TargetPo
 		return nil, nil
 	}
 
-	targetPoolsModel := []targetPool{}
+	var targetPoolsModel []targetPool
 	diags := model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting targetPools: %w", core.DiagsToError(diags))
 	}
 
-	payload := []albSdk.TargetPool{}
+	var payload []albSdk.TargetPool
 	for i := range targetPoolsModel {
 		targetPoolModel := targetPoolsModel[i]
 
@@ -1994,13 +1962,13 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]albSdk.Target, er
 		return nil, nil
 	}
 
-	targetsModel := []target{}
+	var targetsModel []target
 	diags := tp.Targets.ElementsAs(ctx, &targetsModel, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting Targets list: %w", core.DiagsToError(diags))
 	}
 
-	payload := []albSdk.Target{}
+	var payload []albSdk.Target
 	for i := range targetsModel {
 		targetModel := targetsModel[i]
 		payload = append(payload, albSdk.Target{
@@ -2062,7 +2030,7 @@ func mapFields(ctx context.Context, alb *albSdk.LoadBalancer, m *Model, region s
 	if err != nil {
 		return fmt.Errorf("mapping network: %w", err)
 	}
-	err = mapOptions(ctx, alb, m)
+	err = mapOptions(alb, m)
 	if err != nil {
 		return fmt.Errorf("mapping options: %w", err)
 	}
@@ -2081,7 +2049,6 @@ func mapDisableSecurityGroupAssignment(applicationLoadBalancerResp *albSdk.LoadB
 	if applicationLoadBalancerResp.DisableTargetSecurityGroupAssignment != nil && *applicationLoadBalancerResp.DisableTargetSecurityGroupAssignment {
 		m.DisableSecurityGroupAssignment = types.BoolValue(true)
 	}
-	return
 }
 
 func mapErrors(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error {
@@ -2090,7 +2057,7 @@ func mapErrors(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error
 		return nil
 	}
 
-	errorsSet := []attr.Value{}
+	var errorsSet []attr.Value
 	for i, errorsResp := range *applicationLoadBalancerResp.Errors {
 		errorMap := map[string]attr.Value{
 			"description": types.StringPointerValue(errorsResp.Description),
@@ -2194,12 +2161,12 @@ func mapListeners(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadB
 		}
 	}
 
-	listenersSet := []attr.Value{}
+	var listenersSet []attr.Value
 	for i, listenerResp := range *applicationLoadBalancerResp.Listeners {
 		var configMatch *listener
-		for _, cl := range configListeners {
-			if !cl.Name.IsNull() && cl.Name.ValueString() == *listenerResp.Name {
-				configMatch = &cl
+		for j := range configListeners {
+			if !configListeners[j].Name.IsNull() && configListeners[j].Name.ValueString() == *listenerResp.Name {
+				configMatch = &configListeners[j]
 				break
 			}
 		}
@@ -2288,7 +2255,7 @@ func mapHosts(ctx context.Context, hostsResp albSdk.ProtocolOptionsHTTPGetHostsA
 		return fmt.Errorf("unpacking hosts from model: %w", core.DiagsToError(diags))
 	}
 
-	hostsSet := []attr.Value{}
+	var hostsSet []attr.Value
 	for i, hostResp := range *hostsResp {
 		var configMatch *hostConfig
 		for _, ch := range configHosts {
@@ -2343,7 +2310,7 @@ func mapRules(ctx context.Context, rulesResp albSdk.HostConfigGetRulesAttributeT
 		return fmt.Errorf("unpacking rules from model: %w", core.DiagsToError(diags))
 	}
 
-	rulesList := []attr.Value{}
+	var rulesList []attr.Value
 	for i, ruleResp := range *rulesResp {
 		webSocket := types.BoolValue(false)
 		// If the webSocket is nil in the response we set it to false in the TF state to
@@ -2423,7 +2390,7 @@ func mapQueryParameters(queryParamsResp albSdk.RuleGetQueryParametersAttributeTy
 		return nil
 	}
 
-	queryParamsSet := []attr.Value{}
+	var queryParamsSet []attr.Value
 	for i, queryParamResp := range *queryParamsResp {
 		queryParamMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(queryParamResp.Name),
@@ -2456,7 +2423,7 @@ func mapHeaders(headersResp albSdk.RuleGetHeadersAttributeType, r map[string]att
 		return nil
 	}
 
-	headersSet := []attr.Value{}
+	var headersSet []attr.Value
 	for i, headerResp := range *headersResp {
 		headerMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(headerResp.Name),
@@ -2554,7 +2521,7 @@ func mapNetworks(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) err
 		return nil
 	}
 
-	networksSet := []attr.Value{}
+	var networksSet []attr.Value
 	for i, networkResp := range *applicationLoadBalancerResp.Networks {
 		networkMap := map[string]attr.Value{
 			"network_id": types.StringPointerValue(networkResp.NetworkId),
@@ -2581,7 +2548,7 @@ func mapNetworks(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) err
 	return nil
 }
 
-func mapOptions(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error {
+func mapOptions(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error {
 	if applicationLoadBalancerResp.Options == nil {
 		m.Options = types.ObjectNull(optionsTypes)
 		return nil
@@ -2684,7 +2651,7 @@ func mapAccessControl(accessControlResp *albSdk.LoadbalancerOptionAccessControl,
 		"allowed_source_ranges": types.SetNull(types.StringType),
 	}
 	if accessControlResp.HasAllowedSourceRanges() {
-		allowedSourceRangesSet := []attr.Value{}
+		var allowedSourceRangesSet []attr.Value
 		for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
 			rangeTF := types.StringValue(rangeResp)
 			allowedSourceRangesSet = append(allowedSourceRangesSet, rangeTF)
@@ -2720,12 +2687,12 @@ func mapTargetPools(ctx context.Context, applicationLoadBalancerResp *albSdk.Loa
 		}
 	}
 
-	targetPoolsSet := []attr.Value{}
+	var targetPoolsSet []attr.Value
 	for i, targetPoolResp := range *applicationLoadBalancerResp.TargetPools {
 		var configMatch *targetPool
-		for _, ctp := range configTargetPools {
-			if !ctp.Name.IsNull() && ctp.Name.ValueString() == *targetPoolResp.Name {
-				configMatch = &ctp
+		for j := range configTargetPools {
+			if !configTargetPools[j].Name.IsNull() && configTargetPools[j].Name.ValueString() == *targetPoolResp.Name {
+				configMatch = &configTargetPools[j]
 				break
 			}
 		}
@@ -2879,7 +2846,7 @@ func mapTargets(targetsResp *[]albSdk.Target, tp map[string]attr.Value) error {
 		return nil
 	}
 
-	targetsSet := []attr.Value{}
+	var targetsSet []attr.Value
 	for i, targetResp := range *targetsResp {
 		targetMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(targetResp.DisplayName),

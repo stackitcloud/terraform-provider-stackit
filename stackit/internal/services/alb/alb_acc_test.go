@@ -643,7 +643,7 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_loadbalancer" {
 			continue
 		}
-		// loadbalancer terraform ID: = "[project_id],[name]"
+		// loadbalancer terraform ID: = "[project_id],[region],[name]"
 		loadbalancerName := strings.Split(rs.Primary.ID, core.Separator)[1]
 		loadbalancersToDestroy = append(loadbalancersToDestroy, loadbalancerName)
 	}
