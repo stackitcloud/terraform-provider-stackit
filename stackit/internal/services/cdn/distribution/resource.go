@@ -726,7 +726,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	// Check if we have existing configuration to preserve secrets
 	var oldConfig distributionConfig
-	if !model.Config.IsNull() && !model.Config.IsUnknown() {
+	if !utils.IsUndefined(model.Config) {
 		diags := model.Config.As(ctx, &oldConfig, basetypes.ObjectAsOptions{
 			UnhandledNullAsEmpty:    true,
 			UnhandledUnknownAsEmpty: true,
