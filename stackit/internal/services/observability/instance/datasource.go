@@ -309,6 +309,10 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: "The route for the alert.",
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
+							"continue": schema.BoolAttribute{
+								Description: routeDescriptions["continue"],
+								Computed:    true,
+							},
 							"group_by": schema.ListAttribute{
 								Description: "The labels by which incoming alerts are grouped together. For example, multiple alerts coming in for cluster=A and alertname=LatencyHigh would be batched into a single group. To aggregate by all possible labels use the special value '...' as the sole label name, for example: group_by: ['...']. This effectively disables aggregation entirely, passing through all alerts as-is. This is unlikely to be what you want, unless you have a very low alert volume or your upstream notification system performs its own grouping.",
 								Computed:    true,

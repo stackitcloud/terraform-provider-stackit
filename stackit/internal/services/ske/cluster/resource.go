@@ -21,9 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -424,17 +422,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: fmt.Sprintf("%s %s", descriptions["max_surge"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.Int64{
-								int64planmodifier.UseStateForUnknown(),
-							},
 						},
 						"max_unavailable": schema.Int64Attribute{
 							Description: fmt.Sprintf("%s %s", descriptions["max_unavailable"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
-							PlanModifiers: []planmodifier.Int64{
-								int64planmodifier.UseStateForUnknown(),
-							},
 						},
 						"os_name": schema.StringAttribute{
 							Description: "The name of the OS image. Defaults to `flatcar`.",
@@ -478,9 +470,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Optional:    true,
 							Computed:    true,
 							ElementType: types.StringType,
-							PlanModifiers: []planmodifier.Map{
-								mapplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"taints": schema.ListNestedAttribute{
 							Description: "Specifies a taint list as defined below.",

@@ -153,6 +153,10 @@ Optional:
 - `repeat_interval` (String) How long to wait before sending a notification again if it has already been sent successfully for an alert. (Usually ~3h or more).
 - `routes` (Attributes List) List of child routes. (see [below for nested schema](#nestedatt--alert_config--route--routes))
 
+Read-Only:
+
+- `continue` (Boolean) Whether an alert should continue matching subsequent sibling nodes.
+
 <a id="nestedatt--alert_config--route--routes"></a>
 ### Nested Schema for `alert_config.route.routes`
 
