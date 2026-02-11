@@ -422,9 +422,6 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", bucketRegion),
 
 					// CRITICAL: Check Credentials Persistence
-					// The API returns null for these, so if this passes,
-					// it means your logic in resource.go (mapFields) correctly
-					// restored the secrets from the Terraform state.
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.access_key_id", accessKey),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.secret_key", secretKey),
 
