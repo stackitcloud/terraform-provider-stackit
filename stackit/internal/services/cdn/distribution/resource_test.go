@@ -31,7 +31,7 @@ func TestToCreatePayload(t *testing.T) {
 		"geofencing":             geofencing,
 		"bucket_url":             types.StringNull(),
 		"region":                 types.StringNull(),
-		"access_key":             types.StringNull(),
+		"access_key_id":          types.StringNull(),
 		"secret_key":             types.StringNull(),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
@@ -109,7 +109,7 @@ func TestToCreatePayload(t *testing.T) {
 					"type":                   types.StringValue("bucket"),
 					"bucket_url":             types.StringValue("https://s3.example.com"),
 					"region":                 types.StringValue("eu01"),
-					"access_key":             types.StringValue("my-access"),
+					"access_key_id":          types.StringValue("my-access"),
 					"secret_key":             types.StringValue("my-secret"),
 					"origin_url":             types.StringNull(),
 					"origin_request_headers": types.MapNull(types.StringType),
@@ -194,7 +194,7 @@ func TestConvertConfig(t *testing.T) {
 		"geofencing":             geofencing,
 		"bucket_url":             types.StringNull(),
 		"region":                 types.StringNull(),
-		"access_key":             types.StringNull(),
+		"access_key_id":          types.StringNull(),
 		"secret_key":             types.StringNull(),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
@@ -280,7 +280,7 @@ func TestConvertConfig(t *testing.T) {
 					"type":                   types.StringValue("bucket"),
 					"bucket_url":             types.StringValue("https://s3.example.com"),
 					"region":                 types.StringValue("eu01"),
-					"access_key":             types.StringValue("my-access"),
+					"access_key_id":          types.StringValue("my-access"),
 					"secret_key":             types.StringValue("my-secret"),
 					"origin_url":             types.StringNull(),
 					"origin_request_headers": types.MapNull(types.StringType),
@@ -355,7 +355,7 @@ func TestMapFields(t *testing.T) {
 		"geofencing":             types.MapNull(geofencingTypes.ElemType),
 		"bucket_url":             types.StringNull(),
 		"region":                 types.StringNull(),
-		"access_key":             types.StringNull(),
+		"access_key_id":          types.StringNull(),
 		"secret_key":             types.StringNull(),
 	})
 	regions := []attr.Value{types.StringValue("EU"), types.StringValue("US")}
@@ -442,7 +442,7 @@ func TestMapFields(t *testing.T) {
 		"type":                   types.StringValue("bucket"),
 		"bucket_url":             types.StringValue("https://s3.example.com"),
 		"region":                 types.StringValue("eu01"),
-		"access_key":             types.StringValue("old-access"),
+		"access_key_id":          types.StringValue("old-access"),
 		"secret_key":             types.StringValue("old-secret"),
 		"origin_url":             types.StringNull(),
 		"origin_request_headers": types.MapNull(types.StringType),
@@ -490,7 +490,7 @@ func TestMapFields(t *testing.T) {
 					"geofencing":             geofencing,
 					"bucket_url":             types.StringNull(),
 					"region":                 types.StringNull(),
-					"access_key":             types.StringNull(),
+					"access_key_id":          types.StringNull(),
 					"secret_key":             types.StringNull(),
 				})
 				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{

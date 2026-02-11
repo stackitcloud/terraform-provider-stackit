@@ -42,10 +42,10 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       type       = "bucket"
       bucket_url = "https://my-private-bucket.s3.eu-central-1.amazonaws.com"
       region     = "eu01"
-      
+
       # Credentials are required for bucket backends
       # It is strongly recommended to use variables for secrets
-      access_key = var.bucket_access_key
+      access_key_id = var.bucket_access_key
       secret_key = var.bucket_secret_key
     }
     regions           = ["EU", "US"]
@@ -104,7 +104,7 @@ Required:
 
 Optional:
 
-- `access_key` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
+- `access_key_id` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
 - `bucket_url` (String) The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.
 - `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
 - `origin_request_headers` (Map of String) The configured origin request headers for the backend

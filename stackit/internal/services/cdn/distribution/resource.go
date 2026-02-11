@@ -65,7 +65,7 @@ var schemaDescriptions = map[string]string{
 	"domain_errors":                         "List of domain errors",
 	"config_backend_bucket_url":             "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
 	"config_backend_region":                 "The region where the bucket is hosted. Required if type is 'bucket'.",
-	"config_backend_access_key":             "The access key for the bucket. Required if type is 'bucket'.",
+	"config_backend_access_key_id":          "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_secret_key":             "The secret key for the bucket. Required if type is 'bucket'.",
 }
 
@@ -99,7 +99,7 @@ type backend struct {
 	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
 	BucketURL            *string               `tfsdk:"bucket_url"`
 	Region               *string               `tfsdk:"region"`
-	AccessKey            *string               `tfsdk:"access_key"`
+	AccessKey            *string               `tfsdk:"access_key_id"`
 	SecretKey            *string               `tfsdk:"secret_key"`
 }
 
@@ -127,7 +127,7 @@ var backendTypes = map[string]attr.Type{
 	"geofencing":             geofencingTypes,
 	"bucket_url":             types.StringType,
 	"region":                 types.StringType,
-	"access_key":             types.StringType,
+	"access_key_id":          types.StringType,
 	"secret_key":             types.StringType,
 }
 
@@ -274,7 +274,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 										// If the origin_url field is populated, no bucket fields can be used
 										path.MatchRelative().AtParent().AtName("bucket_url"),
 										path.MatchRelative().AtParent().AtName("region"),
-										path.MatchRelative().AtParent().AtName("access_key"),
+										path.MatchRelative().AtParent().AtName("access_key_id"),
 										path.MatchRelative().AtParent().AtName("secret_key"),
 									),
 								},
@@ -298,7 +298,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_bucket_url"],
 								Validators: []validator.String{
-									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("region"), path.MatchRelative().AtParent().AtName("access_key"), path.MatchRelative().AtParent().AtName("secret_key")),
+									stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("region"), path.MatchRelative().AtParent().AtName("access_key_id"), path.MatchRelative().AtParent().AtName("secret_key")),
 									stringvalidator.ConflictsWith(
 										// If the origin_url is populated, bucket_url can not be used
 										path.MatchRelative().AtParent().AtName("origin_url"),
@@ -310,10 +310,10 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Description: schemaDescriptions["config_backend_region"],
 								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
-							"access_key": schema.StringAttribute{
+							"access_key_id": schema.StringAttribute{
 								Optional:    true,
 								Sensitive:   true,
-								Description: schemaDescriptions["config_backend_access_key"],
+								Description: schemaDescriptions["config_backend_access_key_id"],
 								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
 							},
 							"secret_key": schema.StringAttribute{
@@ -814,10 +814,10 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 			"origin_request_headers": originRequestHeaders,
 			"geofencing":             geofencingVal,
 			// bucket fields must be null when using HTTP
-			"bucket_url": types.StringNull(),
-			"region":     types.StringNull(),
-			"access_key": types.StringNull(),
-			"secret_key": types.StringNull(),
+			"bucket_url":    types.StringNull(),
+			"region":        types.StringNull(),
+			"access_key_id": types.StringNull(),
+			"secret_key":    types.StringNull(),
 		}
 	} else if distribution.Config.Backend.BucketBackend != nil {
 		// Preserve secrets from previous state because API does not return them
@@ -832,11 +832,11 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		}
 
 		backendValues = map[string]attr.Value{
-			"type":       types.StringValue("bucket"),
-			"bucket_url": types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
-			"region":     types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
-			"access_key": accessKeyVal,
-			"secret_key": secretKeyVal,
+			"type":          types.StringValue("bucket"),
+			"bucket_url":    types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
+			"region":        types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
+			"access_key_id": accessKeyVal,
+			"secret_key":    secretKeyVal,
 			// HTTP field must be null when using Bucket
 			"origin_url":             types.StringNull(),
 			"origin_request_headers": types.MapNull(types.StringType),

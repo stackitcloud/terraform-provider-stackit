@@ -368,7 +368,7 @@ func configBucketResources(bucketUrl, region, accessKey, secretKey string) strin
                             type       = "bucket"
                             bucket_url = "%s"
                             region     = "%s"
-                            access_key = "%s"
+                            access_key_id = "%s"
                             secret_key = "%s"
                         }
                         regions           = ["EU", "US"]
@@ -425,7 +425,7 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					// The API returns null for these, so if this passes,
 					// it means your logic in resource.go (mapFields) correctly
 					// restored the secrets from the Terraform state.
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.access_key", accessKey),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.access_key_id", accessKey),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.secret_key", secretKey),
 
 					// Ensure HTTP fields are not set
@@ -434,7 +434,7 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 			},
 			// 2. Import Test
 			// This verifies that importing a bucket distribution works,
-			// although note that imported resources usually lose secrets (access_key/secret_key)
+			// although note that imported resources usually lose secrets (access_key_id/secret_key)
 			// because they are not in the API response.
 			{
 				ResourceName: "stackit_cdn_distribution.distribution",
@@ -456,7 +456,7 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 				// because the API does not return them, so Terraform will see them as null/empty
 				// in the new state, differing from the config.
 				ImportStateVerifyIgnore: []string{
-					"config.backend.access_key",
+					"config.backend.access_key_id",
 					"config.backend.secret_key",
 				},
 			},
