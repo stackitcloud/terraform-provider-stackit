@@ -1301,15 +1301,6 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
-		"project_id": projectId,
-		"region":     region,
-		"name":       *updateResp.Name,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Application Load Balancer update waiting: %v", err))
