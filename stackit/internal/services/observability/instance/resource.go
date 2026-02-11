@@ -125,6 +125,7 @@ var globalConfigurationTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.AlertConfig.route
 type mainRouteModel struct {
+	Continue       types.Bool   `tfsdk:"continue"`
 	GroupBy        types.List   `tfsdk:"group_by"`
 	GroupInterval  types.String `tfsdk:"group_interval"`
 	GroupWait      types.String `tfsdk:"group_wait"`
@@ -167,6 +168,7 @@ type routeModelNoRoutes struct {
 }
 
 var mainRouteTypes = map[string]attr.Type{
+	"continue":        types.BoolType,
 	"group_by":        types.ListType{ElemType: types.StringType},
 	"group_interval":  types.StringType,
 	"group_wait":      types.StringType,
@@ -771,6 +773,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "Route configuration for the alerts.",
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
+							"continue": schema.BoolAttribute{
+								Description: routeDescriptions["continue"],
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
+							},
 							"group_by": schema.ListAttribute{
 								Description: routeDescriptions["group_by"],
 								Optional:    true,
@@ -1826,6 +1833,7 @@ func getMockAlertConfig(ctx context.Context) (alertConfigModel, error) {
 	}
 
 	mockRoute, diags := types.ObjectValue(mainRouteTypes, map[string]attr.Value{
+		"continue":        types.BoolValue(false),
 		"receiver":        types.StringValue("email-me"),
 		"group_by":        mockGroupByList,
 		"group_wait":      types.StringValue("30s"),
@@ -2057,6 +2065,7 @@ func mapRouteToAttributes(ctx context.Context, route *observability.Route) (attr
 	}
 
 	routeMap := map[string]attr.Value{
+		"continue":        types.BoolPointerValue(route.Continue),
 		"group_by":        groupByModel,
 		"group_interval":  types.StringPointerValue(route.GroupInterval),
 		"group_wait":      types.StringPointerValue(route.GroupWait),
@@ -2397,6 +2406,7 @@ func toRoutePayload(ctx context.Context, routeTF *mainRouteModel) (*observabilit
 	}
 
 	return &observability.UpdateAlertConfigsPayloadRoute{
+		Continue:       conversion.BoolValueToPointer(routeTF.Continue),
 		GroupBy:        groupByPayload,
 		GroupInterval:  conversion.StringValueToPointer(routeTF.GroupInterval),
 		GroupWait:      conversion.StringValueToPointer(routeTF.GroupWait),
