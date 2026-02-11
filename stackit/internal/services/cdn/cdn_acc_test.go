@@ -419,7 +419,6 @@ func configBucketDatasource(bucketName, credentialsGroupName string) string {
 }
 
 func TestAccCDNDistributionBucketResource(t *testing.T) {
-
 	bucketName := fmt.Sprintf("tf-acc-bucket-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 	credentialsGroupName := fmt.Sprintf("tf-acc-group-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 
