@@ -48,7 +48,7 @@ Read-Only:
 - `backup_schedule_id` (Number)
 - `enabled` (Boolean) Is the backup schedule enabled or disabled.
 - `name` (String) The backup schedule name.
-- `rrule` (String) Backup schedule described in `rrule` (recurrence rule) format.
+- `rrule` (String) An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.
 
 <a id="nestedatt--items--backup_properties"></a>
 ### Nested Schema for `items.backup_properties`

@@ -38,10 +38,10 @@ import {
 ### Required
 
 - `enabled` (Boolean) Is the update schedule enabled or disabled.
-- `maintenance_window` (Number) Maintenance window [1..24].
+- `maintenance_window` (Number) Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.
 - `name` (String) The schedule name.
 - `project_id` (String) STACKIT Project ID to which the server is associated.
-- `rrule` (String) Update schedule described in `rrule` (recurrence rule) format.
+- `rrule` (String) An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.
 - `server_id` (String) Server ID for the update schedule.
 
 ### Optional
