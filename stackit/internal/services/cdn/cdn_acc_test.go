@@ -514,7 +514,6 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 				),
 			},
 			// Step 4: Update Resource (Change Bucket & Creds)
-			// This simulates the scenario where underlying dependencies change, testing the fix for "Error mapping config"
 			{
 				Config: configBucketResources(bucketNameUpdated, credentialsGroupNameUpdated),
 				Check: resource.ComposeAggregateTestCheckFunc(
