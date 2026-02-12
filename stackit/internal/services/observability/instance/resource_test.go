@@ -65,6 +65,7 @@ func fixtureReceiverModel(emailConfigs, opsGenieConfigs, webHooksConfigs basetyp
 
 func fixtureRouteModel() basetypes.ObjectValue {
 	return types.ObjectValueMust(mainRouteTypes, map[string]attr.Value{
+		"continue": types.BoolValue(false),
 		"group_by": types.ListValueMust(types.StringType, []attr.Value{
 			types.StringValue("label1"),
 			types.StringValue("label2"),
@@ -98,6 +99,7 @@ func fixtureRouteModel() basetypes.ObjectValue {
 
 func fixtureNullRouteModel() basetypes.ObjectValue {
 	return types.ObjectValueMust(mainRouteTypes, map[string]attr.Value{
+		"continue":        types.BoolNull(),
 		"group_by":        types.ListNull(types.StringType),
 		"group_interval":  types.StringNull(),
 		"group_wait":      types.StringNull(),
@@ -175,7 +177,7 @@ func fixtureReceiverPayload(emailConfigs *[]observability.CreateAlertConfigRecei
 
 func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 	return &observability.UpdateAlertConfigsPayloadRoute{
-		Continue:       nil,
+		Continue:       utils.Ptr(false),
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
 		GroupWait:      utils.Ptr("1m"),
@@ -252,7 +254,7 @@ func fixtureWebHooksConfigsResponse() observability.WebHook {
 
 func fixtureRouteResponse() *observability.Route {
 	return &observability.Route{
-		Continue:       nil,
+		Continue:       utils.Ptr(false),
 		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
 		GroupInterval:  utils.Ptr("1m"),
 		GroupWait:      utils.Ptr("1m"),

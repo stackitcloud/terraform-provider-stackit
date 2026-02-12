@@ -98,6 +98,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"key": "value",
 				},
 				Routed: utils.Ptr(true),
+				Dhcp:   utils.Ptr(true),
 			},
 			testRegion,
 			DataSourceModel{
@@ -141,6 +142,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				IPv4Gateway: types.StringValue("gateway"),
 				IPv6Gateway: types.StringValue("gateway"),
 				Region:      types.StringValue(testRegion),
+				DHCP:        types.BoolValue(true),
 			},
 			true,
 		},

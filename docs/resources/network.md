@@ -64,6 +64,7 @@ import {
 
 ### Optional
 
+- `dhcp` (Boolean) If the network has DHCP enabled. Default value is `true`.
 - `ipv4_gateway` (String) The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
 - `ipv4_nameservers` (List of String) The IPv4 nameservers of the network.
 - `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).

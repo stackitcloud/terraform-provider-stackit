@@ -33,6 +33,7 @@ data "stackit_network" "example" {
 
 ### Read-Only
 
+- `dhcp` (Boolean) Shows if DHCP is enabled for the network.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`network_id`".
 - `ipv4_gateway` (String) The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
 - `ipv4_nameservers` (List of String) The IPv4 nameservers of the network.
