@@ -96,7 +96,7 @@ type optimizerConfig struct {
 
 type backend struct {
 	Type                 string                `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
-	OriginURL            string                `tfsdk:"origin_url"`             // The origin URL of the backend
+	OriginURL            *string               `tfsdk:"origin_url"`             // The origin URL of the backend
 	OriginRequestHeaders *map[string]string    `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
 	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
 	BucketURL            *string               `tfsdk:"bucket_url"`
@@ -575,7 +575,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 		configPatchBackend.HttpBackendPatch = &cdn.HttpBackendPatch{
 			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
-			OriginUrl:            &configModel.Backend.OriginURL,
+			OriginUrl:            configModel.Backend.OriginURL,
 			Type:                 cdn.PtrString("http"),
 			Geofencing:           &geofencingPatch,
 		}
@@ -749,8 +749,8 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	var oldConfig distributionConfig
 	if !utils.IsUndefined(model.Config) {
 		diags := model.Config.As(ctx, &oldConfig, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
 		})
 		if diags.HasError() {
 			return core.DiagsToError(diags)
@@ -968,8 +968,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		// as convertConfig returns the SDK Config struct which hides them.
 		var rawConfig distributionConfig
 		diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    true,
-			UnhandledUnknownAsEmpty: true,
+			UnhandledNullAsEmpty:    false,
+			UnhandledUnknownAsEmpty: false,
 		})
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -1012,8 +1012,8 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	}
 	configModel := distributionConfig{}
 	diags := model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    true,
-		UnhandledUnknownAsEmpty: true,
+		UnhandledNullAsEmpty:    false,
+		UnhandledUnknownAsEmpty: false,
 	})
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
@@ -1075,7 +1075,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 		cdnConfig.Backend.HttpBackend = &cdn.HttpBackend{
 			OriginRequestHeaders: &originRequestHeaders,
-			OriginUrl:            &configModel.Backend.OriginURL,
+			OriginUrl:            configModel.Backend.OriginURL,
 			Type:                 cdn.PtrString("http"),
 			Geofencing:           &geofencing,
 		}

@@ -423,8 +423,11 @@ func configBucketDatasource(bucketName, credentialsGroupName string) string {
 func TestAccCDNDistributionBucketResource(t *testing.T) {
 	bucketName := fmt.Sprintf("tf-acc-bucket-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 	credentialsGroupName := fmt.Sprintf("tf-acc-group-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	bucketNameUpdated := fmt.Sprintf("tf-acc-bucket-upd-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	credentialsGroupNameUpdated := fmt.Sprintf("tf-acc-group-upd-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
 
 	expectedBucketUrl := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketName)
+	expectedBucketUrlUpdated := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketNameUpdated)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -508,6 +511,25 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					// Security Check: Secrets should NOT be in Data Source
 					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.access_key_id"),
 					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.secret_access_key"),
+				),
+			},
+			// Step 4: Update Resource (Change Bucket & Creds)
+			// This simulates the scenario where underlying dependencies change, testing the fix for "Error mapping config"
+			{
+				Config: configBucketResources(bucketNameUpdated, credentialsGroupNameUpdated),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", expectedBucketUrlUpdated),
+
+					// Verify that keys have been updated to the new credentials
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.access_key_id",
+						"stackit_objectstorage_credential.creds", "access_key",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.secret_access_key",
+						"stackit_objectstorage_credential.creds", "secret_access_key",
+					),
 				),
 			},
 		},
