@@ -434,7 +434,21 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 			{
 				Config: configBucketResources(bucketName, credentialsGroupName),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CN"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "RU"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "false"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.type", "bucket"),
 
 					// Verify the Bucket URL matches the one we constructed
@@ -473,7 +487,21 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 			{
 				Config: configBucketDatasource(bucketName, credentialsGroupName),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "distribution_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "updated_at"),
 					resource.TestCheckResourceAttrPair("data.stackit_cdn_distribution.bucket_ds", "project_id", "stackit_cdn_distribution.distribution", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.type", "managed"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.0", "EU"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.1", "US"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.0", "CN"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.1", "RU"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.optimizer.enabled", "false"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.type", "bucket"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.bucket_url", expectedBucketUrl),
 
