@@ -46,7 +46,7 @@ provider "stackit" {
 
 To authenticate, you will need a [service account](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/). Create it in the [STACKIT Portal](https://portal.stackit.cloud/) and assign the necessary permissions to it, e.g. `project.owner`. There are multiple ways to authenticate:
 
-- Workload Identity Federation (Recommended)
+- Workload Identity Federation
 - Key flow 
 
 When setting up authentication, the provider will always try to use the workload identity federation flow first and search for credentials in several locations, following a specific order:
@@ -66,7 +66,7 @@ When setting up authentication, the provider will always try to use the workload
    }
    ```
 
-### Workload Identity Federation (Recommended)
+### Workload Identity Federation
 
     The following instructions assume that you have created a service account and assigned the necessary permissions to it, e.g. `project.owner`.
 
