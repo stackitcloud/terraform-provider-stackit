@@ -302,7 +302,23 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, *createTokenResp.Token.Id).WaitWithContext(ctx)
+	if createTokenResp.Token.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "Got empty token id")
+		return
+	}
+
+	tokenId := *createTokenResp.Token.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"token_id":   tokenId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Waiting for token to be active: %v", err))
 		return
