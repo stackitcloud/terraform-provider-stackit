@@ -22,7 +22,7 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
   config = {
     backend = {
       type       = "bucket"
-      bucket_url = "https://my-private-bucket.s3.eu-central-1.amazonaws.com"
+      bucket_url = "https://my-test.object.storage.eu01.onstackit.cloud"
       region     = "eu01"
 
       # Credentials are required for bucket backends
