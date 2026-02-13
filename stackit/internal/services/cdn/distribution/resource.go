@@ -433,6 +433,20 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.LogResponse(ctx)
 
+	if createResp.Distribution.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", "Got empty cdn distribution id")
+		return
+	}
+
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":      projectId,
+		"distribution_id": *createResp.Distribution.Id,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, *createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
@@ -682,8 +696,10 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing CDN distribution", fmt.Sprintf("Expected import identifier on the format: [project_id]%q[distribution_id], got %q", core.Separator, req.ID))
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("distribution_id"), idParts[1])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id":      idParts[0],
+		"distribution_id": idParts[1],
+	})
 	tflog.Info(ctx, "CDN distribution state imported")
 }
 
