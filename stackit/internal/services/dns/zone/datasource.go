@@ -97,7 +97,7 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"dns_name": schema.StringAttribute{
 				Description: "The zone name. E.g. `example.com` (must not end with a trailing dot).",
-				Required:    true,
+				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(253),
