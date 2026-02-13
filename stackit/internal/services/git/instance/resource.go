@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -220,7 +219,21 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	ctx = core.LogResponse(ctx)
 
+	if gitInstanceResp.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", "Got empty git instance id")
+		return
+	}
+
 	gitInstanceId := *gitInstanceResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": gitInstanceId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	_, err = wait.CreateGitInstanceWaitHandler(ctx, g.client, projectId, gitInstanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Git instance creation waiting: %v", err))
@@ -345,13 +358,11 @@ func (g *gitResource) ImportState(ctx context.Context, req resource.ImportStateR
 		)
 		return
 	}
-
-	projectId := idParts[0]
-	instanceId := idParts[1]
-
 	// Set the project ID and instance ID attributes in the state.
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), instanceId)...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id":  idParts[0],
+		"instance_id": idParts[1],
+	})
 	tflog.Info(ctx, "Git instance state imported")
 }
 
