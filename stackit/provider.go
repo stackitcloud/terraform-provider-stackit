@@ -3,7 +3,6 @@ package stackit
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -112,6 +111,7 @@ import (
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -205,7 +205,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_email":                "Service account email. It can also be set using the environment variable STACKIT_SERVICE_ACCOUNT_EMAIL. It is required if you want to use the resource manager project resource. This value is required using OpenID Connect authentication.",
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
 		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
-		"use_oidc":                             "Should OIDC be used for Authentication? This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
+		"use_oidc":                             "Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
 		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
 		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
@@ -550,11 +550,11 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	}
 
 	// Workload Identity Federation via provided OIDC Token from GitHub Actions
-	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && getEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") {
+	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && utils.GetEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") {
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
-		oidcReqURL := getEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
-		oidcReqToken := getEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
+		oidcReqURL := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "ACTIONS_ID_TOKEN_REQUEST_URL", "")
+		oidcReqToken := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)
 		}
@@ -758,35 +758,4 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 	return []func() ephemeral.EphemeralResource{
 		access_token.NewAccessTokenEphemeralResource,
 	}
-}
-
-// getEnvStringOrDefault takes a Framework StringValue and a corresponding Environment Variable name and returns
-// either the string value set in the StringValue if not Null / Unknown _or_ the os.GetEnv() value of the Environment
-// Variable provided. If both of these are empty, an empty string defaultValue is returned.
-func getEnvStringOrDefault(val types.String, envVar, defaultValue string) string {
-	if val.IsNull() || val.IsUnknown() {
-		if v := os.Getenv(envVar); v != "" {
-			return os.Getenv(envVar)
-		}
-		return defaultValue
-	}
-
-	return val.ValueString()
-}
-
-// getEnvBoolIfValueAbsent takes a Framework BoolValue and a corresponding Environment Variable name and returns
-// one of the following in priority order:
-// 1 - the Boolean value set in the BoolValue if this is not Null / Unknown.
-// 2 - the boolean representation of the os.GetEnv() value of the Environment Variable provided (where anything but
-// 'true' or '1' is 'false').
-// 3 - `false` in all other cases.
-func getEnvBoolIfValueAbsent(val types.Bool, envVar string) bool {
-	if val.IsNull() || val.IsUnknown() {
-		v := os.Getenv(envVar)
-		if strings.EqualFold(v, "true") || strings.EqualFold(v, "1") {
-			return true
-		}
-	}
-
-	return val.ValueBool()
 }
