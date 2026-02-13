@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -773,6 +772,21 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.LogResponse(ctx)
 
+	if createResp.Name == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", "Got empty load balancer name")
+		return
+	}
+
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"name":       *createResp.Name,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
@@ -965,9 +979,11 @@ func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"name":       idParts[2],
+	})
 	tflog.Info(ctx, "Load balancer state imported")
 }
 
