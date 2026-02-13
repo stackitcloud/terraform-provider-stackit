@@ -78,12 +78,23 @@ func TestGetEnvStringOrDefault(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up any previous value first
-			os.Unsetenv(tt.envVar)
+			err := os.Unsetenv(tt.envVar)
+			if err != nil {
+				t.Errorf("Failed to unset environment variable %s: %v", tt.envVar, err)
+			}
 
 			// Setup environment variable
 			if tt.envValue != "" {
-				os.Setenv(tt.envVar, tt.envValue)
-				defer os.Unsetenv(tt.envVar)
+				err = os.Setenv(tt.envVar, tt.envValue)
+				if err != nil {
+					t.Errorf("Failed to set environment variable %s: %v", tt.envVar, err)
+				}
+				defer func() {
+					err := os.Unsetenv(tt.envVar)
+					if err != nil {
+						t.Errorf("Failed to unset environment variable %s: %v", tt.envVar, err)
+					}
+				}()
 			}
 
 			result := GetEnvStringOrDefault(tt.val, tt.envVar, tt.defaultValue)
@@ -213,12 +224,23 @@ func TestGetEnvBoolIfValueAbsent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clean up any previous value first
-			os.Unsetenv(tt.envVar)
+			err := os.Unsetenv(tt.envVar)
+			if err != nil {
+				t.Errorf("Failed to unset environment variable %s: %v", tt.envVar, err)
+			}
 
 			// Setup environment variable
 			if tt.envValue != "" {
-				os.Setenv(tt.envVar, tt.envValue)
-				defer os.Unsetenv(tt.envVar)
+				err = os.Setenv(tt.envVar, tt.envValue)
+				if err != nil {
+					t.Errorf("Failed to set environment variable %s: %v", tt.envVar, err)
+				}
+				defer func() {
+					err := os.Unsetenv(tt.envVar)
+					if err != nil {
+						t.Errorf("Failed to unset environment variable %s: %v", tt.envVar, err)
+					}
+				}()
 			}
 
 			result := GetEnvBoolIfValueAbsent(tt.val, tt.envVar)
