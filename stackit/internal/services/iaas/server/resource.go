@@ -498,13 +498,26 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	ctx = core.LogResponse(ctx)
 
+	if server.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", "Got empty server id")
+		return
+	}
 	serverId := *server.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"server_id":  serverId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
-	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Get Server with details
 	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
