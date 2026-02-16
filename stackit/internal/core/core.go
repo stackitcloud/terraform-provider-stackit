@@ -43,6 +43,7 @@ type ProviderData struct {
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
+	ALBCustomEndpoint               string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string

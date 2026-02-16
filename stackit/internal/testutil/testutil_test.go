@@ -37,6 +37,11 @@ func TestConvertConfigVariable(t *testing.T) {
 			variable: config.StringVariable(`instance =~ ".*"`),
 			want:     `instance =~ ".*"`,
 		},
+		{
+			name:     "line breaks",
+			variable: config.StringVariable(`line \n breaks`),
+			want:     `line \n breaks`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
