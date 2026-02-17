@@ -157,12 +157,23 @@ var maintenanceTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Network
 type network struct {
-	ID types.String `tfsdk:"id"`
+	ID           types.String `tfsdk:"id"`
+	ControlPlane types.Object `tfsdk:"control_plane"`
 }
 
 // Types corresponding to network
 var networkTypes = map[string]attr.Type{
-	"id": basetypes.StringType{},
+	"id":            basetypes.StringType{},
+	"control_plane": types.ObjectType{AttrTypes: controlPlaneTypes},
+}
+
+type controlPlane struct {
+	AccessScope types.String `tfsdk:"access_scope"`
+}
+
+// Types corresponding to control plane
+var controlPlaneTypes = map[string]attr.Type{
+	"access_scope": basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Hibernations[i]
@@ -561,6 +572,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						},
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"control_plane": schema.SingleNestedAttribute{
+						Description: "Control plane for the cluster.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"access_scope": schema.StringAttribute{
+								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...),
+								Optional:    true,
+							},
 						},
 					},
 				},
@@ -1352,8 +1373,21 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 		return nil, fmt.Errorf("converting network object: %v", diags.Errors())
 	}
 
+	var networkControlPlane *ske.V2ControlPlaneNetwork
+	if !(network.ControlPlane.IsNull() || network.ControlPlane.IsUnknown()) {
+		networkControlPlaneModel := controlPlane{}
+		diags = network.ControlPlane.As(ctx, &networkControlPlaneModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting network control plane: %w", core.DiagsToError(diags))
+		}
+		networkControlPlane = &ske.V2ControlPlaneNetwork{
+			AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(networkControlPlaneModel.AccessScope)),
+		}
+	}
+
 	return &ske.Network{
-		Id: conversion.StringValueToPointer(network.ID),
+		Id:           conversion.StringValueToPointer(network.ID),
+		ControlPlane: networkControlPlane,
 	}, nil
 }
 
@@ -1657,12 +1691,32 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 		return nil
 	}
 
+	var diags diag.Diagnostics
 	id := types.StringNull()
 	if cl.Network.Id != nil {
 		id = types.StringValue(*cl.Network.Id)
 	}
+
+	networkControlPlane := types.ObjectNull(controlPlaneTypes)
+	if cl.Network.ControlPlane != nil {
+		controlPlaneAccessScope := types.StringNull()
+		if cl.Network.ControlPlane.AccessScope != nil {
+			controlPlaneAccessScope = types.StringValue(string(cl.Network.ControlPlane.GetAccessScope()))
+		}
+
+		controlPlaneValues := map[string]attr.Value{
+			"access_scope": controlPlaneAccessScope,
+		}
+
+		networkControlPlane, diags = types.ObjectValue(controlPlaneTypes, controlPlaneValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating network control plane: %w", core.DiagsToError(diags))
+		}
+	}
+
 	networkValues := map[string]attr.Value{
-		"id": id,
+		"id":            id,
+		"control_plane": networkControlPlane,
 	}
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
