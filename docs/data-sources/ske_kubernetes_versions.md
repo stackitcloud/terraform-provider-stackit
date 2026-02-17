@@ -43,7 +43,7 @@ resource "stackit_ske_cluster" "example" {
 ### Optional
 
 - `region` (String) Region override. If omitted, the provider’s region will be used.
-- `version_state` (String) If specified, only returns Kubernetes versions with this version state. Possible values are: `UNSPECIFIED`, `SUPPORTED`.
+- `version_state` (String) If specified, only returns Kubernetes versions with this version state. Possible values are: `SUPPORTED`.
 
 ### Read-Only
 
