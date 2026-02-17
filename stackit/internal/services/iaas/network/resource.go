@@ -428,8 +428,21 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	if network.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", "Got empty network id")
+		return
+	}
+
 	networkId := *network.Id
-	ctx = tflog.SetField(ctx, "network_id", networkId)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"network_id": networkId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
@@ -592,17 +605,11 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 		return
 	}
-
-	projectId := idParts[0]
-	region := idParts[1]
-	networkId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "region", region)
-	ctx = tflog.SetField(ctx, "network_id", networkId)
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), region)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkId)...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"network_id": idParts[2],
+	})
 	tflog.Info(ctx, "Network state imported")
 }
 

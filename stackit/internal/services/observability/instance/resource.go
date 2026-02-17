@@ -918,6 +918,13 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
+	if plan.GetGrafanaGlobalDashboards() == 0 {
+		// If grafana_admin_enabled was set, return an error to the user
+		if !(utils.IsUndefined(configModel.GrafanaAdminEnabled)) {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Plan (%s) has no Grafana included. Remove `grafana_admin_enabled` from your config or use a different plan.", *plan.Name))
+		}
+	}
+
 	// Plan does not support alert config
 	if plan.GetAlertMatchers() == 0 && plan.GetAlertReceivers() == 0 {
 		// If an alert config was set, return an error to the user
@@ -990,7 +997,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Generate API request body from model
-	createPayload, err := toCreatePayload(&model)
+	createPayload, err := toCreatePayload(&model, plan.GetGrafanaGlobalDashboards() != 0)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -1328,7 +1335,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(&model, plan.GetGrafanaGlobalDashboards() != 0)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -1339,7 +1346,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	previousStatePayload, err := toUpdatePayload(&previousState)
+	previousStatePayload, err := toUpdatePayload(&previousState, plan.GetGrafanaGlobalDashboards() != 0)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating previous state payload: %v", err))
 		return
@@ -2141,7 +2148,7 @@ func mapChildRoutesToAttributes(ctx context.Context, routes *[]observability.Rou
 	return returnRoutesList, nil
 }
 
-func toCreatePayload(model *Model) (*observability.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, setGrafanaAdminEnabled bool) (*observability.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -2150,12 +2157,16 @@ func toCreatePayload(model *Model) (*observability.CreateInstancePayload, error)
 	for k := range elements {
 		pa[k] = elements[k].String()
 	}
-	return &observability.CreateInstancePayload{
-		GrafanaAdminEnabled: conversion.BoolValueToPointer(model.GrafanaAdminEnabled),
-		Name:                conversion.StringValueToPointer(model.Name),
-		PlanId:              conversion.StringValueToPointer(model.PlanId),
-		Parameter:           &pa,
-	}, nil
+	payload := &observability.CreateInstancePayload{
+		Name:      conversion.StringValueToPointer(model.Name),
+		PlanId:    conversion.StringValueToPointer(model.PlanId),
+		Parameter: &pa,
+	}
+	if setGrafanaAdminEnabled {
+		payload.GrafanaAdminEnabled = conversion.BoolValueToPointer(model.GrafanaAdminEnabled)
+	}
+
+	return payload, nil
 }
 
 func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, retentionDays1h *int64, resp *observability.GetMetricsStorageRetentionResponse) (*observability.UpdateMetricsStorageRetentionPayload, error) {
@@ -2205,7 +2216,7 @@ func updateACL(ctx context.Context, projectId, instanceId string, acl []string, 
 	return nil
 }
 
-func toUpdatePayload(model *Model) (*observability.UpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, setGrafanaAdminEnabled bool) (*observability.UpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -2214,11 +2225,16 @@ func toUpdatePayload(model *Model) (*observability.UpdateInstancePayload, error)
 	for k, v := range elements {
 		pa[k] = v.String()
 	}
-	return &observability.UpdateInstancePayload{
+	payload := &observability.UpdateInstancePayload{
 		Name:      conversion.StringValueToPointer(model.Name),
 		PlanId:    conversion.StringValueToPointer(model.PlanId),
 		Parameter: &pa,
-	}, nil
+	}
+	if setGrafanaAdminEnabled {
+		payload.GrafanaAdminEnabled = conversion.BoolValueToPointer(model.GrafanaAdminEnabled)
+	}
+
+	return payload, nil
 }
 
 func toUpdateAlertConfigPayload(ctx context.Context, model *alertConfigModel) (*observability.UpdateAlertConfigsPayload, error) {
