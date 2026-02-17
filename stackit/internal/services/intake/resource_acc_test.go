@@ -20,41 +20,39 @@ import (
 )
 
 //go:embed testdata/resource-min.tf
-var resourceMin string
+var resourceIntakeRunnerMin string
 
 //go:embed testdata/resource-max.tf
-var resourceMax string
+var resourceIntakeRunnerMax string
 
 const intakeRunnerResource = "stackit_intake_runner.example"
 
-const (
-	intakeRunnerMinName        = "intake-min-runner"
-	intakeRunnerMinNameUpdated = "intake-min-runner-upd"
-	intakeRunnerMaxName        = "intake-max-runner"
-	intakeRunnerMaxNameUpdated = "intake-max-runner-upd"
-)
-
-var testConfigVarsMin = config.Variables{
-	"project_id": config.StringVariable(testutil.ProjectId),
-	"name":       config.StringVariable(intakeRunnerMinName),
+var testIntakeRunnerConfigVarsMin = config.Variables{
+	"project_id":            config.StringVariable(testutil.ProjectId),
+	"name":                  config.StringVariable("intake-min-runner"),
+	"max_message_size_kib":  config.IntegerVariable(1024),
+	"max_messages_per_hour": config.IntegerVariable(1000),
 }
 
-var testConfigVarsMax = config.Variables{
-	"project_id": config.StringVariable(testutil.ProjectId),
-	"name":       config.StringVariable(intakeRunnerMaxName),
+var testIntakeRunnerConfigVarsMax = config.Variables{
+	"project_id":            config.StringVariable(testutil.ProjectId),
+	"name":                  config.StringVariable("intake-max-runner"),
+	"description":           config.StringVariable("An example runner for Intake"),
+	"max_message_size_kib":  config.IntegerVariable(1024),
+	"max_messages_per_hour": config.IntegerVariable(1100),
 }
 
-func testConfigVarsMinUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testConfigVarsMin))
-	maps.Copy(tempConfig, testConfigVarsMin)
-	tempConfig["name"] = config.StringVariable(intakeRunnerMinNameUpdated)
+func testIntakeRunnerConfigVarsMinUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMin))
+	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMin)
+	tempConfig["name"] = config.StringVariable("intake-min-runner-upd")
 	return tempConfig
 }
 
-func testConfigVarsMaxUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testConfigVarsMax))
-	maps.Copy(tempConfig, testConfigVarsMax)
-	tempConfig["name"] = config.StringVariable(intakeRunnerMaxNameUpdated)
+func testIntakeRunnerConfigVarsMaxUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMax))
+	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMax)
+	tempConfig["name"] = config.StringVariable("intake-max-runner-upd")
 	return tempConfig
 }
 
@@ -65,28 +63,28 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create the minimum runner from the HCL file
 			{
-				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMin,
+				ConfigVariables: testIntakeRunnerConfigVarsMin,
+				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMinName),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["name"])),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", "1024"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", "1000"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_messages_per_hour"])),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
-					resource.TestCheckResourceAttrSet(intakeRunnerResource, "region"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
 				),
 			},
 			// Data source check: creates config that includes resource and data source
 			{
-				ConfigVariables: testConfigVarsMin,
+				ConfigVariables: testIntakeRunnerConfigVarsMin,
 				Config: fmt.Sprintf(`
 					%s
 					data "stackit_intake_runner" "example" {
 						project_id = %s.project_id
 						runner_id  = %s.runner_id
 						region     = %s.region
-					}`, testutil.IntakeProviderConfig()+"\n"+resourceMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
+					}`, testutil.IntakeProviderConfig()+"\n"+resourceIntakeRunnerMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Make sure it's correctly found resource by comparing runner_id attribute
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
@@ -98,8 +96,8 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 			},
 			// Simulate terraform import
 			{
-				ConfigVariables:   testConfigVarsMin,
-				Config:            testutil.IntakeProviderConfig() + "\n" + resourceMin,
+				ConfigVariables:   testIntakeRunnerConfigVarsMin,
+				Config:            testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				ResourceName:      intakeRunnerResource,
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -114,10 +112,16 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 			},
 			// Update check: verifies API updated resource name without crashing
 			{
-				ConfigVariables: testConfigVarsMinUpdated(),
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMin,
+				ConfigVariables: testIntakeRunnerConfigVarsMinUpdated(),
+				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", intakeRunnerMinNameUpdated),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMinUpdated()["name"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_messages_per_hour"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
 				),
 			},
 		},
@@ -131,30 +135,30 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create the max intake runner from HCL files and verify comparison
 			{
-				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMax,
+				ConfigVariables: testIntakeRunnerConfigVarsMax,
+				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "description", "An example runner for Intake"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", "1024"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", "1100"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["name"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "description", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_messages_per_hour"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "2"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
-					resource.TestCheckResourceAttrSet(intakeRunnerResource, "region"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
 				),
 			},
 			{
-				ConfigVariables: testConfigVarsMax,
+				ConfigVariables: testIntakeRunnerConfigVarsMax,
 				Config: fmt.Sprintf(`
 					%s
 					data "stackit_intake_runner" "example" {
 						project_id = %s.project_id
 						runner_id  = %s.runner_id
-					}`, testutil.IntakeProviderConfig()+"\n"+resourceMax, intakeRunnerResource, intakeRunnerResource),
+					}`, testutil.IntakeProviderConfig()+"\n"+resourceIntakeRunnerMax, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "runner_id", "data.stackit_intake_runner.example", "runner_id"),
@@ -165,15 +169,38 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "max_messages_per_hour", "data.stackit_intake_runner.example", "max_messages_per_hour"),
 				),
 			},
+			// Simulate terraform import
+			{
+				ConfigVariables:   testIntakeRunnerConfigVarsMax,
+				Config:            testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMax,
+				ResourceName:      intakeRunnerResource,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					// Construct ID string
+					r, ok := s.RootModule().Resources[intakeRunnerResource]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource %s", intakeRunnerResource)
+					}
+					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["runner_id"]), nil
+				},
+			},
 			// Update and verify changes are reflected
 			{
-				ConfigVariables: testConfigVarsMaxUpdated(),
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceMax,
+				ConfigVariables: testIntakeRunnerConfigVarsMaxUpdated(),
+				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["name"])),
-					// Ensure optional fields survived the update (didn't get wiped by a bad Update payload)
-					resource.TestCheckResourceAttr(intakeRunnerResource, "description", "An example runner for Intake"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMaxUpdated()["name"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "description", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_messages_per_hour"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "2"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
 				),
 			},
 		},
