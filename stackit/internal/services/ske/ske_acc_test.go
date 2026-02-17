@@ -92,6 +92,7 @@ var testConfigVarsMax = config.Variables{
 	"refresh_before":                                   config.StringVariable("600"),
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
+	"network_control_plane_access_scope":               config.StringVariable("PUBLIC"),
 }
 
 var testConfigDatasource = config.Variables{
@@ -110,6 +111,7 @@ func configVarsMaxUpdated() config.Variables {
 	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
+	updatedConfig["network_control_plane_access_scope"] = config.StringVariable("SNA")
 
 	return updatedConfig
 }
@@ -247,6 +249,11 @@ func TestAccSKEMax(t *testing.T) {
 				Config:          testutil.SKEProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Network
+					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
+					resource.TestCheckResourceAttr("stackit_network.network", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
+
 					// cluster data
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
@@ -298,6 +305,12 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
+
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_cluster.cluster", "network.id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
@@ -373,6 +386,12 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_cluster.cluster", "network.id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
 				),
 			},
 			// 3) Import cluster
@@ -455,6 +474,12 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
+
+					resource.TestCheckResourceAttrPair(
+						"stackit_ske_cluster.cluster", "network.id",
+						"stackit_network.network", "network_id",
+					),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(configVarsMaxUpdated()["network_control_plane_access_scope"])),
 				),
 			},
 			// Deletion is done by the framework implicitly

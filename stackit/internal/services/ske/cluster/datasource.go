@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 
@@ -221,6 +222,16 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 						Computed:    true,
 						Validators: []validator.String{
 							validate.UUID(),
+						},
+					},
+					"control_plane": schema.SingleNestedAttribute{
+						Description: "Control plane for the cluster.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"access_scope": schema.StringAttribute{
+								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...),
+								Computed:    true,
+							},
 						},
 					},
 				},

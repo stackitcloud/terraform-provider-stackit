@@ -117,7 +117,16 @@ Read-Only:
 
 Read-Only:
 
+- `control_plane` (Attributes) Control plane for the cluster. (see [below for nested schema](#nestedatt--network--control_plane))
 - `id` (String) ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.
+
+<a id="nestedatt--network--control_plane"></a>
+### Nested Schema for `network.control_plane`
+
+Read-Only:
+
+- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area.Possible values are: `PUBLIC`, `SNA`.
+
 
 
 <a id="nestedatt--node_pools"></a>

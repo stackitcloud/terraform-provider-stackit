@@ -39,6 +39,10 @@ resource "stackit_ske_cluster" "example" {
     start                                = "01:00:00Z"
     end                                  = "02:00:00Z"
   }
+  network = {
+    id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    access_scope = "PUBLIC"
+  }
 }
 
 # Only use the import statement, if you want to import an existing ske cluster
@@ -204,4 +208,12 @@ Optional:
 
 Optional:
 
+- `control_plane` (Attributes) Control plane for the cluster. (see [below for nested schema](#nestedatt--network--control_plane))
 - `id` (String) ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.
+
+<a id="nestedatt--network--control_plane"></a>
+### Nested Schema for `network.control_plane`
+
+Optional:
+
+- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area.Possible values are: `PUBLIC`, `SNA`.
