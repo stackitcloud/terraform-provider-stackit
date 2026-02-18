@@ -88,7 +88,7 @@ jobs:
 
           resource "stackit_service_account" "sa"   {
             project_id = "62675838-7758-4b99-a4eb-84b20ac8626b"
-            name       = "terraform-wif-ci"
+            name       = "terraform-wif-ci-3"
           }
           EOF
         displayName: "Create Test Configuration"
