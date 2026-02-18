@@ -38,16 +38,20 @@ execute terraform on the main branch, we will configure the service account "Fed
 ### Azure DevOps assertions
 
 Azure DevOps supports OIDC authentication using the public issuer "https://vstoken.azure.com" (for Azure DevOps Server you should check your issuer URL) and setting information like organization, project, and pipeline 
-as part of the OIDC token claims.
+as part of the OIDC token claims. 
 
 Using a hypothetical pipeline named `terraform-ado-oidc` inside the prohect 'https://myorg.azure.com/project-abc` as example and assuming that we want to 
 execute terraform on the main branch, we will configure the service account "Federated identity Provider" with the following configuration:
 - **Provider Name**: AzureDevOps # This is just an example, you can choose any name you want
-- **Issuer URL**: https://vstoken.azure.com/{ORGANIZATION_ID} # This is the public issuer for Azure DevOps OIDC tokens
+- **Issuer URL**: https://vstoken.dev.azure.com/{ORGANIZATION_ID} # This is the public issuer for Azure DevOps OIDC tokens
+  - For most organizations, the URL uses `vstoken.dev.azure.com`, but some legacy organizations might use 'vstoken.azure.com' To be 100% sure, you can inspect the `iss` claim in a decoded OIDC token from your pipeline,
+  - How to find your ORGANIZATION_ID?
+    - Via Browser: Go to https://dev.azure.com/{YOUR_ORG_NAME}/_apis/connectionData and copy the value of instanceId. 
+    - Via Pipeline: Add a script step echo $(System.CollectionId) to print it during a run.
 - **Assertions**:
   - **aud**->equals->api://AzureADTokenExchange # Mandatory value
   - **sub**->equals->p://myorg/project-abc/terraform-ado-oidc # This is the pipeline where the process is running
-  - **rpo_ref**->equals->refs/heads/main # This is the branch where the pipeline will run, can be used instead of sub claim
+  - **rpo_ref**->equals->refs/heads/main # This is the branch where the pipeline will run
 
 > Note: This is just an example, you can use more or less fine-grained assertions.
 
