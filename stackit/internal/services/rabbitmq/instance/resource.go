@@ -67,7 +67,7 @@ type parametersModel struct {
 	Roles                types.List   `tfsdk:"roles"`
 	Syslog               types.List   `tfsdk:"syslog"`
 	TlsCiphers           types.List   `tfsdk:"tls_ciphers"`
-	TlsProtocols         types.String `tfsdk:"tls_protocols"`
+	TlsProtocols         types.List   `tfsdk:"tls_protocols"`
 }
 
 // Types corresponding to parametersModel
@@ -84,7 +84,7 @@ var parametersTypes = map[string]attr.Type{
 	"roles":                  basetypes.ListType{ElemType: types.StringType},
 	"syslog":                 basetypes.ListType{ElemType: types.StringType},
 	"tls_ciphers":            basetypes.ListType{ElemType: types.StringType},
-	"tls_protocols":          basetypes.StringType{},
+	"tls_protocols":          basetypes.ListType{ElemType: types.StringType},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -144,7 +144,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"roles":                  "List of roles to assign to the instance.",
 		"syslog":                 "List of syslog servers to send logs to.",
 		"tls_ciphers":            "List of TLS ciphers to use.",
-		"tls_protocols":          "TLS protocol to use.",
+		"tls_protocols":          "TLS protocol versions to use.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -274,8 +274,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"tls_protocols": schema.StringAttribute{
+					"tls_protocols": schema.ListAttribute{
 						Description: parametersDescriptions["tls_protocols"],
+						ElementType: types.StringType,
 						Optional:    true,
 						Computed:    true,
 					},
@@ -749,7 +750,6 @@ func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters
 	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
-	payloadParams.TlsProtocols = rabbitmq.InstanceParametersGetTlsProtocolsAttributeType(conversion.StringValueToPointer(parameters.TlsProtocols))
 
 	var err error
 	payloadParams.Plugins, err = conversion.StringListToPointer(parameters.Plugins)
@@ -770,6 +770,11 @@ func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters
 	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
 	if err != nil {
 		return nil, fmt.Errorf("converting tls_ciphers: %w", err)
+	}
+
+	payloadParams.TlsProtocols, err = conversion.StringListToPointer(parameters.TlsProtocols)
+	if err != nil {
+		return nil, fmt.Errorf("converting tls_protocol_versions: %w", err)
 	}
 
 	return payloadParams, nil

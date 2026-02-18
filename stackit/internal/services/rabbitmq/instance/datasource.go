@@ -81,7 +81,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"roles":                  "List of roles to assign to the instance.",
 		"syslog":                 "List of syslog servers to send logs to.",
 		"tls_ciphers":            "List of TLS ciphers to use.",
-		"tls_protocols":          "TLS protocol to use.",
+		"tls_protocols":          "TLS protocol versions to use.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -177,8 +177,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						ElementType: types.StringType,
 						Computed:    true,
 					},
-					"tls_protocols": schema.StringAttribute{
+					"tls_protocols": schema.ListAttribute{
 						Description: parametersDescriptions["tls_protocols"],
+						ElementType: types.StringType,
 						Computed:    true,
 					},
 				},
