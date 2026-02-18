@@ -37,11 +37,6 @@ variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "network_control_plane_access_scope" {}
 
-resource "stackit_network" "network" {
-  project_id = var.project_id
-  name       = var.name
-}
-
 resource "stackit_ske_cluster" "cluster" {
   project_id = var.project_id
   name       = var.name
@@ -99,7 +94,6 @@ resource "stackit_ske_cluster" "cluster" {
   }
   region = var.region
   network = {
-    id = stackit_network.network.network_id
     control_plane = {
       access_scope = var.network_control_plane_access_scope
     }

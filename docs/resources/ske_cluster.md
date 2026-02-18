@@ -40,7 +40,6 @@ resource "stackit_ske_cluster" "example" {
     end                                  = "02:00:00Z"
   }
   network = {
-    id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     access_scope = "PUBLIC"
   }
 }
