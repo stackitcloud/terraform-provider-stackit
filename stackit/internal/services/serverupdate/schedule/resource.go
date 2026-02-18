@@ -177,7 +177,7 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"rrule": schema.StringAttribute{
-				Description: "Update schedule described in `rrule` (recurrence rule) format.",
+				Description: "An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -193,7 +193,7 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:    true,
 			},
 			"maintenance_window": schema.Int64Attribute{
-				Description: "Maintenance window [1..24].",
+				Description: "Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.",
 				Required:    true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),

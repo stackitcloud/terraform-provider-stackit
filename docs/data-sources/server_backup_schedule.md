@@ -42,7 +42,7 @@ data "stackit_server_backup_schedule" "example" {
 - `enabled` (Boolean) Is the backup schedule enabled or disabled.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`server_id`,`backup_schedule_id`".
 - `name` (String) The schedule name.
-- `rrule` (String) Backup schedule described in `rrule` (recurrence rule) format.
+- `rrule` (String) An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.
 
 <a id="nestedatt--backup_properties"></a>
 ### Nested Schema for `backup_properties`
