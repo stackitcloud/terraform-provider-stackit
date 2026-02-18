@@ -109,8 +109,8 @@ github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOl
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jhump/protoreflect v1.17.0 h1:qOEr613fac2lOuTgWN4tPAtLL7fUSbuJL5X5XumQh94=
 github.com/jhump/protoreflect v1.17.0/go.mod h1:h9+vUUL38jiBzck8ck+6G/aeMX8Z4QUY/NiJPwPNi+8=
-github.com/jorturfer/stackit-sdk-go/core v0.0.0-20260218231415-0eade063c837 h1:DhZWX1S3qvYoD58D+8lJLaShVtg84vFk8q4oe4CWqAw=
-github.com/jorturfer/stackit-sdk-go/core v0.0.0-20260218231415-0eade063c837/go.mod h1:osMglDby4csGZ5sIfhNyYq1bS1TxIdPY88+skE/kkmI=
+github.com/jorturfer/stackit-sdk-go/core v0.0.0-20260218233050-3f219dc9de13 h1:SUA7JGasPoMs6ubO0xH0Lp+a6wQ+hoJF+KLVf5dDCis=
+github.com/jorturfer/stackit-sdk-go/core v0.0.0-20260218233050-3f219dc9de13/go.mod h1:osMglDby4csGZ5sIfhNyYq1bS1TxIdPY88+skE/kkmI=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
