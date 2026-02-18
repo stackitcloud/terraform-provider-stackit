@@ -15,9 +15,6 @@ variables:
   # Versión de Go (ajusta según tu go.mod)
   GO_VERSION: "1.22"
 
-environment:
-  SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
 jobs:
   - job: Build_and_Test
     displayName: "Build Provider & Test Plan"
@@ -30,6 +27,8 @@ jobs:
           echo "SYSTEM_ACCESSTOKEN: ${SYSTEM_ACCESSTOKEN}"
           echo "System.OidcRequestUri: $(System.OidcRequestUri)"
           echo "System.AccessToken: $(System.AccessToken)"
+        env:
+          SYSTEM_ACCESSTOKEN: $(SYSTEM_ACCESSTOKEN)
 
         displayName: "Check Environment"
       # 1. Instalar Go
@@ -110,6 +109,7 @@ jobs:
         env:
           STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
           STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
       # 8. Terraform Destroy (Siempre se ejecuta)
       - script: |
@@ -123,3 +123,4 @@ jobs:
         env:
           STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
           STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
