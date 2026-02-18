@@ -41,7 +41,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.4.3
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.32.0
+	golang.org/x/mod v0.33.0
 )
 
 require (
