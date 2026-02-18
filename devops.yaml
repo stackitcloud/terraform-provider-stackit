@@ -22,6 +22,13 @@ jobs:
     steps:
       - checkout: self
 
+      - script: |
+          echo "SYSTEM_OIDCREQUESTURI: $(SYSTEM_OIDCREQUESTURI)"
+          echo "SYSTEM_ACCESSTOKEN: $(SYSTEM_ACCESSTOKEN)"
+          echo "System.OidcRequestUri: $(System.OidcRequestUri)"
+          echo "System.AccessToken: $(System.AccessToken)"
+
+        displayName: "Check Environment"
       # 1. Instalar Go
       - task: GoTool@0
         inputs:
