@@ -15,7 +15,7 @@ variables:
   # Versión de Go (ajusta según tu go.mod)
   GO_VERSION: "1.22"
 
-env:
+environment:
   SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
 jobs:
