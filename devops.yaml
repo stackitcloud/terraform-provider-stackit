@@ -12,6 +12,7 @@ variables:
   # Es posible que necesites una Service Connection o configurar las credenciales explícitamente.
   STACKIT_USE_OIDC: "1"
   STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
+  SYSTEM_ACCESSTOKEN: $(System.AccessToken)
   # Versión de Go (ajusta según tu go.mod)
   GO_VERSION: "1.22"
 
