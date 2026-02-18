@@ -28,7 +28,7 @@ jobs:
           echo "System.OidcRequestUri: $(System.OidcRequestUri)"
           echo "System.AccessToken: $(System.AccessToken)"
         env:
-          SYSTEM_ACCESSTOKEN: $(SYSTEM_ACCESSTOKEN)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
         displayName: "Check Environment"
       # 1. Instalar Go
@@ -101,6 +101,7 @@ jobs:
         env:
           STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
           STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
       # 7. Terraform Apply
       - script: |
