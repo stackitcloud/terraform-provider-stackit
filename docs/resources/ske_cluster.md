@@ -40,7 +40,9 @@ resource "stackit_ske_cluster" "example" {
     end                                  = "02:00:00Z"
   }
   network = {
-    access_scope = "PUBLIC"
+    control_plane = {
+      access_scope = "PUBLIC"
+    }
   }
 }
 
