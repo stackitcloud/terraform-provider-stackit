@@ -23,8 +23,8 @@ jobs:
       - checkout: self
 
       - script: |
-          echo "SYSTEM_OIDCREQUESTURI: $(SYSTEM_OIDCREQUESTURI)"
-          echo "SYSTEM_ACCESSTOKEN: $(SYSTEM_ACCESSTOKEN)"
+          echo "SYSTEM_OIDCREQUESTURI: ${SYSTEM_OIDCREQUESTURI}"
+          echo "SYSTEM_ACCESSTOKEN: ${SYSTEM_ACCESSTOKEN}"
           echo "System.OidcRequestUri: $(System.OidcRequestUri)"
           echo "System.AccessToken: $(System.AccessToken)"
 
