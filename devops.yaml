@@ -11,7 +11,7 @@ variables:
   # NOTA: En ADO, la autenticación OIDC funciona diferente a GitHub.
   # Es posible que necesites una Service Connection o configurar las credenciales explícitamente.
   STACKIT_USE_OIDC: "1"
-  STACKIT_SERVICE_ACCOUNT_EMAIL: "turrado-test-2jfmrj1@sa.stackit.cloud"
+  STACKIT_SERVICE_ACCOUNT_EMAIL: "test-idp-njf5pc1@sa.stackit.cloud"
   # Versión de Go (ajusta según tu go.mod)
   GO_VERSION: "1.22"
 
@@ -73,11 +73,43 @@ jobs:
           provider "stackit" {
             default_region                       = "eu01"
             enable_beta_resources                = true
+            service_account_custom_endpoint      = "https://service-account.api.qa.stackit.cloud"
+            token_custom_endpoint                = "https://accounts.qa.stackit.cloud/oauth/v2/token"
           }
 
           resource "stackit_service_account" "sa"   {
-            project_id = "36026686-6bb7-46e9-8712-25625983a1be"
+            project_id = "62675838-7758-4b99-a4eb-84b20ac8626b"
             name       = "terraform-wif-ci"
           }
           EOF
         displayName: "Create Test Configuration"
+
+      # 6. Terraform Plan
+      - script: |
+          terraform init -backend=false
+          terraform plan -out=tfplan
+        displayName: "Terraform Plan"
+        env:
+          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
+          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+
+      # 7. Terraform Apply
+      - script: |
+          terraform apply -auto-approve tfplan
+        displayName: "Terraform Apply"
+        env:
+          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
+          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+
+      # 8. Terraform Destroy (Siempre se ejecuta)
+      - script: |
+          if [ -f terraform.tfstate ]; then
+            terraform destroy -auto-approve
+          else
+            echo "No state file found, skipping destroy."
+          fi
+        displayName: "Terraform Destroy"
+        condition: always() # Equivalente a if: always() en GitHub Actions
+        env:
+          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
+          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
