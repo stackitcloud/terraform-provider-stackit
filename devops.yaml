@@ -1,0 +1,83 @@
+trigger:
+  branches:
+    include:
+      - "*"
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  # Definir variables globales para usarlas en los scripts
+  # NOTA: En ADO, la autenticación OIDC funciona diferente a GitHub.
+  # Es posible que necesites una Service Connection o configurar las credenciales explícitamente.
+  STACKIT_USE_OIDC: "1"
+  STACKIT_SERVICE_ACCOUNT_EMAIL: "turrado-test-2jfmrj1@sa.stackit.cloud"
+  # Versión de Go (ajusta según tu go.mod)
+  GO_VERSION: "1.22"
+
+jobs:
+  - job: Build_and_Test
+    displayName: "Build Provider & Test Plan"
+
+    steps:
+      - checkout: self
+
+      # 1. Instalar Go
+      - task: GoTool@0
+        inputs:
+          version: "$(GO_VERSION)"
+        displayName: "Setup Go"
+
+      # 2. Compilar el Provider
+      - script: |
+          go build -o terraform-provider-stackit
+          chmod +x terraform-provider-stackit
+
+          # En ADO usamos $(Build.SourcesDirectory) en lugar de GITHUB_WORKSPACE
+          echo "##vso[task.setvariable variable=BINARY_PATH]$(Build.SourcesDirectory)"
+        displayName: "Build Provider"
+
+      # 3. Configurar Overrides de Terraform
+      - script: |
+          cat <<EOF > ~/.terraformrc
+          provider_installation {
+            dev_overrides {
+              "stackitcloud/stackit" = "$(BINARY_PATH)"
+            }
+            # Para otros providers (random, null, etc), usa el registro normal
+            direct {}
+          }
+          EOF
+
+          echo "Terraform RC content:"
+          cat ~/.terraformrc
+        displayName: "Configure Terraform Dev Overrides"
+
+      # 4. Instalar Terraform
+      - task: TerraformInstaller@1
+        inputs:
+          terraformVersion: "latest"
+        displayName: "Setup Terraform"
+
+      # 5. Crear configuración de prueba (main.tf)
+      - script: |
+          cat <<EOF > main.tf
+          terraform {
+            required_providers {
+              stackit = {
+                source = "stackitcloud/stackit"
+              }
+            }
+          }
+
+          provider "stackit" {
+            default_region                       = "eu01"
+            enable_beta_resources                = true
+          }
+
+          resource "stackit_service_account" "sa"   {
+            project_id = "36026686-6bb7-46e9-8712-25625983a1be"
+            name       = "terraform-wif-ci"
+          }
+          EOF
+        displayName: "Create Test Configuration"
