@@ -181,8 +181,10 @@ type providerModel struct {
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 
-	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
-	Experiments         types.List `tfsdk:"experiments"`
+	EnableBetaResources types.Bool   `tfsdk:"enable_beta_resources"`
+	Experiments         types.List   `tfsdk:"experiments"`
+	CliAuth             types.Bool   `tfsdk:"cli_auth"`
+	CliProfile          types.String `tfsdk:"cli_profile"`
 }
 
 // Schema defines the provider-level schema for configuration data.
@@ -229,6 +231,8 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"token_custom_endpoint":              "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":              "Enable beta resources. Default is false.",
 		"experiments":                        fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
+		"cli_auth":                           "Enable authentication using STACKIT CLI credentials. When enabled, the provider will use credentials from 'stackit auth provider login' if no explicit service account credentials are provided. Default is false.",
+		"cli_profile":                        "STACKIT CLI profile to use for authentication when cli_auth is enabled. If not specified, uses STACKIT_CLI_PROFILE environment variable, then ~/.config/stackit/cli-profile.txt, then 'default'.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -410,6 +414,14 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
 			},
+			"cli_auth": schema.BoolAttribute{
+				Optional:    true,
+				Description: descriptions["cli_auth"],
+			},
+			"cli_profile": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["cli_profile"],
+			},
 		},
 	}
 }
@@ -498,6 +510,40 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		providerData.Experiments = experimentValues
 	}
 
+	// Setup authentication with priority order:
+	// 1. Explicit provider configuration (service_account_key, token, etc.)
+	// 2. CLI provider credentials (if cli_auth = true and authenticated via STACKIT CLI)
+	// 3. Environment variables and credentials file (handled by sdkauth.SetupAuth)
+	var err error
+
+	// Check if CLI auth is explicitly enabled
+	cliAuthEnabled := !providerConfig.CliAuth.IsNull() && !providerConfig.CliAuth.IsUnknown() && providerConfig.CliAuth.ValueBool()
+
+	// Check if explicit authentication is configured
+	hasExplicitAuth := (!providerConfig.ServiceAccountKey.IsNull() && !providerConfig.ServiceAccountKey.IsUnknown()) ||
+		(!providerConfig.ServiceAccountKeyPath.IsNull() && !providerConfig.ServiceAccountKeyPath.IsUnknown()) ||
+		(!providerConfig.Token.IsNull() && !providerConfig.Token.IsUnknown())
+
+	// Configure CLI provider authentication via SDK if enabled
+	if !hasExplicitAuth && cliAuthEnabled {
+		// Get CLI profile from config
+		var cliProfile string
+		if !providerConfig.CliProfile.IsNull() && !providerConfig.CliProfile.IsUnknown() {
+			cliProfile = providerConfig.CliProfile.ValueString()
+		}
+
+		// Apply CLI provider auth configuration option
+		// The SDK will handle credential reading, token refresh, and authentication
+		err := config.WithCLIProviderAuth(cliProfile)(sdkConfig)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider",
+				fmt.Sprintf("%v", err))
+			return
+		}
+	}
+
+	// Setup authentication using the configured SDK
+	// This respects explicit credentials, CLI auth (if enabled), or env vars/credentials file
 	roundTripper, err := sdkauth.SetupAuth(sdkConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up authentication: %v", err))
