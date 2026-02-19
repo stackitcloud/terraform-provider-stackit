@@ -549,7 +549,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.ReadJWTFromFileSystem(oidc_token_path)
 	}
 
-	// Workload Identity Federation via provided OIDC Token from GitHub Actions or Azure Dev Ops
+	// Workload Identity Federation via provided OIDC Token from GitHub Actions or Azure DevOps
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && utils.GetEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") {
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
