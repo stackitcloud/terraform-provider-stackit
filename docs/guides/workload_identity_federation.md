@@ -18,7 +18,7 @@ Before using Workload Identity Federation flow, you need to:
 WIF can be configured to trust any public OIDC provider following the [docs page](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-federations/#create-a-federated-identity-provider)
 but for the purpose of this guide we will focus on GitHub Actions and AzureDevOps as OIDC providers. 
 
-> Important: The most closed assertions including all the data that you cant from the OIDC token should be used to avoid potential security risks of trusting tokens that are not issued in the context of your CI/CD pipeline.
+> Important: The most closed assertions including all the data that you can from the OIDC token should be used to avoid potential security risks of trusting tokens that are not issued in the context of your CI/CD pipeline.
 
 ### GitHub Actions assertions
 
