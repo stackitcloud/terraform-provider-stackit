@@ -28,6 +28,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -220,6 +221,9 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// This sleep is currently needed due to the IAM Cache.
 	time.Sleep(10 * time.Second)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"container_id": *folderCreateResp.ContainerId,
+	})
 
 	folderGetResponse, err := r.client.GetFolderDetails(ctx, *folderCreateResp.ContainerId).Execute()
 	if err != nil {
@@ -376,9 +380,9 @@ func (r *folderResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	ctx = tflog.SetField(ctx, "container_id", req.ID)
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("container_id"), req.ID)...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"container_id": req.ID,
+	})
 	tflog.Info(ctx, "Resource Manager folder state imported")
 }
 
