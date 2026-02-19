@@ -50,7 +50,7 @@ func (m *MockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			m.t.Fatalf("Error marshaling response body: %v", err)
 		}
 		w.Header().Set("content-type", "application/json")
-		w.Write(bs)
+		w.Write(bs) //nolint:errcheck
 	}
 	status := next.StatusCode
 	if status == 0 {
