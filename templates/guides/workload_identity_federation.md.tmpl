@@ -147,3 +147,75 @@ jobs:
           STACKIT_USE_OIDC: "1"
           STACKIT_SERVICE_ACCOUNT_EMAIL: "terraform-example@sa.stackit.cloud"
 ```
+
+### Azure Pipeline
+
+```yaml
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  STACKIT_USE_OIDC: "1"
+  STACKIT_SERVICE_ACCOUNT_EMAIL: "terraform-example@sa.stackit.cloud"
+
+jobs:
+  - job: demo-job
+    displayName: "Workload Identity Federation with STACKIT"
+    steps:
+      - checkout: self
+
+      - task: TerraformInstaller@1
+        inputs:
+          terraformVersion: "latest"
+        displayName: "Setup Terraform"
+
+      - script: |
+          cat <<EOF > main.tf
+          terraform {
+            required_providers {
+              stackit = {
+                source = "stackitcloud/stackit"
+              }
+            }
+          }
+
+          provider "stackit" {
+            default_region  = "eu01"
+          }
+
+          resource "stackit_service_account" "sa"   {
+            project_id = "e1925fbf-5272-497a-8298-1586760670de"
+            name       = "terraform-example-ci"
+          }
+          EOF
+        displayName: "Create Test Configuration"
+
+      - script: |
+          terraform init
+        displayName: "Terraform Init"
+        env:
+          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
+          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+      - script: |
+          terraform plan -out=tfplan
+        displayName: "Terraform Plan"
+        env:
+          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
+          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+      - script: |
+          terraform apply -auto-approve tfplan
+        displayName: "Terraform Apply"
+        env:
+          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
+          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+```
