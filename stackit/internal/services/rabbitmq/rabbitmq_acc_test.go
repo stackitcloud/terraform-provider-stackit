@@ -3,10 +3,12 @@ package rabbitmq_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -239,6 +241,198 @@ func TestAccRabbitMQResource(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+// Run apply for an instance and produce an error in the waiter. By erroring out state checks are not run in this step.
+// The second step imports the resource and runs a state check to verify that the first step wrote the IDs, despite the error.
+// When importing we append "-import" to the credential ID to verify that the import isn't overwriting the instance
+// ID from the first step
+func TestRabbitMQInstanceSavesIDsOnError(t *testing.T) {
+	projectId := uuid.NewString()
+	instanceId := uuid.NewString()
+	const (
+		name     = "instance-name"
+		planName = "plan-name"
+		planId   = "plan-id"
+		version  = "version"
+	)
+	s := testutil.NewMockServer(t)
+	defer s.Server.Close()
+	tfConfig := fmt.Sprintf(`
+provider "stackit" {
+	rabbitmq_custom_endpoint = "%s"
+	service_account_token = "mock-server-needs-no-auth"
+}
+
+resource "stackit_rabbitmq_instance" "instance" {
+	project_id = "%s"
+	name = "%s"
+	plan_name = "%s"
+	version = "%s"
+}
+`, s.Server.URL, projectId, name, planName, version)
+	offerings := testutil.MockResponse{
+		ToJsonBody: &rabbitmq.ListOfferingsResponse{
+			Offerings: &[]rabbitmq.Offering{
+				{
+					Version: utils.Ptr(version),
+					Plans: &[]rabbitmq.Plan{
+						{
+							Name: utils.Ptr(planName),
+							Id:   utils.Ptr(planId),
+						},
+					},
+				},
+			},
+		},
+	}
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					s.Reset(
+						// respond to listing offerings
+						offerings,
+						// initial post response
+						testutil.MockResponse{
+							ToJsonBody: rabbitmq.CreateInstanceResponse{
+								InstanceId: utils.Ptr(instanceId),
+							},
+						},
+						// failing waiter
+						testutil.MockResponse{
+							ToJsonBody: rabbitmq.Instance{
+								Status: utils.Ptr(rabbitmq.INSTANCESTATUS_FAILED),
+							},
+						},
+					)
+				},
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile("Error creating instance.*"),
+			},
+			{
+				PreConfig: func() {
+					s.Reset(
+						// read from import
+						testutil.MockResponse{
+							ToJsonBody: rabbitmq.Instance{
+								Status:     utils.Ptr(rabbitmq.INSTANCESTATUS_ACTIVE),
+								InstanceId: utils.Ptr(instanceId + "-import"),
+								PlanId:     utils.Ptr(planId),
+							},
+						},
+						// list offerings in import
+						offerings,
+						// delete
+						testutil.MockResponse{StatusCode: http.StatusAccepted},
+						// delete waiter
+						testutil.MockResponse{
+							StatusCode: http.StatusGone,
+						},
+					)
+				},
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if len(states) != 1 {
+						return fmt.Errorf("expected exactly one state to be imported, got %d", len(states))
+					}
+					state := states[0]
+					if state.Attributes["instance_id"] != instanceId {
+						return fmt.Errorf("expected instance_id to be %s, got %s", instanceId, state.Attributes["instance_id"])
+					}
+					if state.Attributes["project_id"] != projectId {
+						return fmt.Errorf("expected project_id to be %s, got %s", projectId, state.Attributes["project_id"])
+					}
+					return nil
+				},
+				ImportState:   true,
+				ImportStateId: fmt.Sprintf("%s,%s", projectId, instanceId),
+				ResourceName:  "stackit_rabbitmq_instance.instance",
+			},
+		},
+	})
+}
+
+// Run apply for credentials and produce an error in the waiter. By erroring out state checks are not run in this step.
+// The second step imports the resource and runs a state check to verify that the first step wrote the IDs, despite the error.
+// When importing we append "-import" to the credential ID to verify that the import isn't overwriting the credential
+// ID from the first step
+func TestRabbitMQCredentialsSavesIDsOnError(t *testing.T) {
+	var (
+		projectId    = uuid.NewString()
+		instanceId   = uuid.NewString()
+		credentialId = uuid.NewString()
+	)
+	s := testutil.NewMockServer(t)
+	t.Cleanup(s.Server.Close)
+	tfConfig := fmt.Sprintf(`
+provider "stackit" {
+	rabbitmq_custom_endpoint = "%s"
+	service_account_token = "mock-server-needs-no-auth"
+}
+
+resource "stackit_rabbitmq_credential" "credential" {
+	project_id = "%s"
+	instance_id = "%s"
+}
+`, s.Server.URL, projectId, instanceId)
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					s.Reset(
+						// initial post response
+						testutil.MockResponse{
+							ToJsonBody: rabbitmq.CredentialsResponse{
+								Id: utils.Ptr(credentialId),
+							},
+						},
+						// failing waiter
+						testutil.MockResponse{StatusCode: http.StatusInternalServerError},
+					)
+				},
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile("Error creating credential.*"),
+			},
+			{
+				PreConfig: func() {
+					s.Reset(
+						// read from import
+						testutil.MockResponse{
+							ToJsonBody: rabbitmq.CredentialsResponse{
+								Id:  utils.Ptr(credentialId + "-import"),
+								Raw: &rabbitmq.RawCredentials{},
+							},
+						},
+						// delete
+						testutil.MockResponse{StatusCode: http.StatusAccepted},
+						// delete waiter
+						testutil.MockResponse{StatusCode: http.StatusGone},
+					)
+				},
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					if len(states) != 1 {
+						return fmt.Errorf("expected exactly one state to be imported, got %d", len(states))
+					}
+					state := states[0]
+					if state.Attributes["instance_id"] != instanceId {
+						return fmt.Errorf("expected instance_id to be %s, got %s", instanceId, state.Attributes["instance_id"])
+					}
+					if state.Attributes["project_id"] != projectId {
+						return fmt.Errorf("expected project_id to be %s, got %s", projectId, state.Attributes["project_id"])
+					}
+					if state.Attributes["credential_id"] != credentialId {
+						return fmt.Errorf("expected credential_id to be %s, got %s", credentialId, state.Attributes["credential_id"])
+					}
+					return nil
+				},
+				ImportState:   true,
+				ImportStateId: fmt.Sprintf("%s,%s,%s", projectId, instanceId, credentialId),
+				ResourceName:  "stackit_rabbitmq_credential.credential",
+			},
 		},
 	})
 }
