@@ -353,7 +353,7 @@ resource "stackit_mongodbflex_instance" "instance" {
 								{
 									Description: utils.Ptr("flava-flav"),
 									Cpu:         utils.Ptr(int64(2)),
-									Id:          utils.Ptr("flavour-id"),
+									Id:          utils.Ptr("flavor-id"),
 									Memory:      utils.Ptr(int64(4)),
 								},
 							}},
