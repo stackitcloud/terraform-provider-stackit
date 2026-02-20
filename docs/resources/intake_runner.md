@@ -14,21 +14,15 @@ Manages STACKIT Intake Runner.
 
 ```terraform
 resource "stackit_intake_runner" "example" {
-  project_id            = var.project_id
-  name                  = "example-runner-full"
+  project_id            = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name                  = "example-runner"
+  region                = "eu01"
   description           = "An example runner for STACKIT Intake"
-  max_message_size_kib  = 2048
-  max_messages_per_hour = 1500
+  max_message_size_kib  = 1024
+  max_messages_per_hour = 1000
   labels = {
-    "created_by" = "terraform-example"
-    "env"        = "production"
+    "env" = "development"
   }
-  region = var.region
-}
-
-import {
-  to = stackit_intake_runner.example
-  id = "${var.project_id},${var.region},${var.runner_id}"
 }
 ```
 
