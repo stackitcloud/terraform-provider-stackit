@@ -246,9 +246,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 }
 
 // Run apply for an instance and produce an error in the waiter. By erroring out state checks are not run in this step.
-// The second step imports the resource and runs a state check to verify that the first step wrote the IDs, despite the error.
-// When importing we append "-import" to the credential ID to verify that the import isn't overwriting the instance
-// ID from the first step
+// The second step refreshes the resource and verifies that the IDs are passed to the read function.
 func TestRabbitMQInstanceSavesIDsOnError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
@@ -294,16 +292,15 @@ resource "stackit_rabbitmq_instance" "instance" {
 			{
 				PreConfig: func() {
 					s.Reset(
-						// respond to listing offerings
 						offerings,
-						// initial post response
 						testutil.MockResponse{
+							Description: "create",
 							ToJsonBody: rabbitmq.CreateInstanceResponse{
 								InstanceId: utils.Ptr(instanceId),
 							},
 						},
-						// failing waiter
 						testutil.MockResponse{
+							Description: "create waiter",
 							ToJsonBody: rabbitmq.Instance{
 								Status: utils.Ptr(rabbitmq.INSTANCESTATUS_FAILED),
 							},
@@ -316,49 +313,29 @@ resource "stackit_rabbitmq_instance" "instance" {
 			{
 				PreConfig: func() {
 					s.Reset(
-						// read from import
 						testutil.MockResponse{
-							ToJsonBody: rabbitmq.Instance{
-								Status:     utils.Ptr(rabbitmq.INSTANCESTATUS_ACTIVE),
-								InstanceId: utils.Ptr(instanceId + "-import"),
-								PlanId:     utils.Ptr(planId),
+							Description: "refresh",
+							Handler: func(w http.ResponseWriter, req *http.Request) {
+								expected := fmt.Sprintf("/v1/projects/%s/instances/%s", projectId, instanceId)
+								if req.URL.Path != expected {
+									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
+								}
+								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
-						// list offerings in import
-						offerings,
-						// delete
-						testutil.MockResponse{StatusCode: http.StatusAccepted},
-						// delete waiter
-						testutil.MockResponse{
-							StatusCode: http.StatusGone,
-						},
+						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
+						testutil.MockResponse{Description: "delete waiter", StatusCode: http.StatusGone},
 					)
 				},
-				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					if len(states) != 1 {
-						return fmt.Errorf("expected exactly one state to be imported, got %d", len(states))
-					}
-					state := states[0]
-					if state.Attributes["instance_id"] != instanceId {
-						return fmt.Errorf("expected instance_id to be %s, got %s", instanceId, state.Attributes["instance_id"])
-					}
-					if state.Attributes["project_id"] != projectId {
-						return fmt.Errorf("expected project_id to be %s, got %s", projectId, state.Attributes["project_id"])
-					}
-					return nil
-				},
-				ImportState:   true,
-				ImportStateId: fmt.Sprintf("%s,%s", projectId, instanceId),
-				ResourceName:  "stackit_rabbitmq_instance.instance",
+				RefreshState: true,
+				ExpectError:  regexp.MustCompile("Error reading instance.*"),
 			},
 		},
 	})
 }
 
 // Run apply for credentials and produce an error in the waiter. By erroring out state checks are not run in this step.
-// The second step imports the resource and runs a state check to verify that the first step wrote the IDs, despite the error.
-// When importing we append "-import" to the credential ID to verify that the import isn't overwriting the credential
-// ID from the first step
+// The second step refreshes the resource and verifies that the IDs are passed to the read function.
 func TestRabbitMQCredentialsSavesIDsOnError(t *testing.T) {
 	var (
 		projectId    = uuid.NewString()
@@ -400,38 +377,22 @@ resource "stackit_rabbitmq_credential" "credential" {
 			{
 				PreConfig: func() {
 					s.Reset(
-						// read from import
 						testutil.MockResponse{
-							ToJsonBody: rabbitmq.CredentialsResponse{
-								Id:  utils.Ptr(credentialId + "-import"),
-								Raw: &rabbitmq.RawCredentials{},
+							Description: "refresh",
+							Handler: func(w http.ResponseWriter, req *http.Request) {
+								expected := fmt.Sprintf("/v1/projects/%s/instances/%s/credentials/%s", projectId, instanceId, credentialId)
+								if req.URL.Path != expected {
+									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
+								}
+								w.WriteHeader(http.StatusInternalServerError)
 							},
 						},
-						// delete
-						testutil.MockResponse{StatusCode: http.StatusAccepted},
-						// delete waiter
-						testutil.MockResponse{StatusCode: http.StatusGone},
+						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
+						testutil.MockResponse{Description: "delete waiter", StatusCode: http.StatusGone},
 					)
 				},
-				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					if len(states) != 1 {
-						return fmt.Errorf("expected exactly one state to be imported, got %d", len(states))
-					}
-					state := states[0]
-					if state.Attributes["instance_id"] != instanceId {
-						return fmt.Errorf("expected instance_id to be %s, got %s", instanceId, state.Attributes["instance_id"])
-					}
-					if state.Attributes["project_id"] != projectId {
-						return fmt.Errorf("expected project_id to be %s, got %s", projectId, state.Attributes["project_id"])
-					}
-					if state.Attributes["credential_id"] != credentialId {
-						return fmt.Errorf("expected credential_id to be %s, got %s", credentialId, state.Attributes["credential_id"])
-					}
-					return nil
-				},
-				ImportState:   true,
-				ImportStateId: fmt.Sprintf("%s,%s,%s", projectId, instanceId, credentialId),
-				ResourceName:  "stackit_rabbitmq_credential.credential",
+				RefreshState: true,
+				ExpectError:  regexp.MustCompile("Error reading credential.*"),
 			},
 		},
 	})
