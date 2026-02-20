@@ -118,7 +118,7 @@ func (a *alertGroupResource) ValidateConfig(ctx context.Context, req resource.Va
 	}
 
 	rules := &[]rule{}
-	diags := resourceModel.Rules.ElementsAs(ctx, rules, false)
+	diags := resourceModel.Rules.ElementsAs(ctx, rules, true)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
