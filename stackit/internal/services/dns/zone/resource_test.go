@@ -435,3 +435,45 @@ func TestToPayloadUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestDnsNameNoTrailingDot(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		match       bool
+	}{
+		{
+			"normal domain without trailing dot",
+			"example.com",
+			true,
+		},
+		{
+			"single layer without trailing dot",
+			"example",
+			true,
+		},
+		{
+			"domain with trailing dot",
+			"example.com.",
+			false,
+		},
+		{
+			"only trailing dot",
+			".",
+			false,
+		},
+		{
+			"single layer with trailing dot",
+			"example.",
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			got := dnsNameNoTrailingDotRegex.MatchString(tt.input)
+			if got != tt.match {
+				t.Fatalf("dnsNameNoTrailingDotRegex.MatchString(%q) = %v, want %v", tt.input, got, tt.match)
+			}
+		})
+	}
+}
