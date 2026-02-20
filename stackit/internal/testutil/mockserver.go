@@ -8,10 +8,15 @@ import (
 	"testing"
 )
 
+// MockResponse represents a single response that the MockServer will return for a request.
+// If `Handler` is set, it will be used to handle the request and the other fields will be ignored.
+// If `ToJsonBody` is set, it will be marshaled to JSON and returned as the response body with content-type application/json.
+// If `StatusCode` is set, it will be used as the response status code. Otherwise, http.StatusOK will be used.
 type MockResponse struct {
 	StatusCode  int
 	Description string
 	ToJsonBody  any
+	Handler     http.HandlerFunc
 }
 
 var _ http.Handler = (*MockServer)(nil)
@@ -44,6 +49,10 @@ func (m *MockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	next := m.responses[m.nextResponse]
 	m.nextResponse++
+	if next.Handler != nil {
+		next.Handler(w, r)
+		return
+	}
 	if next.ToJsonBody != nil {
 		bs, err := json.Marshal(next.ToJsonBody)
 		if err != nil {
