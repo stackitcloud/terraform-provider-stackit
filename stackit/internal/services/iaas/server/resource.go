@@ -61,6 +61,7 @@ type Model struct {
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
+	Agent             types.Object `tfsdk:"agent"`
 	AvailabilityZone  types.String `tfsdk:"availability_zone"`
 	BootVolume        types.Object `tfsdk:"boot_volume"`
 	ImageId           types.String `tfsdk:"image_id"`
@@ -73,6 +74,11 @@ type Model struct {
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
 	DesiredStatus     types.String `tfsdk:"desired_status"`
+}
+
+// Struct corresponding to Model.Agent
+type agentModel struct {
+	Provisioned types.Bool `tfsdk:"provisioned"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -93,6 +99,11 @@ var bootVolumeTypes = map[string]attr.Type{
 	"source_id":             basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
 	"id":                    basetypes.StringType{},
+}
+
+// Types corresponding to agentModel
+var agentTypes = map[string]attr.Type{
+	"provisioned": basetypes.BoolType{},
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
@@ -160,6 +171,14 @@ func (r *serverResource) ValidateConfig(ctx context.Context, req resource.Valida
 	if !bootVolume.DeleteOnTermination.IsUnknown() && !bootVolume.DeleteOnTermination.IsNull() && !bootVolume.SourceType.IsUnknown() && !bootVolume.SourceType.IsNull() {
 		if bootVolume.SourceType != types.StringValue("image") {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring server", "You can only provide `delete_on_termination` for `source_type` `image`.")
+		}
+	}
+
+	var agent = &agentModel{}
+	if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+		diags := model.Agent.As(ctx, agent, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return
 		}
 	}
 
@@ -272,6 +291,23 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 				Optional: true,
 				Computed: true,
+			},
+			"agent": schema.SingleNestedAttribute{
+				Description: "The STACKIT Server Agent configured for the server",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"provisioned": schema.BoolAttribute{
+						Description: "Whether a STACKIT Server Agent should be provisioned at the server",
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.RequiresReplace(),
+						},
+					},
+				},
 			},
 			"boot_volume": schema.SingleNestedAttribute{
 				Description: "The boot volume for the server",
@@ -975,6 +1011,26 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 		model.NetworkInterfaces = types.ListNull(types.StringType)
 	}
 
+	if serverResp.Agent != nil {
+		// convert agent model
+		var modelAgent = &agentModel{}
+		if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+			diags := model.Agent.As(ctx, modelAgent, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+			}
+		}
+		agent, diags := types.ObjectValue(agentTypes, map[string]attr.Value{
+			"provisioned": types.BoolPointerValue(serverResp.Agent.Provisioned),
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map agentModel: %w", core.DiagsToError(diags))
+		}
+		model.Agent = agent
+	} else {
+		model.Agent = types.ObjectNull(agentTypes)
+	}
+
 	if serverResp.BootVolume != nil {
 		// convert boot volume model
 		var bootVolumeModel = &bootVolumeModel{}
@@ -1043,6 +1099,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		}
 	}
 
+	var agent = &agentModel{}
+	if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+		diags := model.Agent.As(ctx, agent, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("convert agent object to struct: %w", core.DiagsToError(diags))
+		}
+	}
+
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -1061,6 +1125,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		if !bootVolume.DeleteOnTermination.IsNull() && !bootVolume.DeleteOnTermination.IsUnknown() && bootVolume.DeleteOnTermination.ValueBool() {
 			// it is set and true, adjust payload
 			bootVolumePayload.DeleteOnTermination = conversion.BoolValueToPointer(bootVolume.DeleteOnTermination)
+		}
+	}
+
+	var agentPayload *iaas.ServerAgent
+	// it is set and true, adjust payload
+	if !agent.Provisioned.IsNull() && !agent.Provisioned.IsUnknown() {
+		agentPayload = &iaas.ServerAgent{
+			Provisioned: conversion.BoolValueToPointer(agent.Provisioned),
 		}
 	}
 
@@ -1093,6 +1165,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 	return &iaas.CreateServerPayload{
 		AffinityGroup:    conversion.StringValueToPointer(model.AffinityGroup),
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
+		Agent:            agentPayload,
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),

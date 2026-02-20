@@ -59,6 +59,7 @@ func TestMapFields(t *testing.T) {
 				ImageId:           types.StringNull(),
 				NetworkInterfaces: types.ListNull(types.StringType),
 				KeypairName:       types.StringNull(),
+				Agent:             types.ObjectNull(agentTypes),
 				AffinityGroup:     types.StringNull(),
 				UserData:          types.StringNull(),
 				CreatedAt:         types.StringNull(),
@@ -92,7 +93,10 @@ func TestMapFields(t *testing.T) {
 							NicId: utils.Ptr("nic2"),
 						},
 					},
-					KeypairName:   utils.Ptr("keypair_name"),
+					KeypairName: utils.Ptr("keypair_name"),
+					Agent: &iaas.ServerAgent{
+						Provisioned: utils.Ptr(true),
+					},
 					AffinityGroup: utils.Ptr("group_id"),
 					CreatedAt:     utils.Ptr(testTimestamp()),
 					UpdatedAt:     utils.Ptr(testTimestamp()),
@@ -113,11 +117,14 @@ func TestMapFields(t *testing.T) {
 				ImageId:           types.StringValue("image_id"),
 				NetworkInterfaces: types.ListNull(types.StringType),
 				KeypairName:       types.StringValue("keypair_name"),
-				AffinityGroup:     types.StringValue("group_id"),
-				CreatedAt:         types.StringValue(testTimestampValue),
-				UpdatedAt:         types.StringValue(testTimestampValue),
-				LaunchedAt:        types.StringValue(testTimestampValue),
-				Region:            types.StringValue("eu02"),
+				Agent: types.ObjectValueMust(agentTypes, map[string]attr.Value{
+					"provisioned": types.BoolValue(true),
+				}),
+				AffinityGroup: types.StringValue("group_id"),
+				CreatedAt:     types.StringValue(testTimestampValue),
+				UpdatedAt:     types.StringValue(testTimestampValue),
+				LaunchedAt:    types.StringValue(testTimestampValue),
+				Region:        types.StringValue("eu02"),
 			},
 			isValid: true,
 		},
@@ -144,6 +151,7 @@ func TestMapFields(t *testing.T) {
 				ImageId:           types.StringNull(),
 				NetworkInterfaces: types.ListNull(types.StringType),
 				KeypairName:       types.StringNull(),
+				Agent:             types.ObjectNull(agentTypes),
 				AffinityGroup:     types.StringNull(),
 				UserData:          types.StringNull(),
 				CreatedAt:         types.StringNull(),
@@ -216,6 +224,9 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("nic1"),
 					types.StringValue("nic2"),
 				}),
+				Agent: types.ObjectValueMust(agentTypes, map[string]attr.Value{
+					"provisioned": types.BoolValue(true),
+				}),
 			},
 			expected: &iaas.CreateServerPayload{
 				Name:             utils.Ptr("name"),
@@ -239,6 +250,9 @@ func TestToCreatePayload(t *testing.T) {
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
 						NicIds: &[]string{"nic1", "nic2"},
 					},
+				},
+				Agent: &iaas.ServerAgent{
+					Provisioned: utils.Ptr(true),
 				},
 			},
 			isValid: true,
@@ -267,6 +281,9 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("nic1"),
 					types.StringValue("nic2"),
 				}),
+				Agent: types.ObjectValueMust(agentTypes, map[string]attr.Value{
+					"provisioned": types.BoolValue(true),
+				}),
 			},
 			expected: &iaas.CreateServerPayload{
 				Name:             utils.Ptr("name"),
@@ -291,6 +308,9 @@ func TestToCreatePayload(t *testing.T) {
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
 						NicIds: &[]string{"nic1", "nic2"},
 					},
+				},
+				Agent: &iaas.ServerAgent{
+					Provisioned: utils.Ptr(true),
 				},
 			},
 			isValid: true,
