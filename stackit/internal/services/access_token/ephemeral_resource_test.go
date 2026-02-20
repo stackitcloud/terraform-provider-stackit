@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 )
@@ -23,11 +24,10 @@ var testServiceAccountKey string
 func startMockTokenServer() *httptest.Server {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := clients.TokenResponseBody{
-			AccessToken:  "mock_access_token",
-			RefreshToken: "mock_refresh_token",
-			TokenType:    "Bearer",
-			ExpiresIn:    int(time.Now().Add(time.Hour).Unix()),
-			Scope:        "mock_scope",
+			AccessToken: "mock_access_token",
+			TokenType:   "Bearer",
+			ExpiresIn:   int(time.Now().Add(time.Hour).Unix()),
+			Scope:       "mock_scope",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
@@ -235,7 +235,13 @@ func TestGetAccessToken(t *testing.T) {
 
 			cfg := tt.cfgFactory()
 
-			token, err := getAccessToken(cfg)
+			roundTripper, err := auth.SetupAuth(cfg)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error generating round tripper for test case '%s'", tt.description)
+				}
+			}
+			token, err := getAccessToken(roundTripper)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error but got none for test case '%s'", tt.description)
