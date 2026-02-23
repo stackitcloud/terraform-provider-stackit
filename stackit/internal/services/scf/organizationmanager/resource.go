@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -239,6 +238,17 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 
 	ctx = core.LogResponse(ctx)
 
+	if scfOrgManagerCreateResponse.Guid == nil {
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", "API response does not contain user id")
+	}
+	userId := *scfOrgManagerCreateResponse.Guid
+	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"org_id":     orgId,
+		"user_id":    userId,
+	})
+
 	err = mapFieldsCreate(scfOrgManagerCreateResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Mapping fields: %v", err))
@@ -360,10 +370,12 @@ func (s *scfOrganizationManagerResource) ImportState(ctx context.Context, reques
 	orgId := idParts[2]
 	userId := idParts[3]
 	// Set the project id, region organization id and user id in the state
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("region"), region)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("org_id"), orgId)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("user_id"), userId)...)
+	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"org_id":     orgId,
+		"user_id":    userId,
+	})
 	tflog.Info(ctx, "Scf organization manager state imported")
 }
 

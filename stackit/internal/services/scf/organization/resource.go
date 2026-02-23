@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -260,7 +259,17 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 
 	ctx = core.LogResponse(ctx)
 
+	if scfOrgCreateResponse.Guid == nil {
+		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", "API response did not include org ID")
+		return
+	}
 	orgId := *scfOrgCreateResponse.Guid
+
+	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"org_id":     orgId,
+	})
 
 	// Apply the org quota if provided
 	if quotaId != "" {
@@ -485,9 +494,11 @@ func (s *scfOrganizationResource) ImportState(ctx context.Context, request resou
 	region := idParts[1]
 	orgId := idParts[2]
 	// Set the project id and organization id in the state
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("region"), region)...)
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root("org_id"), orgId)...)
+	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"org_id":     orgId,
+	})
 	tflog.Info(ctx, "Scf organization state imported")
 }
 
