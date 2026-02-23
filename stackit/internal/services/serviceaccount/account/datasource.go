@@ -140,7 +140,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 		}
 
 		// Try to parse the name from the provided email address
-		name, err := parseNameFromEmail(model.Email.ValueString())
+		name, err := serviceaccountUtils.ParseNameFromEmail(model.Email.ValueString())
 		if name != "" && err == nil {
 			model.Name = types.StringValue(name)
 		}

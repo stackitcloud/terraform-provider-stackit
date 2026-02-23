@@ -280,7 +280,7 @@ func (r *serviceAccountResource) ImportState(ctx context.Context, req resource.I
 	email := idParts[1]
 
 	// Attempt to parse the name from the email if valid.
-	name, err := parseNameFromEmail(email)
+	name, err := serviceaccountUtils.ParseNameFromEmail(email)
 	if name != "" && err == nil {
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 	}
@@ -321,20 +321,4 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 	model.ProjectId = types.StringPointerValue(resp.ProjectId)
 
 	return nil
-}
-
-// parseNameFromEmail extracts the name component from an email address.
-// The email format must be `name-<random7characters>@sa.stackit.cloud`.
-func parseNameFromEmail(email string) (string, error) {
-	namePattern := `^([a-z][a-z0-9]*(?:-[a-z0-9]+)*)-\w{7}@sa\.stackit\.cloud$`
-	re := regexp.MustCompile(namePattern)
-	match := re.FindStringSubmatch(email)
-
-	// If a match is found, return the name component
-	if len(match) > 1 {
-		return match[1], nil
-	}
-
-	// If no match is found, return an error
-	return "", fmt.Errorf("unable to parse name from email")
 }

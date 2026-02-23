@@ -123,39 +123,3 @@ func TestMapFields(t *testing.T) {
 		})
 	}
 }
-
-func TestParseNameFromEmail(t *testing.T) {
-	testCases := []struct {
-		email       string
-		expected    string
-		shouldError bool
-	}{
-		{"test03-8565oq1@sa.stackit.cloud", "test03", false},
-		{"import-test-vshp191@sa.stackit.cloud", "import-test", false},
-		{"sa-test-01-acfj2s1@sa.stackit.cloud", "sa-test-01", false},
-		{"invalid-email@sa.stackit.cloud", "", true},
-		{"missingcode-@sa.stackit.cloud", "", true},
-		{"nohyphen8565oq1@sa.stackit.cloud", "", true},
-		{"eu01-qnmbwo1@unknown.stackit.cloud", "", true},
-		{"eu01-qnmbwo1@ske.stackit.com", "", true},
-		{"someotherformat@sa.stackit.cloud", "", true},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.email, func(t *testing.T) {
-			name, err := parseNameFromEmail(tc.email)
-			if tc.shouldError {
-				if err == nil {
-					t.Errorf("expected an error for email: %s, but got none", tc.email)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("did not expect an error for email: %s, but got: %v", tc.email, err)
-				}
-				if name != tc.expected {
-					t.Errorf("expected name: %s, got: %s for email: %s", tc.expected, name, tc.email)
-				}
-			}
-		})
-	}
-}
