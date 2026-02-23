@@ -163,6 +163,8 @@ github.com/stackitcloud/stackit-sdk-go/services/git v0.10.3 h1:VIjkSofZz9utOOkBd
 github.com/stackitcloud/stackit-sdk-go/services/git v0.10.3/go.mod h1:EJk1Ss9GTel2NPIu/w3+x9XcQcEd2k3ibea5aQDzVhQ=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5 h1:W57+XRa8wTLsi5CV9Tqa7mGgt/PvlRM//RurXSmvII8=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5/go.mod h1:lTWjW57eAq1bwfM6nsNinhoBr3MHFW/GaFasdAsYfDM=
+github.com/stackitcloud/stackit-sdk-go/services/intake v0.4.2 h1:xywfPSTBV6lqcnueI++KsyWvnZTKCfoCVp8/kzT/RXE=
+github.com/stackitcloud/stackit-sdk-go/services/intake v0.4.2/go.mod h1:Ki7BldvSi1f5Lhy7iDeBkAhUvgXPCSAsaqFuxrkPDpg=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2 h1:2ulSL2IkIAKND59eAjbEhVkOoBMyvm48ojwz1a3t0U0=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2/go.mod h1:cuIaMMiHeHQsbvy7BOFMutoV3QtN+ZBx7Tg3GmYUw7s=
 github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.7.3 h1:d/qIj+XNaqByVbLvwpWoA0Ekv0yrONWyNswg4/jGX7Y=
