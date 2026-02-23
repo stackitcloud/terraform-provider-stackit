@@ -323,10 +323,11 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 	return nil
 }
 
-// parseNameFromEmail extracts the name component from an email address.
-// The email format must be `name-<random7characters>@sa.stackit.cloud`.
+// parseNameFromEmail extracts the name component from a service account email address.
+// The expected email format is `name-<random7to10characters>@sa.stackit.cloud`
+// or `name-<random7to10characters>@ske.sa.stackit.cloud`.
 func parseNameFromEmail(email string) (string, error) {
-	namePattern := `^([a-z][a-z0-9]*(?:-[a-z0-9]+)*)-\w{7}@sa\.stackit\.cloud$`
+	namePattern := `^([a-z][a-z0-9]*(?:-[a-z0-9]+)*)-\w{7,10}@(?:ske\.)?sa\.stackit\.cloud$`
 	re := regexp.MustCompile(namePattern)
 	match := re.FindStringSubmatch(email)
 

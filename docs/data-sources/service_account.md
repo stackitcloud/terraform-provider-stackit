@@ -13,9 +13,16 @@ Service account data source schema.
 ## Example Usage
 
 ```terraform
-data "stackit_service_account" "sa" {
+data "stackit_service_account" "sa_exact" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  email      = "sa01-8565oq1@sa.stackit.cloud"
+  email      = "foo-vshp19@sa.stackit.cloud"
+}
+
+// Querying the SKE service account using a regular expression for the email
+data "stackit_service_account" "sa_ske" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  # This regex matches any standard email prefix ending exactly with the SKE domain.
+  email_regex = ".*@ske\\.sa\\.stackit\\.cloud$"
 }
 ```
 
@@ -24,8 +31,12 @@ data "stackit_service_account" "sa" {
 
 ### Required
 
-- `email` (String) Email of the service account.
 - `project_id` (String) STACKIT project ID to which the service account is associated.
+
+### Optional
+
+- `email` (String) Email of the service account. Either email or email_regex must be provided.
+- `email_regex` (String) Regular expression to match the email of the service account. The first service account matching this regex will be used. Either email or email_regex must be provided.
 
 ### Read-Only
 
