@@ -581,6 +581,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"access_scope": schema.StringAttribute{
 								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...),
 								Optional:    true,
+								Computed:    true,
 							},
 						},
 					},
