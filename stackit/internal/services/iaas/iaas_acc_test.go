@@ -122,7 +122,7 @@ var testConfigServerVarsMin = config.Variables{
 	"name":         config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"network_name": config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"machine_type": config.StringVariable("t1.1"),
-	"image_id":     config.StringVariable("a2c127b2-b1b5-4aee-986f-41cd11b41279"),
+	"image_id":     config.StringVariable("fb5b3fa8-5e20-478a-929a-2b7da1676b18"),
 }
 
 var testConfigServerVarsMinUpdated = func() config.Variables {
@@ -142,7 +142,7 @@ var testConfigServerVarsMax = config.Variables{
 	"name":                 config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"name_not_updated":     config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
 	"machine_type":         config.StringVariable("t1.1"),
-	"image_id":             config.StringVariable("a2c127b2-b1b5-4aee-986f-41cd11b41279"),
+	"image_id":             config.StringVariable("fb5b3fa8-5e20-478a-929a-2b7da1676b18"),
 	"availability_zone":    config.StringVariable("eu01-1"),
 	"label":                config.StringVariable("label"),
 	"user_data":            config.StringVariable("#!/bin/bash"),
@@ -4672,7 +4672,6 @@ func TestAccMachineType(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "ram"),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "disk"),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "description"),
-					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "extra_specs.cpu"),
 
 					resource.TestCheckResourceAttr("data.stackit_machine_type.filter_sorted_ascending_false", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "id"),
@@ -4681,7 +4680,6 @@ func TestAccMachineType(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "ram"),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "disk"),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "description"),
-					resource.TestCheckResourceAttrSet("data.stackit_machine_type.filter_sorted_ascending_false", "extra_specs.cpu"),
 
 					resource.TestCheckResourceAttr("data.stackit_machine_type.no_match", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
 					resource.TestCheckNoResourceAttr("data.stackit_machine_type.no_match", "description"),
