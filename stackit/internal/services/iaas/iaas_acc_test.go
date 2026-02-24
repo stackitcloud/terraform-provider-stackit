@@ -188,8 +188,9 @@ var testConfigAffinityGroupVarsMin = config.Variables{
 // NETWORK INTERFACE - MIN
 
 var testConfigNetworkInterfaceVarsMin = config.Variables{
-	"project_id": config.StringVariable(testutil.ProjectId),
-	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"project_id":  config.StringVariable(testutil.ProjectId),
+	"name":        config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"ipv4_prefix": config.StringVariable("10.2.10.0/24"),
 }
 
 // NETWORK INTERFACE - MAX
