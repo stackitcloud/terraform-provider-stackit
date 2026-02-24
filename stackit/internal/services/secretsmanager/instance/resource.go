@@ -19,7 +19,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -180,8 +179,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
+	if createResp.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
+		return
+	}
 	instanceId := *createResp.Id
-	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": instanceId,
+	})
 
 	// Create ACLs
 	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
@@ -364,9 +370,10 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		)
 		return
 	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"instance_id": idParts[1],
+	})
 	tflog.Info(ctx, "Secrets Manager instance state imported")
 }
 
