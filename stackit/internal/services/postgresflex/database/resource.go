@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -98,11 +98,11 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "Postgres Flex database client configured")
 }
 
@@ -215,7 +215,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new database
-	databaseResp, err := r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute()
+	databaseResp, _, err := r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -328,7 +328,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing record set
-	err := r.client.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	_, err := r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -388,7 +388,7 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model, region
 	model.Region = types.StringValue(region)
 
 	if databaseResp.Options != nil {
-		owner, ok := (*databaseResp.Options)["owner"]
+		owner, ok := databaseResp.Options["owner"]
 		if ok {
 			ownerStr, ok := owner.(string)
 			if !ok {
@@ -421,14 +421,14 @@ var databaseNotFoundErr = errors.New("database not found")
 
 // The API does not have a GetDatabase endpoint, only ListDatabases
 func getDatabase(ctx context.Context, client *postgresflex.APIClient, projectId, region, instanceId, databaseId string) (*postgresflex.InstanceDatabase, error) {
-	resp, err := client.ListDatabases(ctx, projectId, region, instanceId).Execute()
+	resp, _, err := client.DefaultAPI.ListDatabases(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		return nil, err
 	}
 	if resp == nil || resp.Databases == nil {
 		return nil, fmt.Errorf("response is nil")
 	}
-	for _, database := range *resp.Databases {
+	for _, database := range resp.Databases {
 		if database.Id != nil && *database.Id == databaseId {
 			return &database, nil
 		}

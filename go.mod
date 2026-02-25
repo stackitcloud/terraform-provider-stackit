@@ -2,6 +2,8 @@ module github.com/stackitcloud/terraform-provider-stackit
 
 go 1.24.0
 
+replace github.com/stackitcloud/stackit-sdk-go/services/postgresflex => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/postgresflex
+
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0

@@ -18,7 +18,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 )
 
@@ -123,7 +123,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					},
 				},
 			},
-			"replicas": schema.Int64Attribute{
+			"replicas": schema.Int32Attribute{
 				Computed: true,
 			},
 			"storage": schema.SingleNestedAttribute{
@@ -166,7 +166,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
-	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, _, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

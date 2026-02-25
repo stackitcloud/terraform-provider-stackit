@@ -28,8 +28,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -48,7 +48,7 @@ type Model struct {
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Flavor         types.Object `tfsdk:"flavor"`
-	Replicas       types.Int64  `tfsdk:"replicas"`
+	Replicas       types.Int32  `tfsdk:"replicas"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
 	Region         types.String `tfsdk:"region"`
@@ -136,11 +136,11 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "Postgres Flex instance client configured")
 }
 
@@ -234,7 +234,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					},
 				},
 			},
-			"replicas": schema.Int64Attribute{
+			"replicas": schema.Int32Attribute{
 				Description: descriptions["replicas"],
 				Required:    true,
 			},
@@ -300,7 +300,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
+		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -322,17 +322,18 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createResp, _, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
+	time.Sleep(10 * time.Second)
 
 	instanceId := *createResp.Id
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -388,7 +389,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, _, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -455,7 +456,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
+		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -477,7 +478,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	_, _, err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -485,7 +486,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -525,7 +526,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	_, err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -533,7 +534,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).SetTimeout(45 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -586,7 +587,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		respACL := *instance.Acl.Items
+		respACL := instance.Acl.Items
 		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -644,7 +645,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 	model.ACL = aclList
 	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
-	model.Replicas = types.Int64PointerValue(instance.Replicas)
+	model.Replicas = types.Int32PointerValue(instance.Replicas)
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Region = types.StringValue(region)
@@ -666,18 +667,18 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &postgresflex.CreateInstancePayload{
-		Acl: &postgresflex.ACL{
-			Items: &acl,
+		Acl: postgresflex.ACL{
+			Items: acl,
 		},
-		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       conversion.StringValueToPointer(flavor.Id),
-		Name:           conversion.StringValueToPointer(model.Name),
-		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &postgresflex.Storage{
+		BackupSchedule: model.BackupSchedule.ValueString(),
+		FlavorId:       flavor.Id.ValueString(),
+		Name:           model.Name.ValueString(),
+		Replicas:       model.Replicas.ValueInt32(),
+		Storage: postgresflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
-		Version: conversion.StringValueToPointer(model.Version),
+		Version: model.Version.ValueString(),
 	}, nil
 }
 
@@ -697,18 +698,19 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 
 	return &postgresflex.PartialUpdateInstancePayload{
 		Acl: &postgresflex.ACL{
-			Items: &acl,
+			Items: acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
+		Replicas:       model.Replicas.ValueInt32Pointer(),
 		Version:        conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 
 type postgresFlexClient interface {
-	ListFlavorsExecute(ctx context.Context, projectId string, region string) (*postgresflex.ListFlavorsResponse, error)
+	ListFlavors(ctx context.Context, projectId string, region string) postgresflex.ApiListFlavorsRequest
+	ListFlavorsExecute(request postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, *http.Response, error)
 }
 
 func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
@@ -729,7 +731,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-	res, err := client.ListFlavorsExecute(ctx, projectId, region)
+	res, _, err := client.ListFlavors(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("listing postgresflex flavors: %w", err)
 	}
@@ -738,7 +740,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	if res.Flavors == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
-	for _, f := range *res.Flavors {
+	for _, f := range res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}
