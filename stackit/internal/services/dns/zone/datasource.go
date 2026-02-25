@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
@@ -95,8 +96,16 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:    true,
 			},
 			"dns_name": schema.StringAttribute{
-				Description: "The zone name. E.g. `example.com`",
+				Description: "The zone name. E.g. `example.com` (must not end with a trailing dot).",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+					stringvalidator.LengthAtMost(253),
+					stringvalidator.RegexMatches(
+						dnsNameNoTrailingDotRegex,
+						"dns_name must not end with a trailing dot",
+					),
+				},
 			},
 			"description": schema.StringAttribute{
 				Description: "Description of the zone.",
