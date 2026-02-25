@@ -167,7 +167,7 @@ func TestToCreatePayload(t *testing.T) {
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]observability.CreateScrapeConfigPayloadStaticConfigsInner{},
+				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
 			true,
@@ -192,7 +192,7 @@ func TestToCreatePayload(t *testing.T) {
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]observability.CreateScrapeConfigPayloadStaticConfigsInner{},
+				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 			},
 			true,
 		},
@@ -216,7 +216,7 @@ func TestToCreatePayload(t *testing.T) {
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]observability.CreateScrapeConfigPayloadStaticConfigsInner{},
+				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 			},
 			true,
 		},
@@ -235,7 +235,7 @@ func TestToCreatePayload(t *testing.T) {
 			&observability.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
-				BasicAuth: &observability.CreateScrapeConfigPayloadBasicAuth{
+				BasicAuth: &observability.PartialUpdateScrapeConfigsRequestInnerBasicAuth{
 					Username: utils.Ptr("u"),
 					Password: utils.Ptr("p"),
 				},
@@ -244,7 +244,7 @@ func TestToCreatePayload(t *testing.T) {
 				ScrapeInterval: utils.Ptr("5m"),
 				ScrapeTimeout:  utils.Ptr("2m"),
 				SampleLimit:    utils.Ptr(float64(5000)),
-				StaticConfigs:  &[]observability.CreateScrapeConfigPayloadStaticConfigsInner{},
+				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
 			true,
@@ -274,7 +274,7 @@ func TestToCreatePayload(t *testing.T) {
 			&observability.CreateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
 				JobName:     utils.Ptr("Name"),
-				StaticConfigs: &[]observability.CreateScrapeConfigPayloadStaticConfigsInner{
+				StaticConfigs: &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{
 					{
 						Targets: &[]string{"url1"},
 						Labels:  &map[string]interface{}{"k1": "v1"},
@@ -415,7 +415,7 @@ func TestToUpdatePayload(t *testing.T) {
 			[]targetModel{},
 			&observability.UpdateScrapeConfigPayload{
 				MetricsPath: utils.Ptr("/metrics"),
-				BasicAuth: &observability.CreateScrapeConfigPayloadBasicAuth{
+				BasicAuth: &observability.PartialUpdateScrapeConfigsRequestInnerBasicAuth{
 					Username: utils.Ptr("u"),
 					Password: utils.Ptr("p"),
 				},
