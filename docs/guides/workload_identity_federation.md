@@ -18,7 +18,7 @@ Before using Workload Identity Federation flow, you need to:
 WIF can be configured to trust any public OIDC provider following the [docs page](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-federations/#create-a-federated-identity-provider)
 but for the purpose of this guide we will focus on GitHub Actions and AzureDevOps as OIDC providers. 
 
-> Important: The most closed assertions including all the data that you can from the OIDC token should be used to avoid potential security risks of trusting tokens that are not issued in the context of your CI/CD pipeline.
+> Important: You should use the most restrictive assertions possible by validating all available data from the OIDC token. This prevents security risks associated with trusting tokens issued outside the specific context of your CI/CD pipeline.
 
 ### GitHub Actions assertions
 
@@ -40,7 +40,7 @@ execute terraform on the main branch, we will configure the service account "Fed
 Azure DevOps supports OIDC authentication using the public issuer "https://vstoken.azure.com" (for Azure DevOps Server you should check your issuer URL) and setting information like organization, project, and pipeline 
 as part of the OIDC token claims. 
 
-Using a hypothetical pipeline named `terraform-ado-oidc` inside the prohect 'https://myorg.azure.com/project-abc` as example and assuming that we want to 
+Using a hypothetical pipeline named `terraform-ado-oidc` inside the project 'https://myorg.azure.com/project-abc` as example and assuming that we want to 
 execute terraform on the main branch, we will configure the service account "Federated identity Provider" with the following configuration:
 - **Provider Name**: AzureDevOps # This is just an example, you can choose any name you want
 - **Issuer URL**: https://vstoken.dev.azure.com/{ORGANIZATION_ID} # This is the public issuer for Azure DevOps OIDC tokens
