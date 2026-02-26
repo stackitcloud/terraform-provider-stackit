@@ -2,8 +2,6 @@ module github.com/stackitcloud/terraform-provider-stackit
 
 go 1.24.0
 
-replace github.com/stackitcloud/stackit-sdk-go/core => github.com/jorturfer/stackit-sdk-go/core v0.0.0-20260218233050-3f219dc9de13
-
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
@@ -13,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.21.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.6
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.3
