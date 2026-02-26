@@ -158,14 +158,14 @@ func (r *shareDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			},
 			"export_policy": schema.StringAttribute{
 				Description: `Name of the Share Export Policy to use in the Share.
-Note that if this is not set, the Share can only be mounted in read only by 
-clients with IPs matching the IP ACL of the Resource Pool hosting this Share. 
+Note that if this is not set, the Share can only be mounted in read only by
+clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share`,
 				Computed: true,
 			},
 			"space_hard_limit_gigabytes": schema.Int64Attribute{
 				Computed: true,
-				Description: `Space hard limit for the Share. 
+				Description: `Space hard limit for the Share.
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
 				(unit: gigabytes)`,
 			},
@@ -207,8 +207,10 @@ func mapDataSourceFields(_ context.Context, region string, share *sfs.GetShareRe
 		utils.Coalesce(model.ShareId, types.StringPointerValue(share.Id)).ValueString(),
 	)
 	model.Name = types.StringPointerValue(share.Name)
-	if policy := share.ExportPolicy.Get(); policy != nil {
-		model.ExportPolicyName = types.StringPointerValue(policy.Name)
+	if share.ExportPolicy != nil {
+		if policy := share.ExportPolicy.Get(); policy != nil {
+			model.ExportPolicyName = types.StringPointerValue(policy.Name)
+		}
 	}
 
 	model.SpaceHardLimitGigabytes = types.Int64PointerValue(share.SpaceHardLimitGigabytes)
