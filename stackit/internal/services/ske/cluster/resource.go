@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -661,6 +662,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Validators: []validator.List{
 									listvalidator.ValueStringsAre(validate.NoUUID()),
 								},
+								// By setting a Default value of an empty list, we tell Terraform to treat a missing
+								// zones block in the dns as if the user explicitly defined
+								// zones = []. This ensures the config (empty list) matches the
+								// API response (empty list).
+								Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 						},
 					},
