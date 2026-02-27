@@ -66,7 +66,7 @@ resource "stackit_foo" "foo" {
 				PreConfig: func() {
 					/* Setup mock responses for refresh and delete.
 					   The refresh response fails with an error, but we want to verify that the URL contains the correct IDs.
-					   After the test TF will automatically destroy the resource. So we set up mocks to simulate a successful dlete.
+					   After the test TF will automatically destroy the resource. So we set up mocks to simulate a successful delete.
 					*/
 					s.Reset(
 						testutil.MockResponse{
