@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -189,7 +189,7 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	networkAreaResp, err := d.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	networkAreaResp, _, err := d.client.DefaultAPI.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -214,7 +214,7 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	networkAreaRegionResp, err := d.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
+	networkAreaRegionResp, _, err := d.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

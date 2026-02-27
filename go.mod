@@ -3,6 +3,11 @@ module github.com/stackitcloud/terraform-provider-stackit
 go 1.24.0
 
 replace github.com/stackitcloud/stackit-sdk-go/services/postgresflex => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/postgresflex
+replace github.com/stackitcloud/stackit-sdk-go/services/iaas => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/iaas
+replace github.com/stackitcloud/stackit-sdk-go/services/mongodbflex => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/mongodbflex
+replace github.com/stackitcloud/stackit-sdk-go/services/edge => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/edge
+replace github.com/stackitcloud/stackit-sdk-go/services/observability => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/observability
+replace github.com/stackitcloud/stackit-sdk-go/services/resourcemanager => /home/Ruben.Hoenle@stackit.cloud/Developer/stackit-sdk-generator/sdk-repo-updated/services/resourcemanager
 
 require (
 	github.com/google/go-cmp v0.7.0

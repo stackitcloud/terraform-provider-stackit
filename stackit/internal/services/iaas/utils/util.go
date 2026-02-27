@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -32,15 +32,15 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	return apiClient
 }
 
-func MapLabels(ctx context.Context, responseLabels *map[string]interface{}, currentLabels types.Map) (basetypes.MapValue, error) { //nolint:gocritic // Linter wants to have a non-pointer type for the map, but this would mean a nil check has to be done before every usage of this func.
+func MapLabels(ctx context.Context, responseLabels map[string]interface{}, currentLabels types.Map) (basetypes.MapValue, error) { //nolint:gocritic // Linter wants to have a non-pointer type for the map, but this would mean a nil check has to be done before every usage of this func.
 	labelsTF, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
 	if diags.HasError() {
 		return labelsTF, fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
 	}
 
-	if responseLabels != nil && len(*responseLabels) != 0 {
+	if responseLabels != nil && len(responseLabels) != 0 {
 		var diags diag.Diagnostics
-		labelsTF, diags = types.MapValueFrom(ctx, types.StringType, *responseLabels)
+		labelsTF, diags = types.MapValueFrom(ctx, types.StringType, responseLabels)
 		if diags.HasError() {
 			return labelsTF, fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
 		}

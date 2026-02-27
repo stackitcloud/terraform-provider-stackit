@@ -7,8 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	coreUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -17,7 +16,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    *[]iaas.PublicNetwork
+		input    []iaas.PublicNetwork
 		expected Model
 		isValid  bool
 	}{
@@ -28,7 +27,7 @@ func TestMapPublicIpRanges(t *testing.T) {
 		},
 		{
 			name:  "empty input should return nulls",
-			input: &[]iaas.PublicNetwork{},
+			input: []iaas.PublicNetwork{},
 			expected: Model{
 				PublicIpRanges: types.ListNull(types.ObjectType{AttrTypes: publicIpRangesTypes}),
 				CidrList:       types.ListNull(types.StringType),
@@ -37,9 +36,9 @@ func TestMapPublicIpRanges(t *testing.T) {
 		},
 		{
 			name: "valid cidr entries",
-			input: &[]iaas.PublicNetwork{
-				{Cidr: coreUtils.Ptr("192.168.0.0/24")},
-				{Cidr: coreUtils.Ptr("192.168.1.0/24")},
+			input: []iaas.PublicNetwork{
+				{Cidr: "192.168.0.0/24"},
+				{Cidr: "192.168.1.0/24"},
 			},
 			expected: func() Model {
 				cidrs := []string{"192.168.0.0/24", "192.168.1.0/24"}
@@ -63,10 +62,9 @@ func TestMapPublicIpRanges(t *testing.T) {
 		},
 		{
 			name: "filter out empty CIDRs",
-			input: &[]iaas.PublicNetwork{
-				{Cidr: coreUtils.Ptr("")},
-				{Cidr: nil},
-				{Cidr: coreUtils.Ptr("10.0.0.0/8")},
+			input: []iaas.PublicNetwork{
+				{Cidr: ""},
+				{Cidr: "10.0.0.0/8"},
 			},
 			expected: func() Model {
 				cidrs := []string{"10.0.0.0/8"}

@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -181,7 +181,7 @@ func (d *volumeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := d.client.GetVolume(ctx, projectId, region, volumeId).Execute()
+	volumeResp, _, err := d.client.DefaultAPI.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -243,8 +243,8 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
 		sourceValues = map[string]attr.Value{
-			"type": types.StringPointerValue(volumeResp.Source.Type),
-			"id":   types.StringPointerValue(volumeResp.Source.Id),
+			"type": types.StringValue(volumeResp.Source.Type),
+			"id":   types.StringValue(volumeResp.Source.Id),
 		}
 		var diags diag.Diagnostics
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
@@ -254,7 +254,7 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 	}
 
 	model.VolumeId = types.StringValue(volumeId)
-	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
+	model.AvailabilityZone = types.StringValue(volumeResp.AvailabilityZone)
 	model.Description = types.StringPointerValue(volumeResp.Description)
 	model.Name = types.StringPointerValue(volumeResp.Name)
 	// Workaround for volumes with no names which return an empty string instead of nil

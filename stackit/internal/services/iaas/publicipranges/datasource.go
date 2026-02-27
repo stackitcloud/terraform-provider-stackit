@@ -9,7 +9,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -118,7 +118,7 @@ func (d *publicIpRangesDataSource) Read(ctx context.Context, req datasource.Read
 
 	ctx = core.InitProviderContext(ctx)
 
-	publicIpRangeResp, err := d.client.ListPublicIPRangesExecute(ctx)
+	publicIpRangeResp, _, err := d.client.DefaultAPI.ListPublicIPRanges(ctx).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -166,20 +166,17 @@ func mapFields(ctx context.Context, publicIpRangeResp *iaas.PublicNetworkListRes
 }
 
 // mapPublicIpRanges map the response publicIpRanges to the model
-func mapPublicIpRanges(ctx context.Context, publicIpRanges *[]iaas.PublicNetwork, model *Model) error {
-	if publicIpRanges == nil {
-		return fmt.Errorf("publicIpRanges input is nil")
-	}
-	if len(*publicIpRanges) == 0 {
+func mapPublicIpRanges(ctx context.Context, publicIpRanges []iaas.PublicNetwork, model *Model) error {
+	if len(publicIpRanges) == 0 {
 		model.PublicIpRanges = types.ListNull(types.ObjectType{AttrTypes: publicIpRangesTypes})
 		model.CidrList = types.ListNull(types.StringType)
 		return nil
 	}
 
 	var apiIpRanges []string
-	for _, ipRange := range *publicIpRanges {
-		if ipRange.Cidr != nil && *ipRange.Cidr != "" {
-			apiIpRanges = append(apiIpRanges, *ipRange.Cidr)
+	for _, ipRange := range publicIpRanges {
+		if ipRange.Cidr != "" {
+			apiIpRanges = append(apiIpRanges, ipRange.Cidr)
 		}
 	}
 

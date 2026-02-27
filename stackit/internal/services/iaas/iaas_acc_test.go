@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -23,7 +23,7 @@ import (
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -5524,7 +5524,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		}
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
 		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
-		err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, region, networkId)
+		_, err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -5534,7 +5534,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 			}
 			errs = append(errs, fmt.Errorf("cannot trigger network deletion %q: %w", networkId, err))
 		}
-		_, err = wait.DeleteNetworkWaitHandler(ctx, client, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
+		_, err = wait.DeleteNetworkWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot delete network %q: %w", networkId, err))
 		}
@@ -5568,7 +5568,7 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 		region := ids[1]
 		networkId := ids[2]
 		networkInterfaceId := ids[3]
-		err := client.DeleteNicExecute(ctx, testutil.ProjectId, region, networkId, networkInterfaceId)
+		_, err := client.DefaultAPI.DeleteNic(ctx, testutil.ProjectId, region, networkId, networkInterfaceId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -5611,20 +5611,16 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
 
-	networkAreasResp, err := client.ListNetworkAreasExecute(ctx, testutil.OrganizationId)
+	networkAreasResp, _, err := client.DefaultAPI.ListNetworkAreas(ctx, testutil.OrganizationId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting networkAreasResp: %w", err)
 	}
 
-	networkAreas := *networkAreasResp.Items
-	for i := range networkAreas {
-		if networkAreas[i].Id == nil {
-			continue
-		}
-		if utils.Contains(networkAreasToDestroy, *networkAreas[i].Id) {
-			err := client.DeleteNetworkAreaRegionExecute(ctx, testutil.OrganizationId, *networkAreas[i].Id, testutil.Region)
+	for _, networkArea := range networkAreasResp.Items {
+		if utils.Contains(networkAreasToDestroy, *networkArea.Id) {
+			_, err := client.DefaultAPI.DeleteNetworkAreaRegion(ctx, testutil.OrganizationId, *networkArea.Id, testutil.Region).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkAreas[i].Id, err)
+				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkArea.Id, err)
 			}
 		}
 	}
@@ -5656,20 +5652,16 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
 
-	networkAreasResp, err := client.ListNetworkAreasExecute(ctx, testutil.OrganizationId)
+	networkAreasResp, _, err := client.DefaultAPI.ListNetworkAreas(ctx, testutil.OrganizationId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting networkAreasResp: %w", err)
 	}
 
-	networkAreas := *networkAreasResp.Items
-	for i := range networkAreas {
-		if networkAreas[i].Id == nil {
-			continue
-		}
-		if utils.Contains(networkAreasToDestroy, *networkAreas[i].Id) {
-			err := client.DeleteNetworkAreaExecute(ctx, testutil.OrganizationId, *networkAreas[i].Id)
+	for _, networkArea := range networkAreasResp.Items {
+		if utils.Contains(networkAreasToDestroy, *networkArea.Id) {
+			_, err := client.DefaultAPI.DeleteNetworkArea(ctx, testutil.OrganizationId, *networkArea.Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkAreas[i].Id, err)
+				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkArea.Id, err)
 			}
 		}
 	}
@@ -5701,20 +5693,16 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 		volumesToDestroy = append(volumesToDestroy, volumeId)
 	}
 
-	volumesResp, err := client.ListVolumesExecute(ctx, testutil.ProjectId, testutil.Region)
+	volumesResp, _, err := client.DefaultAPI.ListVolumes(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting volumesResp: %w", err)
 	}
 
-	volumes := *volumesResp.Items
-	for i := range volumes {
-		if volumes[i].Id == nil {
-			continue
-		}
-		if utils.Contains(volumesToDestroy, *volumes[i].Id) {
-			err := client.DeleteVolumeExecute(ctx, testutil.ProjectId, testutil.Region, *volumes[i].Id)
+	for _, volume := range volumesResp.Items {
+		if utils.Contains(volumesToDestroy, *volume.Id) {
+			_, err := client.DefaultAPI.DeleteVolume(ctx, testutil.ProjectId, testutil.Region, *volume.Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying volume %s during CheckDestroy: %w", *volumes[i].Id, err)
+				return fmt.Errorf("destroying volume %s during CheckDestroy: %w", *volume.Id, err)
 			}
 		}
 	}
@@ -5752,20 +5740,16 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
-	serversResp, err := alphaClient.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
+	serversResp, _, err := alphaClient.DefaultAPI.ListServers(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
 
-	servers := *serversResp.Items
-	for i := range servers {
-		if servers[i].Id == nil {
-			continue
-		}
-		if utils.Contains(serversToDestroy, *servers[i].Id) {
-			err := alphaClient.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
+	for _, server := range serversResp.Items {
+		if utils.Contains(serversToDestroy, *server.Id) {
+			_, err := alphaClient.DefaultAPI.DeleteServer(ctx, testutil.ProjectId, testutil.Region, *server.Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
+				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *server.Id, err)
 			}
 		}
 	}
@@ -5782,20 +5766,17 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 
-	networksResp, err := client.ListNetworksExecute(ctx, testutil.ProjectId, testutil.Region)
+	networksResp, _, err := client.DefaultAPI.ListNetworks(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting networksResp: %w", err)
 	}
 
-	networks := *networksResp.Items
-	for i := range networks {
-		if networks[i].Id == nil {
-			continue
-		}
-		if utils.Contains(networksToDestroy, *networks[i].Id) {
-			err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, testutil.Region, *networks[i].Id)
+	networks := networksResp.Items
+	for _, network := range networks {
+		if utils.Contains(networksToDestroy, network.Id) {
+			_, err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, testutil.Region, network.Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying network %s during CheckDestroy: %w", *networks[i].Id, err)
+				return fmt.Errorf("destroying network %s during CheckDestroy: %w", network.Id, err)
 			}
 		}
 	}
@@ -5828,18 +5809,18 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 		affinityGroupsToDestroy = append(affinityGroupsToDestroy, affinityGroupId)
 	}
 
-	affinityGroupsResp, err := client.ListAffinityGroupsExecute(ctx, testutil.ProjectId, testutil.Region)
+	affinityGroupsResp, _, err := client.DefaultAPI.ListAffinityGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting securityGroupsResp: %w", err)
 	}
 
-	affinityGroups := *affinityGroupsResp.Items
+	affinityGroups := affinityGroupsResp.Items
 	for i := range affinityGroups {
 		if affinityGroups[i].Id == nil {
 			continue
 		}
 		if utils.Contains(affinityGroupsToDestroy, *affinityGroups[i].Id) {
-			err := client.DeleteAffinityGroupExecute(ctx, testutil.ProjectId, testutil.Region, *affinityGroups[i].Id)
+			_, err := client.DefaultAPI.DeleteAffinityGroup(ctx, testutil.ProjectId, testutil.Region, *affinityGroups[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying affinity group %s during CheckDestroy: %w", *affinityGroups[i].Id, err)
 			}
@@ -5873,18 +5854,18 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 		securityGroupsToDestroy = append(securityGroupsToDestroy, securityGroupId)
 	}
 
-	securityGroupsResp, err := client.ListSecurityGroupsExecute(ctx, testutil.ProjectId, testutil.Region)
+	securityGroupsResp, _, err := client.DefaultAPI.ListSecurityGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting securityGroupsResp: %w", err)
 	}
 
-	securityGroups := *securityGroupsResp.Items
+	securityGroups := securityGroupsResp.Items
 	for i := range securityGroups {
 		if securityGroups[i].Id == nil {
 			continue
 		}
 		if utils.Contains(securityGroupsToDestroy, *securityGroups[i].Id) {
-			err := client.DeleteSecurityGroupExecute(ctx, testutil.ProjectId, testutil.Region, *securityGroups[i].Id)
+			_, err := client.DefaultAPI.DeleteSecurityGroup(ctx, testutil.ProjectId, testutil.Region, *securityGroups[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying security group %s during CheckDestroy: %w", *securityGroups[i].Id, err)
 			}
@@ -5918,18 +5899,18 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 		publicIpsToDestroy = append(publicIpsToDestroy, publicIpId)
 	}
 
-	publicIpsResp, err := client.ListPublicIPsExecute(ctx, testutil.ProjectId, testutil.Region)
+	publicIpsResp, _, err := client.DefaultAPI.ListPublicIPs(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting publicIpsResp: %w", err)
 	}
 
-	publicIps := *publicIpsResp.Items
+	publicIps := publicIpsResp.Items
 	for i := range publicIps {
 		if publicIps[i].Id == nil {
 			continue
 		}
 		if utils.Contains(publicIpsToDestroy, *publicIps[i].Id) {
-			err := client.DeletePublicIPExecute(ctx, testutil.ProjectId, testutil.Region, *publicIps[i].Id)
+			_, err := client.DefaultAPI.DeletePublicIP(ctx, testutil.ProjectId, testutil.Region, *publicIps[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying public IP %s during CheckDestroy: %w", *publicIps[i].Id, err)
 			}
@@ -5962,18 +5943,18 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 		keyPairsToDestroy = append(keyPairsToDestroy, rs.Primary.ID)
 	}
 
-	keyPairsResp, err := client.ListKeyPairsExecute(ctx)
+	keyPairsResp, _, err := client.DefaultAPI.ListKeyPairs(ctx).Execute()
 	if err != nil {
 		return fmt.Errorf("getting key pairs: %w", err)
 	}
 
-	keyPairs := *keyPairsResp.Items
+	keyPairs := keyPairsResp.Items
 	for i := range keyPairs {
 		if keyPairs[i].Name == nil {
 			continue
 		}
 		if utils.Contains(keyPairsToDestroy, *keyPairs[i].Name) {
-			err := client.DeleteKeyPairExecute(ctx, *keyPairs[i].Name)
+			_, err := client.DefaultAPI.DeleteKeyPair(ctx, *keyPairs[i].Name).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying key pair %s during CheckDestroy: %w", *keyPairs[i].Name, err)
 			}
@@ -6008,18 +5989,18 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 		imagesToDestroy = append(imagesToDestroy, imageId)
 	}
 
-	imagesResp, err := client.ListImagesExecute(ctx, testutil.ProjectId, testutil.Region)
+	imagesResp, _, err := client.DefaultAPI.ListImages(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting images: %w", err)
 	}
 
-	images := *imagesResp.Items
+	images := imagesResp.Items
 	for i := range images {
 		if images[i].Id == nil {
 			continue
 		}
 		if utils.Contains(imagesToDestroy, *images[i].Id) {
-			err := client.DeleteImageExecute(ctx, testutil.ProjectId, testutil.Region, *images[i].Id)
+			_, err := client.DefaultAPI.DeleteImage(ctx, testutil.ProjectId, testutil.Region, *images[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying image %s during CheckDestroy: %w", *images[i].Id, err)
 			}
@@ -6052,7 +6033,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
-		err := client.DeleteRoutingTableFromAreaExecute(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId)
+		_, err := client.DefaultAPI.DeleteRoutingTableFromArea(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -6093,7 +6074,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
 
-		err := client.DeleteRouteFromRoutingTableExecute(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId, routingTableRouteId)
+		_, err := client.DefaultAPI.DeleteRouteFromRoutingTable(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId, routingTableRouteId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {

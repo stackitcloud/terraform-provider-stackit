@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -59,32 +59,32 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.Image{
 					Id:          utils.Ptr("iid"),
-					Name:        utils.Ptr("name"),
-					DiskFormat:  utils.Ptr("format"),
+					Name:        "name",
+					DiskFormat:  "format",
 					MinDiskSize: utils.Ptr(int64(1)),
 					MinRam:      utils.Ptr(int64(1)),
 					Protected:   utils.Ptr(true),
 					Scope:       utils.Ptr("scope"),
 					Config: &iaas.ImageConfig{
 						BootMenu:               utils.Ptr(true),
-						CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
-						DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
-						NicModel:               iaas.NewNullableString(utils.Ptr("model")),
+						CdromBus:               *iaas.NewNullableString(utils.Ptr("cdrom_bus")),
+						DiskBus:                *iaas.NewNullableString(utils.Ptr("disk_bus")),
+						NicModel:               *iaas.NewNullableString(utils.Ptr("model")),
 						OperatingSystem:        utils.Ptr("os"),
-						OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
-						OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
-						RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
-						RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
+						OperatingSystemDistro:  *iaas.NewNullableString(utils.Ptr("os_distro")),
+						OperatingSystemVersion: *iaas.NewNullableString(utils.Ptr("os_version")),
+						RescueBus:              *iaas.NewNullableString(utils.Ptr("rescue_bus")),
+						RescueDevice:           *iaas.NewNullableString(utils.Ptr("rescue_device")),
 						SecureBoot:             utils.Ptr(true),
 						Uefi:                   utils.Ptr(true),
-						VideoModel:             iaas.NewNullableString(utils.Ptr("model")),
+						VideoModel:             *iaas.NewNullableString(utils.Ptr("model")),
 						VirtioScsi:             utils.Ptr(true),
 					},
 					Checksum: &iaas.ImageChecksum{
-						Algorithm: utils.Ptr("algorithm"),
-						Digest:    utils.Ptr("digest"),
+						Algorithm: "algorithm",
+						Digest:    "digest",
 					},
-					Labels: &map[string]interface{}{
+					Labels: map[string]interface{}{
 						"key": "value",
 					},
 				},
@@ -218,27 +218,27 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.CreateImagePayload{
-				Name:        utils.Ptr("name"),
-				DiskFormat:  utils.Ptr("format"),
+				Name:        "name",
+				DiskFormat:  "format",
 				MinDiskSize: utils.Ptr(int64(1)),
 				MinRam:      utils.Ptr(int64(1)),
 				Protected:   utils.Ptr(true),
 				Config: &iaas.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
-					DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
-					NicModel:               iaas.NewNullableString(utils.Ptr("nic_model")),
+					CdromBus:               *iaas.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                *iaas.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               *iaas.NewNullableString(utils.Ptr("nic_model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
-					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
-					RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
-					RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
+					OperatingSystemDistro:  *iaas.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: *iaas.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              *iaas.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           *iaas.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaas.NewNullableString(utils.Ptr("video_model")),
+					VideoModel:             *iaas.NewNullableString(utils.Ptr("video_model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -308,20 +308,20 @@ func TestToUpdatePayload(t *testing.T) {
 				Protected:   utils.Ptr(true),
 				Config: &iaas.ImageConfig{
 					BootMenu:               utils.Ptr(true),
-					CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
-					DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
-					NicModel:               iaas.NewNullableString(utils.Ptr("nic_model")),
+					CdromBus:               *iaas.NewNullableString(utils.Ptr("cdrom_bus")),
+					DiskBus:                *iaas.NewNullableString(utils.Ptr("disk_bus")),
+					NicModel:               *iaas.NewNullableString(utils.Ptr("nic_model")),
 					OperatingSystem:        utils.Ptr("os"),
-					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
-					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
-					RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
-					RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
+					OperatingSystemDistro:  *iaas.NewNullableString(utils.Ptr("os_distro")),
+					OperatingSystemVersion: *iaas.NewNullableString(utils.Ptr("os_version")),
+					RescueBus:              *iaas.NewNullableString(utils.Ptr("rescue_bus")),
+					RescueDevice:           *iaas.NewNullableString(utils.Ptr("rescue_device")),
 					SecureBoot:             utils.Ptr(true),
 					Uefi:                   utils.Ptr(true),
-					VideoModel:             iaas.NewNullableString(utils.Ptr("video_model")),
+					VideoModel:             *iaas.NewNullableString(utils.Ptr("video_model")),
 					VirtioScsi:             utils.Ptr(true),
 				},
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 			},

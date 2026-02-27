@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 )
@@ -157,23 +157,19 @@ func MapRouteReadModel(ctx context.Context, route *iaas.Route, model *RouteReadM
 }
 
 func MapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
-	if routeResp.Nexthop == nil {
-		return types.ObjectNull(RouteNextHopTypes), nil
-	}
-
 	nextHopMap := map[string]attr.Value{}
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaas.NexthopIPv4:
-		nextHopMap["type"] = types.StringValue(*i.Type)
-		nextHopMap["value"] = types.StringPointerValue(i.Value)
+		nextHopMap["type"] = types.StringValue(i.Type)
+		nextHopMap["value"] = types.StringValue(i.Value)
 	case *iaas.NexthopIPv6:
-		nextHopMap["type"] = types.StringValue(*i.Type)
-		nextHopMap["value"] = types.StringPointerValue(i.Value)
+		nextHopMap["type"] = types.StringValue(i.Type)
+		nextHopMap["value"] = types.StringValue(i.Value)
 	case *iaas.NexthopBlackhole:
-		nextHopMap["type"] = types.StringValue(*i.Type)
+		nextHopMap["type"] = types.StringValue(i.Type)
 		nextHopMap["value"] = types.StringNull()
 	case *iaas.NexthopInternet:
-		nextHopMap["type"] = types.StringValue(*i.Type)
+		nextHopMap["type"] = types.StringValue(i.Type)
 		nextHopMap["value"] = types.StringNull()
 	default:
 		return types.ObjectNull(RouteNextHopTypes), fmt.Errorf("unexpected Nexthop type: %T", i)
@@ -188,18 +184,14 @@ func MapRouteNextHop(routeResp *iaas.Route) (types.Object, error) {
 }
 
 func MapRouteDestination(routeResp *iaas.Route) (types.Object, error) {
-	if routeResp.Destination == nil {
-		return types.ObjectNull(RouteDestinationTypes), nil
-	}
-
 	destinationMap := map[string]attr.Value{}
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaas.DestinationCIDRv4:
-		destinationMap["type"] = types.StringValue(*i.Type)
-		destinationMap["value"] = types.StringPointerValue(i.Value)
+		destinationMap["type"] = types.StringValue(i.Type)
+		destinationMap["value"] = types.StringValue(i.Value)
 	case *iaas.DestinationCIDRv6:
-		destinationMap["type"] = types.StringValue(*i.Type)
-		destinationMap["value"] = types.StringPointerValue(i.Value)
+		destinationMap["type"] = types.StringValue(i.Type)
+		destinationMap["value"] = types.StringValue(i.Value)
 	default:
 		return types.ObjectNull(RouteDestinationTypes), fmt.Errorf("unexpected Destionation type: %T", i)
 	}

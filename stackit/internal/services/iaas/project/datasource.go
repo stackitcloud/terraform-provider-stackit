@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -137,7 +137,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	projectResp, err := d.client.GetProjectDetailsExecute(ctx, projectId)
+	projectResp, _, err := d.client.DefaultAPI.GetProjectDetails(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -179,8 +179,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	var projectId string
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
-	} else if projectResp.Id != nil {
-		projectId = *projectResp.Id
+	} else if projectResp.Id != "" {
+		projectId = projectResp.Id
 	} else {
 		return fmt.Errorf("project id is not present")
 	}
@@ -189,12 +189,10 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	model.ProjectId = types.StringValue(projectId)
 
 	var areaId basetypes.StringValue
-	if projectResp.AreaId != nil {
-		if projectResp.AreaId.String != nil {
-			areaId = types.StringPointerValue(projectResp.AreaId.String)
-		} else if projectResp.AreaId.StaticAreaID != nil {
-			areaId = types.StringValue(string(*projectResp.AreaId.StaticAreaID))
-		}
+	if projectResp.AreaId.String != nil {
+		areaId = types.StringPointerValue(projectResp.AreaId.String)
+	} else if projectResp.AreaId.StaticAreaID != nil {
+		areaId = types.StringValue(string(*projectResp.AreaId.StaticAreaID))
 	}
 
 	var createdAt basetypes.StringValue
@@ -211,8 +209,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 
 	model.AreaId = areaId
 	model.InternetAccess = types.BoolPointerValue(projectResp.InternetAccess)
-	model.State = types.StringPointerValue(projectResp.Status)
-	model.Status = types.StringPointerValue(projectResp.Status)
+	model.State = types.StringValue(projectResp.Status)
+	model.Status = types.StringValue(projectResp.Status)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	return nil

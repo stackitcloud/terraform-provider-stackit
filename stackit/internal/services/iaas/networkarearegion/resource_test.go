@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 const (
@@ -59,22 +59,22 @@ func Test_mapFields(t *testing.T) {
 				},
 				networkAreaRegion: &iaas.RegionalArea{
 					Ipv4: &iaas.RegionalAreaIPv4{
-						DefaultNameservers: &[]string{
+						DefaultNameservers: []string{
 							"nameserver1",
 							"nameserver2",
 						},
-						TransferNetwork:  utils.Ptr("network"),
-						DefaultPrefixLen: utils.Ptr(int64(20)),
-						MaxPrefixLen:     utils.Ptr(int64(22)),
-						MinPrefixLen:     utils.Ptr(int64(18)),
-						NetworkRanges: &[]iaas.NetworkRange{
+						TransferNetwork:  "network",
+						DefaultPrefixLen: int64(20),
+						MaxPrefixLen:     int64(22),
+						MinPrefixLen:     int64(18),
+						NetworkRanges: []iaas.NetworkRange{
 							{
 								Id:     utils.Ptr(networkRangeId1),
-								Prefix: utils.Ptr("prefix-1"),
+								Prefix: "prefix-1",
 							},
 							{
 								Id:     utils.Ptr(networkRangeId2),
-								Prefix: utils.Ptr("prefix-2"),
+								Prefix: "prefix-2",
 							},
 						},
 					},
@@ -212,22 +212,22 @@ func Test_toCreatePayload(t *testing.T) {
 			},
 			want: &iaas.CreateNetworkAreaRegionPayload{
 				Ipv4: &iaas.RegionalAreaIPv4{
-					DefaultNameservers: &[]string{
+					DefaultNameservers: []string{
 						"ns1",
 						"ns2",
 					},
-					NetworkRanges: &[]iaas.NetworkRange{
+					NetworkRanges: []iaas.NetworkRange{
 						{
-							Prefix: utils.Ptr("pr-1"),
+							Prefix: "pr-1",
 						},
 						{
-							Prefix: utils.Ptr("pr-2"),
+							Prefix: "pr-2",
 						},
 					},
-					TransferNetwork:  utils.Ptr("network"),
-					DefaultPrefixLen: utils.Ptr(int64(20)),
-					MaxPrefixLen:     utils.Ptr(int64(22)),
-					MinPrefixLen:     utils.Ptr(int64(18)),
+					TransferNetwork:  "network",
+					DefaultPrefixLen: int64(20),
+					MaxPrefixLen:     int64(22),
+					MinPrefixLen:     int64(18),
 				},
 			},
 		},
@@ -282,7 +282,7 @@ func Test_toUpdatePayload(t *testing.T) {
 			},
 			want: &iaas.UpdateNetworkAreaRegionPayload{
 				Ipv4: &iaas.UpdateRegionalAreaIPv4{
-					DefaultNameservers: &[]string{
+					DefaultNameservers: []string{
 						"ns1",
 						"ns2",
 					},
@@ -318,7 +318,7 @@ func Test_toUpdatePayload(t *testing.T) {
 
 func Test_mapIpv4NetworkRanges(t *testing.T) {
 	type args struct {
-		networkAreaRangesList *[]iaas.NetworkRange
+		networkAreaRangesList []iaas.NetworkRange
 		model                 *Model
 	}
 	tests := []struct {
@@ -347,18 +347,18 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 						},
 					},
 				},
-				networkAreaRangesList: &[]iaas.NetworkRange{
+				networkAreaRangesList: []iaas.NetworkRange{
 					{
 						Id:     utils.Ptr(networkRangeId2),
-						Prefix: utils.Ptr("prefix-2"),
+						Prefix: "prefix-2",
 					},
 					{
 						Id:     utils.Ptr(networkRangeId3),
-						Prefix: utils.Ptr("prefix-3"),
+						Prefix: "prefix-3",
 					},
 					{
 						Id:     utils.Ptr(networkRangeId1),
-						Prefix: utils.Ptr("prefix-1"),
+						Prefix: "prefix-1",
 					},
 				},
 			},
@@ -405,14 +405,14 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 						DefaultNameservers: types.ListNull(types.StringType),
 					},
 				},
-				networkAreaRangesList: &[]iaas.NetworkRange{
+				networkAreaRangesList: []iaas.NetworkRange{
 					{
 						Id:     utils.Ptr(networkRangeId2),
-						Prefix: utils.Ptr("prefix-2"),
+						Prefix: "prefix-2",
 					},
 					{
 						Id:     utils.Ptr(networkRangeId3),
-						Prefix: utils.Ptr("prefix-3"),
+						Prefix: "prefix-3",
 					},
 				},
 			},
@@ -451,21 +451,21 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 
 func Test_updateIpv4NetworkRanges(t *testing.T) {
 	getAllNetworkRangesResp := iaas.NetworkRangeListResponse{
-		Items: &[]iaas.NetworkRange{
+		Items: []iaas.NetworkRange{
 			{
-				Prefix: utils.Ptr("pr-1"),
+				Prefix: "pr-1",
 				Id:     utils.Ptr(networkRangeId1),
 			},
 			{
-				Prefix: utils.Ptr("pr-2"),
+				Prefix: "pr-2",
 				Id:     utils.Ptr(networkRangeId2),
 			},
 			{
-				Prefix: utils.Ptr("pr-3"),
+				Prefix: "pr-3",
 				Id:     utils.Ptr(networkRangeId3),
 			},
 			{
-				Prefix: utils.Ptr("pr-2"),
+				Prefix: "pr-2",
 				Id:     utils.Ptr(networkRangeId2Repeated),
 			},
 		},
@@ -826,12 +826,12 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 					t.Errorf("Create network range handler: nil Ipv4")
 					return
 				}
-				ipv4 := *payload.Ipv4
+				ipv4 := payload.Ipv4
 
 				for _, networkRange := range ipv4 {
-					prefix := *networkRange.Prefix
+					prefix := networkRange.Prefix
 					if prefixExists, prefixWasCreated := networkRangesStates[prefix]; prefixWasCreated && prefixExists {
-						t.Errorf("Create network range handler: attempted to create range '%v' that already exists", *payload.Ipv4)
+						t.Errorf("Create network range handler: attempted to create range '%v' that already exists", payload.Ipv4)
 						return
 					}
 					w.Header().Set("Content-Type", "application/json")
@@ -845,7 +845,7 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 					}
 
 					resp := iaas.NetworkRange{
-						Prefix: utils.Ptr("prefix"),
+						Prefix: "prefix",
 						Id:     utils.Ptr("id-range"),
 					}
 					respBytes, err := json.Marshal(resp)
@@ -871,9 +871,9 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 				}
 
 				var prefix string
-				for _, rangeItem := range *getAllNetworkRangesResp.Items {
+				for _, rangeItem := range getAllNetworkRangesResp.Items {
 					if *rangeItem.Id == networkRangeId {
-						prefix = *rangeItem.Prefix
+						prefix = rangeItem.Prefix
 					}
 				}
 				prefixExists, prefixWasCreated := networkRangesStates[prefix]
@@ -1020,10 +1020,10 @@ func Test_toNetworkRangesPayload(t *testing.T) {
 			},
 			want: &[]iaas.NetworkRange{
 				{
-					Prefix: utils.Ptr("prefix-1"),
+					Prefix: "prefix-1",
 				},
 				{
-					Prefix: utils.Ptr("prefix-2"),
+					Prefix: "prefix-2",
 				},
 			},
 		},

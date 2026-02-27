@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -57,9 +57,9 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.SecurityGroup{
 					Id:       utils.Ptr("sgid"),
-					Name:     utils.Ptr("name"),
+					Name:     "name",
 					Stateful: utils.Ptr(true),
-					Labels: &map[string]interface{}{
+					Labels: map[string]interface{}{
 						"key": "value",
 					},
 					Description: utils.Ptr("desc"),
@@ -89,7 +89,7 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.SecurityGroup{
 					Id:     utils.Ptr("sgid"),
-					Labels: &map[string]interface{}{},
+					Labels: map[string]interface{}{},
 				},
 				region: "eu01",
 			},
@@ -155,9 +155,9 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			&iaas.CreateSecurityGroupPayload{
-				Name:     utils.Ptr("name"),
+				Name:     "name",
 				Stateful: utils.Ptr(true),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 				Description: utils.Ptr("desc"),
@@ -202,7 +202,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateSecurityGroupPayload{
 				Name: utils.Ptr("name"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 				Description: utils.Ptr("desc"),

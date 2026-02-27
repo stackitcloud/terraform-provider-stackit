@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"
@@ -43,7 +43,7 @@ func Test_mapDatasourceFields(t *testing.T) {
 			},
 			&iaas.RoutingTable{
 				Id:   utils.Ptr(routingTableId.String()),
-				Name: utils.Ptr("default_values"),
+				Name: "default_values",
 			},
 			shared.RoutingTableDataSourceModel{
 				Id:             types.StringValue(id),
@@ -67,9 +67,9 @@ func Test_mapDatasourceFields(t *testing.T) {
 			},
 			&iaas.RoutingTable{
 				Id:          utils.Ptr(routingTableId.String()),
-				Name:        utils.Ptr("values_ok"),
+				Name:        "values_ok",
 				Description: utils.Ptr("Description"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 			},

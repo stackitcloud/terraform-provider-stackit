@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -393,7 +393,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Case 1: Direct lookup by image ID
 	if imageID != "" {
-		imageResp, err = d.client.GetImage(ctx, projectID, region, imageID).Execute()
+		imageResp, _, err = d.client.DefaultAPI.GetImage(ctx, projectID, region, imageID).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "Reading image",
 				fmt.Sprintf("Image with ID %q does not exist in project %q.", imageID, projectID),
@@ -419,7 +419,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Fetch all available images
-		imageList, err := d.client.ListImages(ctx, projectID, region).Execute()
+		imageList, _, err := d.client.DefaultAPI.ListImages(ctx, projectID, region).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
 			return
@@ -428,13 +428,12 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		ctx = core.LogResponse(ctx)
 
 		// Step 1: Match images by name or regular expression (name or name_regex, if provided)
-		var matchedImages []*iaas.Image
-		for i := range *imageList.Items {
-			img := &(*imageList.Items)[i]
-			if name != "" && img.Name != nil && *img.Name == name {
+		var matchedImages []iaas.Image
+		for _, img := range imageList.Items {
+			if name != "" && img.Name == name {
 				matchedImages = append(matchedImages, img)
 			}
-			if compiledRegex != nil && img.Name != nil && compiledRegex.MatchString(*img.Name) {
+			if compiledRegex != nil && compiledRegex.MatchString(img.Name) {
 				matchedImages = append(matchedImages, img)
 			}
 			// If neither name nor name_regex is specified, include all images for filter evaluation later
@@ -449,7 +448,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Step 3: Apply additional filtering based on OS, distro, version, UEFI, secure boot, etc.
-		var filteredImages []*iaas.Image
+		var filteredImages []iaas.Image
 		for _, img := range matchedImages {
 			if imageMatchesFilter(img, &filter) {
 				filteredImages = append(filteredImages, img)
@@ -464,7 +463,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Step 4: Use the first image from the filtered and sorted result list
-		imageResp = filteredImages[0]
+		imageResp = &filteredImages[0]
 	}
 
 	err = mapDataSourceFields(ctx, imageResp, &model, region)
@@ -509,17 +508,17 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
-		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
-		configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus())
-		configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel())
+		configModel.CDROMBus = types.StringValue(imageResp.Config.GetCdromBus())
+		configModel.DiskBus = types.StringValue(imageResp.Config.GetDiskBus())
+		configModel.NICModel = types.StringValue(imageResp.Config.GetNicModel())
 		configModel.OperatingSystem = types.StringPointerValue(imageResp.Config.OperatingSystem)
-		configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro())
-		configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion())
-		configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus())
-		configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice())
+		configModel.OperatingSystemDistro = types.StringValue(imageResp.Config.GetOperatingSystemDistro())
+		configModel.OperatingSystemVersion = types.StringValue(imageResp.Config.GetOperatingSystemVersion())
+		configModel.RescueBus = types.StringValue(imageResp.Config.GetRescueBus())
+		configModel.RescueDevice = types.StringValue(imageResp.Config.GetRescueDevice())
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
-		configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel())
+		configModel.VideoModel = types.StringValue(imageResp.Config.GetVideoModel())
 		configModel.VirtioScsi = types.BoolPointerValue(iaas.PtrBool(imageResp.Config.GetVirtioScsi()))
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{
@@ -548,8 +547,8 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	var checksumModel = &checksumModel{}
 	var checksumObject basetypes.ObjectValue
 	if imageResp.Checksum != nil {
-		checksumModel.Algorithm = types.StringPointerValue(imageResp.Checksum.Algorithm)
-		checksumModel.Digest = types.StringPointerValue(imageResp.Checksum.Digest)
+		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
+		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)
 		checksumObject, diags = types.ObjectValue(checksumTypes, map[string]attr.Value{
 			"algorithm": checksumModel.Algorithm,
 			"digest":    checksumModel.Digest,
@@ -568,8 +567,8 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	}
 
 	model.ImageId = types.StringValue(imageId)
-	model.Name = types.StringPointerValue(imageResp.Name)
-	model.DiskFormat = types.StringPointerValue(imageResp.DiskFormat)
+	model.Name = types.StringValue(imageResp.Name)
+	model.DiskFormat = types.StringValue(imageResp.DiskFormat)
 	model.MinDiskSize = types.Int64PointerValue(imageResp.MinDiskSize)
 	model.MinRAM = types.Int64PointerValue(imageResp.MinRam)
 	model.Protected = types.BoolPointerValue(imageResp.Protected)
@@ -582,7 +581,7 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 
 // imageMatchesFilter checks whether a given image matches all specified filter conditions.
 // It returns true only if all non-null fields in the filter match corresponding fields in the image's config.
-func imageMatchesFilter(img *iaas.Image, filter *Filter) bool {
+func imageMatchesFilter(img iaas.Image, filter *Filter) bool {
 	if filter == nil {
 		return true
 	}
@@ -599,13 +598,13 @@ func imageMatchesFilter(img *iaas.Image, filter *Filter) bool {
 	}
 
 	if !filter.Distro.IsNull() &&
-		(cfg.OperatingSystemDistro == nil || cfg.OperatingSystemDistro.Get() == nil ||
+		(cfg.OperatingSystemDistro.Get() == nil ||
 			filter.Distro.ValueString() != *cfg.OperatingSystemDistro.Get()) {
 		return false
 	}
 
 	if !filter.Version.IsNull() &&
-		(cfg.OperatingSystemVersion == nil || cfg.OperatingSystemVersion.Get() == nil ||
+		(cfg.OperatingSystemVersion.Get() == nil ||
 			filter.Version.ValueString() != *cfg.OperatingSystemVersion.Get()) {
 		return false
 	}
@@ -624,7 +623,7 @@ func imageMatchesFilter(img *iaas.Image, filter *Filter) bool {
 }
 
 // sortImagesByName sorts a slice of images by name, respecting nils and order direction.
-func sortImagesByName(images []*iaas.Image, sortAscending bool) {
+func sortImagesByName(images []iaas.Image, sortAscending bool) {
 	if len(images) <= 1 {
 		return
 	}
@@ -633,16 +632,10 @@ func sortImagesByName(images []*iaas.Image, sortAscending bool) {
 		a, b := images[i].Name, images[j].Name
 
 		switch {
-		case a == nil && b == nil:
-			return false // Equal
-		case a == nil:
-			return false // Nil goes after non-nil
-		case b == nil:
-			return true // Non-nil goes before nil
 		case sortAscending:
-			return *a < *b
+			return a < b
 		default:
-			return *a > *b
+			return a > b
 		}
 	})
 }

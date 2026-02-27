@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -262,7 +262,7 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	routeResp, err := r.client.AddRoutesToRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).AddRoutesToRoutingTablePayload(*payload).Execute()
+	routeResp, _, err := r.client.DefaultAPI.AddRoutesToRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).AddRoutesToRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -309,7 +309,7 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	routeResp, err := r.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
+	routeResp, _, err := r.client.DefaultAPI.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -372,7 +372,7 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	route, err := r.client.UpdateRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).UpdateRouteOfRoutingTablePayload(*payload).Execute()
+	route, _, err := r.client.DefaultAPI.UpdateRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).UpdateRouteOfRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -419,7 +419,7 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing routing table route
-	err := r.client.DeleteRouteFromRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
+	_, err := r.client.DefaultAPI.DeleteRouteFromRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error routing table route", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -464,13 +464,13 @@ func (r *routeResource) ImportState(ctx context.Context, req resource.ImportStat
 func mapFieldsFromList(ctx context.Context, routeResp *iaas.RouteListResponse, model *shared.RouteModel, region string) error {
 	if routeResp == nil || routeResp.Items == nil {
 		return fmt.Errorf("response input is nil")
-	} else if len(*routeResp.Items) < 1 {
+	} else if len(routeResp.Items) < 1 {
 		return fmt.Errorf("no routes found in response")
-	} else if len(*routeResp.Items) > 1 {
+	} else if len(routeResp.Items) > 1 {
 		return fmt.Errorf("more than 1 route found in response")
 	}
 
-	route := (*routeResp.Items)[0]
+	route := (routeResp.Items)[0]
 	return shared.MapRouteModel(ctx, &route, model, region)
 }
 
@@ -494,11 +494,11 @@ func toCreatePayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.A
 	}
 
 	return &iaas.AddRoutesToRoutingTablePayload{
-		Items: &[]iaas.Route{
+		Items: []iaas.Route{
 			{
-				Labels:      &labels,
-				Nexthop:     nextHopPayload,
-				Destination: destinationPayload,
+				Labels:      labels,
+				Nexthop:     *nextHopPayload,
+				Destination: *destinationPayload,
 			},
 		},
 	}, nil
@@ -515,7 +515,7 @@ func toUpdatePayload(ctx context.Context, model *shared.RouteModel, currentLabel
 	}
 
 	return &iaas.UpdateRouteOfRoutingTablePayload{
-		Labels: &labels,
+		Labels: labels,
 	}, nil
 }
 
@@ -543,6 +543,7 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.
 	case "ipv6":
 		return sdkUtils.Ptr(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
 	}
+
 	return nil, fmt.Errorf("unknown nexthop type: %s", nexthopModel.Type.ValueString())
 }
 

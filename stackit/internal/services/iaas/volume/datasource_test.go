@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapDatasourceFields(t *testing.T) {
@@ -63,8 +63,8 @@ func TestMapDatasourceFields(t *testing.T) {
 				input: &iaas.Volume{
 					Id:               utils.Ptr("nid"),
 					Name:             utils.Ptr("name"),
-					AvailabilityZone: utils.Ptr("zone"),
-					Labels: &map[string]interface{}{
+					AvailabilityZone: "zone",
+					Labels: map[string]interface{}{
 						"key": "value",
 					},
 					Description:      utils.Ptr("desc"),
@@ -74,12 +74,12 @@ func TestMapDatasourceFields(t *testing.T) {
 					Source:           &iaas.VolumeSource{},
 					Encrypted:        utils.Ptr(true),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{
-						KekKeyId:       utils.Ptr("kek-key-id"),
-						KekKeyVersion:  utils.Ptr(int64(1)),
-						KekKeyringId:   utils.Ptr("kek-keyring-id"),
+						KekKeyId:       "kek-key-id",
+						KekKeyVersion:  int64(1),
+						KekKeyringId:   "kek-keyring-id",
 						KekProjectId:   utils.Ptr("kek-project-id"),
 						KeyPayload:     nil,
-						ServiceAccount: utils.Ptr("test-sa@sa.stackit.cloud"),
+						ServiceAccount: "test-sa@sa.stackit.cloud",
 					},
 				},
 				region: "eu02",

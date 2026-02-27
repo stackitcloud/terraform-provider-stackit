@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -92,8 +92,8 @@ func TestToCreatePayload(t *testing.T) {
 				Policy:    types.StringValue("policy"),
 			},
 			&iaas.CreateAffinityGroupPayload{
-				Name:   utils.Ptr("name"),
-				Policy: utils.Ptr("policy"),
+				Name:   "name",
+				Policy: "policy",
 			},
 			true,
 		},

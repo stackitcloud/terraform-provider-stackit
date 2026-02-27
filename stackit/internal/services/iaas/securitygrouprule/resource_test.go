@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[string]attr.Value{
@@ -18,8 +18,8 @@ var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[
 })
 
 var fixtureIcmpParameters = iaas.ICMPParameters{
-	Code: utils.Ptr(int64(1)),
-	Type: utils.Ptr(int64(2)),
+	Code: int64(1),
+	Type: int64(2),
 }
 
 var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]attr.Value{
@@ -28,8 +28,8 @@ var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]att
 })
 
 var fixturePortRange = iaas.PortRange{
-	Max: utils.Ptr(int64(2)),
-	Min: utils.Ptr(int64(1)),
+	Max: int64(2),
+	Min: int64(1),
 }
 
 var fixtureModelProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
@@ -105,7 +105,7 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.SecurityGroupRule{
 					Id:                    utils.Ptr("sgrid"),
 					Description:           utils.Ptr("desc"),
-					Direction:             utils.Ptr("ingress"),
+					Direction:             "ingress",
 					Ethertype:             utils.Ptr("ether"),
 					IpRange:               utils.Ptr("iprange"),
 					RemoteSecurityGroupId: utils.Ptr("remote"),
@@ -259,7 +259,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateSecurityGroupRulePayload{
 				Description:    utils.Ptr("desc"),
-				Direction:      utils.Ptr("ingress"),
+				Direction:      "ingress",
 				IcmpParameters: &fixtureIcmpParameters,
 				PortRange:      &fixturePortRange,
 				Protocol:       &fixtureCreateProtocol,

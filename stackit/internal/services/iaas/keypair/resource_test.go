@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -43,9 +43,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&iaas.Keypair{
 				Name:        utils.Ptr("name"),
-				PublicKey:   utils.Ptr("public_key"),
+				PublicKey:   "public_key",
 				Fingerprint: utils.Ptr("fingerprint"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 			},
@@ -67,9 +67,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&iaas.Keypair{
 				Name:        utils.Ptr("name"),
-				PublicKey:   utils.Ptr("public_key"),
+				PublicKey:   "public_key",
 				Fingerprint: utils.Ptr("fingerprint"),
-				Labels:      &map[string]interface{}{},
+				Labels:      map[string]interface{}{},
 			},
 			Model{
 				Id:          types.StringValue("name"),
@@ -91,9 +91,9 @@ func TestMapFields(t *testing.T) {
 			"no_resource_id",
 			Model{},
 			&iaas.Keypair{
-				PublicKey:   utils.Ptr("public_key"),
+				PublicKey:   "public_key",
 				Fingerprint: utils.Ptr("fingerprint"),
-				Labels:      &map[string]interface{}{},
+				Labels:      map[string]interface{}{},
 			},
 			Model{},
 			false,
@@ -137,8 +137,8 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateKeyPairPayload{
 				Name:      utils.Ptr("name"),
-				PublicKey: utils.Ptr("public_key"),
-				Labels: &map[string]interface{}{
+				PublicKey: "public_key",
+				Labels: map[string]interface{}{
 					"key1": "value1",
 					"key2": "value2",
 				},
@@ -183,7 +183,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdateKeyPairPayload{
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key1": "value1",
 					"key2": "value2",
 				},

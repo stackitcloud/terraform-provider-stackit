@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -32,9 +32,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				NetworkId: types.StringValue("nid"),
 			},
 			&iaas.Network{
-				Id: utils.Ptr("nid"),
+				Id: "nid",
 				Ipv4: &iaas.NetworkIPv4{
-					Gateway: iaas.NewNullableString(nil),
+					Gateway: *iaas.NewNullableString(nil),
 				},
 			},
 			testRegion,
@@ -69,32 +69,32 @@ func TestMapDataSourceFields(t *testing.T) {
 				NetworkId: types.StringValue("nid"),
 			},
 			&iaas.Network{
-				Id:   utils.Ptr("nid"),
-				Name: utils.Ptr("name"),
+				Id:   "nid",
+				Name: "name",
 				Ipv4: &iaas.NetworkIPv4{
-					Nameservers: &[]string{
+					Nameservers: []string{
 						"ns1",
 						"ns2",
 					},
-					Prefixes: &[]string{
+					Prefixes: []string{
 						"192.168.42.0/24",
 						"10.100.10.0/16",
 					},
 					PublicIp: utils.Ptr("publicIp"),
-					Gateway:  iaas.NewNullableString(utils.Ptr("gateway")),
+					Gateway:  *iaas.NewNullableString(utils.Ptr("gateway")),
 				},
 				Ipv6: &iaas.NetworkIPv6{
-					Nameservers: &[]string{
+					Nameservers: []string{
 						"ns1",
 						"ns2",
 					},
-					Prefixes: &[]string{
+					Prefixes: []string{
 						"fd12:3456:789a:1::/64",
 						"fd12:3456:789a:2::/64",
 					},
-					Gateway: iaas.NewNullableString(utils.Ptr("gateway")),
+					Gateway: *iaas.NewNullableString(utils.Ptr("gateway")),
 				},
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 				Routed: utils.Ptr(true),
@@ -161,9 +161,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				}),
 			},
 			&iaas.Network{
-				Id: utils.Ptr("nid"),
+				Id: "nid",
 				Ipv4: &iaas.NetworkIPv4{
-					Nameservers: &[]string{
+					Nameservers: []string{
 						"ns2",
 						"ns3",
 					},
@@ -203,9 +203,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				}),
 			},
 			&iaas.Network{
-				Id: utils.Ptr("nid"),
+				Id: "nid",
 				Ipv6: &iaas.NetworkIPv6{
-					Nameservers: &[]string{
+					Nameservers: []string{
 						"ns2",
 						"ns3",
 					},
@@ -242,9 +242,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				}),
 			},
 			&iaas.Network{
-				Id: utils.Ptr("nid"),
+				Id: "nid",
 				Ipv4: &iaas.NetworkIPv4{
-					Prefixes: &[]string{
+					Prefixes: []string{
 						"10.100.20.0/16",
 						"10.100.10.0/16",
 					},
@@ -287,9 +287,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				}),
 			},
 			&iaas.Network{
-				Id: utils.Ptr("nid"),
+				Id: "nid",
 				Ipv6: &iaas.NetworkIPv6{
-					Prefixes: &[]string{
+					Prefixes: []string{
 						"fd12:3456:789a:3::/64",
 						"fd12:3456:789a:4::/64",
 					},
@@ -325,7 +325,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				NetworkId: types.StringValue("nid"),
 			},
 			&iaas.Network{
-				Id: utils.Ptr("nid"),
+				Id: "nid",
 			},
 			testRegion,
 			DataSourceModel{

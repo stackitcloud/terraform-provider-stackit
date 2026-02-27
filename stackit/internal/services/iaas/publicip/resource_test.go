@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -32,7 +32,7 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.PublicIp{
 					Id:               utils.Ptr("pipid"),
-					NetworkInterface: iaas.NewNullableString(nil),
+					NetworkInterface: *iaas.NewNullableString(nil),
 				},
 				region: "eu01",
 			},
@@ -58,10 +58,10 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.PublicIp{
 					Id: utils.Ptr("pipid"),
 					Ip: utils.Ptr("ip"),
-					Labels: &map[string]interface{}{
+					Labels: map[string]interface{}{
 						"key": "value",
 					},
-					NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
+					NetworkInterface: *iaas.NewNullableString(utils.Ptr("interface")),
 				},
 				region: "eu02",
 			},
@@ -88,7 +88,7 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.PublicIp{
 					Id:               utils.Ptr("pipid"),
-					NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
+					NetworkInterface: *iaas.NewNullableString(utils.Ptr("interface")),
 				},
 				region: "eu01",
 			},
@@ -176,10 +176,10 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreatePublicIPPayload{
 				Ip: utils.Ptr("ip"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: *iaas.NewNullableString(utils.Ptr("interface")),
 			},
 			true,
 		},
@@ -193,10 +193,10 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreatePublicIPPayload{
 				Ip: utils.Ptr("ip"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaas.NewNullableString(nil),
+				NetworkInterface: *iaas.NewNullableString(nil),
 			},
 			true,
 		},
@@ -237,10 +237,10 @@ func TestToUpdatePayload(t *testing.T) {
 				NetworkInterfaceId: types.StringValue("interface"),
 			},
 			&iaas.UpdatePublicIPPayload{
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: *iaas.NewNullableString(utils.Ptr("interface")),
 			},
 			true,
 		},
@@ -253,10 +253,10 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdatePublicIPPayload{
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
-				NetworkInterface: iaas.NewNullableString(nil),
+				NetworkInterface: *iaas.NewNullableString(nil),
 			},
 			true,
 		},

@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -161,13 +161,13 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "filter_is_null", model.Filter.IsNull())
 	ctx = tflog.SetField(ctx, "filter_is_unknown", model.Filter.IsUnknown())
 
-	listMachineTypeReq := d.client.ListMachineTypes(ctx, projectId, region)
+	listMachineTypeReq := d.client.DefaultAPI.ListMachineTypes(ctx, projectId, region)
 
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() && strings.TrimSpace(model.Filter.ValueString()) != "" {
 		listMachineTypeReq = listMachineTypeReq.Filter(strings.TrimSpace(model.Filter.ValueString()))
 	}
 
-	apiResp, err := listMachineTypeReq.Execute()
+	apiResp, _, err := listMachineTypeReq.Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "Failed to read machine types",
 			fmt.Sprintf("Unable to retrieve machine types for project %q %s.", projectId, err),
@@ -181,15 +181,15 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 	ctx = core.LogResponse(ctx)
 
-	if apiResp.Items == nil || len(*apiResp.Items) == 0 {
+	if apiResp.Items == nil || len(apiResp.Items) == 0 {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No machine types found", "No matching machine types.")
 		return
 	}
 
 	// Convert items to []*iaas.MachineType
-	machineTypes := make([]*iaas.MachineType, len(*apiResp.Items))
-	for i := range *apiResp.Items {
-		machineTypes[i] = &(*apiResp.Items)[i]
+	machineTypes := make([]*iaas.MachineType, len(apiResp.Items))
+	for i := range apiResp.Items {
+		machineTypes[i] = &(apiResp.Items)[i]
 	}
 
 	sorted, err := sortMachineTypeByName(machineTypes, sortAscending)
@@ -215,22 +215,22 @@ func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, mod
 		return fmt.Errorf("nil input provided")
 	}
 
-	if machineType.Name == nil || *machineType.Name == "" {
+	if machineType.Name == "" {
 		return fmt.Errorf("machine type name is missing")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, *machineType.Name)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, machineType.Name)
 	model.Region = types.StringValue(region)
-	model.Name = types.StringPointerValue(machineType.Name)
+	model.Name = types.StringValue(machineType.Name)
 	model.Description = types.StringPointerValue(machineType.Description)
-	model.Disk = types.Int64PointerValue(machineType.Disk)
-	model.Ram = types.Int64PointerValue(machineType.Ram)
-	model.Vcpus = types.Int64PointerValue(machineType.Vcpus)
+	model.Disk = types.Int64Value(machineType.Disk)
+	model.Ram = types.Int64Value(machineType.Ram)
+	model.Vcpus = types.Int64Value(machineType.Vcpus)
 
 	extra := types.MapNull(types.StringType)
-	if machineType.ExtraSpecs != nil && len(*machineType.ExtraSpecs) > 0 {
+	if machineType.ExtraSpecs != nil && len(machineType.ExtraSpecs) > 0 {
 		var diags diag.Diagnostics
-		extra, diags = types.MapValueFrom(ctx, types.StringType, *machineType.ExtraSpecs)
+		extra, diags = types.MapValueFrom(ctx, types.StringType, machineType.ExtraSpecs)
 		if diags.HasError() {
 			return fmt.Errorf("converting extraspecs: %w", core.DiagsToError(diags))
 		}
@@ -247,16 +247,16 @@ func sortMachineTypeByName(input []*iaas.MachineType, ascending bool) ([]*iaas.M
 	// Filter out nil or missing name
 	var filtered []*iaas.MachineType
 	for _, m := range input {
-		if m != nil && m.Name != nil {
+		if m != nil {
 			filtered = append(filtered, m)
 		}
 	}
 
 	sort.SliceStable(filtered, func(i, j int) bool {
 		if ascending {
-			return *filtered[i].Name < *filtered[j].Name
+			return filtered[i].Name < filtered[j].Name
 		}
-		return *filtered[i].Name > *filtered[j].Name
+		return filtered[i].Name > filtered[j].Name
 	})
 
 	return filtered, nil

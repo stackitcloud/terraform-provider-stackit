@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 const (
@@ -34,7 +34,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				Id: utils.Ptr(projectId),
+				Id: projectId,
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),
@@ -48,11 +48,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId:         utils.Ptr(iaas.AreaId{String: utils.Ptr("aid")}),
+				AreaId:         iaas.AreaId{String: utils.Ptr("aid")},
 				CreatedAt:      utils.Ptr(testTimestamp()),
 				InternetAccess: utils.Ptr(true),
-				Id:             utils.Ptr(projectId),
-				Status:         utils.Ptr("CREATED"),
+				Id:             projectId,
+				Status:         "CREATED",
 				UpdatedAt:      utils.Ptr(testTimestamp()),
 			},
 			expected: &DatasourceModel{
@@ -73,10 +73,10 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId: utils.Ptr(iaas.AreaId{
+				AreaId: iaas.AreaId{
 					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(),
-				}),
-				Id: utils.Ptr(projectId),
+				},
+				Id: projectId,
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),

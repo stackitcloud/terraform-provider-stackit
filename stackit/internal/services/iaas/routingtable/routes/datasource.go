@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -100,7 +100,7 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 
-	routesResp, err := d.client.ListRoutesOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routesResp, _, err := d.client.DefaultAPI.ListRoutesOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -152,7 +152,7 @@ func mapDataSourceRoutingTableRoutes(ctx context.Context, routes *iaas.RouteList
 	)
 
 	itemsList := []attr.Value{}
-	for i, route := range *routes.Items {
+	for i, route := range routes.Items {
 		var routeModel shared.RouteReadModel
 		err := shared.MapRouteReadModel(ctx, &route, &routeModel)
 		if err != nil {

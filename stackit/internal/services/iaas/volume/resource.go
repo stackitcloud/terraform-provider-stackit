@@ -29,8 +29,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -457,7 +457,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new volume
 
-	volume, err := r.client.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
+	volume, _, err := r.client.DefaultAPI.CreateVolume(ctx, projectId, region).CreateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -480,7 +480,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
+	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("volume creation waiting: %v", err))
 		return
@@ -520,7 +520,7 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	volumeResp, err := r.client.GetVolume(ctx, projectId, region, volumeId).Execute()
+	volumeResp, _, err := r.client.DefaultAPI.GetVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -582,7 +582,7 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing volume
-	updatedVolume, err := r.client.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
+	updatedVolume, _, err := r.client.DefaultAPI.UpdateVolume(ctx, projectId, region, volumeId).UpdateVolumePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -598,9 +598,9 @@ func (r *volumeResource) Update(ctx context.Context, req resource.UpdateRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("The new volume size must be larger than the current size (%d GB)", *updatedVolume.Size))
 		} else if *modelSize > *updatedVolume.Size {
 			payload := iaas.ResizeVolumePayload{
-				Size: modelSize,
+				Size: *modelSize,
 			}
-			err := r.client.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(payload).Execute()
+			_, err := r.client.DefaultAPI.ResizeVolume(ctx, projectId, region, volumeId).ResizeVolumePayload(payload).Execute()
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating volume", fmt.Sprintf("Resizing the volume, calling API: %v", err))
 			}
@@ -642,7 +642,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Delete existing volume
-	err := r.client.DeleteVolume(ctx, projectId, region, volumeId).Execute()
+	_, err := r.client.DefaultAPI.DeleteVolume(ctx, projectId, region, volumeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -650,7 +650,7 @@ func (r *volumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
+	_, err = wait.DeleteVolumeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting volume", fmt.Sprintf("volume deletion waiting: %v", err))
 		return
@@ -712,8 +712,8 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 		sourceObject = types.ObjectNull(sourceTypes)
 	} else {
 		sourceValues = map[string]attr.Value{
-			"type": types.StringPointerValue(volumeResp.Source.Type),
-			"id":   types.StringPointerValue(volumeResp.Source.Id),
+			"type": types.StringValue(volumeResp.Source.Type),
+			"id":   types.StringValue(volumeResp.Source.Id),
 		}
 		var diags diag.Diagnostics
 		sourceObject, diags = types.ObjectValue(sourceTypes, sourceValues)
@@ -723,7 +723,7 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	}
 
 	model.VolumeId = types.StringValue(volumeId)
-	model.AvailabilityZone = types.StringPointerValue(volumeResp.AvailabilityZone)
+	model.AvailabilityZone = types.StringValue(volumeResp.AvailabilityZone)
 	model.Description = types.StringPointerValue(volumeResp.Description)
 	model.Name = types.StringPointerValue(volumeResp.Name)
 	// Workaround for volumes with no names which return an empty string instead of nil
@@ -756,15 +756,15 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 
 	if !source.Id.IsNull() && !source.Type.IsNull() {
 		sourcePayload = &iaas.VolumeSource{
-			Id:   conversion.StringValueToPointer(source.Id),
-			Type: conversion.StringValueToPointer(source.Type),
+			Id:   source.Id.ValueString(),
+			Type: source.Type.ValueString(),
 		}
 	}
 
 	payload := iaas.CreateVolumePayload{
-		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
+		AvailabilityZone: model.AvailabilityZone.ValueString(),
 		Description:      conversion.StringValueToPointer(model.Description),
-		Labels:           &labels,
+		Labels:           labels,
 		Name:             conversion.StringValueToPointer(model.Name),
 		PerformanceClass: conversion.StringValueToPointer(model.PerformanceClass),
 		Size:             conversion.Int64ValueToPointer(model.Size),
@@ -772,20 +772,20 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 	}
 
 	if model.EncryptionParameters != nil {
-		var keyPayload *[]byte
+		var keyPayload *string
 		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
-			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString()))
+			keyPayload = sdkUtils.Ptr(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString())
 		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
-			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64.ValueString()))
+			keyPayload = sdkUtils.Ptr(model.EncryptionParameters.KeyPayloadBase64.ValueString())
 		}
 
 		payload.EncryptionParameters = &iaas.VolumeEncryptionParameter{
-			KekKeyId:       conversion.StringValueToPointer(model.EncryptionParameters.KekKeyId),
-			KekKeyVersion:  conversion.Int64ValueToPointer(model.EncryptionParameters.KekKeyVersion),
-			KekKeyringId:   conversion.StringValueToPointer(model.EncryptionParameters.KekKeyringId),
+			KekKeyId:       model.EncryptionParameters.KekKeyId.ValueString(),
+			KekKeyVersion:  model.EncryptionParameters.KekKeyVersion.ValueInt64(),
+			KekKeyringId:   model.EncryptionParameters.KekKeyringId.ValueString(),
 			KekProjectId:   nil,
 			KeyPayload:     keyPayload,
-			ServiceAccount: conversion.StringValueToPointer(model.EncryptionParameters.ServiceAccount),
+			ServiceAccount: model.EncryptionParameters.ServiceAccount.ValueString(),
 		}
 	}
 
@@ -805,6 +805,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	return &iaas.UpdateVolumePayload{
 		Description: conversion.StringValueToPointer(model.Description),
 		Name:        conversion.StringValueToPointer(model.Name),
-		Labels:      &labels,
+		Labels:      labels,
 	}, nil
 }

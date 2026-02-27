@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -184,7 +184,7 @@ func (r *networkInterfaceAttachResource) Create(ctx context.Context, req resourc
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Create new network interface attachment
-	err := r.client.AddNicToServer(ctx, projectId, region, serverId, networkInterfaceId).Execute()
+	_, err := r.client.DefaultAPI.AddNicToServer(ctx, projectId, region, serverId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching network interface to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -223,7 +223,7 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	nics, err := r.client.ListServerNICs(ctx, projectId, region, serverId).Execute()
+	nics, _, err := r.client.DefaultAPI.ListServerNICs(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -241,25 +241,23 @@ func (r *networkInterfaceAttachResource) Read(ctx context.Context, req resource.
 		return
 	}
 
-	if nics.Items != nil {
-		for _, nic := range *nics.Items {
-			if nic.Id == nil || (nic.Id != nil && *nic.Id != networkInterfaceId) {
-				continue
-			}
+	for _, nic := range nics.Items {
+		if nic.Id == nil || (nic.Id != nil && *nic.Id != networkInterfaceId) {
+			continue
+		}
 
-			model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, networkInterfaceId)
-			model.Region = types.StringValue(region)
+		model.Id = utils.BuildInternalTerraformId(projectId, region, serverId, networkInterfaceId)
+		model.Region = types.StringValue(region)
 
-			// Set refreshed state
-			diags = resp.State.Set(ctx, model)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-
-			tflog.Info(ctx, "Network interface attachment read")
+		// Set refreshed state
+		diags = resp.State.Set(ctx, model)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
+
+		tflog.Info(ctx, "Network interface attachment read")
+		return
 	}
 
 	// no matching network interface was found, the attachment no longer exists
@@ -293,7 +291,7 @@ func (r *networkInterfaceAttachResource) Delete(ctx context.Context, req resourc
 	ctx = tflog.SetField(ctx, "network_interface_id", network_interfaceId)
 
 	// Remove network_interface from server
-	err := r.client.RemoveNicFromServer(ctx, projectId, region, serverId, network_interfaceId).Execute()
+	_, err := r.client.DefaultAPI.RemoveNicFromServer(ctx, projectId, region, serverId, network_interfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing network interface from server", fmt.Sprintf("Calling API: %v", err))
 		return

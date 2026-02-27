@@ -20,8 +20,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -190,7 +190,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	payload := iaas.AddVolumeToServerPayload{
 		DeleteOnTermination: sdkUtils.Ptr(false),
 	}
-	_, err := r.client.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
+	_, _, err := r.client.DefaultAPI.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -208,7 +208,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client, projectId, region, serverId, volumeId).WaitWithContext(ctx)
+	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
 		return
@@ -246,7 +246,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	_, err := r.client.GetAttachedVolume(ctx, projectId, region, serverId, volumeId).Execute()
+	_, _, err := r.client.DefaultAPI.GetAttachedVolume(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -299,7 +299,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Remove volume from server
-	err := r.client.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
+	_, err := r.client.DefaultAPI.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -307,7 +307,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.RemoveVolumeFromServerWaitHandler(ctx, r.client, projectId, region, serverId, volumeId).WaitWithContext(ctx)
+	_, err = wait.RemoveVolumeFromServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
 		return

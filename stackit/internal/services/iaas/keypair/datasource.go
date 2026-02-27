@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -97,7 +97,7 @@ func (d *keyPairDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	ctx = tflog.SetField(ctx, "name", name)
 
-	keypairResp, err := d.client.GetKeyPair(ctx, name).Execute()
+	keypairResp, _, err := d.client.DefaultAPI.GetKeyPair(ctx, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

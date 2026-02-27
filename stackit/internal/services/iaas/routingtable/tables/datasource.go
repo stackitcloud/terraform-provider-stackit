@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -132,7 +132,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTablesResp, err := d.client.ListRoutingTablesOfArea(ctx, organizationId, networkAreaId, region).Execute()
+	routingTablesResp, _, err := d.client.DefaultAPI.ListRoutingTablesOfArea(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -180,7 +180,7 @@ func mapDataSourceRoutingTables(ctx context.Context, routingTables *iaas.Routing
 	model.Id = utils.BuildInternalTerraformId(organizationId, region, networkAreaId)
 
 	itemsList := []attr.Value{}
-	for i, routingTable := range *routingTables.Items {
+	for i, routingTable := range routingTables.Items {
 		var routingTableModel shared.RoutingTableReadModel
 		err := shared.MapRoutingTableReadModel(ctx, &routingTable, &routingTableModel)
 		if err != nil {

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
@@ -92,7 +92,7 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTableResp, err := d.client.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routingTableResp, _, err := d.client.DefaultAPI.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

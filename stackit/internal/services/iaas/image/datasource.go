@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -230,7 +230,7 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
-	imageResp, err := d.client.GetImage(ctx, projectId, region, imageId).Execute()
+	imageResp, _, err := d.client.DefaultAPI.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -289,17 +289,17 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
-		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
-		configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus())
-		configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel())
+		configModel.CDROMBus = types.StringValue(imageResp.Config.GetCdromBus())
+		configModel.DiskBus = types.StringValue(imageResp.Config.GetDiskBus())
+		configModel.NICModel = types.StringValue(imageResp.Config.GetNicModel())
 		configModel.OperatingSystem = types.StringPointerValue(imageResp.Config.OperatingSystem)
-		configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro())
-		configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion())
-		configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus())
-		configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice())
+		configModel.OperatingSystemDistro = types.StringValue(imageResp.Config.GetOperatingSystemDistro())
+		configModel.OperatingSystemVersion = types.StringValue(imageResp.Config.GetOperatingSystemVersion())
+		configModel.RescueBus = types.StringValue(imageResp.Config.GetRescueBus())
+		configModel.RescueDevice = types.StringValue(imageResp.Config.GetRescueDevice())
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
-		configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel())
+		configModel.VideoModel = types.StringValue(imageResp.Config.GetVideoModel())
 		configModel.VirtioScsi = types.BoolPointerValue(iaas.PtrBool(imageResp.Config.GetVirtioScsi()))
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{
@@ -328,8 +328,8 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	var checksumModel = &checksumModel{}
 	var checksumObject basetypes.ObjectValue
 	if imageResp.Checksum != nil {
-		checksumModel.Algorithm = types.StringPointerValue(imageResp.Checksum.Algorithm)
-		checksumModel.Digest = types.StringPointerValue(imageResp.Checksum.Digest)
+		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
+		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)
 		checksumObject, diags = types.ObjectValue(checksumTypes, map[string]attr.Value{
 			"algorithm": checksumModel.Algorithm,
 			"digest":    checksumModel.Digest,
@@ -348,8 +348,8 @@ func mapDataSourceFields(ctx context.Context, imageResp *iaas.Image, model *Data
 	}
 
 	model.ImageId = types.StringValue(imageId)
-	model.Name = types.StringPointerValue(imageResp.Name)
-	model.DiskFormat = types.StringPointerValue(imageResp.DiskFormat)
+	model.Name = types.StringValue(imageResp.Name)
+	model.DiskFormat = types.StringValue(imageResp.DiskFormat)
 	model.MinDiskSize = types.Int64PointerValue(imageResp.MinDiskSize)
 	model.MinRAM = types.Int64PointerValue(imageResp.MinRam)
 	model.Protected = types.BoolPointerValue(imageResp.Protected)

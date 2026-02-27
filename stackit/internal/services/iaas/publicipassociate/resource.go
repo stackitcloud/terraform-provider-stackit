@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -211,7 +211,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 	// Update existing public IP
-	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	updatedPublicIp, _, err := r.client.DefaultAPI.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -252,7 +252,7 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
+	publicIpResp, _, err := r.client.DefaultAPI.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -308,10 +308,10 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	payload := &iaas.UpdatePublicIPPayload{
-		NetworkInterface: iaas.NewNullableString(nil),
+		NetworkInterface: *iaas.NewNullableString(nil),
 	}
 
-	_, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	_, _, err := r.client.DefaultAPI.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting public IP association", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -362,11 +362,7 @@ func mapFields(publicIpResp *iaas.PublicIp, model *Model, region string) error {
 		return fmt.Errorf("public IP id not present")
 	}
 
-	if publicIpResp.NetworkInterface != nil {
-		model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.GetNetworkInterface())
-	} else {
-		model.NetworkInterfaceId = types.StringNull()
-	}
+	model.NetworkInterfaceId = types.StringPointerValue(publicIpResp.NetworkInterface.Get())
 
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, publicIpId, model.NetworkInterfaceId.ValueString(),
@@ -384,6 +380,6 @@ func toCreatePayload(model *Model) (*iaas.UpdatePublicIPPayload, error) {
 	}
 
 	return &iaas.UpdatePublicIPPayload{
-		NetworkInterface: iaas.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
+		NetworkInterface: *iaas.NewNullableString(conversion.StringValueToPointer(model.NetworkInterfaceId)),
 	}, nil
 }

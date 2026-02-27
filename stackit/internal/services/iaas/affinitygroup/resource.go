@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 var (
@@ -209,7 +209,7 @@ func (r *affinityGroupResource) Create(ctx context.Context, req resource.CreateR
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	affinityGroupResp, err := r.client.CreateAffinityGroup(ctx, projectId, region).CreateAffinityGroupPayload(*payload).Execute()
+	affinityGroupResp, _, err := r.client.DefaultAPI.CreateAffinityGroup(ctx, projectId, region).CreateAffinityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -252,7 +252,7 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
-	affinityGroupResp, err := r.client.GetAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
+	affinityGroupResp, _, err := r.client.DefaultAPI.GetAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -303,7 +303,7 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
 	// Delete existing affinity group
-	err := r.client.DeleteAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
+	_, err := r.client.DefaultAPI.DeleteAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -339,12 +339,9 @@ func toCreatePayload(model *Model) (*iaas.CreateAffinityGroupPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	nameValue := conversion.StringValueToPointer(model.Name)
-	policyValue := conversion.StringValueToPointer(model.Policy)
-
 	return &iaas.CreateAffinityGroupPayload{
-		Name:   nameValue,
-		Policy: policyValue,
+		Name:   model.Name.ValueString(),
+		Policy: model.Policy.ValueString(),
 	}, nil
 }
 
@@ -369,8 +366,8 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, affinityGroupId)
 	model.Region = types.StringValue(region)
 
-	if affinityGroupResp.Members != nil && len(*affinityGroupResp.Members) > 0 {
-		members, diags := types.ListValueFrom(ctx, types.StringType, *affinityGroupResp.Members)
+	if affinityGroupResp.Members != nil && len(affinityGroupResp.Members) > 0 {
+		members, diags := types.ListValueFrom(ctx, types.StringType, affinityGroupResp.Members)
 		if diags.HasError() {
 			return fmt.Errorf("convert members to StringValue list: %w", core.DiagsToError(diags))
 		}
@@ -381,8 +378,8 @@ func mapFields(ctx context.Context, affinityGroupResp *iaas.AffinityGroup, model
 
 	model.AffinityGroupId = types.StringValue(affinityGroupId)
 
-	model.Name = types.StringPointerValue(affinityGroupResp.Name)
-	model.Policy = types.StringPointerValue(affinityGroupResp.Policy)
+	model.Name = types.StringValue(affinityGroupResp.Name)
+	model.Policy = types.StringValue(affinityGroupResp.Policy)
 
 	return nil
 }

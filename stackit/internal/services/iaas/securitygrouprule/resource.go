@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -480,7 +480,7 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create new security group rule
-	securityGroupRule, err := r.client.CreateSecurityGroupRule(ctx, projectId, region, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
+	securityGroupRule, _, err := r.client.DefaultAPI.CreateSecurityGroupRule(ctx, projectId, region, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -525,7 +525,7 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := r.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, _, err := r.client.DefaultAPI.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -582,7 +582,7 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
 	// Delete existing security group rule
-	err := r.client.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	_, err := r.client.DefaultAPI.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -636,7 +636,7 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model, regi
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.SecurityGroupId.ValueString(), securityGroupRuleId)
 	model.Region = types.StringValue(region)
 	model.SecurityGroupRuleId = types.StringValue(securityGroupRuleId)
-	model.Direction = types.StringPointerValue(securityGroupRuleResp.Direction)
+	model.Direction = types.StringValue(securityGroupRuleResp.Direction)
 	model.Description = types.StringPointerValue(securityGroupRuleResp.Description)
 	model.EtherType = types.StringPointerValue(securityGroupRuleResp.Ethertype)
 	model.IpRange = types.StringPointerValue(securityGroupRuleResp.IpRange)
@@ -665,8 +665,8 @@ func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) 
 	}
 
 	icmpParametersValues := map[string]attr.Value{
-		"type": types.Int64Value(*securityGroupRuleResp.IcmpParameters.Type),
-		"code": types.Int64Value(*securityGroupRuleResp.IcmpParameters.Code),
+		"type": types.Int64Value(securityGroupRuleResp.IcmpParameters.Type),
+		"code": types.Int64Value(securityGroupRuleResp.IcmpParameters.Code),
 	}
 
 	icmpParametersObject, diags := types.ObjectValue(icmpParametersTypes, icmpParametersValues)
@@ -683,20 +683,9 @@ func mapPortRange(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error
 		return nil
 	}
 
-	portRangeMax := types.Int64Null()
-	portRangeMin := types.Int64Null()
-
-	if securityGroupRuleResp.PortRange.Max != nil {
-		portRangeMax = types.Int64Value(*securityGroupRuleResp.PortRange.Max)
-	}
-
-	if securityGroupRuleResp.PortRange.Min != nil {
-		portRangeMin = types.Int64Value(*securityGroupRuleResp.PortRange.Min)
-	}
-
 	portRangeValues := map[string]attr.Value{
-		"max": portRangeMax,
-		"min": portRangeMin,
+		"max": types.Int64Value(securityGroupRuleResp.PortRange.Max),
+		"min": types.Int64Value(securityGroupRuleResp.PortRange.Min),
 	}
 
 	portRangeObject, diags := types.ObjectValue(portRangeTypes, portRangeValues)
@@ -757,7 +746,7 @@ func toCreatePayload(model *Model, icmpParameters *icmpParametersModel, portRang
 
 	return &iaas.CreateSecurityGroupRulePayload{
 		Description:           conversion.StringValueToPointer(model.Description),
-		Direction:             conversion.StringValueToPointer(model.Direction),
+		Direction:             model.Direction.ValueString(),
 		Ethertype:             conversion.StringValueToPointer(model.EtherType),
 		IpRange:               conversion.StringValueToPointer(model.IpRange),
 		RemoteSecurityGroupId: conversion.StringValueToPointer(model.RemoteSecurityGroupId),
@@ -773,8 +762,8 @@ func toIcmpParametersPayload(icmpParameters *icmpParametersModel) (*iaas.ICMPPar
 	}
 	payloadParams := &iaas.ICMPParameters{}
 
-	payloadParams.Code = conversion.Int64ValueToPointer(icmpParameters.Code)
-	payloadParams.Type = conversion.Int64ValueToPointer(icmpParameters.Type)
+	payloadParams.Code = icmpParameters.Code.ValueInt64()
+	payloadParams.Type = icmpParameters.Type.ValueInt64()
 
 	return payloadParams, nil
 }
@@ -785,8 +774,8 @@ func toPortRangePayload(portRange *portRangeModel) (*iaas.PortRange, error) {
 	}
 	payloadPortRange := &iaas.PortRange{}
 
-	payloadPortRange.Max = conversion.Int64ValueToPointer(portRange.Max)
-	payloadPortRange.Min = conversion.Int64ValueToPointer(portRange.Min)
+	payloadPortRange.Max = portRange.Max.ValueInt64()
+	payloadPortRange.Min = portRange.Min.ValueInt64()
 
 	return payloadPortRange, nil
 }

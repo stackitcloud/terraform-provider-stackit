@@ -10,7 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -64,20 +64,20 @@ func TestMapFields(t *testing.T) {
 					Region:             types.StringValue("eu01"),
 				},
 				input: &iaas.Route{
-					Destination: &iaas.RouteDestination{
+					Destination: iaas.RouteDestination{
 						DestinationCIDRv4: &iaas.DestinationCIDRv4{
-							Type:  utils.Ptr("cidrv4"),
-							Value: utils.Ptr("prefix"),
+							Type:  "cidrv4",
+							Value: "prefix",
 						},
 						DestinationCIDRv6: nil,
 					},
-					Nexthop: &iaas.RouteNexthop{
+					Nexthop: iaas.RouteNexthop{
 						NexthopIPv4: &iaas.NexthopIPv4{
-							Type:  utils.Ptr("ipv4"),
-							Value: utils.Ptr("hop"),
+							Type:  "ipv4",
+							Value: "hop",
 						},
 					},
-					Labels: &map[string]interface{}{
+					Labels: map[string]interface{}{
 						"key": "value",
 					},
 				},
@@ -168,22 +168,22 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateNetworkAreaRoutePayload{
-				Items: &[]iaas.Route{
+				Items: []iaas.Route{
 					{
-						Destination: &iaas.RouteDestination{
+						Destination: iaas.RouteDestination{
 							DestinationCIDRv4: &iaas.DestinationCIDRv4{
-								Type:  utils.Ptr("cidrv4"),
-								Value: utils.Ptr("prefix"),
+								Type:  "cidrv4",
+								Value: "prefix",
 							},
 							DestinationCIDRv6: nil,
 						},
-						Nexthop: &iaas.RouteNexthop{
+						Nexthop: iaas.RouteNexthop{
 							NexthopIPv4: &iaas.NexthopIPv4{
-								Type:  utils.Ptr("ipv4"),
-								Value: utils.Ptr("hop"),
+								Type:  "ipv4",
+								Value: "hop",
 							},
 						},
-						Labels: &map[string]interface{}{
+						Labels: map[string]interface{}{
 							"key": "value",
 						},
 					},
@@ -227,7 +227,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdateNetworkAreaRoutePayload{
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key1": "value1",
 					"key2": "value2",
 				},
@@ -276,8 +276,8 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopIPv4: &iaas.NexthopIPv4{
-					Type:  utils.Ptr("ipv4"),
-					Value: utils.Ptr("10.20.30.40"),
+					Type:  "ipv4",
+					Value: "10.20.30.40",
 				},
 			},
 			wantErr: false,
@@ -294,8 +294,8 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopIPv6: &iaas.NexthopIPv6{
-					Type:  utils.Ptr("ipv6"),
-					Value: utils.Ptr("2001:db8:85a3:0:0:8a2e:370:7334"),
+					Type:  "ipv6",
+					Value: "2001:db8:85a3:0:0:8a2e:370:7334",
 				},
 			},
 			wantErr: false,
@@ -311,7 +311,7 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopInternet: &iaas.NexthopInternet{
-					Type: utils.Ptr("internet"),
+					Type: "internet",
 				},
 			},
 			wantErr: false,
@@ -327,7 +327,7 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopBlackhole: &iaas.NexthopBlackhole{
-					Type: utils.Ptr("blackhole"),
+					Type: "blackhole",
 				},
 			},
 			wantErr: false,
@@ -396,8 +396,8 @@ func TestToDestinationPayload(t *testing.T) {
 			},
 			want: &iaas.RouteDestination{
 				DestinationCIDRv4: &iaas.DestinationCIDRv4{
-					Type:  utils.Ptr("cidrv4"),
-					Value: utils.Ptr("192.168.1.0/24"),
+					Type:  "cidrv4",
+					Value: "192.168.1.0/24",
 				},
 			},
 			wantErr: false,
@@ -414,8 +414,8 @@ func TestToDestinationPayload(t *testing.T) {
 			},
 			want: &iaas.RouteDestination{
 				DestinationCIDRv6: &iaas.DestinationCIDRv6{
-					Type:  utils.Ptr("cidrv6"),
-					Value: utils.Ptr("2001:db8:1234::/48"),
+					Type:  "cidrv6",
+					Value: "2001:db8:1234::/48",
 				},
 			},
 			wantErr: false,
@@ -476,10 +476,10 @@ func TestMapRouteNextHop(t *testing.T) {
 			name: "ipv4",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: &iaas.RouteNexthop{
+					Nexthop: iaas.RouteNexthop{
 						NexthopIPv4: &iaas.NexthopIPv4{
-							Type:  utils.Ptr("ipv4"),
-							Value: utils.Ptr("192.168.1.0/24"),
+							Type:  "ipv4",
+							Value: "192.168.1.0/24",
 						},
 					},
 				},
@@ -493,10 +493,10 @@ func TestMapRouteNextHop(t *testing.T) {
 			name: "ipv6",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: &iaas.RouteNexthop{
+					Nexthop: iaas.RouteNexthop{
 						NexthopIPv4: &iaas.NexthopIPv4{
-							Type:  utils.Ptr("ipv6"),
-							Value: utils.Ptr("2001:db8:85a3:0:0:8a2e:370:7334"),
+							Type:  "ipv6",
+							Value: "2001:db8:85a3:0:0:8a2e:370:7334",
 						},
 					},
 				},
@@ -510,9 +510,9 @@ func TestMapRouteNextHop(t *testing.T) {
 			name: "blackhole",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: &iaas.RouteNexthop{
+					Nexthop: iaas.RouteNexthop{
 						NexthopBlackhole: &iaas.NexthopBlackhole{
-							Type: utils.Ptr("blackhole"),
+							Type: "blackhole",
 						},
 					},
 				},
@@ -525,9 +525,9 @@ func TestMapRouteNextHop(t *testing.T) {
 			name: "internet",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: &iaas.RouteNexthop{
+					Nexthop: iaas.RouteNexthop{
 						NexthopInternet: &iaas.NexthopInternet{
-							Type: utils.Ptr("internet"),
+							Type: "internet",
 						},
 					},
 				},
@@ -565,10 +565,10 @@ func TestMapRouteDestination(t *testing.T) {
 			name: "cidrv4",
 			args: args{
 				routeResp: &iaas.Route{
-					Destination: &iaas.RouteDestination{
+					Destination: iaas.RouteDestination{
 						DestinationCIDRv4: &iaas.DestinationCIDRv4{
-							Type:  utils.Ptr("cidrv4"),
-							Value: utils.Ptr("192.168.1.0/24"),
+							Type:  "cidrv4",
+							Value: "192.168.1.0/24",
 						},
 					},
 				},
@@ -582,10 +582,10 @@ func TestMapRouteDestination(t *testing.T) {
 			name: "cidrv6",
 			args: args{
 				routeResp: &iaas.Route{
-					Destination: &iaas.RouteDestination{
+					Destination: iaas.RouteDestination{
 						DestinationCIDRv4: &iaas.DestinationCIDRv4{
-							Type:  utils.Ptr("cidrv6"),
-							Value: utils.Ptr("2001:db8:1234::/48"),
+							Type:  "cidrv6",
+							Value: "2001:db8:1234::/48",
 						},
 					},
 				},

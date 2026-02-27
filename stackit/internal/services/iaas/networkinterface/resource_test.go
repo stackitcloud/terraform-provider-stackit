@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -66,12 +66,12 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.NIC{
 					Id:   utils.Ptr("nicid"),
 					Name: utils.Ptr("name"),
-					AllowedAddresses: &[]iaas.AllowedAddressesInner{
+					AllowedAddresses: []iaas.AllowedAddressesInner{
 						{
 							String: utils.Ptr("aa1"),
 						},
 					},
-					SecurityGroups: &[]string{
+					SecurityGroups: []string{
 						"prefix1",
 						"prefix2",
 					},
@@ -82,7 +82,7 @@ func TestMapFields(t *testing.T) {
 					Mac:         utils.Ptr("mac"),
 					Status:      utils.Ptr("status"),
 					Type:        utils.Ptr("type"),
-					Labels: &map[string]interface{}{
+					Labels: map[string]interface{}{
 						"label1": "ref1",
 					},
 				},
@@ -124,7 +124,7 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.NIC{
 					Id: utils.Ptr("nicid"),
-					AllowedAddresses: &[]iaas.AllowedAddressesInner{
+					AllowedAddresses: []iaas.AllowedAddressesInner{
 						{
 							String: utils.Ptr("aa2"),
 						},
@@ -237,11 +237,11 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateNicPayload{
 				Name: utils.Ptr("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: &[]iaas.AllowedAddressesInner{
+				AllowedAddresses: []iaas.AllowedAddressesInner{
 					{
 						String: utils.Ptr("aa1"),
 					},
@@ -263,7 +263,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateNicPayload{
 				Name: utils.Ptr("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
@@ -313,11 +313,11 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateNicPayload{
 				Name: utils.Ptr("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: &[]iaas.AllowedAddressesInner{
+				AllowedAddresses: []iaas.AllowedAddressesInner{
 					{
 						String: utils.Ptr("aa1"),
 					},
@@ -339,11 +339,11 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateNicPayload{
 				Name: utils.Ptr("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: utils.Ptr([]iaas.AllowedAddressesInner{}),
+				AllowedAddresses: []iaas.AllowedAddressesInner{},
 			},
 			true,
 		},

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -182,7 +182,7 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := d.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, _, err := d.client.DefaultAPI.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

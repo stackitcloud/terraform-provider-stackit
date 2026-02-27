@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -29,8 +30,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -490,7 +491,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new server
 
-	server, err := r.client.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
+	server, _, err := r.client.DefaultAPI.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -513,16 +514,16 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
+	_, err = wait.CreateServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
 
 	// Get Server with details
-	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
-	server, err = serverReq.Execute()
+	server, _, err = serverReq.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("get server details: %v", err))
 	}
@@ -534,7 +535,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+	if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("update server state: %v", err))
 		return
 	}
@@ -548,18 +549,9 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	tflog.Info(ctx, "Server created")
 }
 
-// serverControlClient provides a mockable interface for the necessary
-// client operations in [updateServerStatus]
-type serverControlClient interface {
-	wait.APIClientInterface
-	StartServerExecute(ctx context.Context, projectId string, region string, serverId string) error
-	StopServerExecute(ctx context.Context, projectId string, region string, serverId string) error
-	DeallocateServerExecute(ctx context.Context, projectId string, region string, serverId string) error
-}
-
-func startServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
+func startServer(ctx context.Context, client iaas.DefaultAPI, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "starting server to enter active state")
-	if err := client.StartServerExecute(ctx, projectId, region, serverId); err != nil {
+	if _, err := client.StartServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		return fmt.Errorf("cannot start server: %w", err)
 	}
 	_, err := wait.StartServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -569,9 +561,9 @@ func startServer(ctx context.Context, client serverControlClient, projectId, reg
 	return nil
 }
 
-func stopServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
+func stopServer(ctx context.Context, client iaas.DefaultAPI, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "stopping server to enter inactive state")
-	if err := client.StopServerExecute(ctx, projectId, region, serverId); err != nil {
+	if _, err := client.StopServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		return fmt.Errorf("cannot stop server: %w", err)
 	}
 	_, err := wait.StopServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -581,9 +573,9 @@ func stopServer(ctx context.Context, client serverControlClient, projectId, regi
 	return nil
 }
 
-func deallocateServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
+func deallocateServer(ctx context.Context, client iaas.DefaultAPI, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "deallocating server to enter shelved state")
-	if err := client.DeallocateServerExecute(ctx, projectId, region, serverId); err != nil {
+	if _, err := client.DeallocateServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		return fmt.Errorf("cannot deallocate server: %w", err)
 	}
 	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -594,7 +586,7 @@ func deallocateServer(ctx context.Context, client serverControlClient, projectId
 }
 
 // updateServerStatus applies the appropriate server state changes for the actual current and the intended state
-func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model *Model, region string) error {
+func updateServerStatus(ctx context.Context, client iaas.DefaultAPI, currentState *string, model *Model, region string) error {
 	if currentState == nil {
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return nil
@@ -614,7 +606,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
+			if _, _, err := client.GetServer(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()).Execute(); err != nil {
 				return err
 			}
 		}
@@ -631,7 +623,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
+			if _, _, err := client.GetServer(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()).Execute(); err != nil {
 				return err
 			}
 		}
@@ -648,7 +640,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
+			if _, _, err := client.GetServer(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()).Execute(); err != nil {
 				return err
 			}
 		}
@@ -677,9 +669,9 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
-	serverResp, err := serverReq.Execute()
+	serverResp, _, err := serverReq.Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -718,23 +710,23 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 
 	var updatedServer *iaas.Server
 	// Update existing server
-	updatedServer, err = r.client.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
+	updatedServer, _, err = r.client.DefaultAPI.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("Calling API: %w", err)
 	}
 
 	// Update machine type
-	modelMachineType := conversion.StringValueToPointer(model.MachineType)
-	if modelMachineType != nil && updatedServer.MachineType != nil && *modelMachineType != *updatedServer.MachineType {
+	modelMachineType := model.MachineType.ValueString()
+	if modelMachineType != updatedServer.MachineType {
 		payload := iaas.ResizeServerPayload{
 			MachineType: modelMachineType,
 		}
-		err := r.client.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
+		_, err := r.client.DefaultAPI.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
 			return nil, fmt.Errorf("Resizing the server, calling API: %w", err)
 		}
 
-		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
+		_, err = wait.ResizeServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("server resize waiting: %w", err)
 		}
@@ -775,7 +767,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		server *iaas.Server
 		err    error
 	)
-	if server, err = r.client.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
+	if server, _, err = r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
 
@@ -790,13 +782,13 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 		ctx = core.LogResponse(ctx)
 
-		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+		if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
 	} else {
 		// potentially unfreeze first and update afterwards
-		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+		if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
@@ -811,9 +803,9 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Re-fetch the server data, to get the details values.
-	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
-	updatedServer, err := serverReq.Execute()
+	updatedServer, _, err := serverReq.Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -854,7 +846,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Delete existing server
-	err := r.client.DeleteServer(ctx, projectId, region, serverId).Execute()
+	_, err := r.client.DefaultAPI.DeleteServer(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -862,7 +854,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
+	_, err = wait.DeleteServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))
 		return
@@ -935,8 +927,8 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	}
 	if serverResp.Nics != nil {
 		var respNics []string
-		for _, nic := range *serverResp.Nics {
-			respNics = append(respNics, *nic.NicId)
+		for _, nic := range serverResp.Nics {
+			respNics = append(respNics, nic.NicId)
 		}
 
 		var modelNics []string
@@ -1004,7 +996,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	}
 
 	model.ServerId = types.StringValue(serverId)
-	model.MachineType = types.StringPointerValue(serverResp.MachineType)
+	model.MachineType = types.StringValue(serverResp.MachineType)
 
 	// Proposed fix: If the server is deallocated, it has no availability zone anymore
 	// reactivation will then _change_ the availability zone again, causing terraform
@@ -1018,7 +1010,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
 		model.UserData = types.StringValue(string(*serverResp.UserData))
 	}
-	model.Name = types.StringPointerValue(serverResp.Name)
+	model.Name = types.StringValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
@@ -1048,14 +1040,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	var bootVolumePayload *iaas.ServerBootVolume
+	var bootVolumePayload *iaas.BootVolume
 	if !bootVolume.SourceId.IsNull() && !bootVolume.SourceType.IsNull() {
-		bootVolumePayload = &iaas.ServerBootVolume{
+		bootVolumePayload = &iaas.BootVolume{
 			PerformanceClass: conversion.StringValueToPointer(bootVolume.PerformanceClass),
 			Size:             conversion.Int64ValueToPointer(bootVolume.Size),
 			Source: &iaas.BootVolumeSource{
-				Id:   conversion.StringValueToPointer(bootVolume.SourceId),
-				Type: conversion.StringValueToPointer(bootVolume.SourceType),
+				Id:   bootVolume.SourceId.ValueString(),
+				Type: bootVolume.SourceType.ValueString(),
 			},
 		}
 		if !bootVolume.DeleteOnTermination.IsNull() && !bootVolume.DeleteOnTermination.IsUnknown() && bootVolume.DeleteOnTermination.ValueBool() {
@@ -1064,12 +1056,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		}
 	}
 
-	var userData *[]byte
+	var userData *string
 	if !model.UserData.IsNull() && !model.UserData.IsUnknown() {
-		src := []byte(model.UserData.ValueString())
-		encodedUserData := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
-		base64.StdEncoding.Encode(encodedUserData, src)
-		userData = &encodedUserData
+		userData = sdkUtils.Ptr(base64.StdEncoding.EncodeToString([]byte(model.UserData.ValueString())))
 	}
 
 	if model.NetworkInterfaces.IsNull() || model.NetworkInterfaces.IsUnknown() {
@@ -1084,9 +1073,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		nicIds = append(nicIds, nicString.ValueString())
 	}
 
-	network := &iaas.CreateServerPayloadAllOfNetworking{
+	network := iaas.CreateServerPayloadAllOfNetworking{
 		CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-			NicIds: &nicIds,
+			NicIds: nicIds,
 		},
 	}
 
@@ -1096,10 +1085,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),
-		Labels:           &labels,
-		Name:             conversion.StringValueToPointer(model.Name),
+		Labels:           labels,
+		Name:             model.Name.ValueString(),
 		Networking:       network,
-		MachineType:      conversion.StringValueToPointer(model.MachineType),
+		MachineType:      model.MachineType.ValueString(),
 		UserData:         userData,
 	}, nil
 }
@@ -1116,6 +1105,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	return &iaas.UpdateServerPayload{
 		Name:   conversion.StringValueToPointer(model.Name),
-		Labels: &labels,
+		Labels: labels,
 	}, nil
 }

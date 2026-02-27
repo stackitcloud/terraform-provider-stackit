@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"
@@ -72,7 +72,7 @@ func Test_mapFieldsFromList(t *testing.T) {
 			args: args{
 				model: &shared.RouteModel{},
 				routeResp: &iaas.RouteListResponse{
-					Items: &[]iaas.Route{},
+					Items: []iaas.Route{},
 				},
 			},
 			wantErr: true,
@@ -82,7 +82,7 @@ func Test_mapFieldsFromList(t *testing.T) {
 			args: args{
 				model: &shared.RouteModel{},
 				routeResp: &iaas.RouteListResponse{
-					Items: &[]iaas.Route{
+					Items: []iaas.Route{
 						{
 							Id: utils.Ptr(uuid.NewString()),
 						},
@@ -106,16 +106,16 @@ func Test_mapFieldsFromList(t *testing.T) {
 					NetworkAreaId:  types.StringValue(networkAreaId.String()),
 				},
 				routeResp: &iaas.RouteListResponse{
-					Items: &[]iaas.Route{
+					Items: []iaas.Route{
 						{
 							Id: utils.Ptr(routeId.String()),
-							Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+							Destination: iaas.DestinationCIDRv4AsRouteDestination(
 								iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
-							)),
-							Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+							),
+							Nexthop: iaas.NexthopIPv4AsRouteNexthop(
 								iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
-							)),
-							Labels: &map[string]interface{}{
+							),
+							Labels: map[string]interface{}{
 								"foo": "bar",
 							},
 							CreatedAt: nil,
@@ -202,7 +202,7 @@ func Test_toUpdatePayload(t *testing.T) {
 				}),
 			},
 			want: &iaas.UpdateRouteOfRoutingTablePayload{
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"foo1": "bar1",
 					"foo2": "bar2",
 					"foo3": nil,
@@ -418,18 +418,18 @@ func Test_toCreatePayload(t *testing.T) {
 				},
 			},
 			want: &iaas.AddRoutesToRoutingTablePayload{
-				Items: &[]iaas.Route{
+				Items: []iaas.Route{
 					{
-						Labels: &map[string]interface{}{
+						Labels: map[string]interface{}{
 							"foo1": "bar1",
 							"foo2": "bar2",
 						},
-						Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+						Nexthop: iaas.NexthopIPv4AsRouteNexthop(
 							iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
-						)),
-						Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+						),
+						Destination: iaas.DestinationCIDRv4AsRouteDestination(
 							iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
-						)),
+						),
 					},
 				},
 			},

@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -297,7 +297,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network interface
-	networkInterface, err := r.client.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
+	networkInterface, _, err := r.client.DefaultAPI.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -344,7 +344,7 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, _, err := r.client.DefaultAPI.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -408,7 +408,7 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	nicResp, err := r.client.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
+	nicResp, _, err := r.client.DefaultAPI.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -452,7 +452,7 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Delete existing network interface
-	err := r.client.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	_, err := r.client.DefaultAPI.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -520,7 +520,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 			model.AllowedAddresses = types.ListNull(types.StringType)
 		}
 	} else {
-		for _, n := range *networkInterfaceResp.AllowedAddresses {
+		for _, n := range networkInterfaceResp.AllowedAddresses {
 			respAllowedAddresses = append(respAllowedAddresses, *n.String)
 		}
 
@@ -542,7 +542,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 	if networkInterfaceResp.SecurityGroups == nil {
 		model.SecurityGroupIds = types.ListNull(types.StringType)
 	} else {
-		respSecurityGroups := *networkInterfaceResp.SecurityGroups
+		respSecurityGroups := networkInterfaceResp.SecurityGroups
 		modelSecurityGroups, err := utils.ListValuetoStringSlice(model.SecurityGroupIds)
 		if err != nil {
 			return fmt.Errorf("get current network interface security groups from model: %w", err)
@@ -585,7 +585,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var labelPayload *map[string]interface{}
+	var labelPayload map[string]interface{}
 
 	modelSecurityGroups := []string{}
 	if !(model.SecurityGroupIds.IsNull() || model.SecurityGroupIds.IsUnknown()) {
@@ -598,7 +598,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 		}
 	}
 
-	allowedAddressesPayload := &[]iaas.AllowedAddressesInner{}
+	allowedAddressesPayload := []iaas.AllowedAddressesInner{}
 	if !(model.AllowedAddresses.IsNull() || model.AllowedAddresses.IsUnknown()) {
 		for _, allowedAddressModel := range model.AllowedAddresses.Elements() {
 			allowedAddressString, ok := allowedAddressModel.(types.String)
@@ -606,7 +606,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 				return nil, fmt.Errorf("type assertion failed")
 			}
 
-			*allowedAddressesPayload = append(*allowedAddressesPayload, iaas.AllowedAddressesInner{
+			allowedAddressesPayload = append(allowedAddressesPayload, iaas.AllowedAddressesInner{
 				String: conversion.StringValueToPointer(allowedAddressString),
 			})
 		}
@@ -619,12 +619,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
 		}
-		labelPayload = &labelMap
+		labelPayload = labelMap
 	}
 
 	return &iaas.CreateNicPayload{
 		AllowedAddresses: allowedAddressesPayload,
-		SecurityGroups:   &modelSecurityGroups,
+		SecurityGroups:   modelSecurityGroups,
 		Labels:           labelPayload,
 		Name:             conversion.StringValueToPointer(model.Name),
 		Device:           conversion.StringValueToPointer(model.Device),
@@ -640,7 +640,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var labelPayload *map[string]interface{}
+	var labelPayload map[string]interface{}
 
 	modelSecurityGroups := []string{}
 	for _, ns := range model.SecurityGroupIds.Elements() {
@@ -670,12 +670,12 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		if err != nil {
 			return nil, fmt.Errorf("mapping labels: %w", err)
 		}
-		labelPayload = &labelMap
+		labelPayload = labelMap
 	}
 
 	return &iaas.UpdateNicPayload{
-		AllowedAddresses: &allowedAddressesPayload,
-		SecurityGroups:   &modelSecurityGroups,
+		AllowedAddresses: allowedAddressesPayload,
+		SecurityGroups:   modelSecurityGroups,
 		Labels:           labelPayload,
 		Name:             conversion.StringValueToPointer(model.Name),
 		NicSecurity:      conversion.BoolValueToPointer(model.Security),

@@ -27,8 +27,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -434,7 +434,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new image
-	imageCreateResp, err := r.client.CreateImage(ctx, projectId, region).CreateImagePayload(*payload).Execute()
+	imageCreateResp, _, err := r.client.DefaultAPI.CreateImage(ctx, projectId, region).CreateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -442,10 +442,10 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	ctx = tflog.SetField(ctx, "image_id", *imageCreateResp.Id)
+	ctx = tflog.SetField(ctx, "image_id", imageCreateResp.Id)
 
 	// Get the image object, as the creation response does not contain all fields
-	image, err := r.client.GetImage(ctx, projectId, region, *imageCreateResp.Id).Execute()
+	image, _, err := r.client.DefaultAPI.GetImage(ctx, projectId, region, imageCreateResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -466,14 +466,14 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Upload image
-	err = uploadImage(ctx, &resp.Diagnostics, model.LocalFilePath.ValueString(), *imageCreateResp.UploadUrl)
+	err = uploadImage(ctx, &resp.Diagnostics, model.LocalFilePath.ValueString(), imageCreateResp.UploadUrl)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Uploading image: %v", err))
 		return
 	}
 
 	// Wait for image to become available
-	waiter := wait.UploadImageWaitHandler(ctx, r.client, projectId, region, *imageCreateResp.Id)
+	waiter := wait.UploadImageWaitHandler(ctx, r.client.DefaultAPI, projectId, region, imageCreateResp.Id)
 	waiter = waiter.SetTimeout(7 * 24 * time.Hour) // Set timeout to one week, to make the timeout useless
 	waitResp, err := waiter.WaitWithContext(ctx)
 	if err != nil {
@@ -516,7 +516,7 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
-	imageResp, err := r.client.GetImage(ctx, projectId, region, imageId).Execute()
+	imageResp, _, err := r.client.DefaultAPI.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -579,7 +579,7 @@ func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	// Update existing image
-	updatedImage, err := r.client.UpdateImage(ctx, projectId, region, imageId).UpdateImagePayload(*payload).Execute()
+	updatedImage, _, err := r.client.DefaultAPI.UpdateImage(ctx, projectId, region, imageId).UpdateImagePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -620,7 +620,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing image
-	err := r.client.DeleteImage(ctx, projectId, region, imageId).Execute()
+	_, err := r.client.DefaultAPI.DeleteImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -628,7 +628,7 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteImageWaitHandler(ctx, r.client, projectId, region, imageId).WaitWithContext(ctx)
+	_, err = wait.DeleteImageWaitHandler(ctx, r.client.DefaultAPI, projectId, region, imageId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("image deletion waiting: %v", err))
 		return
@@ -685,17 +685,17 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	diags := diag.Diagnostics{}
 	if imageResp.Config != nil {
 		configModel.BootMenu = types.BoolPointerValue(imageResp.Config.BootMenu)
-		configModel.CDROMBus = types.StringPointerValue(imageResp.Config.GetCdromBus())
-		configModel.DiskBus = types.StringPointerValue(imageResp.Config.GetDiskBus())
-		configModel.NICModel = types.StringPointerValue(imageResp.Config.GetNicModel())
+		configModel.CDROMBus = types.StringValue(imageResp.Config.GetCdromBus())
+		configModel.DiskBus = types.StringValue(imageResp.Config.GetDiskBus())
+		configModel.NICModel = types.StringValue(imageResp.Config.GetNicModel())
 		configModel.OperatingSystem = types.StringPointerValue(imageResp.Config.OperatingSystem)
-		configModel.OperatingSystemDistro = types.StringPointerValue(imageResp.Config.GetOperatingSystemDistro())
-		configModel.OperatingSystemVersion = types.StringPointerValue(imageResp.Config.GetOperatingSystemVersion())
-		configModel.RescueBus = types.StringPointerValue(imageResp.Config.GetRescueBus())
-		configModel.RescueDevice = types.StringPointerValue(imageResp.Config.GetRescueDevice())
+		configModel.OperatingSystemDistro = types.StringValue(imageResp.Config.GetOperatingSystemDistro())
+		configModel.OperatingSystemVersion = types.StringValue(imageResp.Config.GetOperatingSystemVersion())
+		configModel.RescueBus = types.StringValue(imageResp.Config.GetRescueBus())
+		configModel.RescueDevice = types.StringValue(imageResp.Config.GetRescueDevice())
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
-		configModel.VideoModel = types.StringPointerValue(imageResp.Config.GetVideoModel())
+		configModel.VideoModel = types.StringValue(imageResp.Config.GetVideoModel())
 		configModel.VirtioScsi = types.BoolPointerValue(iaas.PtrBool(imageResp.Config.GetVirtioScsi()))
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{
@@ -724,8 +724,8 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	var checksumModel = &checksumModel{}
 	var checksumObject basetypes.ObjectValue
 	if imageResp.Checksum != nil {
-		checksumModel.Algorithm = types.StringPointerValue(imageResp.Checksum.Algorithm)
-		checksumModel.Digest = types.StringPointerValue(imageResp.Checksum.Digest)
+		checksumModel.Algorithm = types.StringValue(imageResp.Checksum.Algorithm)
+		checksumModel.Digest = types.StringValue(imageResp.Checksum.Digest)
 		checksumObject, diags = types.ObjectValue(checksumTypes, map[string]attr.Value{
 			"algorithm": checksumModel.Algorithm,
 			"digest":    checksumModel.Digest,
@@ -744,8 +744,8 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 	}
 
 	model.ImageId = types.StringValue(imageId)
-	model.Name = types.StringPointerValue(imageResp.Name)
-	model.DiskFormat = types.StringPointerValue(imageResp.DiskFormat)
+	model.Name = types.StringValue(imageResp.Name)
+	model.DiskFormat = types.StringValue(imageResp.DiskFormat)
 	model.MinDiskSize = types.Int64PointerValue(imageResp.MinDiskSize)
 	model.MinRAM = types.Int64PointerValue(imageResp.MinRam)
 	model.Protected = types.BoolPointerValue(imageResp.Protected)
@@ -771,17 +771,17 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateImagePayloa
 
 	configPayload := &iaas.ImageConfig{
 		BootMenu:               conversion.BoolValueToPointer(configModel.BootMenu),
-		CdromBus:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
-		DiskBus:                iaas.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
-		NicModel:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
+		CdromBus:               *iaas.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
+		DiskBus:                *iaas.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
+		NicModel:               *iaas.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
 		OperatingSystem:        conversion.StringValueToPointer(configModel.OperatingSystem),
-		OperatingSystemDistro:  iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
-		OperatingSystemVersion: iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
-		RescueBus:              iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
-		RescueDevice:           iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
+		OperatingSystemDistro:  *iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
+		OperatingSystemVersion: *iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
+		RescueBus:              *iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
+		RescueDevice:           *iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
 		SecureBoot:             conversion.BoolValueToPointer(configModel.SecureBoot),
 		Uefi:                   conversion.BoolValueToPointer(configModel.UEFI),
-		VideoModel:             iaas.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
+		VideoModel:             *iaas.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
 		VirtioScsi:             conversion.BoolValueToPointer(configModel.VirtioScsi),
 	}
 
@@ -791,13 +791,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateImagePayloa
 	}
 
 	return &iaas.CreateImagePayload{
-		Name:        conversion.StringValueToPointer(model.Name),
-		DiskFormat:  conversion.StringValueToPointer(model.DiskFormat),
+		Name:        model.Name.ValueString(),
+		DiskFormat:  model.DiskFormat.ValueString(),
 		MinDiskSize: conversion.Int64ValueToPointer(model.MinDiskSize),
 		MinRam:      conversion.Int64ValueToPointer(model.MinRAM),
 		Protected:   conversion.BoolValueToPointer(model.Protected),
 		Config:      configPayload,
-		Labels:      &labels,
+		Labels:      labels,
 	}, nil
 }
 
@@ -816,17 +816,17 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	configPayload := &iaas.ImageConfig{
 		BootMenu:               conversion.BoolValueToPointer(configModel.BootMenu),
-		CdromBus:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
-		DiskBus:                iaas.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
-		NicModel:               iaas.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
+		CdromBus:               *iaas.NewNullableString(conversion.StringValueToPointer(configModel.CDROMBus)),
+		DiskBus:                *iaas.NewNullableString(conversion.StringValueToPointer(configModel.DiskBus)),
+		NicModel:               *iaas.NewNullableString(conversion.StringValueToPointer(configModel.NICModel)),
 		OperatingSystem:        conversion.StringValueToPointer(configModel.OperatingSystem),
-		OperatingSystemDistro:  iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
-		OperatingSystemVersion: iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
-		RescueBus:              iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
-		RescueDevice:           iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
+		OperatingSystemDistro:  *iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemDistro)),
+		OperatingSystemVersion: *iaas.NewNullableString(conversion.StringValueToPointer(configModel.OperatingSystemVersion)),
+		RescueBus:              *iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueBus)),
+		RescueDevice:           *iaas.NewNullableString(conversion.StringValueToPointer(configModel.RescueDevice)),
 		SecureBoot:             conversion.BoolValueToPointer(configModel.SecureBoot),
 		Uefi:                   conversion.BoolValueToPointer(configModel.UEFI),
-		VideoModel:             iaas.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
+		VideoModel:             *iaas.NewNullableString(conversion.StringValueToPointer(configModel.VideoModel)),
 		VirtioScsi:             conversion.BoolValueToPointer(configModel.VirtioScsi),
 	}
 
@@ -843,7 +843,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		MinRam:      conversion.Int64ValueToPointer(model.MinRAM),
 		Protected:   conversion.BoolValueToPointer(model.Protected),
 		Config:      configPayload,
-		Labels:      &labels,
+		Labels:      labels,
 	}, nil
 }
 

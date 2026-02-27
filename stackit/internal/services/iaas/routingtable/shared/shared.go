@@ -6,7 +6,7 @@ import (
 	"maps"
 	"time"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -259,7 +259,7 @@ func MapRoutingTableReadModel(ctx context.Context, routingTable *iaas.RoutingTab
 	}
 
 	model.RoutingTableId = types.StringValue(routingTableId)
-	model.Name = types.StringPointerValue(routingTable.Name)
+	model.Name = types.StringValue(routingTable.Name)
 	model.Description = types.StringPointerValue(routingTable.Description)
 	model.Default = types.BoolPointerValue(routingTable.Default)
 	model.SystemRoutes = types.BoolPointerValue(routingTable.SystemRoutes)

@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -220,7 +220,7 @@ func (r *securityGroupResource) Create(ctx context.Context, req resource.CreateR
 
 	// Create new security group
 
-	securityGroup, err := r.client.CreateSecurityGroup(ctx, projectId, region).CreateSecurityGroupPayload(*payload).Execute()
+	securityGroup, _, err := r.client.DefaultAPI.CreateSecurityGroup(ctx, projectId, region).CreateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -265,7 +265,7 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "security_id", securityGroupId)
 
-	securityGroupResp, err := r.client.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
+	securityGroupResp, _, err := r.client.DefaultAPI.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -327,7 +327,7 @@ func (r *securityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 	// Update existing security group
-	updatedSecurityGroup, err := r.client.UpdateSecurityGroup(ctx, projectId, region, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
+	updatedSecurityGroup, _, err := r.client.DefaultAPI.UpdateSecurityGroup(ctx, projectId, region, securityGroupId).UpdateSecurityGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -369,7 +369,7 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 
 	// Delete existing security group
-	err := r.client.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
+	_, err := r.client.DefaultAPI.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -428,7 +428,7 @@ func mapFields(ctx context.Context, securityGroupResp *iaas.SecurityGroup, model
 	}
 
 	model.SecurityGroupId = types.StringValue(securityGroupId)
-	model.Name = types.StringPointerValue(securityGroupResp.Name)
+	model.Name = types.StringValue(securityGroupResp.Name)
 	model.Description = types.StringPointerValue(securityGroupResp.Description)
 	model.Stateful = types.BoolPointerValue(securityGroupResp.Stateful)
 	model.Labels = labels
@@ -449,8 +449,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateSecurityGro
 	return &iaas.CreateSecurityGroupPayload{
 		Stateful:    conversion.BoolValueToPointer(model.Stateful),
 		Description: conversion.StringValueToPointer(model.Description),
-		Labels:      &labels,
-		Name:        conversion.StringValueToPointer(model.Name),
+		Labels:      labels,
+		Name:        model.Name.ValueString(),
 	}, nil
 }
 
@@ -467,6 +467,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	return &iaas.UpdateSecurityGroupPayload{
 		Description: conversion.StringValueToPointer(model.Description),
 		Name:        conversion.StringValueToPointer(model.Name),
-		Labels:      &labels,
+		Labels:      labels,
 	}, nil
 }

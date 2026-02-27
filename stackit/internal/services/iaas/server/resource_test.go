@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 )
 
 const (
@@ -78,18 +78,18 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.Server{
 					Id:               utils.Ptr("sid"),
-					Name:             utils.Ptr("name"),
+					Name:             "name",
 					AvailabilityZone: utils.Ptr("zone"),
-					Labels: &map[string]interface{}{
+					Labels: map[string]interface{}{
 						"key": "value",
 					},
 					ImageId: utils.Ptr("image_id"),
-					Nics: &[]iaas.ServerNetwork{
+					Nics: []iaas.ServerNetwork{
 						{
-							NicId: utils.Ptr("nic1"),
+							NicId: "nic1",
 						},
 						{
-							NicId: utils.Ptr("nic2"),
+							NicId: "nic2",
 						},
 					},
 					KeypairName:   utils.Ptr("keypair_name"),
@@ -218,9 +218,9 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateServerPayload{
-				Name:             utils.Ptr("name"),
+				Name:             "name",
 				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 				BootVolume: &iaas.ServerBootVolume{
@@ -233,11 +233,11 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				ImageId:     utils.Ptr("image"),
 				KeypairName: utils.Ptr("keypair"),
-				MachineType: utils.Ptr("machine_type"),
-				UserData:    utils.Ptr([]byte(base64EncodedUserData)),
-				Networking: &iaas.CreateServerPayloadAllOfNetworking{
+				MachineType: "machine_type",
+				UserData:    utils.Ptr(base64EncodedUserData),
+				Networking: iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-						NicIds: &[]string{"nic1", "nic2"},
+						NicIds: []string{"nic1", "nic2"},
 					},
 				},
 			},
@@ -271,7 +271,7 @@ func TestToCreatePayload(t *testing.T) {
 			expected: &iaas.CreateServerPayload{
 				Name:             utils.Ptr("name"),
 				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 				BootVolume: &iaas.ServerBootVolume{
@@ -285,11 +285,11 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				ImageId:     utils.Ptr("image"),
 				KeypairName: utils.Ptr("keypair"),
-				MachineType: utils.Ptr("machine_type"),
-				UserData:    utils.Ptr([]byte(base64EncodedUserData)),
-				Networking: &iaas.CreateServerPayloadAllOfNetworking{
+				MachineType: "machine_type",
+				UserData:    utils.Ptr(base64EncodedUserData),
+				Networking: iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-						NicIds: &[]string{"nic1", "nic2"},
+						NicIds: []string{"nic1", "nic2"},
 					},
 				},
 			},
@@ -332,7 +332,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateServerPayload{
 				Name: utils.Ptr("name"),
-				Labels: &map[string]interface{}{
+				Labels: map[string]interface{}{
 					"key": "value",
 				},
 			},
