@@ -16,7 +16,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -191,7 +190,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	userId := *userResp.Id
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": instanceId,
+		"user_id":     userId,
+	})
 
 	// Map response body to schema
 	err = mapFields(userResp, &model)
@@ -354,10 +357,11 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 		)
 		return
 	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"instance_id": idParts[1],
+		"user_id":     idParts[2],
+	})
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"Secrets Manager user imported with empty password",
 		"The user password is not imported as it is only available upon creation of a new user. The password field will be empty.",

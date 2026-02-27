@@ -84,7 +84,22 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
    ```
 4. Create a utils package, for service `foo` it would be `stackit/internal/foo/utils`. Add a `ConfigureClient()` func and use it in your resource and datasource implementations.
 
-https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/utils/util.go
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/utils/util.go
+
+5. If the service `foo` uses async creation (you have to use a waiter after creating the resource), we want to save the
+   IDs as soon as possible to the state. Should the waiter time out, we'll still have the IDs in the state and allow
+   further usage of that resource.
+
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
+   
+   The example in the contribution-guide linked above, does this by calling `utils.SetAndLogStateFields` before calling
+   the waiter.
+
+   To test this we use terraforms acceptance tests in unit test mode. These tests are named `Test<RESOURCE>SavesIDsOnError`.
+   You can find an annotated example of such tests in:
+
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
+   
 
 ### Local development
 

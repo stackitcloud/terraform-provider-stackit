@@ -552,10 +552,12 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"network": schema.SingleNestedAttribute{
 				Description: "Network block as defined below.",
 				Optional:    true,
+				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Description: "ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.",
 						Optional:    true,
+						Computed:    true,
 						Validators: []validator.String{
 							validate.UUID(),
 						},
