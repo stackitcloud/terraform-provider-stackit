@@ -28,7 +28,7 @@ data "stackit_dns_zone" "example" {
 
 ### Optional
 
-- `dns_name` (String) The zone name. E.g. `example.com`
+- `dns_name` (String) The zone name. E.g. `example.com` (must not end with a trailing dot).
 - `zone_id` (String) The zone ID.
 
 ### Read-Only
