@@ -74,7 +74,7 @@ When using Workload Identity Federation (WIF), you don't need a static service a
 
 WIF can be configured to trust any public OIDC provider following the [official documentation](https://docs.stackit.cloud/platform/access-and-identity/service-accounts/how-tos/manage-service-account-federations/#create-a-federated-identity-provider).
 
-To use WIF, set the `use_oidc` flag to `true` and provide an OIDC token for the exchange. While you can provide the token directly via `service_account_federated_token`, this is **not recommended for GitHub Actions**, as the provider will automatically fetch the token from the environment. For a complete setup, see our [Workload Identity Federation guide](./guides/workload_identity_federation.md).
+To use WIF, set the `use_oidc` flag to `true` and provide an OIDC token for the exchange. While you can provide the token directly via `service_account_federated_token`, this is **not recommended for GitHub Actions or Azure DevOps**, as the provider will automatically fetch the token from the environment. For a complete setup, see our [Workload Identity Federation guide](./docs/guides/workload_identity_federation.md).
 
 In addition to this, you must set the `service_account_email` to specify which service account to impersonate.
 

@@ -549,7 +549,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.ReadJWTFromFileSystem(oidc_token_path)
 	}
 
-	// Workload Identity Federation via provided OIDC Token from GitHub Actions
+	// Workload Identity Federation via provided OIDC Token from GitHub Actions or Azure DevOps
 	if sdkConfig.ServiceAccountFederatedTokenFunc == nil && utils.GetEnvBoolIfValueAbsent(providerConfig.UseOIDC, "STACKIT_USE_OIDC") {
 		sdkConfig.WorkloadIdentityFederation = true
 		// https://docs.github.com/en/actions/reference/security/oidc#methods-for-requesting-the-oidc-token
@@ -557,6 +557,17 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		oidcReqToken := utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestGHOIDCToken(oidcReqURL, oidcReqToken)
+		}
+
+		// https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create?view=azure-devops-rest-7.1#taskhuboidctoken
+		// https://learn.microsoft.com/es-es/azure/devops/pipelines/build/variables?view=azure-devops&tabs=yaml
+		oidcReqURL = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestURL, "SYSTEM_OIDCREQUESTURI", "")
+		oidcReqToken = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "SYSTEM_ACCESSTOKEN", "")
+		// This can be set to the ID of the service connection to restrict the token exchange to that connection, not supported by default to avoid additional configuration
+		// for users that don't need it, can be added as an additional provider config parameter in the future if there is demand
+		serviceConnectionID := ""
+		if oidcReqURL != "" && oidcReqToken != "" {
+			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestAzureDevOpsOIDCToken(oidcReqURL, oidcReqToken, serviceConnectionID)
 		}
 	}
 
