@@ -99,8 +99,8 @@ import (
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
 	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
+	serviceAccounts "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/accounts"
 	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
-	serviceAccountToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/token"
 	exportpolicy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/export-policy"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/resourcepool"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/share"
@@ -665,6 +665,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewScheduleDataSource,
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
+		serviceAccounts.NewServiceAccountsDataSource,
 		skeCluster.NewClusterDataSource,
 		skeKubernetesVersion.NewKubernetesVersionsDataSource,
 		skeMachineImages.NewKubernetesMachineImageVersionDataSource,
@@ -750,7 +751,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		serverBackupSchedule.NewScheduleResource,
 		serverUpdateSchedule.NewScheduleResource,
 		serviceAccount.NewServiceAccountResource,
-		serviceAccountToken.NewServiceAccountTokenResource,
 		serviceAccountKey.NewServiceAccountKeyResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
