@@ -25,7 +25,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -114,11 +113,6 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_backup_schedule", "resource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	apiClient := serverbackupUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -130,8 +124,7 @@ func (r *scheduleResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "Server backup schedule resource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server backup schedule resource schema. Must have a `region` specified in the provider configuration.", core.Resource),
+		Description: "Server backup schedule resource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`server_id`,`backup_schedule_id`\".",
