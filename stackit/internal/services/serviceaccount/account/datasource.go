@@ -56,15 +56,14 @@ func (r *serviceAccountDataSource) Metadata(_ context.Context, req datasource.Me
 // Schema defines the schema for the service account data source.
 func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":         "Terraform's internal resource ID, structured as \"`project_id`,`email`\".",
-		"project_id": "STACKIT project ID to which the service account is associated.",
-		"name":       "Name of the service account.",
-		"email":      "Email of the service account.",
+		"id":                 "Terraform's internal resource ID, structured as \"`project_id`,`email`\".",
+		"project_id":         "STACKIT project ID to which the service account is associated.",
+		"service_account_id": "The internal UUID of the service account.",
+		"name":               "Name of the service account.",
+		"email":              "Email of the service account.",
 	}
 
 	// Define the schema with validation rules and descriptions for each attribute.
-	// The datasource schema differs slightly from the resource schema.
-	// In this case, the email attribute is required to read the service account data from the API.
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Service account data source schema.",
 		Description:         "Service account data source schema.",
@@ -79,6 +78,13 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"service_account_id": schema.StringAttribute{
+				Description: descriptions["service_account_id"],
+				Computed:    true,
+				Validators: []validator.String{
+					validate.UUID(),
 				},
 			},
 			"email": schema.StringAttribute{

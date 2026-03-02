@@ -64,3 +64,4 @@ Read-Only:
 
 - `email` (String) Email of the service account.
 - `name` (String) Name of the service account.
+- `service_account_id` (String) The internal UUID of the service account.

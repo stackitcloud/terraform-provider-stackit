@@ -29,8 +29,9 @@ var (
 
 // ServiceAccountItem represents a single service account inside the list.
 type ServiceAccountItem struct {
-	Email types.String `tfsdk:"email"`
-	Name  types.String `tfsdk:"name"`
+	ServiceAccountId types.String `tfsdk:"service_account_id"`
+	Email            types.String `tfsdk:"email"`
+	Name             types.String `tfsdk:"name"`
 }
 
 // ServiceAccountsModel represents the Model for the plural data source.
@@ -111,6 +112,13 @@ func (r *serviceAccountsDataSource) Schema(_ context.Context, _ datasource.Schem
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
+						"service_account_id": schema.StringAttribute{
+							Description: "The internal UUID of the service account.",
+							Computed:    true,
+							Validators: []validator.String{
+								validate.UUID(),
+							},
+						},
 						"email": schema.StringAttribute{
 							Description: "Email of the service account.",
 							Computed:    true,
@@ -203,8 +211,9 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 		nameStr, _ := serviceaccountUtils.ParseNameFromEmail(email)
 
 		matchedItems = append(matchedItems, ServiceAccountItem{
-			Email: types.StringValue(email),
-			Name:  types.StringValue(nameStr),
+			ServiceAccountId: types.StringPointerValue(sa.Id),
+			Email:            types.StringValue(email),
+			Name:             types.StringValue(nameStr),
 		})
 	}
 

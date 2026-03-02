@@ -16,6 +16,10 @@ func TestMapDataSourceFields(t *testing.T) {
 	emailB := "sa-b-1234567@sa.stackit.cloud"
 	emailC := "sa-c-1234567@ske.sa.stackit.cloud"
 
+	idA := "550e8400-e29b-41d4-a716-446655440001"
+	idB := "550e8400-e29b-41d4-a716-446655440002"
+	idC := "550e8400-e29b-41d4-a716-446655440003"
+
 	nameA := "sa-a"
 	nameB := "sa-b"
 	nameC := "sa-c"
@@ -31,9 +35,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "default_sort_descending",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA)},
-				{Email: utils.Ptr(emailC)},
-				{Email: utils.Ptr(emailB)},
+				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
+				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
+				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:     types.StringValue(projectId),
@@ -44,9 +48,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId:     types.StringValue(projectId),
 				SortAscending: types.BoolNull(),
 				Items: []ServiceAccountItem{
-					{Email: types.StringValue(emailC), Name: types.StringValue(nameC)},
-					{Email: types.StringValue(emailB), Name: types.StringValue(nameB)},
-					{Email: types.StringValue(emailA), Name: types.StringValue(nameA)},
+					{Email: types.StringValue(emailC), Name: types.StringValue(nameC), ServiceAccountId: types.StringValue(idC)},
+					{Email: types.StringValue(emailB), Name: types.StringValue(nameB), ServiceAccountId: types.StringValue(idB)},
+					{Email: types.StringValue(emailA), Name: types.StringValue(nameA), ServiceAccountId: types.StringValue(idA)},
 				},
 			},
 			isValid: true,
@@ -54,9 +58,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "sort_ascending",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailC)},
-				{Email: utils.Ptr(emailA)},
-				{Email: utils.Ptr(emailB)},
+				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
+				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
+				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:     types.StringValue(projectId),
@@ -67,9 +71,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId:     types.StringValue(projectId),
 				SortAscending: types.BoolValue(true),
 				Items: []ServiceAccountItem{
-					{Email: types.StringValue(emailA), Name: types.StringValue(nameA)},
-					{Email: types.StringValue(emailB), Name: types.StringValue(nameB)},
-					{Email: types.StringValue(emailC), Name: types.StringValue(nameC)},
+					{Email: types.StringValue(emailA), Name: types.StringValue(nameA), ServiceAccountId: types.StringValue(idA)},
+					{Email: types.StringValue(emailB), Name: types.StringValue(nameB), ServiceAccountId: types.StringValue(idB)},
+					{Email: types.StringValue(emailC), Name: types.StringValue(nameC), ServiceAccountId: types.StringValue(idC)},
 				},
 			},
 			isValid: true,
@@ -77,9 +81,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "regex_filter_match",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA)},
-				{Email: utils.Ptr(emailB)},
-				{Email: utils.Ptr(emailC)},
+				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
+				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
+				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:     types.StringValue(projectId),
@@ -93,7 +97,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				EmailRegex:    types.StringValue(`.*-b-.*`),
 				SortAscending: types.BoolValue(true),
 				Items: []ServiceAccountItem{
-					{Email: types.StringValue(emailB), Name: types.StringValue(nameB)},
+					{Email: types.StringValue(emailB), Name: types.StringValue(nameB), ServiceAccountId: types.StringValue(idB)},
 				},
 			},
 			isValid: true,
@@ -101,9 +105,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "suffix_filter_match",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA)},
-				{Email: utils.Ptr(emailB)},
-				{Email: utils.Ptr(emailC)},
+				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
+				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
+				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:   types.StringValue(projectId),
@@ -114,7 +118,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId:   types.StringValue(projectId),
 				EmailSuffix: types.StringValue(`@ske.sa.stackit.cloud`),
 				Items: []ServiceAccountItem{
-					{Email: types.StringValue(emailC), Name: types.StringValue(nameC)},
+					{Email: types.StringValue(emailC), Name: types.StringValue(nameC), ServiceAccountId: types.StringValue(idC)},
 				},
 			},
 			isValid: true,
@@ -122,7 +126,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "skip_nil_email",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA)},
+				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
 				{Email: nil}, // Should be skipped
 			},
 			initialModel: ServiceAccountsModel{
@@ -134,7 +138,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId:     types.StringValue(projectId),
 				SortAscending: types.BoolValue(true),
 				Items: []ServiceAccountItem{
-					{Email: types.StringValue(emailA), Name: types.StringValue(nameA)},
+					{Email: types.StringValue(emailA), Name: types.StringValue(nameA), ServiceAccountId: types.StringValue(idA)},
 				},
 			},
 			isValid: true,

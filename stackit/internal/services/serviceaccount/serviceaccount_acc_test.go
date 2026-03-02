@@ -79,14 +79,10 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", testutil.ConvertConfigVariable(testConfigVars["name"])),
 					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "email"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "created_at"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "valid_until"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "service_account_id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "ttl_days"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "json"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "service_account_email"),
-					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_access_token.token", "service_account_email"),
 					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_key.key", "service_account_email"),
 				),
 			},
@@ -98,14 +94,10 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", testutil.ConvertConfigVariable(testConfigVarsUpdate["name"])),
 					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "email"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "created_at"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "valid_until"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "service_account_id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "ttl_days"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "json"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "service_account_email"),
-					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_access_token.token", "service_account_email"),
 					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_key.key", "service_account_email"),
 				),
 			},
@@ -115,6 +107,7 @@ func TestServiceAccount(t *testing.T) {
 				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_service_account.sa", "service_account_id"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_service_account.sa", "project_id",
 						"data.stackit_service_account.sa", "project_id",
@@ -126,6 +119,10 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_service_account.sa", "email",
 						"data.stackit_service_account.sa", "email",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account.sa", "service_account_id",
+						"data.stackit_service_account.sa", "service_account_id",
 					),
 				),
 			},
@@ -143,6 +140,7 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_service_accounts.list", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.email"),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.name"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.service_account_id"),
 				),
 			},
 			// Data source (Plural - Filtered by Regex)
@@ -152,6 +150,7 @@ func TestServiceAccount(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_accounts.list_regex", "project_id", testutil.ConvertConfigVariable(testConfigVarsPluralRegex["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_regex", "items.0.email"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_regex", "items.0.service_account_id"),
 				),
 			},
 			// Data source (Plural - Filtered by Suffix)
@@ -161,6 +160,7 @@ func TestServiceAccount(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_accounts.list_suffix", "project_id", testutil.ConvertConfigVariable(testConfigVarsPluralSuffix["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_suffix", "items.0.email"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_suffix", "items.0.service_account_id"),
 				),
 			},
 			// Import

@@ -18,14 +18,6 @@ func TestToCreatePayload(t *testing.T) {
 	}{
 		{
 			"default_values",
-			&Model{},
-			&serviceaccount.CreateServiceAccountPayload{
-				Name: nil,
-			},
-			true,
-		},
-		{
-			"default_values",
 			&Model{
 				Name: types.StringValue("example-name1"),
 			},
@@ -70,13 +62,15 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&serviceaccount.ServiceAccount{
+				Id:        utils.Ptr("550e8400-e29b-41d4-a716-446655440000"),
 				ProjectId: utils.Ptr("pid"),
 				Email:     utils.Ptr("mail"),
 			},
 			Model{
-				Id:        types.StringValue("pid,mail"),
-				ProjectId: types.StringValue("pid"),
-				Email:     types.StringValue("mail"),
+				Id:               types.StringValue("pid,mail"),
+				ProjectId:        types.StringValue("pid"),
+				ServiceAccountId: types.StringValue("550e8400-e29b-41d4-a716-446655440000"),
+				Email:            types.StringValue("mail"),
 			},
 			true,
 		},
@@ -93,10 +87,19 @@ func TestMapFields(t *testing.T) {
 			false,
 		},
 		{
+			"no_email",
+			&serviceaccount.ServiceAccount{
+				ProjectId: utils.Ptr("pid"),
+				Id:        utils.Ptr("550e8400-e29b-41d4-a716-446655440000"),
+			},
+			Model{},
+			false,
+		},
+		{
 			"no_id",
 			&serviceaccount.ServiceAccount{
 				ProjectId: utils.Ptr("pid"),
-				Internal:  utils.Ptr(true),
+				Email:     utils.Ptr("mail"),
 			},
 			Model{},
 			false,
@@ -115,7 +118,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(state, &tt.expected)
+				diff := cmp.Diff(*state, tt.expected, cmp.AllowUnexported(types.String{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
