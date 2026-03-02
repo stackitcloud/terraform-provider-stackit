@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
@@ -35,6 +36,9 @@ var (
 	_ resource.ResourceWithConfigure   = &zoneResource{}
 	_ resource.ResourceWithImportState = &zoneResource{}
 )
+
+// dnsNameNoTrailingDotRegex defines the zone dns_name without trailing dot
+var dnsNameNoTrailingDotRegex = regexp.MustCompile(`^.*[^.]$`)
 
 type Model struct {
 	Id                types.String `tfsdk:"id"` // needed by TF
@@ -144,6 +148,10 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.LengthAtMost(253),
+					stringvalidator.RegexMatches(
+						dnsNameNoTrailingDotRegex,
+						"dns_name must not end with a trailing dot",
+					),
 				},
 			},
 			"description": schema.StringAttribute{

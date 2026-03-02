@@ -17,7 +17,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -261,7 +260,15 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	userId := *userResp.Item.Id
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"region":      region,
+		"instance_id": instanceId,
+		"user_id":     userId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Map response body to schema
 	err = mapFieldsCreate(userResp, &model, region)
@@ -448,10 +455,12 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), idParts[3])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
+		"user_id":     idParts[3],
+	})
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"MongoDB Flex user imported with empty password and empty uri",
 		"The user password and uri are not imported as they are only available upon creation of a new user. The password and uri fields will be empty.",

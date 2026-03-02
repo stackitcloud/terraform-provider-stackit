@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.21.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.17.6
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.3
@@ -25,7 +25,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.5
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.8
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.16.3
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.6
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.26.0
@@ -54,7 +54,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect

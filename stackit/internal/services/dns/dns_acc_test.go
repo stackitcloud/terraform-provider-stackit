@@ -93,6 +93,20 @@ func TestAccDnsMinResource(t *testing.T) {
 				ConfigVariables: configVarsInvalid(testConfigVarsMin),
 				ExpectError:     regexp.MustCompile(`not a valid dns name. Need at least two levels`),
 			},
+			// Creation fail: trailing dot is rejected on purpose
+			{
+				Config: resourceMinConfig,
+				ConfigVariables: func() config.Variables {
+					vars := maps.Clone(testConfigVarsMin)
+
+					// Ensure it ends with a dot (even if the random value already had one, be explicit)
+					base := testutil.ConvertConfigVariable(vars["dns_name"])
+					vars["dns_name"] = config.StringVariable(base + ".")
+
+					return vars
+				}(),
+				ExpectError: regexp.MustCompile(`dns_name must not end with a trailing dot`),
+			},
 			// creation
 			{
 				Config:          resourceMinConfig,

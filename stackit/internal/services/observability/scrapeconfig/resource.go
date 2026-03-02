@@ -728,15 +728,15 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 
 	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
-		sc.BasicAuth = &observability.CreateScrapeConfigPayloadBasicAuth{
+		sc.BasicAuth = &observability.PartialUpdateScrapeConfigsRequestInnerBasicAuth{
 			Username: conversion.StringValueToPointer(basicAuthModel.Username),
 			Password: conversion.StringValueToPointer(basicAuthModel.Password),
 		}
 	}
 
-	t := make([]observability.CreateScrapeConfigPayloadStaticConfigsInner, len(targetsModel))
+	t := make([]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner, len(targetsModel))
 	for i, target := range targetsModel {
-		ti := observability.CreateScrapeConfigPayloadStaticConfigsInner{}
+		ti := observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{}
 
 		urls := []string{}
 		diags := target.URLs.ElementsAs(ctx, &urls, false)
@@ -817,7 +817,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 	}
 
 	if sc.BasicAuth == nil && !basicAuthModel.Username.IsNull() && !basicAuthModel.Password.IsNull() {
-		sc.BasicAuth = &observability.CreateScrapeConfigPayloadBasicAuth{
+		sc.BasicAuth = &observability.PartialUpdateScrapeConfigsRequestInnerBasicAuth{
 			Username: conversion.StringValueToPointer(basicAuthModel.Username),
 			Password: conversion.StringValueToPointer(basicAuthModel.Password),
 		}
