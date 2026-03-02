@@ -1,9 +1,11 @@
 variable "project_id" {}
 variable "name" {}
+variable "ipv4_prefix" {}
 
 resource "stackit_network" "network" {
-  project_id = var.project_id
-  name       = var.name
+  project_id  = var.project_id
+  name        = var.name
+  ipv4_prefix = var.ipv4_prefix
 }
 
 resource "stackit_network_interface" "network_interface" {
