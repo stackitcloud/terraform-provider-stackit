@@ -1,4 +1,4 @@
-package utils
+package stringplanmodifier
 
 import (
 	"context"
@@ -13,18 +13,20 @@ type UseStateForUnknownFuncResponse struct {
 }
 
 // UseStateForUnknownIfFunc is a conditional function used in UseStateForUnknownIf
-type UseStateForUnknownIfFunc func(context.Context, planmodifier.StringRequest, *UseStateForUnknownFuncResponse)
+type UseStateForUnknownIfFunc func(context.Context, string, planmodifier.StringRequest, *UseStateForUnknownFuncResponse)
 
 type useStateForUnknownIf struct {
-	ifFunc      UseStateForUnknownIfFunc
-	description string
+	ifFunc        UseStateForUnknownIfFunc
+	attributeName string
+	description   string
 }
 
 // UseStateForUnknownIf returns a plan modifier similar to UseStateForUnknown with a conditional
-func UseStateForUnknownIf(f UseStateForUnknownIfFunc, description string) planmodifier.String {
+func UseStateForUnknownIf(f UseStateForUnknownIfFunc, attributeName, description string) planmodifier.String {
 	return useStateForUnknownIf{
-		ifFunc:      f,
-		description: description,
+		ifFunc:        f,
+		attributeName: attributeName,
+		description:   description,
 	}
 }
 
@@ -56,7 +58,7 @@ func (m useStateForUnknownIf) PlanModifyString(ctx context.Context, req planmodi
 	// (https://github.com/hashicorp/terraform-plugin-framework/blob/44348af3923c82a93c64ae7dca906d9850ba956b/resource/schema/stringplanmodifier/use_state_for_unknown.go#L38)
 
 	funcResponse := &UseStateForUnknownFuncResponse{}
-	m.ifFunc(ctx, req, funcResponse)
+	m.ifFunc(ctx, m.attributeName, req, funcResponse)
 
 	resp.Diagnostics.Append(funcResponse.Diagnostics...)
 	if resp.Diagnostics.HasError() {
