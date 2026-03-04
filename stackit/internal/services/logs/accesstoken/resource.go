@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -21,8 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
@@ -53,7 +52,7 @@ var schemaDescriptions = map[string]string{
 	"permissions":     "The access permissions granted to the access token. Possible values: `read`, `write`.",
 	"status": fmt.Sprintf(
 		"The status of the access token. %s",
-		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(logs.AllowedAccessTokenStatusEnumValues)...),
+		tfutils.FormatPossibleValues("active", "expired"),
 	),
 }
 
@@ -69,7 +68,7 @@ type Model struct {
 	AccessToken   types.String `tfsdk:"access_token"`
 	Expires       types.Bool   `tfsdk:"expires"`
 	ValidUntil    types.String `tfsdk:"valid_until"`
-	Lifetime      types.Int64  `tfsdk:"lifetime"`
+	Lifetime      types.Int32  `tfsdk:"lifetime"`
 	Permissions   types.List   `tfsdk:"permissions"`
 	Status        types.String `tfsdk:"status"`
 }
@@ -211,11 +210,11 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 				Description: schemaDescriptions["valid_until"],
 				Computed:    true,
 			},
-			"lifetime": schema.Int64Attribute{
+			"lifetime": schema.Int32Attribute{
 				Description: schemaDescriptions["lifetime"],
 				Optional:    true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"permissions": schema.ListAttribute{
@@ -260,7 +259,7 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	createResp, err := r.client.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateAccessToken(ctx, projectId, region, instanceId).CreateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -268,12 +267,7 @@ func (r *logsAccessTokenResource) Create(ctx context.Context, req resource.Creat
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs access token", "Got empty credential id")
-		return
-	}
-	accessTokenId := *createResp.Id
-	ctx = tflog.SetField(ctx, "access_token_id", accessTokenId)
+	ctx = tflog.SetField(ctx, "access_token_id", createResp.Id)
 
 	err = mapFields(ctx, createResp, &model)
 	if err != nil {
@@ -308,7 +302,7 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenID)
 
-	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	accessTokenResponse, err := r.client.DefaultAPI.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -362,7 +356,7 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	err = r.client.UpdateAccessToken(ctx, projectID, region, instanceID, accessTokenID).UpdateAccessTokenPayload(*payload).Execute()
+	err = r.client.DefaultAPI.UpdateAccessToken(ctx, projectID, region, instanceID, accessTokenID).UpdateAccessTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -370,7 +364,7 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 
 	ctx = core.LogResponse(ctx)
 
-	accessTokenResponse, err := r.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	accessTokenResponse, err := r.client.DefaultAPI.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -412,7 +406,7 @@ func (r *logsAccessTokenResource) Delete(ctx context.Context, req resource.Delet
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenID)
 
-	err := r.client.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	err := r.client.DefaultAPI.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -449,8 +443,8 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 
 	payload := &logs.CreateAccessTokenPayload{
 		Description: conversion.StringValueToPointer(model.Description),
-		DisplayName: conversion.StringValueToPointer(model.DisplayName),
-		Lifetime:    conversion.Int64ValueToPointer(model.Lifetime),
+		DisplayName: model.DisplayName.ValueString(),
+		Lifetime:    conversion.Int32ValueToPointer(model.Lifetime),
 	}
 
 	if !(tfutils.IsUndefined(model.Permissions)) {
@@ -458,7 +452,7 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		permissionDiags := model.Permissions.ElementsAs(ctx, &permissions, false)
 		diagnostics.Append(permissionDiags...)
 		if !permissionDiags.HasError() {
-			payload.Permissions = &permissions
+			payload.Permissions = permissions
 		}
 	}
 
@@ -476,8 +470,8 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	var accessTokenID string
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
-	} else if accessToken.Id != nil {
-		accessTokenID = *accessToken.Id
+	} else if accessToken.Id != "" {
+		accessTokenID = accessToken.Id
 	} else {
 		return fmt.Errorf("access token id not present")
 	}
@@ -485,11 +479,11 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
 	model.Region = types.StringValue(model.Region.ValueString())
-	model.Creator = types.StringPointerValue(accessToken.Creator)
+	model.Creator = types.StringValue(accessToken.Creator)
 	model.Description = types.StringPointerValue(accessToken.Description)
-	model.DisplayName = types.StringPointerValue(accessToken.DisplayName)
-	model.Expires = types.BoolPointerValue(accessToken.Expires)
-	model.Status = types.StringValue(string(*accessToken.Status))
+	model.DisplayName = types.StringValue(accessToken.DisplayName)
+	model.Expires = types.BoolValue(accessToken.Expires)
+	model.Status = types.StringValue(accessToken.Status)
 
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {
@@ -502,7 +496,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 
 	permissionList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if accessToken.Permissions != nil && len(*accessToken.Permissions) > 0 {
+	if accessToken.Permissions != nil && len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
 		if diags.HasError() {
 			return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))

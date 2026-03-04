@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
@@ -119,7 +119,7 @@ func (d *logsInstanceDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: schemaDescriptions["query_url"],
 				Computed:    true,
 			},
-			"retention_days": schema.Int64Attribute{
+			"retention_days": schema.Int32Attribute{
 				Description: schemaDescriptions["retention_days"],
 				Computed:    true,
 			},
@@ -149,7 +149,7 @@ func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	instanceResponse, err := d.client.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
+	instanceResponse, err := d.client.DefaultAPI.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
