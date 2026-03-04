@@ -93,3 +93,8 @@ linters:
     - unparam # false positives
 issues:
   exclude-use-default: false
+  # disable deprecation errors while we switch over to the SDK structure with multi API version support
+  exclude-rules:
+    - linters:
+        - staticcheck
+      text: "SA1019:"

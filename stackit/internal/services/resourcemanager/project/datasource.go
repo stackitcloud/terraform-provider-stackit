@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -167,7 +167,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		identifierType = "Project"
 	}
 
-	projectResp, err := d.client.GetProject(ctx, identifier).Execute()
+	projectResp, err := d.client.DefaultAPI.GetProject(ctx, identifier).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
