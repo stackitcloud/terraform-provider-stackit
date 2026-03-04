@@ -11,6 +11,7 @@ import (
 
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
+	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -368,7 +369,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					utils.UseStateForUnknownIf(hasKubernetesMinChanged, "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
+					stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "kubernetes_version_min", "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
 				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
@@ -451,7 +452,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								utils.UseStateForUnknownIf(hasOsVersionMinChanged, "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+								stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "os_version_min", "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
 							},
 						},
 						"volume_type": schema.StringAttribute{
@@ -2106,52 +2107,6 @@ func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*str
 		return nil, fmt.Errorf("no supported Kubernetes version found")
 	}
 	return latestVersion, nil
-}
-
-func hasKubernetesMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := path.Root("kubernetes_version_min")
-
-	var minVersionPlan types.String
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	var minVersionState types.String
-	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	if minVersionState == minVersionPlan {
-		response.UseStateForUnknown = true
-		return
-	}
-}
-
-func hasOsVersionMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := request.Path.ParentPath().AtName("os_version_min")
-
-	var minVersionPlan types.String
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	var minVersionState types.String
-	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	if minVersionState == minVersionPlan {
-		response.UseStateForUnknown = true
-		return
-	}
 }
 
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
