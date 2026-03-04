@@ -48,6 +48,7 @@ type DataSourceModel struct {
 	Routed           types.Bool   `tfsdk:"routed"`
 	Region           types.String `tfsdk:"region"`
 	RoutingTableID   types.String `tfsdk:"routing_table_id"`
+	DHCP             types.Bool   `tfsdk:"dhcp"`
 }
 
 // NewNetworkDataSource is a helper function to simplify the provider implementation.
@@ -197,6 +198,10 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"dhcp": schema.BoolAttribute{
+				Description: "Shows if DHCP is enabled for the network.",
+				Computed:    true,
 			},
 		},
 	}
@@ -397,6 +402,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
+	model.DHCP = types.BoolPointerValue(networkResp.Dhcp)
 
 	return nil
 }

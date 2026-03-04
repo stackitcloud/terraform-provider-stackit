@@ -22,7 +22,6 @@ variable "server_name_min" {
 
 // general data
 variable "project_id" {}
-variable "region" {}
 
 // load balancer data
 variable "loadbalancer_name" {}
@@ -35,6 +34,7 @@ variable "host" {}
 variable "protocol_http" {}
 variable "target_pool_name" {}
 variable "target_pool_port" {}
+variable "ephemeral_address" {}
 
 resource "stackit_network" "network" {
   project_id       = var.project_id
@@ -50,16 +50,6 @@ resource "stackit_network_interface" "network_interface" {
   lifecycle {
     ignore_changes = [
       security_group_ids,
-    ]
-  }
-}
-
-resource "stackit_public_ip" "public_ip" {
-  project_id           = var.project_id
-  network_interface_id = stackit_network_interface.network_interface.network_interface_id
-  lifecycle {
-    ignore_changes = [
-      network_interface_id
     ]
   }
 }
@@ -86,7 +76,6 @@ resource "stackit_server" "server" {
 }
 
 resource "stackit_application_load_balancer" "loadbalancer" {
-  region     = var.region
   project_id = var.project_id
   name       = var.loadbalancer_name
   plan_id    = var.plan_id
@@ -120,5 +109,7 @@ resource "stackit_application_load_balancer" "loadbalancer" {
       role       = var.network_role
     }
   ]
-  external_address = stackit_public_ip.public_ip.ip
+  options = {
+    ephemeral_address = var.ephemeral_address
+  }
 }

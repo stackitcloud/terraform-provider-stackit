@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -357,6 +358,182 @@ func TestAccCDNDistributionResource(t *testing.T) {
 		},
 	})
 }
+
+func configBucketResources(bucketName, credentialsGroupName string) string {
+	return fmt.Sprintf(`
+		%s
+
+		resource "stackit_objectstorage_bucket" "bucket" {
+			project_id = "%s"
+			name       = "%s"
+		}
+
+		resource "stackit_objectstorage_credentials_group" "group" {
+			project_id = "%s"
+			name       = "%s"
+		}
+
+		resource "stackit_objectstorage_credential" "creds" {
+			project_id           = "%s"
+			credentials_group_id = stackit_objectstorage_credentials_group.group.credentials_group_id
+		}
+
+		resource "stackit_cdn_distribution" "distribution" {
+			project_id = "%s"
+			config = {
+				backend = {
+					type       = "bucket"
+					# Construct the URL dynamically using the bucket name
+					bucket_url = "https://${stackit_objectstorage_bucket.bucket.name}.object.storage.eu01.onstackit.cloud"
+					region     = "eu01"
+					
+					# Pass the keys via credentials block
+                    credentials = {
+                        access_key_id = stackit_objectstorage_credential.creds.access_key
+                        secret_access_key = stackit_objectstorage_credential.creds.secret_access_key
+                    }
+				}
+				regions           = ["EU", "US"]
+				blocked_countries = ["CN", "RU"] 
+	
+				optimizer = {
+					enabled = false
+				}
+			}
+		}
+		`, testutil.CdnProviderConfig(),
+		testutil.ProjectId, bucketName,
+		testutil.ProjectId, credentialsGroupName,
+		testutil.ProjectId,
+		testutil.ProjectId,
+	)
+}
+
+func configBucketDatasource(bucketName, credentialsGroupName string) string {
+	return fmt.Sprintf(`
+		%s
+
+		data "stackit_cdn_distribution" "bucket_ds" {
+			project_id      = stackit_cdn_distribution.distribution.project_id
+			distribution_id = stackit_cdn_distribution.distribution.distribution_id
+		}
+	`, configBucketResources(bucketName, credentialsGroupName))
+}
+
+func TestAccCDNDistributionBucketResource(t *testing.T) {
+	bucketName := fmt.Sprintf("tf-acc-bucket-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	credentialsGroupName := fmt.Sprintf("tf-acc-group-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	bucketNameUpdated := fmt.Sprintf("tf-acc-bucket-upd-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+	credentialsGroupNameUpdated := fmt.Sprintf("tf-acc-group-upd-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
+
+	expectedBucketUrl := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketName)
+	expectedBucketUrlUpdated := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketNameUpdated)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckCDNDistributionDestroy,
+		Steps: []resource.TestStep{
+			// Step 1: Create Resource (Real Bucket & Creds)
+			{
+				Config: configBucketResources(bucketName, credentialsGroupName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CN"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "RU"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "false"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.type", "bucket"),
+
+					// Verify the Bucket URL matches the one we constructed
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", expectedBucketUrl),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", "eu01"),
+
+					// CRITICAL: Verify that the CDN keys match the Object Storage keys
+					// We use AttrPair because the values are generated dynamically on the server side
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.access_key_id",
+						"stackit_objectstorage_credential.creds", "access_key",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.secret_access_key",
+						"stackit_objectstorage_credential.creds", "secret_access_key",
+					),
+				),
+			},
+			{
+				ResourceName: "stackit_cdn_distribution.distribution",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_cdn_distribution.distribution"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource")
+					}
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, r.Primary.Attributes["distribution_id"]), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+				// We MUST ignore credentials on import verification
+				// 1. API doesn't return them (security).
+				// 2. State has them (from resource creation).
+				ImportStateVerifyIgnore: []string{"config.backend.credentials"},
+			},
+			// Step 3: Data Source
+			{
+				Config: configBucketDatasource(bucketName, credentialsGroupName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "distribution_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "created_at"),
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "updated_at"),
+					resource.TestCheckResourceAttrPair("data.stackit_cdn_distribution.bucket_ds", "project_id", "stackit_cdn_distribution.distribution", "project_id"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.type", "managed"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.0", "EU"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.1", "US"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.0", "CN"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.1", "RU"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.optimizer.enabled", "false"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.type", "bucket"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.bucket_url", expectedBucketUrl),
+
+					// Security Check: Secrets should NOT be in Data Source
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.access_key_id"),
+					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.secret_access_key"),
+				),
+			},
+			// Step 4: Update Resource (Change Bucket & Creds)
+			{
+				Config: configBucketResources(bucketNameUpdated, credentialsGroupNameUpdated),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", expectedBucketUrlUpdated),
+
+					// Verify that keys have been updated to the new credentials
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.access_key_id",
+						"stackit_objectstorage_credential.creds", "access_key",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_cdn_distribution.distribution", "config.backend.credentials.secret_access_key",
+						"stackit_objectstorage_credential.creds", "secret_access_key",
+					),
+				),
+			},
+		},
+	})
+}
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *cdn.APIClient
@@ -400,9 +577,26 @@ const (
 )
 
 func blockUntilDomainResolves(domain string) (net.IP, error) {
+	// Create a custom resolver that bypasses the local system DNS settings/cache
+	// and queries Google DNS (8.8.8.8) directly.
+	r := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: time.Millisecond * time.Duration(10000),
+			}
+			// Force query to Google DNS
+			return d.DialContext(ctx, network, "8.8.8.8:53")
+		},
+	}
+
 	// wait until it becomes ready
 	isReady := func() (net.IP, error) {
-		ips, err := net.LookupIP(domain)
+		// Use a context for the individual query timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		ips, err := r.LookupIP(ctx, "ip", domain)
 		if err != nil {
 			return nil, fmt.Errorf("error looking up IP for domain %s: %w", domain, err)
 		}
@@ -413,6 +607,7 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 		}
 		return nil, fmt.Errorf("no IP for domain: %v", domain)
 	}
+
 	return retry(recordCheckAttempts, recordCheckInterval, isReady)
 }
 

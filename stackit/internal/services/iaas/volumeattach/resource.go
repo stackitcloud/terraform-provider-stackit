@@ -197,6 +197,16 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	ctx = core.LogResponse(ctx)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"server_id":  serverId,
+		"volume_id":  volumeId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client, projectId, region, serverId, volumeId).WaitWithContext(ctx)
 	if err != nil {

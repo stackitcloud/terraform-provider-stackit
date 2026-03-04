@@ -1004,30 +1004,52 @@ func TestMapAlertConfigField(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description string
-		input       *Model
-		expected    *observability.CreateInstancePayload
-		isValid     bool
+		description         string
+		input               *Model
+		grafanaAdminEnabled bool
+		expected            *observability.CreateInstancePayload
+		isValid             bool
 	}{
 		{
 			"basic_ok",
 			&Model{
-				PlanId: types.StringValue("planId"),
+				GrafanaAdminEnabled: types.BoolValue(true),
+				PlanId:              types.StringValue("planId"),
 			},
+			true,
 			&observability.CreateInstancePayload{
-				Name:      nil,
-				PlanId:    utils.Ptr("planId"),
-				Parameter: &map[string]interface{}{},
+				GrafanaAdminEnabled: utils.Ptr(true),
+				Name:                nil,
+				PlanId:              utils.Ptr("planId"),
+				Parameter:           &map[string]interface{}{},
 			},
 			true,
 		},
 		{
 			"ok",
 			&Model{
+				GrafanaAdminEnabled: types.BoolValue(false),
+				Name:                types.StringValue("Name"),
+				PlanId:              types.StringValue("planId"),
+				Parameters:          makeTestMap(t),
+			},
+			true,
+			&observability.CreateInstancePayload{
+				GrafanaAdminEnabled: utils.Ptr(false),
+				Name:                utils.Ptr("Name"),
+				PlanId:              utils.Ptr("planId"),
+				Parameter:           &map[string]interface{}{"key": `"value"`},
+			},
+			true,
+		},
+		{
+			"plan does not support grafana",
+			&Model{
 				Name:       types.StringValue("Name"),
 				PlanId:     types.StringValue("planId"),
 				Parameters: makeTestMap(t),
 			},
+			false,
 			&observability.CreateInstancePayload{
 				Name:      utils.Ptr("Name"),
 				PlanId:    utils.Ptr("planId"),
@@ -1038,13 +1060,14 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"nil_model",
 			nil,
+			true,
 			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input)
+			output, err := toCreatePayload(tt.input, tt.grafanaAdminEnabled)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -1063,47 +1086,70 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToPayloadUpdate(t *testing.T) {
 	tests := []struct {
-		description string
-		input       *Model
-		expected    *observability.UpdateInstancePayload
-		isValid     bool
+		description         string
+		input               *Model
+		grafanaAdminEnabled bool
+		expected            *observability.UpdateInstancePayload
+		isValid             bool
 	}{
 		{
 			"basic_ok",
 			&Model{
-				PlanId: types.StringValue("planId"),
+				GrafanaAdminEnabled: types.BoolValue(true),
+				PlanId:              types.StringValue("planId"),
 			},
+			true,
 			&observability.UpdateInstancePayload{
-				Name:      nil,
-				PlanId:    utils.Ptr("planId"),
-				Parameter: &map[string]any{},
+				GrafanaAdminEnabled: utils.Ptr(true),
+				Name:                nil,
+				PlanId:              utils.Ptr("planId"),
+				Parameter:           &map[string]any{},
 			},
 			true,
 		},
 		{
 			"ok",
 			&Model{
+				GrafanaAdminEnabled: types.BoolValue(false),
+				Name:                types.StringValue("Name"),
+				PlanId:              types.StringValue("planId"),
+				Parameters:          makeTestMap(t),
+			},
+			true,
+			&observability.UpdateInstancePayload{
+				GrafanaAdminEnabled: utils.Ptr(false),
+				Name:                utils.Ptr("Name"),
+				PlanId:              utils.Ptr("planId"),
+				Parameter:           &map[string]any{"key": `"value"`},
+			},
+			true,
+		},
+		{
+			"plan does not support grafana",
+			&Model{
 				Name:       types.StringValue("Name"),
 				PlanId:     types.StringValue("planId"),
 				Parameters: makeTestMap(t),
 			},
+			false,
 			&observability.UpdateInstancePayload{
 				Name:      utils.Ptr("Name"),
 				PlanId:    utils.Ptr("planId"),
-				Parameter: &map[string]any{"key": `"value"`},
+				Parameter: &map[string]interface{}{"key": `"value"`},
 			},
 			true,
 		},
 		{
 			"nil_model",
 			nil,
+			true,
 			nil,
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input)
+			output, err := toUpdatePayload(tt.input, tt.grafanaAdminEnabled)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

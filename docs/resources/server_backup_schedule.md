@@ -4,14 +4,11 @@ page_title: "stackit_server_backup_schedule Resource - stackit"
 subcategory: ""
 description: |-
   Server backup schedule resource schema. Must have a region specified in the provider configuration.
-  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_server_backup_schedule (Resource)
 
 Server backup schedule resource schema. Must have a `region` specified in the provider configuration.
-
-~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -45,7 +42,7 @@ import {
 - `enabled` (Boolean) Is the backup schedule enabled or disabled.
 - `name` (String) The schedule name.
 - `project_id` (String) STACKIT Project ID to which the server is associated.
-- `rrule` (String) Backup schedule described in `rrule` (recurrence rule) format.
+- `rrule` (String) An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.
 - `server_id` (String) Server ID for the backup schedule.
 
 ### Optional

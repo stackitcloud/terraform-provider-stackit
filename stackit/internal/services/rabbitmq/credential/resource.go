@@ -15,7 +15,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -204,7 +203,14 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	credentialId := *credentialsResp.Id
-	ctx = tflog.SetField(ctx, "credential_id", credentialId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":    projectId,
+		"instance_id":   instanceId,
+		"credential_id": credentialId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
@@ -325,9 +331,14 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credential_id"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":    idParts[0],
+		"instance_id":   idParts[1],
+		"credential_id": idParts[2],
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	tflog.Info(ctx, "RabbitMQ credential state imported")
 }
 

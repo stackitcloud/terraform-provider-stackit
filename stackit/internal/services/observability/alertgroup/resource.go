@@ -117,6 +117,10 @@ func (a *alertGroupResource) ValidateConfig(ctx context.Context, req resource.Va
 		return
 	}
 
+	if resourceModel.Rules.IsUnknown() || resourceModel.Rules.IsNull() {
+		return
+	}
+
 	rules := &[]rule{}
 	diags := resourceModel.Rules.ElementsAs(ctx, rules, false)
 	resp.Diagnostics.Append(diags...)

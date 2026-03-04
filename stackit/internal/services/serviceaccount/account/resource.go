@@ -35,10 +35,11 @@ var (
 
 // Model represents the schema for the service account resource.
 type Model struct {
-	Id        types.String `tfsdk:"id"`         // Required by Terraform
-	ProjectId types.String `tfsdk:"project_id"` // ProjectId associated with the service account
-	Name      types.String `tfsdk:"name"`       // Name of the service account
-	Email     types.String `tfsdk:"email"`      // Email linked to the service account
+	Id               types.String `tfsdk:"id"`                 // Required by Terraform
+	ProjectId        types.String `tfsdk:"project_id"`         // ProjectId associated with the service account
+	ServiceAccountId types.String `tfsdk:"service_account_id"` // Internal ID of the service account
+	Name             types.String `tfsdk:"name"`               // Name of the service account
+	Email            types.String `tfsdk:"email"`              // Email linked to the service account
 }
 
 // NewServiceAccountResource is a helper function to create a new service account resource instance.
@@ -74,10 +75,11 @@ func (r *serviceAccountResource) Metadata(_ context.Context, req resource.Metada
 // Schema defines the schema for the resource.
 func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"id":         "Terraform's internal resource ID, structured as \"`project_id`,`email`\".",
-		"project_id": "STACKIT project ID to which the service account is associated.",
-		"name":       "Name of the service account.",
-		"email":      "Email of the service account.",
+		"id":                 "Terraform's internal resource ID, structured as \"`project_id`,`email`\".",
+		"project_id":         "STACKIT project ID to which the service account is associated.",
+		"service_account_id": "The internal UUID of the service account.",
+		"name":               "Name of the service account.",
+		"email":              "Email of the service account.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -97,6 +99,13 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"service_account_id": schema.StringAttribute{
+				Description: descriptions["service_account_id"],
+				Computed:    true,
+				Validators: []validator.String{
+					validate.UUID(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -221,11 +230,6 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 // Update attempts to update the resource. In this case, service accounts cannot be updated.
-// Note: This method is intentionally left without update logic because changes
-// to 'project_id' or 'name' require the resource to be entirely replaced.
-// As a result, the Update function is redundant since any modifications will
-// automatically trigger a resource recreation through Terraform's built-in
-// lifecycle management.
 func (r *serviceAccountResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Service accounts cannot be updated, so we log an error.
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating service account", "Service accounts can't be updated")
@@ -280,7 +284,7 @@ func (r *serviceAccountResource) ImportState(ctx context.Context, req resource.I
 	email := idParts[1]
 
 	// Attempt to parse the name from the email if valid.
-	name, err := parseNameFromEmail(email)
+	name, err := serviceaccountUtils.ParseNameFromEmail(email)
 	if name != "" && err == nil {
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 	}
@@ -315,26 +319,15 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 		return fmt.Errorf("service account email not present")
 	}
 
+	if resp.Id == nil {
+		return fmt.Errorf("service account id not present")
+	}
+
 	// Build the ID by combining the project ID and email and assign the model's fields.
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *resp.Email)
+	model.ServiceAccountId = types.StringPointerValue(resp.Id)
 	model.Email = types.StringPointerValue(resp.Email)
 	model.ProjectId = types.StringPointerValue(resp.ProjectId)
 
 	return nil
-}
-
-// parseNameFromEmail extracts the name component from an email address.
-// The email format must be `name-<random7characters>@sa.stackit.cloud`.
-func parseNameFromEmail(email string) (string, error) {
-	namePattern := `^([a-z][a-z0-9]*(?:-[a-z0-9]+)*)-\w{7}@sa\.stackit\.cloud$`
-	re := regexp.MustCompile(namePattern)
-	match := re.FindStringSubmatch(email)
-
-	// If a match is found, return the name component
-	if len(match) > 1 {
-		return match[1], nil
-	}
-
-	// If no match is found, return an error
-	return "", fmt.Errorf("unable to parse name from email")
 }

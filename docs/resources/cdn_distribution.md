@@ -35,6 +35,30 @@ resource "stackit_cdn_distribution" "example_distribution" {
   }
 }
 
+resource "stackit_cdn_distribution" "example_bucket_distribution" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  config = {
+    backend = {
+      type       = "bucket"
+      bucket_url = "https://my-test.object.storage.eu01.onstackit.cloud"
+      region     = "eu01"
+
+      # Credentials are required for bucket backends
+      # It is strongly recommended to use variables for secrets
+      credentials = {
+        access_key_id     = var.bucket_access_key
+        secret_access_key = var.bucket_secret_key
+      }
+    }
+    regions           = ["EU", "US"]
+    blocked_countries = ["CN", "RU"]
+
+    optimizer = {
+      enabled = false
+    }
+  }
+}
+
 # Only use the import statement, if you want to import an existing cdn distribution
 import {
   to = stackit_cdn_distribution.import-example
@@ -78,13 +102,25 @@ Optional:
 
 Required:
 
-- `origin_url` (String) The configured backend type for the distribution
-- `type` (String) The configured backend type. Possible values are: `http`.
+- `type` (String) The configured backend type. Possible values are: `http`, `bucket`.
 
 Optional:
 
-- `geofencing` (Map of List of String) A map of URLs to a list of countries where content is allowed.
-- `origin_request_headers` (Map of String) The configured origin request headers for the backend
+- `bucket_url` (String) The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.
+- `credentials` (Attributes) The credentials for the bucket. Required if type is 'bucket'. (see [below for nested schema](#nestedatt--config--backend--credentials))
+- `geofencing` (Map of List of String) The configured type http to configure countries where content is allowed. A map of URLs to a list of countries
+- `origin_request_headers` (Map of String) The configured type http origin request headers for the backend
+- `origin_url` (String) The configured backend type http for the distribution
+- `region` (String) The region where the bucket is hosted. Required if type is 'bucket'.
+
+<a id="nestedatt--config--backend--credentials"></a>
+### Nested Schema for `config.backend.credentials`
+
+Required:
+
+- `access_key_id` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
+- `secret_access_key` (String, Sensitive) The access key for the bucket. Required if type is 'bucket'.
+
 
 
 <a id="nestedatt--config--optimizer"></a>

@@ -25,7 +25,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/logs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -91,11 +90,6 @@ func (r *logsAccessTokenResource) Configure(ctx context.Context, req resource.Co
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_logs_access_token", "resource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	r.client = utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -136,8 +130,7 @@ func (r *logsAccessTokenResource) Metadata(_ context.Context, req resource.Metad
 
 func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Logs access token resource schema.", core.Resource),
-		Description:         fmt.Sprintf("Logs access token resource schema. %s", core.ResourceRegionFallbackDocstring),
+		Description: fmt.Sprintf("Logs access token resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],

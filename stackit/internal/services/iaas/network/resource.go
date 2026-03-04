@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -71,6 +72,7 @@ type Model struct {
 	NoIPv6Gateway    types.Bool   `tfsdk:"no_ipv6_gateway"`
 	Region           types.String `tfsdk:"region"`
 	RoutingTableID   types.String `tfsdk:"routing_table_id"`
+	DHCP             types.Bool   `tfsdk:"dhcp"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -378,6 +380,15 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
+			"dhcp": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "If the network has DHCP enabled. Default value is `true`.",
+				Default:     booldefault.StaticBool(true),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -417,8 +428,21 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	if network.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", "Got empty network id")
+		return
+	}
+
 	networkId := *network.Id
-	ctx = tflog.SetField(ctx, "network_id", networkId)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"network_id": networkId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
@@ -581,17 +605,11 @@ func (r *networkResource) ImportState(ctx context.Context, req resource.ImportSt
 		)
 		return
 	}
-
-	projectId := idParts[0]
-	region := idParts[1]
-	networkId := idParts[2]
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "region", region)
-	ctx = tflog.SetField(ctx, "network_id", networkId)
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), region)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkId)...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"network_id": idParts[2],
+	})
 	tflog.Info(ctx, "Network state imported")
 }
 
@@ -747,6 +765,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
+	model.DHCP = types.BoolPointerValue(networkResp.Dhcp)
 
 	return nil
 }
@@ -862,6 +881,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		Ipv4:           ipv4Body,
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),
+		Dhcp:           conversion.BoolValueToPointer(model.DHCP),
 	}
 
 	return &payload, nil
@@ -944,6 +964,7 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		Ipv4:           ipv4Body,
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),
+		Dhcp:           conversion.BoolValueToPointer(model.DHCP),
 	}
 
 	return &payload, nil

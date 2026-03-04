@@ -13,18 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
 )
-
-// scheduleDataSourceBetaCheckDone is used to prevent multiple checks for beta resources.
-// This is a workaround for the lack of a global state in the provider and
-// needs to exist because the Configure method is called twice.
-var schedulesDataSourceBetaCheckDone bool
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -55,14 +49,6 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 		return
 	}
 
-	if !schedulesDataSourceBetaCheckDone {
-		features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_server_update_schedules", "data source")
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		schedulesDataSourceBetaCheckDone = true
-	}
-
 	apiClient := serverupdateUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -74,8 +60,7 @@ func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.Conf
 // Schema defines the schema for the data source.
 func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description:         "Server update schedules datasource schema. Must have a `region` specified in the provider configuration.",
-		MarkdownDescription: features.AddBetaDescription("Server update schedules datasource schema. Must have a `region` specified in the provider configuration.", core.Datasource),
+		Description: "Server update schedules datasource schema. Must have a `region` specified in the provider configuration.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`server_id`\".",
@@ -109,7 +94,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 						},
 						"rrule": schema.StringAttribute{
-							Description: "Update schedule described in `rrule` (recurrence rule) format.",
+							Description: "An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.",
 							Computed:    true,
 						},
 						"enabled": schema.BoolAttribute{
@@ -117,7 +102,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 						},
 						"maintenance_window": schema.Int64Attribute{
-							Description: "Maintenance window [1..24].",
+							Description: "Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.",
 							Computed:    true,
 						},
 					},

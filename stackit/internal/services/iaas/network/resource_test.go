@@ -90,6 +90,7 @@ func TestMapFields(t *testing.T) {
 					"key": "value",
 				},
 				Routed: utils.Ptr(true),
+				Dhcp:   utils.Ptr(true),
 			},
 			testRegion,
 			Model{
@@ -133,6 +134,7 @@ func TestMapFields(t *testing.T) {
 				IPv4Gateway: types.StringValue("gateway"),
 				IPv6Gateway: types.StringValue("gateway"),
 				Region:      types.StringValue(testRegion),
+				DHCP:        types.BoolValue(true),
 			},
 			true,
 		},
@@ -403,6 +405,7 @@ func TestToCreatePayload(t *testing.T) {
 				Routed:      types.BoolValue(false),
 				IPv4Gateway: types.StringValue("gateway"),
 				IPv4Prefix:  types.StringValue("prefix"),
+				DHCP:        types.BoolValue(true),
 			},
 			&iaas.CreateNetworkPayload{
 				Name: utils.Ptr("name"),
@@ -420,6 +423,7 @@ func TestToCreatePayload(t *testing.T) {
 					"key": "value",
 				},
 				Routed: utils.Ptr(false),
+				Dhcp:   utils.Ptr(true),
 			},
 			true,
 		},
@@ -588,6 +592,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 				Routed:      types.BoolValue(true),
 				IPv4Gateway: types.StringValue("gateway"),
+				DHCP:        types.BoolValue(true),
 			},
 			Model{
 				ProjectId: types.StringValue("pid"),
@@ -606,6 +611,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Labels: &map[string]interface{}{
 					"key": "value",
 				},
+				Dhcp: utils.Ptr(true),
 			},
 			true,
 		},

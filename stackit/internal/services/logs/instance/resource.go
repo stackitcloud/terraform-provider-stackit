@@ -22,7 +22,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/logs/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -89,11 +88,6 @@ func (r *logsInstanceResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_logs_instance", "resource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -136,8 +130,7 @@ func (r *logsInstanceResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *logsInstanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: features.AddBetaDescription("Logs instance resource schema.", core.Resource),
-		Description:         fmt.Sprintf("Logs instance resource schema. %s", core.ResourceRegionFallbackDocstring),
+		Description: fmt.Sprintf("Logs instance resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],

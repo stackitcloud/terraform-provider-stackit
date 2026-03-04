@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -539,6 +540,10 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Computed:    true,
 				Validators: []validator.String{
 					validate.IP(false),
+					stringvalidator.AtLeastOneOf(
+						path.MatchRoot("options").AtName("private_network_only"),
+						path.MatchRoot("options").AtName("ephemeral_address"),
+					),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -874,12 +879,24 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
+						Validators: []validator.Bool{
+							boolvalidator.AtLeastOneOf(
+								path.MatchRoot("external_address"),
+								path.MatchRoot("options").AtName("private_network_only"),
+							),
+						},
 					},
 					"private_network_only": schema.BoolAttribute{
 						Description: descriptions["private_network_only"],
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
+						Validators: []validator.Bool{
+							boolvalidator.AtLeastOneOf(
+								path.MatchRoot("external_address"),
+								path.MatchRoot("options").AtName("ephemeral_address"),
+							),
+						},
 					},
 					"observability": schema.SingleNestedAttribute{
 						Description: descriptions["observability"],

@@ -37,3 +37,4 @@ import {
 
 - `email` (String) Email of the service account.
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`email`".
+- `service_account_id` (String) The internal UUID of the service account.

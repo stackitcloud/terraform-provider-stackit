@@ -8,6 +8,7 @@ variable "ipv4_prefix_length" {}
 variable "routed" {}
 variable "label" {}
 variable "service_account_mail" {}
+variable "dhcp" {}
 
 # no test candidate, just needed for the testing setup
 resource "stackit_network_area" "network_area" {
@@ -57,6 +58,7 @@ resource "stackit_network" "network_prefix" {
   labels = {
     "acc-test" : var.label
   }
+  dhcp = var.dhcp
 
   depends_on = [stackit_network_area_region.network_area_region]
 }

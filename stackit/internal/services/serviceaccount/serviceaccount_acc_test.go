@@ -2,63 +2,68 @@ package serviceaccount
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-// Service Account resource data
-var serviceAccountResource = map[string]string{
-	"project_id": testutil.ProjectId,
-	"name01":     "sa-test-01",
-	"name02":     "sa-test-02",
+var (
+	//go:embed testdata/resource-service-account.tf
+	resourceServiceAccount string
+
+	//go:embed testdata/datasource-service-account.tf
+	datasourceServiceAccount string
+
+	//go:embed testdata/datasource-service-accounts.tf
+	datasourceServiceAccounts string
+
+	//go:embed testdata/datasource-service-accounts-regex.tf
+	datasourceServiceAccountsRegex string
+
+	//go:embed testdata/datasource-service-accounts-suffix.tf
+	datasourceServiceAccountsSuffix string
+
+	//go:embed testdata/datasource-service-account-exact-not-found.tf
+	datasourceServiceAccountExactNotFound string
+)
+
+var testConfigVars = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+	"name":       config.StringVariable("satest01"),
 }
 
-func inputServiceAccountResourceConfig(name string) string {
-	return fmt.Sprintf(`
-				%s
-			
-				resource "stackit_service_account" "sa" {
-					project_id = "%s"
-					name = "%s"
-				}
-
-				resource "stackit_service_account_access_token" "token" {
-					project_id = stackit_service_account.sa.project_id
-  					service_account_email = stackit_service_account.sa.email
-				}
-
-				resource "stackit_service_account_key" "key" {
-					project_id            = stackit_service_account.sa.project_id
-					service_account_email = stackit_service_account.sa.email
-					ttl_days              = 90
-				}
-				`,
-		testutil.ServiceAccountProviderConfig(),
-		serviceAccountResource["project_id"],
-		name,
-	)
+var testConfigVarsUpdate = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
+	"name":       config.StringVariable("satest02"),
 }
 
-func inputServiceAccountDataSourceConfig() string {
-	return fmt.Sprintf(`
-					%s
+var testConfigVarsPluralRegex = config.Variables{
+	"project_id":  config.StringVariable(testutil.ProjectId),
+	"name":        config.StringVariable("satest02"),
+	"email_regex": config.StringVariable(`^satest02-.*@(?:ske\.)?sa\.stackit\.cloud$`),
+}
 
-					data "stackit_service_account" "sa" {
-						project_id  = stackit_service_account.sa.project_id
-						email = stackit_service_account.sa.email
-					}
-					`,
-		inputServiceAccountResourceConfig(serviceAccountResource["name01"]),
-	)
+var testConfigVarsPluralSuffix = config.Variables{
+	"project_id":   config.StringVariable(testutil.ProjectId),
+	"name":         config.StringVariable("satest02"),
+	"email_suffix": config.StringVariable(`@sa.stackit.cloud`),
+}
+
+var testConfigVarsExactNotFound = config.Variables{
+	"project_id":      config.StringVariable(testutil.ProjectId),
+	"name":            config.StringVariable("satest02"),
+	"not_found_email": config.StringVariable("does-not-exist-123@sa.stackit.cloud"),
 }
 
 func TestServiceAccount(t *testing.T) {
@@ -68,46 +73,41 @@ func TestServiceAccount(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: inputServiceAccountResourceConfig(serviceAccountResource["name01"]),
+				ConfigVariables: testConfigVars,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", serviceAccountResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", serviceAccountResource["name01"]),
+					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
+					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", testutil.ConvertConfigVariable(testConfigVars["name"])),
 					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "email"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "created_at"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "valid_until"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "service_account_id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "ttl_days"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "json"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "service_account_email"),
-					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_access_token.token", "service_account_email"),
 					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_key.key", "service_account_email"),
 				),
 			},
 			// Update
 			{
-				Config: inputServiceAccountResourceConfig(serviceAccountResource["name02"]),
+				ConfigVariables: testConfigVarsUpdate,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", serviceAccountResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", serviceAccountResource["name02"]),
+					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
+					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", testutil.ConvertConfigVariable(testConfigVarsUpdate["name"])),
 					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "email"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "token"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "created_at"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "valid_until"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_access_token.token", "service_account_email"),
+					resource.TestCheckResourceAttrSet("stackit_service_account.sa", "service_account_id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "ttl_days"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "json"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_key.key", "service_account_email"),
-					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_access_token.token", "service_account_email"),
 					resource.TestCheckResourceAttrPair("stackit_service_account.sa", "email", "stackit_service_account_key.key", "service_account_email"),
 				),
 			},
-			// Data source
+			// Data source (Using exact email)
 			{
-				Config: inputServiceAccountDataSourceConfig(),
+				ConfigVariables: testConfigVarsUpdate,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Instance
-					resource.TestCheckResourceAttr("data.stackit_service_account.sa", "project_id", serviceAccountResource["project_id"]),
+					resource.TestCheckResourceAttr("data.stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_service_account.sa", "service_account_id"),
 					resource.TestCheckResourceAttrPair(
 						"stackit_service_account.sa", "project_id",
 						"data.stackit_service_account.sa", "project_id",
@@ -120,11 +120,54 @@ func TestServiceAccount(t *testing.T) {
 						"stackit_service_account.sa", "email",
 						"data.stackit_service_account.sa", "email",
 					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account.sa", "service_account_id",
+						"data.stackit_service_account.sa", "service_account_id",
+					),
+				),
+			},
+			// Data source (Singular Exact Email - Not Found Expectation)
+			{
+				ConfigVariables: testConfigVarsExactNotFound,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountExactNotFound,
+				ExpectError:     regexp.MustCompile(`Service account not found`),
+			},
+			// Data source (Plural / List of Service Accounts - No filter)
+			{
+				ConfigVariables: testConfigVarsUpdate,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccounts,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_service_accounts.list", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.email"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.name"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.service_account_id"),
+				),
+			},
+			// Data source (Plural - Filtered by Regex)
+			{
+				ConfigVariables: testConfigVarsPluralRegex,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountsRegex,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_service_accounts.list_regex", "project_id", testutil.ConvertConfigVariable(testConfigVarsPluralRegex["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_regex", "items.0.email"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_regex", "items.0.service_account_id"),
+				),
+			},
+			// Data source (Plural - Filtered by Suffix)
+			{
+				ConfigVariables: testConfigVarsPluralSuffix,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountsSuffix,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_service_accounts.list_suffix", "project_id", testutil.ConvertConfigVariable(testConfigVarsPluralSuffix["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_suffix", "items.0.email"),
+					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_suffix", "items.0.service_account_id"),
 				),
 			},
 			// Import
 			{
-				ResourceName: "stackit_service_account.sa",
+				ConfigVariables: testConfigVarsUpdate,
+				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount,
+				ResourceName:    "stackit_service_account.sa",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_service_account.sa"]
 					if !ok {
@@ -153,7 +196,7 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 		client, err = serviceaccount.NewAPIClient()
 	} else {
 		client, err = serviceaccount.NewAPIClient(
-			config.WithEndpoint(testutil.ServiceAccountCustomEndpoint),
+			stackitSdkConfig.WithEndpoint(testutil.ServiceAccountCustomEndpoint),
 		)
 	}
 

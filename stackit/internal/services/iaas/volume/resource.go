@@ -465,14 +465,26 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	ctx = core.LogResponse(ctx)
 
+	if volume.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", "Got empty volume id")
+		return
+	}
 	volumeId := *volume.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"volume_id":  volumeId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	volume, err = wait.CreateVolumeWaitHandler(ctx, r.client, projectId, region, volumeId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("volume creation waiting: %v", err))
 		return
 	}
-
-	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Map response body to schema
 	err = mapFields(ctx, volume, &model, region)
