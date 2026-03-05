@@ -195,7 +195,7 @@ type providerModel struct {
 
 // Schema defines the provider-level schema for configuration data.
 func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
-	descriptions := map[string]string{
+	descriptions := map[string]string{ //nolint:gosec // descriptions
 		"credentials_path":                     "Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.",
 		"service_account_token":                "Token used for authentication. If set, the token flow will be used to authenticate all operations.",
 		"service_account_key_path":             "Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.",

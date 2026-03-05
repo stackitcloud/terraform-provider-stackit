@@ -116,12 +116,9 @@ func TestAccDnsMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
-
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primary_name_server"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "serial_number"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "visibility"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 					// Record set data
 					resource.TestCheckResourceAttrPair(
 						"stackit_dns_record_set.record_set", "project_id",
@@ -241,9 +238,7 @@ func TestAccDnsMinResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primary_name_server"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "serial_number"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "visibility"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 					// Record set data
 					resource.TestCheckResourceAttrPair(
 						"stackit_dns_record_set.record_set", "project_id",
@@ -305,9 +300,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", testutil.ConvertConfigVariable(testConfigVarsMax["type"])),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primary_name_server"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "serial_number"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "visibility"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "record_set_id"),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["record_name"])),
@@ -479,9 +472,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_zone.zone", "type", testutil.ConvertConfigVariable(testConfigVarsMax["type"])),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "primary_name_server"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "serial_number"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "state"),
 					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "visibility"),
-					resource.TestCheckResourceAttrSet("stackit_dns_zone.zone", "zone_id"),
 					// Record set data
 					resource.TestCheckResourceAttrPair(
 						"stackit_dns_record_set.record_set", "project_id",
