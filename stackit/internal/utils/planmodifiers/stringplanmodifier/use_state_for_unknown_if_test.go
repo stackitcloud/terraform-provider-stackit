@@ -1,4 +1,4 @@
-package utils
+package stringplanmodifier
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 			stateValue:  types.StringNull(),
 			planValue:   types.StringUnknown(),
 			configValue: types.StringValue("some-config"),
-			ifFunc: func(_ context.Context, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ string, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 				// This should not be reached because the state is null
 				resp.UseStateForUnknown = true
 			},
@@ -36,7 +36,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 			stateValue:  types.StringValue("old-state"),
 			planValue:   types.StringValue("new-plan"),
 			configValue: types.StringValue("new-plan"),
-			ifFunc: func(_ context.Context, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ string, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 				// This should not be reached because the plan is known
 				resp.UseStateForUnknown = true
 			},
@@ -47,7 +47,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 			stateValue:  types.StringValue("old-state"),
 			planValue:   types.StringUnknown(),
 			configValue: types.StringUnknown(),
-			ifFunc: func(_ context.Context, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ string, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 				// This should not be reached
 				resp.UseStateForUnknown = true
 			},
@@ -58,7 +58,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 			stateValue:  types.StringValue("old-state"),
 			planValue:   types.StringUnknown(),
 			configValue: types.StringNull(), // Simulating computed only
-			ifFunc: func(_ context.Context, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ string, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 				resp.UseStateForUnknown = false
 			},
 			expectedPlanValue: types.StringUnknown(),
@@ -68,7 +68,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 			stateValue:  types.StringValue("old-state"),
 			planValue:   types.StringUnknown(),
 			configValue: types.StringNull(),
-			ifFunc: func(_ context.Context, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ string, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 				resp.UseStateForUnknown = true
 			},
 			expectedPlanValue: types.StringValue("old-state"),
@@ -78,7 +78,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 			stateValue:  types.StringValue("old-state"),
 			planValue:   types.StringUnknown(),
 			configValue: types.StringNull(),
-			ifFunc: func(_ context.Context, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ string, _ planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 				resp.Diagnostics.AddError("Test Error", "Something went wrong")
 			},
 			expectedPlanValue: types.StringUnknown(),
@@ -89,7 +89,7 @@ func TestUseStateForUnknownIf_PlanModifyString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize the modifier
-			modifier := UseStateForUnknownIf(tt.ifFunc, "test description")
+			modifier := UseStateForUnknownIf(tt.ifFunc, "", "test description")
 
 			// Construct request
 			req := planmodifier.StringRequest{
