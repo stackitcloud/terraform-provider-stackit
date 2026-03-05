@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int64planmodifier"
 
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
@@ -543,7 +543,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days", "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
 				},
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
@@ -551,7 +551,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days_5m_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
 				},
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
@@ -559,7 +559,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days_1h_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
 				},
 			},
 			"metrics_url": schema.StringAttribute{
