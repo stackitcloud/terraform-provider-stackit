@@ -21,6 +21,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
+	alb "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/applicationloadbalancer"
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
@@ -156,6 +157,7 @@ type providerModel struct {
 	DefaultRegion types.String `tfsdk:"default_region"`
 
 	// Custom endpoints
+	ALBCustomEndpoint               types.String `tfsdk:"alb_custom_endpoint"`
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
@@ -210,6 +212,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
 		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
+		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
 		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
@@ -321,6 +324,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Description: descriptions["experiments"],
 			},
 			// Custom endpoints
+			"alb_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["alb_custom_endpoint"],
+			},
 			"cdn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["cdn_custom_endpoint"],
@@ -492,6 +499,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
+	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
@@ -595,6 +603,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 // DataSources defines the data sources implemented in the provider.
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
+		alb.NewApplicationLoadBalancerDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
@@ -682,6 +691,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 // Resources defines the resources implemented in the provider.
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
+		alb.NewApplicationLoadBalancerResource,
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,
 		cdnCustomDomain.NewCustomDomainResource,
