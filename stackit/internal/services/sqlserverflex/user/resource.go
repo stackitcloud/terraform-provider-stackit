@@ -255,7 +255,9 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	userId := *userResp.Item.Id
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"user_id": userId,
+	})
 
 	// Map response body to schema
 	err = mapFieldsCreate(userResp, &model, region)
