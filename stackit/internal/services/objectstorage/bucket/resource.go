@@ -16,7 +16,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -205,6 +204,16 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	ctx = core.LogResponse(ctx)
 
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"name":       bucketName,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Bucket creation waiting: %v", err))
@@ -333,9 +342,12 @@ func (r *bucketResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"name":       idParts[2],
+	})
 	tflog.Info(ctx, "ObjectStorage bucket state imported")
 }
 
