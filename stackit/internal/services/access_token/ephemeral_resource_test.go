@@ -64,7 +64,7 @@ func writeTempPEMFile(t *testing.T, pemContent string) string {
 	}
 
 	t.Cleanup(func() {
-		_ = os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name()) //nolint:gosec // Filename safely generated through os.CreateTemp
 	})
 
 	return tmpFile.Name()
