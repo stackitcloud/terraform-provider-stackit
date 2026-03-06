@@ -204,6 +204,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
+	if userName == "" {
+		// Resource has not been created yet / identifier not known yet.
+		// Do not call GetCredentials with an empty username.
+		return
+	}
 	_, err := r.client.GetCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
 		utils.LogError(
