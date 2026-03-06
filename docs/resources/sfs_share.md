@@ -37,13 +37,13 @@ import {
 ### Required
 
 - `export_policy` (String) Name of the Share Export Policy to use in the Share.
-Note that if this is set to an empty string, the Share can only be mounted in read only by 
-clients with IPs matching the IP ACL of the Resource Pool hosting this Share. 
+Note that if this is set to an empty string, the Share can only be mounted in read only by
+clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share
 - `name` (String) Name of the share.
 - `project_id` (String) STACKIT project ID to which the share is associated.
 - `resource_pool_id` (String) The ID of the resource pool for the SFS share.
-- `space_hard_limit_gigabytes` (Number) Space hard limit for the Share. 
+- `space_hard_limit_gigabytes` (Number) Space hard limit for the Share.
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
 				(unit: gigabytes)
 
