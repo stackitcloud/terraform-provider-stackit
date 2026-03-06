@@ -43,7 +43,7 @@ import {
 
 - `resource_id` (String) folder Resource to assign the role to.
 - `role` (String) Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/permissions`
-- `subject` (String) Identifier of user, service account or client. Usually email address or name in case of clients
+- `subject` (String) Identifier of user, service account or client. Usually email address or name in case of clients. All letters must be lowercased.
 
 ### Read-Only
 

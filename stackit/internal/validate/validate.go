@@ -369,3 +369,27 @@ func ValidNoTrailingNewline() *Validator {
 		},
 	}
 }
+
+// IsLowercased returns a Validator that checks if all letters in the input string are lowercase.
+// Examples:
+// - "example": valid
+// - "example123": valid, numbers are not affected by case
+// - "exaMPle123": invalid
+func IsLowercased() *Validator {
+	description := `All letters in the value must be lowercase as defined by gos unicode.IsLower(rune).`
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, request validator.StringRequest, response *validator.StringResponse) {
+			val := request.ConfigValue.ValueString()
+			lowercased := strings.ToLower(val)
+			if val != lowercased {
+				response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					request.Path,
+					description,
+					val,
+				))
+				return
+			}
+		},
+	}
+}
