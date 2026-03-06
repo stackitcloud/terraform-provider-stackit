@@ -79,7 +79,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
+	descriptions := map[string]string{ //nolint:gosec // description for credential id
 		"main":          "MariaDB credential resource schema. Must have a `region` specified in the provider configuration.",
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",

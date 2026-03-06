@@ -539,7 +539,7 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
-	if *backups.Items != nil && len(*backups.Items) > 0 {
+	if len(*backups.Items) > 0 {
 		tflog.Debug(ctx, "Backups found - will not disable server backup service")
 		return nil
 	}

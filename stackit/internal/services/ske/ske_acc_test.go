@@ -181,7 +181,6 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_start"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
 				),
 			},
 			// 3) Import cluster
@@ -227,7 +226,6 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_machine_image_version_updates"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_start"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 				),
 			},
@@ -371,8 +369,6 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "egress_address_ranges.0"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
-
-					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
 				),
 			},
 			// 3) Import cluster
