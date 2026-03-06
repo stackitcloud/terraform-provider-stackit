@@ -865,7 +865,7 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 		return fmt.Errorf("stat file: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPut, uploadURL, bufio.NewReader(file))
+	req, err := http.NewRequest(http.MethodPut, uploadURL, bufio.NewReader(file)) //nolint:gosec // file upload
 	if err != nil {
 		return fmt.Errorf("create upload request: %w", err)
 	}
@@ -873,7 +873,7 @@ func uploadImage(ctx context.Context, diags *diag.Diagnostics, filePath, uploadU
 	req.ContentLength = stat.Size()
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:gosec // file upload
 	if err != nil {
 		return fmt.Errorf("upload image: %w", err)
 	}
