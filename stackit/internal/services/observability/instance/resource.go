@@ -305,7 +305,7 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 		"continue": schema.BoolAttribute{
 			Description: routeDescriptions["continue"],
 			Optional:    !isDatasource,
-			Computed:    isDatasource,
+			Computed:    true,
 		},
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
@@ -317,17 +317,11 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 			Description: routeDescriptions["group_interval"],
 			Optional:    !isDatasource,
 			Computed:    true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 		"group_wait": schema.StringAttribute{
 			Description: routeDescriptions["group_wait"],
 			Optional:    !isDatasource,
 			Computed:    true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 		"match": schema.MapAttribute{
 			Description:        routeDescriptions["match"],
@@ -358,9 +352,6 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 			Description: routeDescriptions["repeat_interval"],
 			Optional:    !isDatasource,
 			Computed:    true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 	}
 
