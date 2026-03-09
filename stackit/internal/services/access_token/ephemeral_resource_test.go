@@ -30,7 +30,7 @@ func startMockTokenServer() *httptest.Server {
 			Scope:       "mock_scope",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp) // nolint:gosec // mock_access_token is not sensitive information
+		_ = json.NewEncoder(w).Encode(resp) //nolint:gosec // no secret, just a mock
 	})
 	return httptest.NewServer(handler)
 }
