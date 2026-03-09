@@ -9,6 +9,7 @@ import (
 	"time"
 
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -216,7 +217,18 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	ctx = core.LogResponse(ctx)
 
+	if createResp.ContainerId == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", "Got empty container id")
+		return
+	}
 	respContainerId := *createResp.ContainerId
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"container_id": respContainerId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// If the request has not been processed yet and the containerId doesn't exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
@@ -379,9 +391,9 @@ func (r *projectResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	ctx = tflog.SetField(ctx, "container_id", req.ID)
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("container_id"), req.ID)...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"container_id": req.ID,
+	})
 	tflog.Info(ctx, "Resource Manager Project state imported")
 }
 

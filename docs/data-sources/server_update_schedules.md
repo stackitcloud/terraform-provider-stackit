@@ -4,14 +4,11 @@ page_title: "stackit_server_update_schedules Data Source - stackit"
 subcategory: ""
 description: |-
   Server update schedules datasource schema. Must have a region specified in the provider configuration.
-  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_server_update_schedules (Data Source)
 
 Server update schedules datasource schema. Must have a `region` specified in the provider configuration.
-
-~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 
@@ -45,7 +42,7 @@ data "stackit_server_update_schedules" "example" {
 Read-Only:
 
 - `enabled` (Boolean) Is the update schedule enabled or disabled.
-- `maintenance_window` (Number) Maintenance window [1..24].
+- `maintenance_window` (Number) Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.
 - `name` (String) The update schedule name.
-- `rrule` (String) Update schedule described in `rrule` (recurrence rule) format.
+- `rrule` (String) An `rrule` (Recurrence Rule) is a standardized string format used in iCalendar (RFC 5545) to define repeating events, and you can generate one by using a dedicated library or by using online generator tools to specify parameters like frequency, interval, and end dates.
 - `update_schedule_id` (Number)

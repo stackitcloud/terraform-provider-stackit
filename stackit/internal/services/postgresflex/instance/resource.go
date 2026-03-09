@@ -21,7 +21,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -329,9 +328,22 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	ctx = core.LogResponse(ctx)
-
+	if createResp.Id == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
+		return
+	}
 	instanceId := *createResp.Id
-	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"region":      region,
+		"instance_id": instanceId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
@@ -554,9 +566,11 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
+	})
 	tflog.Info(ctx, "Postgres Flex instance state imported")
 }
 

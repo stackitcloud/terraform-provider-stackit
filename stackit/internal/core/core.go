@@ -29,20 +29,15 @@ const (
 
 type EphemeralProviderData struct {
 	ProviderData
-
-	PrivateKey            string
-	PrivateKeyPath        string
-	ServiceAccountKey     string
-	ServiceAccountKeyPath string
-	TokenCustomEndpoint   string
 }
 
 type ProviderData struct {
 	RoundTripper        http.RoundTripper
-	ServiceAccountEmail string // Deprecated: ServiceAccountEmail is not required and will be removed after 12th June 2025.
+	ServiceAccountEmail string
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
+	ALBCustomEndpoint               string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
