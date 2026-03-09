@@ -39,12 +39,12 @@ data "stackit_sfs_share" "example" {
 ### Read-Only
 
 - `export_policy` (String) Name of the Share Export Policy to use in the Share.
-Note that if this is not set, the Share can only be mounted in read only by 
-clients with IPs matching the IP ACL of the Resource Pool hosting this Share. 
+Note that if this is not set, the Share can only be mounted in read only by
+clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`share_id`".
 - `mount_path` (String) Mount path of the Share, used to mount the Share
 - `name` (String) Name of the Share
-- `space_hard_limit_gigabytes` (Number) Space hard limit for the Share. 
+- `space_hard_limit_gigabytes` (Number) Space hard limit for the Share.
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
 				(unit: gigabytes)
