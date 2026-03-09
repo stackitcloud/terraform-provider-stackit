@@ -583,9 +583,12 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"access_scope": schema.StringAttribute{
-								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...),
+								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...) + " The field is immutable!",
 								Optional:    true,
 								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+								},
 							},
 						},
 					},
