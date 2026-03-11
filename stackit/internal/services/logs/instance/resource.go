@@ -309,7 +309,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance read", map[string]interface{}{
+	tflog.Info(ctx, "Logs Instance read", map[string]any{
 		"instance_id": instanceID,
 	})
 }
@@ -357,7 +357,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance updated", map[string]interface{}{
+	tflog.Info(ctx, "Logs Instance updated", map[string]any{
 		"instance_id": instanceID,
 	})
 }
@@ -450,7 +450,7 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 
 	aclList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if instance.Acl != nil && len(instance.Acl) > 0 {
+	if len(instance.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, instance.Acl)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))

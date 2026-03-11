@@ -496,7 +496,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 
 	permissionList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if accessToken.Permissions != nil && len(accessToken.Permissions) > 0 {
+	if len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
 		if diags.HasError() {
 			return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))

@@ -670,13 +670,14 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	if err != nil {
 		return fmt.Errorf("getting instances: %w", err)
 	}
-	for _, i := range response.Instances {
-		if !slices.Contains(instancesToDestroy, i.Id) {
+	for i := range response.Instances {
+		if !slices.Contains(instancesToDestroy, response.Instances[i].Id) {
 			continue
 		}
-		err := client.DefaultAPI.DeleteLogsInstance(ctx, testutil.ProjectId, "eu01", i.Id).Execute()
+
+		err := client.DefaultAPI.DeleteLogsInstance(ctx, testutil.ProjectId, "eu01", response.Instances[i].Id).Execute()
 		if err != nil {
-			return fmt.Errorf("deleting instance %s: %w", i.Id, err)
+			return fmt.Errorf("deleting instance %s: %w", response.Instances[i].Id, err)
 		}
 	}
 	return nil
