@@ -49,9 +49,10 @@ var testConfigVarsMin = config.Variables{
 	"kubernetes_version_min":      config.StringVariable(skeProviderOptions.GetCreateK8sVersion()),
 	"maintenance_enable_machine_image_version_updates": config.StringVariable("true"),
 	"maintenance_enable_kubernetes_version_updates":    config.StringVariable("true"),
-	"maintenance_start": config.StringVariable("02:00:00+01:00"),
-	"maintenance_end":   config.StringVariable("04:00:00+01:00"),
-	"region":            config.StringVariable(testutil.Region),
+	"maintenance_start":                  config.StringVariable("02:00:00+01:00"),
+	"maintenance_end":                    config.StringVariable("04:00:00+01:00"),
+	"region":                             config.StringVariable(testutil.Region),
+	"network_control_plane_access_scope": config.StringVariable("PUBLIC"),
 }
 
 var testConfigVarsMax = config.Variables{
@@ -138,12 +139,14 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.minimum", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_minimum"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "node_pools.0.name", testutil.ConvertConfigVariable(testConfigVarsMin["nodepool_name"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "node_pools.0.os_version_used"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_kubernetes_version_updates"])),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_enable_machine_image_version_updates"])),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_start"])),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
-					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "kubernetes_version_min", testutil.ConvertConfigVariable(testConfigVarsMin["kubernetes_version_min"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_kubernetes_version_updates", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_enable_kubernetes_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.enable_machine_image_version_updates", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_enable_machine_image_version_updates"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_start"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_end"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
@@ -183,6 +186,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "kubernetes_version_used"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
 				),
 			},
 			// 3) Import cluster

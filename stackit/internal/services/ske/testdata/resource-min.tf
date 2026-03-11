@@ -11,6 +11,7 @@ variable "maintenance_enable_machine_image_version_updates" {}
 variable "maintenance_start" {}
 variable "maintenance_end" {}
 variable "region" {}
+variable "network_control_plane_access_scope" {}
 
 
 resource "stackit_ske_cluster" "cluster" {
@@ -36,6 +37,11 @@ resource "stackit_ske_cluster" "cluster" {
     end                                  = var.maintenance_end
   }
   region = var.region
+  network = {
+    control_plane = {
+      access_scope = var.network_control_plane_access_scope
+    }
+  }
 }
 
 resource "stackit_ske_kubeconfig" "kubeconfig" {
