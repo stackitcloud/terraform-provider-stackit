@@ -24,7 +24,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	coreutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -76,7 +75,7 @@ func (r *shareResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 		return
 	}
 
-	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -179,14 +178,14 @@ func (r *shareResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"export_policy": schema.StringAttribute{
 				Description: `Name of the Share Export Policy to use in the Share.
-Note that if this is set to an empty string, the Share can only be mounted in read only by 
-clients with IPs matching the IP ACL of the Resource Pool hosting this Share. 
+Note that if this is set to an empty string, the Share can only be mounted in read only by
+clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share`,
 				Required: true,
 			},
 			"space_hard_limit_gigabytes": schema.Int64Attribute{
 				Required: true,
-				Description: `Space hard limit for the Share. 
+				Description: `Space hard limit for the Share.
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
 				(unit: gigabytes)`,
 			},

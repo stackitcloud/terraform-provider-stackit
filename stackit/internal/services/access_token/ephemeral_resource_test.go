@@ -30,7 +30,7 @@ func startMockTokenServer() *httptest.Server {
 			Scope:       "mock_scope",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp) //nolint:gosec // no secret, just a mock
 	})
 	return httptest.NewServer(handler)
 }
@@ -64,7 +64,7 @@ func writeTempPEMFile(t *testing.T, pemContent string) string {
 	}
 
 	t.Cleanup(func() {
-		_ = os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name()) //nolint:gosec // Filename safely generated through os.CreateTemp
 	})
 
 	return tmpFile.Name()
