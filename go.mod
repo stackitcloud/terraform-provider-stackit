@@ -2,8 +2,6 @@ module github.com/stackitcloud/terraform-provider-stackit
 
 go 1.24.0
 
-replace github.com/stackitcloud/stackit-sdk-go/services/resourcemanager => /home/ruben.hoenle/Developer/stackit-sdk-go/services/resourcemanager
-
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
@@ -33,7 +31,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.6
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.5
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.3
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8
