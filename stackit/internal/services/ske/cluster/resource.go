@@ -1387,7 +1387,7 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 	}
 
 	var networkControlPlane *ske.V2ControlPlaneNetwork
-	if !(network.ControlPlane.IsNull() || network.ControlPlane.IsUnknown()) {
+	if !utils.IsUndefined(network.ControlPlane) {
 		networkControlPlaneModel := controlPlane{}
 		diags = network.ControlPlane.As(ctx, &networkControlPlaneModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
