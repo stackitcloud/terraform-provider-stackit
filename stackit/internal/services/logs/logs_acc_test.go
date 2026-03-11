@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -666,17 +666,18 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	response, err := client.ListLogsInstances(ctx, testutil.ProjectId, "eu01").Execute()
+	response, err := client.DefaultAPI.ListLogsInstances(ctx, testutil.ProjectId, "eu01").Execute()
 	if err != nil {
 		return fmt.Errorf("getting instances: %w", err)
 	}
-	for _, i := range *response.Instances {
-		if !slices.Contains(instancesToDestroy, *i.Id) {
+	for i := range response.Instances {
+		if !slices.Contains(instancesToDestroy, response.Instances[i].Id) {
 			continue
 		}
-		err := client.DeleteLogsInstance(ctx, testutil.ProjectId, "eu01", *i.Id).Execute()
+
+		err := client.DefaultAPI.DeleteLogsInstance(ctx, testutil.ProjectId, "eu01", response.Instances[i].Id).Execute()
 		if err != nil {
-			return fmt.Errorf("deleting instance %s: %w", *i.Id, err)
+			return fmt.Errorf("deleting instance %s: %w", response.Instances[i].Id, err)
 		}
 	}
 	return nil
@@ -707,7 +708,7 @@ func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
 
-		err := client.DeleteAccessTokenExecute(ctx, testutil.ProjectId, region, instanceId, accessTokenId)
+		err := client.DefaultAPI.DeleteAccessToken(ctx, testutil.ProjectId, region, instanceId, accessTokenId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {

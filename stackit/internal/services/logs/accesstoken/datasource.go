@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
@@ -160,7 +160,7 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenID)
 
-	accessTokenResponse, err := d.client.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
+	accessTokenResponse, err := d.client.DefaultAPI.GetAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
 		tfutils.LogError(
 			ctx,
@@ -203,8 +203,8 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	var accessTokenID string
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
-	} else if accessToken.Id != nil {
-		accessTokenID = *accessToken.Id
+	} else if accessToken.Id != "" {
+		accessTokenID = accessToken.Id
 	} else {
 		return fmt.Errorf("access token id not present")
 	}
@@ -212,11 +212,11 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
 	model.Region = types.StringValue(model.Region.ValueString())
-	model.Creator = types.StringPointerValue(accessToken.Creator)
+	model.Creator = types.StringValue(accessToken.Creator)
 	model.Description = types.StringPointerValue(accessToken.Description)
-	model.DisplayName = types.StringPointerValue(accessToken.DisplayName)
-	model.Expires = types.BoolPointerValue(accessToken.Expires)
-	model.Status = types.StringValue(string(*accessToken.Status))
+	model.DisplayName = types.StringValue(accessToken.DisplayName)
+	model.Expires = types.BoolValue(accessToken.Expires)
+	model.Status = types.StringValue(accessToken.Status)
 
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {
@@ -225,7 +225,7 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 
 	permissionList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if accessToken.Permissions != nil && len(*accessToken.Permissions) > 0 {
+	if len(accessToken.Permissions) > 0 {
 		permissionList, diags = types.ListValueFrom(ctx, types.StringType, accessToken.Permissions)
 		if diags.HasError() {
 			return fmt.Errorf("mapping permissions: %w", core.DiagsToError(diags))
