@@ -255,10 +255,12 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 
 	model.KubeconfigId = types.StringValue(kubeconfigUUID)
 
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "cluster_name", clusterName)
-	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
-	ctx = tflog.SetField(ctx, "region", region)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":     projectId,
+		"cluster_name":   clusterName,
+		"kube_config_id": kubeconfigUUID,
+		"region":         region,
+	})
 
 	err := r.createKubeconfig(ctx, &model)
 
