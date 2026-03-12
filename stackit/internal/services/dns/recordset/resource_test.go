@@ -8,7 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 )
 
 func TestMapFields(t *testing.T) {
@@ -24,10 +25,13 @@ func TestMapFields(t *testing.T) {
 			Model{
 				ProjectId: types.StringValue("pid"),
 				ZoneId:    types.StringValue("zid"),
+				Name:      types.StringValue("rname"),
 			},
 			&dns.RecordSetResponse{
-				Rrset: &dns.RecordSet{
-					Id: utils.Ptr("rid"),
+				Rrset: dns.RecordSet{
+					Id:   "rid",
+					Name: "rname",
+					Ttl:  120,
 				},
 			},
 			Model{
@@ -38,11 +42,11 @@ func TestMapFields(t *testing.T) {
 				Active:      types.BoolNull(),
 				Comment:     types.StringNull(),
 				Error:       types.StringNull(),
-				Name:        types.StringNull(),
-				FQDN:        types.StringNull(),
+				Name:        types.StringValue("rname"),
+				FQDN:        types.StringValue("rname"),
 				Records:     types.ListNull(types.StringType),
 				State:       types.StringValue(""),
-				TTL:         types.Int64Null(),
+				TTL:         types.Int32Value(120),
 				Type:        types.StringValue(""),
 			},
 			true,
@@ -54,19 +58,19 @@ func TestMapFields(t *testing.T) {
 				ZoneId:    types.StringValue("zid"),
 			},
 			&dns.RecordSetResponse{
-				Rrset: &dns.RecordSet{
-					Id:      utils.Ptr("rid"),
+				Rrset: dns.RecordSet{
+					Id:      "rid",
 					Active:  utils.Ptr(true),
 					Comment: utils.Ptr("comment"),
 					Error:   utils.Ptr("error"),
-					Name:    utils.Ptr("name"),
-					Records: &[]dns.Record{
-						{Content: utils.Ptr("record_1")},
-						{Content: utils.Ptr("record_2")},
+					Name:    "name",
+					Records: []dns.Record{
+						{Content: "record_1"},
+						{Content: "record_2"},
 					},
-					State: dns.RECORDSETSTATE_CREATING.Ptr(),
-					Ttl:   utils.Ptr(int64(1)),
-					Type:  dns.RECORDSETTYPE_A.Ptr(),
+					State: wait.RECORDSETSTATE_CREATING,
+					Ttl:   1,
+					Type:  "A",
 				},
 			},
 			Model{
@@ -83,9 +87,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("record_1"),
 					types.StringValue("record_2"),
 				}),
-				State: types.StringValue(string(dns.RECORDSETSTATE_CREATING)),
-				TTL:   types.Int64Value(1),
-				Type:  types.StringValue(string(dns.RECORDSETTYPE_A)),
+				State: types.StringValue(wait.RECORDSETSTATE_CREATING),
+				TTL:   types.Int32Value(1),
+				Type:  types.StringValue("A"),
 			},
 			true,
 		},
@@ -100,19 +104,19 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			&dns.RecordSetResponse{
-				Rrset: &dns.RecordSet{
-					Id:      utils.Ptr("rid"),
+				Rrset: dns.RecordSet{
+					Id:      "rid",
 					Active:  utils.Ptr(true),
 					Comment: utils.Ptr("comment"),
 					Error:   utils.Ptr("error"),
-					Name:    utils.Ptr("name"),
-					Records: &[]dns.Record{
-						{Content: utils.Ptr("record_1")},
-						{Content: utils.Ptr("record_2")},
+					Name:    "name",
+					Records: []dns.Record{
+						{Content: "record_1"},
+						{Content: "record_2"},
 					},
-					State: dns.RECORDSETSTATE_CREATING.Ptr(),
-					Ttl:   utils.Ptr(int64(1)),
-					Type:  dns.RECORDSETTYPE_A.Ptr(),
+					State: wait.RECORDSETSTATE_CREATING,
+					Ttl:   1,
+					Type:  "A",
 				},
 			},
 			Model{
@@ -129,9 +133,9 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("record_2"),
 					types.StringValue("record_1"),
 				}),
-				State: types.StringValue(string(dns.RECORDSETSTATE_CREATING)),
-				TTL:   types.Int64Value(1),
-				Type:  types.StringValue(string(dns.RECORDSETTYPE_A)),
+				State: types.StringValue(wait.RECORDSETSTATE_CREATING),
+				TTL:   types.Int32Value(1),
+				Type:  types.StringValue("A"),
 			},
 			true,
 		},
@@ -143,16 +147,16 @@ func TestMapFields(t *testing.T) {
 				Name:      types.StringValue("other-name"),
 			},
 			&dns.RecordSetResponse{
-				Rrset: &dns.RecordSet{
-					Id:      utils.Ptr("rid"),
+				Rrset: dns.RecordSet{
+					Id:      "rid",
 					Active:  nil,
 					Comment: nil,
 					Error:   nil,
-					Name:    utils.Ptr("name"),
+					Name:    "name",
 					Records: nil,
-					State:   dns.RECORDSETSTATE_CREATING.Ptr(),
-					Ttl:     utils.Ptr(int64(2123456789)),
-					Type:    dns.RECORDSETTYPE_A.Ptr(),
+					State:   wait.RECORDSETSTATE_CREATING,
+					Ttl:     2123456789,
+					Type:    "A",
 				},
 			},
 			Model{
@@ -166,9 +170,9 @@ func TestMapFields(t *testing.T) {
 				Name:        types.StringValue("other-name"),
 				FQDN:        types.StringValue("name"),
 				Records:     types.ListNull(types.StringType),
-				State:       types.StringValue(string(dns.RECORDSETSTATE_CREATING)),
-				TTL:         types.Int64Value(2123456789),
-				Type:        types.StringValue(string(dns.RECORDSETTYPE_A)),
+				State:       types.StringValue(wait.RECORDSETSTATE_CREATING),
+				TTL:         types.Int32Value(2123456789),
+				Type:        types.StringValue("A"),
 			},
 			true,
 		},
@@ -223,7 +227,7 @@ func TestToCreatePayload(t *testing.T) {
 			"default values",
 			&Model{},
 			&dns.CreateRecordSetPayload{
-				Records: &[]dns.RecordPayload{},
+				Records: []dns.RecordPayload{},
 			},
 			true,
 		},
@@ -236,18 +240,18 @@ func TestToCreatePayload(t *testing.T) {
 					types.StringValue("record_1"),
 					types.StringValue("record_2"),
 				}),
-				TTL:  types.Int64Value(1),
-				Type: types.StringValue(string(dns.RECORDSETTYPE_A)),
+				TTL:  types.Int32Value(1),
+				Type: types.StringValue("A"),
 			},
 			&dns.CreateRecordSetPayload{
 				Comment: utils.Ptr("comment"),
-				Name:    utils.Ptr("name"),
-				Records: &[]dns.RecordPayload{
-					{Content: utils.Ptr("record_1")},
-					{Content: utils.Ptr("record_2")},
+				Name:    "name",
+				Records: []dns.RecordPayload{
+					{Content: "record_1"},
+					{Content: "record_2"},
 				},
-				Ttl:  utils.Ptr(int64(1)),
-				Type: dns.CREATERECORDSETPAYLOADTYPE_A.Ptr(),
+				Ttl:  utils.Ptr(int32(1)),
+				Type: "A",
 			},
 			true,
 		},
@@ -257,15 +261,15 @@ func TestToCreatePayload(t *testing.T) {
 				Comment: types.StringNull(),
 				Name:    types.StringValue(""),
 				Records: types.ListValueMust(types.StringType, nil),
-				TTL:     types.Int64Value(2123456789),
-				Type:    types.StringValue(string(dns.RECORDSETTYPE_A)),
+				TTL:     types.Int32Value(2123456789),
+				Type:    types.StringValue("A"),
 			},
 			&dns.CreateRecordSetPayload{
 				Comment: nil,
-				Name:    utils.Ptr(""),
-				Records: &[]dns.RecordPayload{},
-				Ttl:     utils.Ptr(int64(2123456789)),
-				Type:    dns.CREATERECORDSETPAYLOADTYPE_A.Ptr(),
+				Name:    "",
+				Records: []dns.RecordPayload{},
+				Ttl:     utils.Ptr(int32(2123456789)),
+				Type:    "A",
 			},
 			true,
 		},
@@ -306,7 +310,7 @@ func TestToUpdatePayload(t *testing.T) {
 			"default_values",
 			&Model{},
 			&dns.PartialUpdateRecordSetPayload{
-				Records: &[]dns.RecordPayload{},
+				Records: []dns.RecordPayload{},
 			},
 			true,
 		},
@@ -319,16 +323,16 @@ func TestToUpdatePayload(t *testing.T) {
 					types.StringValue("record_1"),
 					types.StringValue("record_2"),
 				}),
-				TTL: types.Int64Value(1),
+				TTL: types.Int32Value(1),
 			},
 			&dns.PartialUpdateRecordSetPayload{
 				Comment: utils.Ptr("comment"),
 				Name:    utils.Ptr("name"),
-				Records: &[]dns.RecordPayload{
-					{Content: utils.Ptr("record_1")},
-					{Content: utils.Ptr("record_2")},
+				Records: []dns.RecordPayload{
+					{Content: "record_1"},
+					{Content: "record_2"},
 				},
-				Ttl: utils.Ptr(int64(1)),
+				Ttl: utils.Ptr(int32(1)),
 			},
 			true,
 		},
@@ -338,13 +342,13 @@ func TestToUpdatePayload(t *testing.T) {
 				Comment: types.StringNull(),
 				Name:    types.StringValue(""),
 				Records: types.ListValueMust(types.StringType, nil),
-				TTL:     types.Int64Value(2123456789),
+				TTL:     types.Int32Value(2123456789),
 			},
 			&dns.PartialUpdateRecordSetPayload{
 				Comment: nil,
 				Name:    utils.Ptr(""),
-				Records: &[]dns.RecordPayload{},
-				Ttl:     utils.Ptr(int64(2123456789)),
+				Records: []dns.RecordPayload{},
+				Ttl:     utils.Ptr(int32(2123456789)),
 			},
 			true,
 		},
