@@ -219,11 +219,16 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// This sleep is currently needed due to the IAM Cache.
-	time.Sleep(10 * time.Second)
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"container_id": *folderCreateResp.ContainerId,
 	})
+
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(10 * time.Second): // This sleep is currently needed due to the IAM Cache.
+		// continue
+	}
 
 	folderGetResponse, err := r.client.GetFolderDetails(ctx, *folderCreateResp.ContainerId).Execute()
 	if err != nil {
