@@ -110,6 +110,9 @@ func TestMapFields(t *testing.T) {
 				},
 				Network: &ske.Network{
 					Id: utils.Ptr("nid"),
+					ControlPlane: &ske.V2ControlPlaneNetwork{
+						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+					},
 				},
 				Name: utils.Ptr("name"),
 				Nodepools: &[]ske.Nodepool{
@@ -231,6 +234,9 @@ func TestMapFields(t *testing.T) {
 				}),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
 					"id": types.StringValue("nid"),
+					"control_plane": types.ObjectValueMust(controlPlaneTypes, map[string]attr.Value{
+						"access_scope": types.StringValue("SNA"),
+					}),
 				}),
 				Hibernations: types.ListValueMust(
 					types.ObjectType{AttrTypes: hibernationTypes},
@@ -560,6 +566,9 @@ func TestMapFields(t *testing.T) {
 				},
 				Network: &ske.Network{
 					Id: utils.Ptr("nid"),
+					ControlPlane: &ske.V2ControlPlaneNetwork{
+						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+					},
 				},
 				Name: utils.Ptr("name"),
 				Nodepools: &[]ske.Nodepool{
@@ -648,6 +657,9 @@ func TestMapFields(t *testing.T) {
 				}),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
 					"id": types.StringValue("nid"),
+					"control_plane": types.ObjectValueMust(controlPlaneTypes, map[string]attr.Value{
+						"access_scope": types.StringValue("SNA"),
+					}),
 				}),
 				Hibernations: types.ListValueMust(
 					types.ObjectType{AttrTypes: hibernationTypes},
@@ -2239,10 +2251,16 @@ func TestToNetworkPayload(t *testing.T) {
 				Name:      types.StringValue("name"),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
 					"id": types.StringValue("nid"),
+					"control_plane": types.ObjectValueMust(controlPlaneTypes, map[string]attr.Value{
+						"access_scope": types.StringValue("SNA"),
+					}),
 				}),
 			},
 			&ske.Network{
 				Id: utils.Ptr("nid"),
+				ControlPlane: &ske.V2ControlPlaneNetwork{
+					AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+				},
 			},
 			true,
 		},
@@ -2252,10 +2270,27 @@ func TestToNetworkPayload(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 				Name:      types.StringValue("name"),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"id": types.StringNull(),
+					"id":            types.StringNull(),
+					"control_plane": types.ObjectNull(controlPlaneTypes),
 				}),
 			},
 			&ske.Network{},
+			true,
+		},
+		{
+			"no_control_plane",
+			&Model{
+				ProjectId: types.StringValue("pid"),
+				Name:      types.StringValue("name"),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"id":            types.StringValue("nid"),
+					"control_plane": types.ObjectNull(controlPlaneTypes),
+				}),
+			},
+			&ske.Network{
+				Id:           utils.Ptr("nid"),
+				ControlPlane: nil,
+			},
 			true,
 		},
 		{
