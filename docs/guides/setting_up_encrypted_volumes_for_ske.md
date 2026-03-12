@@ -87,6 +87,7 @@ resource "stackit_service_account" "kms_manager" {
 
 # Grant the 'kms.admin' role to the manager service-account
 resource "stackit_authorization_project_role_assignment" "kms_user" {
+  // in this case the STACKIT project_id
   resource_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   role        = "kms.admin"
   subject     = stackit_service_account.kms_manager.email
@@ -105,7 +106,7 @@ resource "stackit_authorization_service_account_role_assignment" "ske_impersonat
 Define the `kubernetes_storage_class`. We pass the IDs of the KMS resources and the email of our manager service account into the parameters.
 
 ```hcl
-resource "kubernetes_storage_class" "encrypted_premium" {
+resource "kubernetes_storage_class_v1" "encrypted_premium" {
   metadata {
     name = "stackit-encrypted-premium"
   }
@@ -137,7 +138,7 @@ resource "kubernetes_storage_class" "encrypted_premium" {
 You can now create a PVC using the new storage class. When a pod claims this volume, the STACKIT CSI driver will automatically use the KMS key to provide an encrypted volume.
 
 ```hcl
-resource "kubernetes_persistent_volume_claim" "test_pvc" {
+resource "kubernetes_persistent_volume_claim_v1" "test_pvc" {
   metadata {
     name = "test-encryption-pvc"
   }
@@ -151,7 +152,7 @@ resource "kubernetes_persistent_volume_claim" "test_pvc" {
       }
     }
 
-    storage_class_name = kubernetes_storage_class.encrypted_premium.metadata[0].name
+    storage_class_name = kubernetes_storage_class_v1.encrypted_premium.metadata[0].name
   }
 }
 ```
