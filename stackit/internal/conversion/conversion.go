@@ -3,6 +3,7 @@ package conversion
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 
@@ -87,6 +88,16 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	return &value
 }
 
+// Int32ValueToPointer converts basetypes.Int32Value to a pointer to int32.
+// It returns nil if the value is null or unknown.
+func Int32ValueToPointer(s basetypes.Int32Value) *int32 {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueInt32()
+	return &value
+}
+
 // Int64ValueToPointer converts basetypes.Int64Value to a pointer to int64.
 // It returns nil if the value is null or unknown.
 func Int64ValueToPointer(s basetypes.Int64Value) *int64 {
@@ -134,6 +145,32 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 	}
 
 	return &listStr, nil
+}
+
+// StringSetToPointer converts basetypes.SetValue to a pointer to a list of strings.
+// It returns nil if the value is null or unknown.
+// Note: It sorts the resulting slice to ensure deterministic behavior.
+func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
+	if set.IsNull() || set.IsUnknown() {
+		return nil, nil
+	}
+
+	elements := set.Elements()
+	result := make([]string, 0, len(elements))
+
+	for i, el := range elements {
+		elStr, ok := el.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("element %d in set is not a string (type: %T)", i, el)
+		}
+		result = append(result, elStr.ValueString())
+	}
+
+	// Because Sets are unordered in Terraform, we sort here to
+	// prevent non-deterministic behavior in the provider logic or API calls.
+	sort.Strings(result)
+
+	return &result, nil
 }
 
 // ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.

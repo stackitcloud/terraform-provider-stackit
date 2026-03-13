@@ -2,12 +2,14 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -653,6 +655,48 @@ func TestCoalesce(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotR := Coalesce(tt.vals...); !reflect.DeepEqual(gotR, tt.want) {
 				t.Errorf("Coalesce() = %v, want %v", gotR, tt.want)
+			}
+		})
+	}
+}
+
+func TestPrettyApiErr(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "normal error",
+			err:  fmt.Errorf("a normal error"),
+			want: "a normal error",
+		},
+		{
+			name: "issue during json indenting",
+			err: errors.Join(&oapierror.GenericOpenAPIError{
+				StatusCode:   500,
+				Body:         []byte("not json formated error"),
+				ErrorMessage: "test none json error",
+				Model:        nil,
+			}),
+			want: "test none json error, status code 500, Body:\nnot json formated error",
+		},
+		{
+			name: "json formated error",
+			err: errors.Join(&oapierror.GenericOpenAPIError{
+				StatusCode:   500,
+				Body:         []byte(`{"error":{"type": "test json format","msg":"a json formated test error"}}`),
+				ErrorMessage: "test json error",
+				Model:        nil,
+			}),
+			want: "test json error, status code 500, Body:\n{\n  \"error\": {\n    \"type\": \"test json format\",\n    \"msg\": \"a json formated test error\"\n  }\n}",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := PrettyApiErr(context.Background(), &diag.Diagnostics{}, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("PrettyApiErr() = %v, want = %v", got, tt.want)
 			}
 		})
 	}

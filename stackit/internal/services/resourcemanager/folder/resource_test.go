@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
 
@@ -32,17 +32,21 @@ func TestMapFolderFields(t *testing.T) {
 			description:           "default_ok",
 			uuidContainerParentId: false,
 			projectResp: &resourcemanager.GetFolderDetailsResponse{
-				ContainerId:  utils.Ptr("cid"),
-				FolderId:     utils.Ptr("fid"),
-				CreationTime: &createTime,
-				UpdateTime:   &updateTime,
+				ContainerId:  "cid",
+				FolderId:     "fid",
+				Name:         "name",
+				CreationTime: createTime,
+				UpdateTime:   updateTime,
+				Parent: resourcemanager.Parent{
+					ContainerId: "parent_cid",
+				},
 			},
 			expected: Model{
 				Id:                types.StringValue("cid"),
 				ContainerId:       types.StringValue("cid"),
 				FolderId:          types.StringValue("fid"),
-				ContainerParentId: types.StringNull(),
-				Name:              types.StringNull(),
+				ContainerParentId: types.StringValue("parent_cid"),
+				Name:              types.StringValue("name"),
 				CreationTime:      types.StringValue(createTime.Format(time.RFC3339)),
 				UpdateTime:        types.StringValue(updateTime.Format(time.RFC3339)),
 			},
@@ -53,19 +57,19 @@ func TestMapFolderFields(t *testing.T) {
 			description:           "container_parent_id_ok",
 			uuidContainerParentId: false,
 			projectResp: &resourcemanager.GetFolderDetailsResponse{
-				ContainerId: utils.Ptr("cid"),
-				FolderId:    utils.Ptr("fid"),
+				ContainerId: "cid",
+				FolderId:    "fid",
 				Labels: &map[string]string{
 					"label1": "ref1",
 					"label2": "ref2",
 				},
-				Parent: &resourcemanager.Parent{
-					ContainerId: utils.Ptr("parent_cid"),
-					Id:          utils.Ptr(testUUID),
+				Parent: resourcemanager.Parent{
+					ContainerId: "parent_cid",
+					Id:          testUUID,
 				},
-				Name:         utils.Ptr("name"),
-				CreationTime: &createTime,
-				UpdateTime:   &updateTime,
+				Name:         "name",
+				CreationTime: createTime,
+				UpdateTime:   updateTime,
 			},
 			expected: Model{
 				Id:                types.StringValue("cid"),
@@ -86,19 +90,19 @@ func TestMapFolderFields(t *testing.T) {
 			description:           "uuid_parent_id_ok",
 			uuidContainerParentId: true,
 			projectResp: &resourcemanager.GetFolderDetailsResponse{
-				ContainerId: utils.Ptr("cid"),
-				FolderId:    utils.Ptr("fid"),
+				ContainerId: "cid",
+				FolderId:    "fid",
 				Labels: &map[string]string{
 					"label1": "ref1",
 					"label2": "ref2",
 				},
-				Parent: &resourcemanager.Parent{
-					ContainerId: utils.Ptr("parent_cid"),
-					Id:          utils.Ptr(testUUID), // simulate UUID logic
+				Parent: resourcemanager.Parent{
+					ContainerId: "parent_cid",
+					Id:          testUUID, // simulate UUID logic
 				},
-				Name:         utils.Ptr("name"),
-				CreationTime: &createTime,
-				UpdateTime:   &updateTime,
+				Name:         "name",
+				CreationTime: createTime,
+				UpdateTime:   updateTime,
 			},
 			expected: Model{
 				Id:                types.StringValue("cid"),
@@ -147,8 +151,8 @@ func TestMapFolderFields(t *testing.T) {
 			var containerParentId = types.StringNull()
 			if tt.uuidContainerParentId {
 				containerParentId = types.StringValue(testUUID)
-			} else if tt.projectResp != nil && tt.projectResp.Parent != nil && tt.projectResp.Parent.ContainerId != nil {
-				containerParentId = types.StringValue(*tt.projectResp.Parent.ContainerId)
+			} else if tt.projectResp != nil {
+				containerParentId = types.StringValue(tt.projectResp.Parent.ContainerId)
 			}
 
 			model := &Model{
@@ -196,18 +200,18 @@ func TestToCreatePayload(t *testing.T) {
 				"label2": "2",
 			},
 			&resourcemanager.CreateFolderPayload{
-				ContainerParentId: utils.Ptr("pid"),
+				ContainerParentId: "pid",
 				Labels: &map[string]string{
 					"label1": "1",
 					"label2": "2",
 				},
-				Members: &[]resourcemanager.Member{
+				Members: []resourcemanager.Member{
 					{
-						Subject: utils.Ptr("john.doe@stackit.cloud"),
-						Role:    utils.Ptr("owner"),
+						Subject: "john.doe@stackit.cloud",
+						Role:    "owner",
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: "name",
 			},
 			true,
 		},
@@ -348,7 +352,7 @@ func TestToMembersPayload(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *[]resourcemanager.Member
+		want    []resourcemanager.Member
 		wantErr bool
 	}{
 		{
@@ -372,10 +376,10 @@ func TestToMembersPayload(t *testing.T) {
 					OwnerEmail: types.StringValue("john.doe@stackit.cloud"),
 				},
 			},
-			want: &[]resourcemanager.Member{
+			want: []resourcemanager.Member{
 				{
-					Subject: utils.Ptr("john.doe@stackit.cloud"),
-					Role:    utils.Ptr("owner"),
+					Subject: "john.doe@stackit.cloud",
+					Role:    "owner",
 				},
 			},
 			wantErr: false,

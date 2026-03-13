@@ -10,16 +10,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 )
 
 var testTime = time.Now()
 
 func fixtureInstance(mods ...func(instance *logs.LogsInstance)) *logs.LogsInstance {
 	instance := &logs.LogsInstance{
-		Id:      utils.Ptr("iid"),
-		Created: utils.Ptr(testTime),
-		Status:  utils.Ptr(logs.LOGSINSTANCESTATUS_ACTIVE),
+		Id:      "iid",
+		Created: testTime,
+		Status:  "active",
 	}
 	for _, mod := range mods {
 		mod(instance)
@@ -42,8 +42,8 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		IngestURL:     types.String{},
 		QueryRangeURL: types.String{},
 		QueryURL:      types.String{},
-		RetentionDays: types.Int64{},
-		Status:        types.StringValue(string(logs.LOGSINSTANCESTATUS_ACTIVE)),
+		RetentionDays: types.Int32{},
+		Status:        types.StringValue("active"),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -60,21 +60,27 @@ func TestMapFields(t *testing.T) {
 	}{
 		{
 			description: "min values",
-			input:       fixtureInstance(),
-			expected:    fixtureModel(),
+			input: fixtureInstance(func(instance *logs.LogsInstance) {
+				instance.DisplayName = "display-name"
+				instance.RetentionDays = 30
+			}),
+			expected: fixtureModel(func(model *Model) {
+				model.DisplayName = types.StringValue("display-name")
+				model.RetentionDays = types.Int32Value(30)
+			}),
 		},
 		{
 			description: "max values",
 			input: fixtureInstance(func(instance *logs.LogsInstance) {
-				instance.Acl = &[]string{"acl-entry-1", "acl-entry-2"}
+				instance.Acl = []string{"acl-entry-1", "acl-entry-2"}
 				instance.DatasourceUrl = utils.Ptr("datasource-url")
 				instance.Description = utils.Ptr("description")
-				instance.DisplayName = utils.Ptr("display-name")
+				instance.DisplayName = "display-name"
 				instance.IngestOtlpUrl = utils.Ptr("ingest-otlp-url")
 				instance.IngestUrl = utils.Ptr("ingest-url")
 				instance.QueryRangeUrl = utils.Ptr("query-range-url")
 				instance.QueryUrl = utils.Ptr("query-url")
-				instance.RetentionDays = utils.Ptr(int64(7))
+				instance.RetentionDays = int32(7)
 			}),
 			expected: fixtureModel(func(model *Model) {
 				model.ACL = types.ListValueMust(types.StringType, []attr.Value{
@@ -88,29 +94,13 @@ func TestMapFields(t *testing.T) {
 				model.IngestURL = types.StringValue("ingest-url")
 				model.QueryRangeURL = types.StringValue("query-range-url")
 				model.QueryURL = types.StringValue("query-url")
-				model.RetentionDays = types.Int64Value(7)
+				model.RetentionDays = types.Int32Value(7)
 			}),
 		},
 		{
 			description: "nil input",
 			wantErr:     true,
 			expected:    fixtureModel(),
-		},
-		{
-			description: "nil status",
-			input: fixtureInstance(func(instance *logs.LogsInstance) {
-				instance.Status = nil
-			}),
-			expected: fixtureModel(),
-			wantErr:  true,
-		},
-		{
-			description: "nil created",
-			input: fixtureInstance(func(instance *logs.LogsInstance) {
-				instance.Created = nil
-			}),
-			expected: fixtureModel(),
-			wantErr:  true,
 		},
 	}
 	for _, tt := range tests {
@@ -157,13 +147,13 @@ func TestToCreatePayload(t *testing.T) {
 				})
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
-				model.RetentionDays = types.Int64Value(7)
+				model.RetentionDays = types.Int32Value(7)
 			}),
 			expected: &logs.CreateLogsInstancePayload{
-				Acl:           &[]string{"acl-entry-1", "acl-entry-2"},
+				Acl:           []string{"acl-entry-1", "acl-entry-2"},
 				Description:   utils.Ptr("description"),
-				DisplayName:   utils.Ptr("display-name"),
-				RetentionDays: utils.Ptr(int64(7)),
+				DisplayName:   "display-name",
+				RetentionDays: int32(7),
 			},
 		},
 		{
@@ -209,13 +199,13 @@ func TestToUpdatePayload(t *testing.T) {
 				})
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
-				model.RetentionDays = types.Int64Value(7)
+				model.RetentionDays = types.Int32Value(7)
 			}),
 			expected: &logs.UpdateLogsInstancePayload{
-				Acl:           &[]string{"acl-entry-1", "acl-entry-2"},
+				Acl:           []string{"acl-entry-1", "acl-entry-2"},
 				Description:   utils.Ptr("description"),
 				DisplayName:   utils.Ptr("display-name"),
-				RetentionDays: utils.Ptr(int64(7)),
+				RetentionDays: utils.Ptr(int32(7)),
 			},
 		},
 		{

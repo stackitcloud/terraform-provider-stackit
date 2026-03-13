@@ -21,6 +21,11 @@ resource "stackit_ske_cluster" "example" {
     start                                = "01:00:00Z"
     end                                  = "02:00:00Z"
   }
+  network = {
+    control_plane = {
+      access_scope = "PUBLIC"
+    }
+  }
 }
 
 # Only use the import statement, if you want to import an existing ske cluster
