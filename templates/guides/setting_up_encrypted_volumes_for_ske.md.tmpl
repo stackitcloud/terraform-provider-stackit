@@ -160,7 +160,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test_pvc" {
 ### 7. Create a Pod to Consume the Volume
 
 ```hcl
-resource "kubernetes_pod" "test_app" {
+resource "kubernetes_pod_v1" "test_app" {
   metadata {
     name = "encrypted-volume-test"
   }
