@@ -22,6 +22,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	alb "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/applicationloadbalancer"
+	cert "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/certificates"
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
@@ -160,6 +161,7 @@ type providerModel struct {
 	ALBCustomEndpoint               types.String `tfsdk:"alb_custom_endpoint"`
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
+	CertificatesCustomEndpoint      types.String `tfsdk:"certificates_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
@@ -214,6 +216,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
+		"certificates_custom_endpoint":         "Custom endpoint for the Application Load Balancer Certificates service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
 		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
 		"git_custom_endpoint":                  "Custom endpoint for the Git service",
@@ -331,6 +334,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"cdn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["cdn_custom_endpoint"],
+			},
+			"certificates_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["certificates_custom_endpoint"],
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -502,6 +509,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
+	setStringField(providerConfig.CertificatesCustomEndpoint, func(v string) { providerData.CertificatesCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
 	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
@@ -606,6 +614,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		alb.NewApplicationLoadBalancerDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
+		cert.NewCertificatesDataSource,
 		cdnCustomDomain.NewCustomDomainDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
@@ -694,6 +703,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		alb.NewApplicationLoadBalancerResource,
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,
+		cert.NewCertificatesResource,
 		cdnCustomDomain.NewCustomDomainResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
