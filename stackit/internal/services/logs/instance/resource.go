@@ -17,9 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs/wait"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
@@ -51,7 +50,7 @@ var schemaDescriptions = map[string]string{
 	"retention_days":  "The log retention time in days",
 	"status": fmt.Sprintf(
 		"The status of the Logs instance, possible values: %s",
-		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(logs.AllowedLogsInstanceStatusEnumValues)...),
+		tfutils.FormatPossibleValues("active", "deleting", "reconciling"),
 	),
 }
 
@@ -69,7 +68,7 @@ type Model struct {
 	IngestURL     types.String `tfsdk:"ingest_url"`
 	QueryRangeURL types.String `tfsdk:"query_range_url"`
 	QueryURL      types.String `tfsdk:"query_url"`
-	RetentionDays types.Int64  `tfsdk:"retention_days"`
+	RetentionDays types.Int32  `tfsdk:"retention_days"`
 	Status        types.String `tfsdk:"status"`
 }
 
@@ -207,7 +206,7 @@ func (r *logsInstanceResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: schemaDescriptions["query_url"],
 				Computed:    true,
 			},
-			"retention_days": schema.Int64Attribute{
+			"retention_days": schema.Int32Attribute{
 				Description: schemaDescriptions["retention_days"],
 				Required:    true,
 			},
@@ -242,7 +241,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	regionId := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "region", regionId)
-	createResp, err := r.client.CreateLogsInstance(ctx, projectId, regionId).CreateLogsInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateLogsInstance(ctx, projectId, regionId).CreateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -250,7 +249,7 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.CreateLogsInstanceWaitHandler(ctx, r.client, projectId, regionId, *createResp.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateLogsInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, regionId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Waiting for Logs Instance to become active: %v", err))
 		return
@@ -287,7 +286,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	instanceResponse, err := r.client.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
+	instanceResponse, err := r.client.DefaultAPI.GetLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -310,7 +309,7 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance read", map[string]interface{}{
+	tflog.Info(ctx, "Logs Instance read", map[string]any{
 		"instance_id": instanceID,
 	})
 }
@@ -339,7 +338,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	updateResp, err := r.client.UpdateLogsInstance(ctx, projectID, region, instanceID).UpdateLogsInstancePayload(*payload).Execute()
+	updateResp, err := r.client.DefaultAPI.UpdateLogsInstance(ctx, projectID, region, instanceID).UpdateLogsInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -358,7 +357,7 @@ func (r *logsInstanceResource) Update(ctx context.Context, req resource.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance updated", map[string]interface{}{
+	tflog.Info(ctx, "Logs Instance updated", map[string]any{
 		"instance_id": instanceID,
 	})
 }
@@ -381,7 +380,7 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 
-	err := r.client.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
+	err := r.client.DefaultAPI.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -389,7 +388,7 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteLogsInstanceWaitHandler(ctx, r.client, projectID, region, instanceID).WaitWithContext(ctx)
+	_, err = wait.DeleteLogsInstanceWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Waiting for Logs Instance to be deleted: %v", err))
 		return
@@ -417,8 +416,8 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 
 	payload := &logs.CreateLogsInstancePayload{
 		Description:   conversion.StringValueToPointer(model.Description),
-		DisplayName:   conversion.StringValueToPointer(model.DisplayName),
-		RetentionDays: conversion.Int64ValueToPointer(model.RetentionDays),
+		DisplayName:   model.DisplayName.ValueString(),
+		RetentionDays: model.RetentionDays.ValueInt32(),
 	}
 
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -426,7 +425,7 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
 		diagnostics.Append(aclDiags...)
 		if !aclDiags.HasError() {
-			payload.Acl = &acl
+			payload.Acl = acl
 		}
 	}
 
@@ -440,24 +439,18 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
-	if instance.Status == nil {
-		return fmt.Errorf("instance status is nil")
-	}
-	if instance.Created == nil {
-		return fmt.Errorf("instance created is nil")
-	}
 	var instanceID string
 	if model.InstanceID.ValueString() != "" {
 		instanceID = model.InstanceID.ValueString()
-	} else if instance.Id != nil {
-		instanceID = *instance.Id
+	} else if instance.Id != "" {
+		instanceID = instance.Id
 	} else {
 		return fmt.Errorf("instance id not present")
 	}
 
 	aclList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if instance.Acl != nil && len(*instance.Acl) > 0 {
+	if len(instance.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, instance.Acl)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
@@ -470,13 +463,13 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	model.Created = types.StringValue(instance.Created.String())
 	model.DatasourceURL = types.StringPointerValue(instance.DatasourceUrl)
 	model.Description = types.StringPointerValue(instance.Description)
-	model.DisplayName = types.StringPointerValue(instance.DisplayName)
+	model.DisplayName = types.StringValue(instance.DisplayName)
 	model.IngestOTLPURL = types.StringPointerValue(instance.IngestOtlpUrl)
 	model.IngestURL = types.StringPointerValue(instance.IngestUrl)
 	model.QueryRangeURL = types.StringPointerValue(instance.QueryRangeUrl)
 	model.QueryURL = types.StringPointerValue(instance.QueryUrl)
-	model.RetentionDays = types.Int64PointerValue(instance.RetentionDays)
-	model.Status = types.StringValue(string(*instance.Status))
+	model.RetentionDays = types.Int32Value(instance.RetentionDays)
+	model.Status = types.StringValue(instance.Status)
 
 	return nil
 }
@@ -489,7 +482,7 @@ func toUpdatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 	payload := &logs.UpdateLogsInstancePayload{
 		Description:   conversion.StringValueToPointer(model.Description),
 		DisplayName:   conversion.StringValueToPointer(model.DisplayName),
-		RetentionDays: conversion.Int64ValueToPointer(model.RetentionDays),
+		RetentionDays: model.RetentionDays.ValueInt32Pointer(),
 	}
 
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -497,7 +490,7 @@ func toUpdatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
 		diagnostics.Append(aclDiags...)
 		if !aclDiags.HasError() {
-			payload.Acl = &acl
+			payload.Acl = acl
 		}
 	}
 

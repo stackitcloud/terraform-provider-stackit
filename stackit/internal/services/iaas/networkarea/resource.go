@@ -159,16 +159,16 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.client = iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
-	resourceManagerClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+
+	r.resourceManagerClient = resourcemanagerUtils.ConfigureClientLegacy(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.resourceManagerClient = resourceManagerClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 

@@ -6,7 +6,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/hashicorp/terraform-plugin-framework v1.17.0
+	github.com/hashicorp/terraform-plugin-framework v1.18.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.30.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
@@ -22,7 +22,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.6
-	github.com/stackitcloud/stackit-sdk-go/services/logs v0.5.2
+	github.com/stackitcloud/stackit-sdk-go/services/logs v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.6
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.5
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.8
@@ -32,7 +32,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.6
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.18.5
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.3
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8

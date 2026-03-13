@@ -4,7 +4,7 @@ page_title: "stackit_network Resource - stackit"
 subcategory: ""
 description: |-
   Network resource schema. Must have a region specified in the provider configuration.
-  ~> Behavior of not configured ipv4_nameservers will change from January 2026. When ipv4_nameservers is not set, it will be set to the network area's default_nameservers.
+  ~> Behavior of not configured ipv4_nameservers has changed. When ipv4_nameservers is not set, it will be set to the network area's default_nameservers.
   To prevent any nameserver configuration, the ipv4_nameservers attribute should be explicitly set to an empty list [].
   In cases where ipv4_nameservers are defined within the resource, the existing behavior will remain unchanged.
 ---
@@ -12,7 +12,7 @@ description: |-
 # stackit_network (Resource)
 
 Network resource schema. Must have a `region` specified in the provider configuration.
-~> Behavior of not configured `ipv4_nameservers` will change from January 2026. When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.
+~> Behavior of not configured `ipv4_nameservers` has changed. When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.
 To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.
 In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged.
 
@@ -66,7 +66,7 @@ import {
 
 - `dhcp` (Boolean) If the network has DHCP enabled. Default value is `true`.
 - `ipv4_gateway` (String) The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
-- `ipv4_nameservers` (List of String) The IPv4 nameservers of the network.
+- `ipv4_nameservers` (List of String) The IPv4 nameservers of the network. If not specified on creation, it will be set with the default nameservers from the network area. If not specified on update, it will remain unchanged.
 - `ipv4_prefix` (String) The IPv4 prefix of the network (CIDR).
 - `ipv4_prefix_length` (Number) The IPv4 prefix length of the network.
 - `ipv6_gateway` (String) The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.
@@ -74,7 +74,6 @@ import {
 - `ipv6_prefix` (String) The IPv6 prefix of the network (CIDR).
 - `ipv6_prefix_length` (Number) The IPv6 prefix length of the network.
 - `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource container
-- `nameservers` (List of String, Deprecated) The nameservers of the network. This field is deprecated and will be removed in January 2026, use `ipv4_nameservers` to configure the nameservers for IPv4.
 - `no_ipv4_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `no_ipv6_gateway` (Boolean) If set to `true`, the network doesn't have a gateway.
 - `region` (String) The resource region. If not defined, the provider region is used.
@@ -87,5 +86,4 @@ import {
 - `ipv4_prefixes` (List of String) The IPv4 prefixes of the network.
 - `ipv6_prefixes` (List of String) The IPv6 prefixes of the network.
 - `network_id` (String) The network ID.
-- `prefixes` (List of String, Deprecated) The prefixes of the network. This field is deprecated and will be removed in January 2026, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.
 - `public_ip` (String) The public IP of the network.

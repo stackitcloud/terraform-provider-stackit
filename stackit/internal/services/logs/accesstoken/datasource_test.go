@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 )
 
 func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceModel {
@@ -25,7 +25,7 @@ func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceMod
 		Expires:       types.Bool{},
 		ValidUntil:    types.String{},
 		Permissions:   types.ListNull(types.StringType),
-		Status:        types.StringValue(string(logs.ACCESSTOKENSTATUS_ACTIVE)),
+		Status:        types.StringValue("active"),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -42,18 +42,24 @@ func TestMapDataSourceFields(t *testing.T) {
 	}{
 		{
 			description: "min values",
-			input:       fixtureAccessToken(),
-			expected:    fixtureDataSourceModel(),
+			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
+				accessToken.DisplayName = "display-name"
+			}),
+			expected: fixtureDataSourceModel(func(model *DataSourceModel) {
+				model.Creator = types.StringValue("")
+				model.DisplayName = types.StringValue("display-name")
+				model.Expires = types.BoolValue(false)
+			}),
 		},
 		{
 			description: "max values",
 			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
-				accessToken.Permissions = &[]string{"write"}
+				accessToken.Permissions = []string{"write"}
 				accessToken.AccessToken = utils.Ptr("")
 				accessToken.Description = utils.Ptr("description")
-				accessToken.DisplayName = utils.Ptr("display-name")
-				accessToken.Creator = utils.Ptr("testUser")
-				accessToken.Expires = utils.Ptr(false)
+				accessToken.DisplayName = "display-name"
+				accessToken.Creator = "testUser"
+				accessToken.Expires = false
 				accessToken.ValidUntil = utils.Ptr(testTime)
 			}),
 			expected: fixtureDataSourceModel(func(model *DataSourceModel) {
@@ -94,7 +100,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if !tt.wantErr {
-				diff := cmp.Diff(state, tt.expected)
+				diff := cmp.Diff(tt.expected, state)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

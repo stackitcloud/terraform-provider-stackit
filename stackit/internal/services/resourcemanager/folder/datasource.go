@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
@@ -150,7 +150,7 @@ func (d *folderDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	containerId := model.ContainerId.ValueString()
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	folderResp, err := d.client.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := d.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

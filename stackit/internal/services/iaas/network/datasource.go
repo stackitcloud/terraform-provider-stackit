@@ -31,12 +31,10 @@ type DataSourceModel struct {
 	ProjectId        types.String `tfsdk:"project_id"`
 	NetworkId        types.String `tfsdk:"network_id"`
 	Name             types.String `tfsdk:"name"`
-	Nameservers      types.List   `tfsdk:"nameservers"`
 	IPv4Gateway      types.String `tfsdk:"ipv4_gateway"`
 	IPv4Nameservers  types.List   `tfsdk:"ipv4_nameservers"`
 	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
 	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
-	Prefixes         types.List   `tfsdk:"prefixes"`
 	IPv4Prefixes     types.List   `tfsdk:"ipv4_prefixes"`
 	IPv6Gateway      types.String `tfsdk:"ipv6_gateway"`
 	IPv6Nameservers  types.List   `tfsdk:"ipv6_nameservers"`
@@ -115,12 +113,6 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					stringvalidator.LengthAtMost(63),
 				},
 			},
-			"nameservers": schema.ListAttribute{
-				Description:        "The nameservers of the network. This field is deprecated and will be removed soon, use `ipv4_nameservers` to configure the nameservers for IPv4.",
-				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for IPv4.",
-				Computed:           true,
-				ElementType:        types.StringType,
-			},
 			"ipv4_gateway": schema.StringAttribute{
 				Description: "The IPv4 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
 				Computed:    true,
@@ -138,12 +130,6 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"ipv4_prefix_length": schema.Int64Attribute{
 				Description: "The IPv4 prefix length of the network.",
 				Computed:    true,
-			},
-			"prefixes": schema.ListAttribute{
-				Description:        "The prefixes of the network. This field is deprecated and will be removed soon, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
-				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
-				Computed:           true,
-				ElementType:        types.StringType,
 			},
 			"ipv4_prefixes": schema.ListAttribute{
 				Description: "The IPv4 prefixes of the network.",
@@ -215,6 +201,9 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
@@ -236,6 +225,8 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, networkResp, &model, region)
 	if err != nil {
@@ -277,37 +268,25 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	// IPv4
 
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Nameservers == nil {
-		model.Nameservers = types.ListNull(types.StringType)
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := *networkResp.Ipv4.Nameservers
-		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
-		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+		modelIPv4Nameservers, err := utils.ListValuetoStringSlice(model.IPv4Nameservers)
 		if err != nil {
-			return fmt.Errorf("get current network nameservers from model: %w", err)
-		}
-		if errIpv4 != nil {
-			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
+			return fmt.Errorf("get current IPv4 network nameservers from model: %w", err)
 		}
 
-		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
 		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
 
-		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
-		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
+		ipv4NameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
 		if diags.HasError() {
-			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
-		}
-		if ipv4Diags.HasError() {
-			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
+			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(diags))
 		}
 
-		model.Nameservers = nameserversTF
 		model.IPv4Nameservers = ipv4NameserversTF
 	}
 
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Prefixes == nil {
-		model.Prefixes = types.ListNull(types.StringType)
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixes := *networkResp.Ipv4.Prefixes
@@ -327,7 +306,6 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 			}
 		}
 
-		model.Prefixes = prefixesTF
 		model.IPv4Prefixes = prefixesTF
 	}
 
