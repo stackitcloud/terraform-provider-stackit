@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -22,8 +22,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -50,16 +50,16 @@ type Model struct {
 	Acl               types.String `tfsdk:"acl"`
 	Active            types.Bool   `tfsdk:"active"`
 	ContactEmail      types.String `tfsdk:"contact_email"`
-	DefaultTTL        types.Int64  `tfsdk:"default_ttl"`
-	ExpireTime        types.Int64  `tfsdk:"expire_time"`
+	DefaultTTL        types.Int32  `tfsdk:"default_ttl"`
+	ExpireTime        types.Int32  `tfsdk:"expire_time"`
 	IsReverseZone     types.Bool   `tfsdk:"is_reverse_zone"`
-	NegativeCache     types.Int64  `tfsdk:"negative_cache"`
+	NegativeCache     types.Int32  `tfsdk:"negative_cache"`
 	PrimaryNameServer types.String `tfsdk:"primary_name_server"`
 	Primaries         types.List   `tfsdk:"primaries"`
 	RecordCount       types.Int64  `tfsdk:"record_count"`
-	RefreshTime       types.Int64  `tfsdk:"refresh_time"`
-	RetryTime         types.Int64  `tfsdk:"retry_time"`
-	SerialNumber      types.Int64  `tfsdk:"serial_number"`
+	RefreshTime       types.Int32  `tfsdk:"refresh_time"`
+	RetryTime         types.Int32  `tfsdk:"retry_time"`
+	SerialNumber      types.Int32  `tfsdk:"serial_number"`
 	Type              types.String `tfsdk:"type"`
 	Visibility        types.String `tfsdk:"visibility"`
 	State             types.String `tfsdk:"state"`
@@ -183,20 +183,20 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					stringvalidator.LengthAtMost(255),
 				},
 			},
-			"default_ttl": schema.Int64Attribute{
+			"default_ttl": schema.Int32Attribute{
 				Description: "Default time to live. E.g. 3600.",
 				Optional:    true,
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
+				Validators: []validator.Int32{
+					int32validator.Between(60, 99999999),
 				},
 			},
-			"expire_time": schema.Int64Attribute{
+			"expire_time": schema.Int32Attribute{
 				Description: "Expire time. E.g. 1209600.",
 				Optional:    true,
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
+				Validators: []validator.Int32{
+					int32validator.Between(60, 99999999),
 				},
 			},
 			"is_reverse_zone": schema.BoolAttribute{
@@ -205,12 +205,12 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 			},
-			"negative_cache": schema.Int64Attribute{
+			"negative_cache": schema.Int32Attribute{
 				Description: "Negative caching. E.g. 60",
 				Optional:    true,
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
+				Validators: []validator.Int32{
+					int32validator.Between(60, 99999999),
 				},
 			},
 			"primaries": schema.ListAttribute{
@@ -226,20 +226,20 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					listvalidator.SizeAtMost(10),
 				},
 			},
-			"refresh_time": schema.Int64Attribute{
+			"refresh_time": schema.Int32Attribute{
 				Description: "Refresh time. E.g. 3600",
 				Optional:    true,
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
+				Validators: []validator.Int32{
+					int32validator.Between(60, 99999999),
 				},
 			},
-			"retry_time": schema.Int64Attribute{
+			"retry_time": schema.Int32Attribute{
 				Description: "Retry time. E.g. 600",
 				Optional:    true,
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(60, 99999999),
+				Validators: []validator.Int32{
+					int32validator.Between(60, 99999999),
 				},
 			},
 			"type": schema.StringAttribute{
@@ -259,12 +259,12 @@ func (r *zoneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					stringvalidator.LengthAtMost(253),
 				},
 			},
-			"serial_number": schema.Int64Attribute{
+			"serial_number": schema.Int32Attribute{
 				Description: "Serial number. E.g. `2022111400`.",
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(0),
-					int64validator.AtMost(math.MaxInt32 - 1),
+				Validators: []validator.Int32{
+					int32validator.AtLeast(0),
+					int32validator.AtMost(math.MaxInt32 - 1),
 				},
 			},
 			"visibility": schema.StringAttribute{
@@ -304,7 +304,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new zone
-	createResp, err := r.client.CreateZone(ctx, projectId).CreateZonePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateZone(ctx, projectId).CreateZonePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -313,7 +313,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	zoneId := *createResp.Zone.Id
+	zoneId := createResp.Zone.Id
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id": projectId,
 		"zone_id":    zoneId,
@@ -322,7 +322,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateZoneWaitHandler(ctx, r.client.DefaultAPI, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Zone creation waiting: %v", err))
 		return
@@ -358,7 +358,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
-	zoneResp, err := r.client.GetZone(ctx, projectId, zoneId).Execute()
+	zoneResp, err := r.client.DefaultAPI.GetZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -366,7 +366,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	ctx = core.LogResponse(ctx)
 
-	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
+	if zoneResp != nil && zoneResp.Zone.State == wait.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -410,7 +410,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	// Update existing zone
-	_, err = r.client.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.PartialUpdateZone(ctx, projectId, zoneId).PartialUpdateZonePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -418,7 +418,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateZoneWaitHandler(ctx, r.client.DefaultAPI, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Zone update waiting: %v", err))
 		return
@@ -455,7 +455,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
 	// Delete existing zone
-	_, err := r.client.DeleteZone(ctx, projectId, zoneId).Execute()
+	_, err := r.client.DefaultAPI.DeleteZone(ctx, projectId, zoneId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -463,7 +463,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteZoneWaitHandler(ctx, r.client, projectId, zoneId).WaitWithContext(ctx)
+	_, err = wait.DeleteZoneWaitHandler(ctx, r.client.DefaultAPI, projectId, zoneId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting zone", fmt.Sprintf("Zone deletion waiting: %v", err))
 		return
@@ -494,7 +494,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 }
 
 func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) error {
-	if zoneResp == nil || zoneResp.Zone == nil {
+	if zoneResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
@@ -513,8 +513,8 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	var zoneId string
 	if model.ZoneId.ValueString() != "" {
 		zoneId = model.ZoneId.ValueString()
-	} else if z.Id != nil {
-		zoneId = *z.Id
+	} else if z.Id != "" {
+		zoneId = z.Id
 	} else {
 		return fmt.Errorf("zone id not present")
 	}
@@ -524,7 +524,7 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	if z.Primaries == nil {
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
-		respPrimaries := *z.Primaries
+		respPrimaries := z.Primaries
 		modelPrimaries, err := utils.ListValuetoStringSlice(model.Primaries)
 		if err != nil {
 			return err
@@ -541,23 +541,23 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	}
 	model.ZoneId = types.StringValue(zoneId)
 	model.Description = types.StringPointerValue(z.Description)
-	model.Acl = types.StringPointerValue(z.Acl)
+	model.Acl = types.StringValue(z.Acl)
 	model.Active = types.BoolPointerValue(z.Active)
 	model.ContactEmail = types.StringPointerValue(z.ContactEmail)
-	model.DefaultTTL = types.Int64PointerValue(z.DefaultTTL)
-	model.DnsName = types.StringPointerValue(z.DnsName)
-	model.ExpireTime = types.Int64PointerValue(z.ExpireTime)
+	model.DefaultTTL = types.Int32Value(z.DefaultTTL)
+	model.DnsName = types.StringValue(z.DnsName)
+	model.ExpireTime = types.Int32Value(z.ExpireTime)
 	model.IsReverseZone = types.BoolPointerValue(z.IsReverseZone)
-	model.Name = types.StringPointerValue(z.Name)
-	model.NegativeCache = types.Int64PointerValue(z.NegativeCache)
-	model.PrimaryNameServer = types.StringPointerValue(z.PrimaryNameServer)
+	model.Name = types.StringValue(z.Name)
+	model.NegativeCache = types.Int32Value(z.NegativeCache)
+	model.PrimaryNameServer = types.StringValue(z.PrimaryNameServer)
 	model.RecordCount = types.Int64PointerValue(rc)
-	model.RefreshTime = types.Int64PointerValue(z.RefreshTime)
-	model.RetryTime = types.Int64PointerValue(z.RetryTime)
-	model.SerialNumber = types.Int64PointerValue(z.SerialNumber)
-	model.State = types.StringValue(string(z.GetState()))
-	model.Type = types.StringValue(string(z.GetType()))
-	model.Visibility = types.StringValue(string(z.GetVisibility()))
+	model.RefreshTime = types.Int32Value(z.RefreshTime)
+	model.RetryTime = types.Int32Value(z.RetryTime)
+	model.SerialNumber = types.Int32Value(z.SerialNumber)
+	model.State = types.StringValue(z.State)
+	model.Type = types.StringValue(z.Type)
+	model.Visibility = types.StringValue(z.Visibility)
 	return nil
 }
 
@@ -575,19 +575,19 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
 	return &dns.CreateZonePayload{
-		Name:          conversion.StringValueToPointer(model.Name),
-		DnsName:       conversion.StringValueToPointer(model.DnsName),
+		Name:          model.Name.ValueString(),
+		DnsName:       model.DnsName.ValueString(),
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
 		Description:   conversion.StringValueToPointer(model.Description),
 		Acl:           conversion.StringValueToPointer(model.Acl),
-		Type:          dns.CreateZonePayloadGetTypeAttributeType(conversion.StringValueToPointer(model.Type)),
-		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
-		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
-		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
-		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
-		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
+		Type:          conversion.StringValueToPointer(model.Type),
+		DefaultTTL:    conversion.Int32ValueToPointer(model.DefaultTTL),
+		ExpireTime:    conversion.Int32ValueToPointer(model.ExpireTime),
+		RefreshTime:   conversion.Int32ValueToPointer(model.RefreshTime),
+		RetryTime:     conversion.Int32ValueToPointer(model.RetryTime),
+		NegativeCache: conversion.Int32ValueToPointer(model.NegativeCache),
 		IsReverseZone: conversion.BoolValueToPointer(model.IsReverseZone),
-		Primaries:     &modelPrimaries,
+		Primaries:     modelPrimaries,
 	}, nil
 }
 
@@ -601,11 +601,11 @@ func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
 		Description:   conversion.StringValueToPointer(model.Description),
 		Acl:           conversion.StringValueToPointer(model.Acl),
-		DefaultTTL:    conversion.Int64ValueToPointer(model.DefaultTTL),
-		ExpireTime:    conversion.Int64ValueToPointer(model.ExpireTime),
-		RefreshTime:   conversion.Int64ValueToPointer(model.RefreshTime),
-		RetryTime:     conversion.Int64ValueToPointer(model.RetryTime),
-		NegativeCache: conversion.Int64ValueToPointer(model.NegativeCache),
+		DefaultTTL:    conversion.Int32ValueToPointer(model.DefaultTTL),
+		ExpireTime:    conversion.Int32ValueToPointer(model.ExpireTime),
+		RefreshTime:   conversion.Int32ValueToPointer(model.RefreshTime),
+		RetryTime:     conversion.Int32ValueToPointer(model.RetryTime),
+		NegativeCache: conversion.Int32ValueToPointer(model.NegativeCache),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
 }
