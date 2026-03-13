@@ -67,6 +67,7 @@ var (
 
 	ALBCustomEndpoint             = os.Getenv("TF_ACC_ALB_CUSTOM_ENDPOINT")
 	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
+	CertCustomEndpoint            = os.Getenv("TF_ACC_CERT_CUSTOM_ENDPOINT")
 	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
 	EdgeCloudCustomEndpoint       = os.Getenv("TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT")
 	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
@@ -141,7 +142,20 @@ func CdnProviderConfig() string {
 		CdnCustomEndpoint,
 	)
 }
-
+func CertProviderConfig() string {
+	if CertCustomEndpoint == "" {
+		return `
+		provider "stackit" {
+			default_region = "eu01"
+		}`
+	}
+	return fmt.Sprintf(`
+		provider "stackit" {
+			cart_custom_endpoint = "%s"
+		}`,
+		CertCustomEndpoint,
+	)
+}
 func DnsProviderConfig() string {
 	if DnsCustomEndpoint == "" {
 		return `provider "stackit" {}`

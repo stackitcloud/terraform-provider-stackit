@@ -1,4 +1,4 @@
-package certificates
+package certificate
 
 import (
 	"context"
@@ -33,7 +33,7 @@ type certDataSource struct {
 
 // Metadata returns the data source type name.
 func (r *certDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_certificates"
+	resp.TypeName = req.ProviderTypeName + "_alb_certificate"
 }
 
 // Configure adds the provider configured client to the data source.
@@ -57,7 +57,7 @@ func (r *certDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 	descriptions := map[string]string{
 		"main":        "Certificates resource schema.",
 		"id":          "Terraform's internal resource ID. It is structured as `project_id`,`region`,`name`.",
-		"project_id":  "STACKIT project ID to which the certificates is associated.",
+		"project_id":  "STACKIT project ID to which the certificate is associated.",
 		"region":      "The resource region (e.g. eu01). If not defined, the provider region is used.",
 		"cert-id":     "The ID of the certificate.",
 		"name":        "Certificate name.",
@@ -67,10 +67,7 @@ func (r *certDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
-		MarkdownDescription: `
-## Setting up supporting infrastructure` + "\n" + `
-
-The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the network, network interface, a public IP address and server resources.
+		MarkdownDescription: `ALB TLS Certificate data source schema. Must have a region specified in the provider configuration.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -79,7 +76,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
-				Computed:    true,
+				Required:    true,
 			},
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
@@ -91,7 +88,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"cert_id": schema.StringAttribute{
 				Description: descriptions["cert-id"],
-				Computed:    true,
+				Required:    true,
 			},
 			"private_key": schema.StringAttribute{
 				Description: descriptions["private_key"],
@@ -117,11 +114,11 @@ func (r *certDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	certId := model.CertID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+	certId := model.CertID.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "cert_id", certId)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "cert_id", certId)
 
 	certResp, err := r.client.GetCertificate(ctx, projectId, region, certId).Execute()
 	if err != nil {

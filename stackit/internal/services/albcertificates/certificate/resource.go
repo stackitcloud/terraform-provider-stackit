@@ -1,4 +1,4 @@
-package certificates
+package certificate
 
 import (
 	"context"
@@ -57,7 +57,7 @@ type certificatesResource struct {
 
 // Metadata returns the resource type name.
 func (r *certificatesResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_certificates"
+	resp.TypeName = req.ProviderTypeName + "_alb_certificate"
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
@@ -110,8 +110,8 @@ func (r *certificatesResource) Configure(ctx context.Context, req resource.Confi
 func (r *certificatesResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Certificates resource schema.",
-		"id":          "Terraform's internal resource ID. It is structured as `project_id`,`region`,`name`.",
-		"project_id":  "STACKIT project ID to which the certificates is associated.",
+		"id":          "Terraform's internal resource ID. It is structured as `project_id`,`region`,`cert_id`.",
+		"project_id":  "STACKIT project ID to which the certificate is associated.",
 		"region":      "The resource region (e.g. eu01). If not defined, the provider region is used.",
 		"cert-id":     "The ID of the certificate.",
 		"name":        "Certificate name.",
@@ -124,7 +124,7 @@ func (r *certificatesResource) Schema(_ context.Context, _ resource.SchemaReques
 		MarkdownDescription: `
 ## Setting up supporting infrastructure` + "\n" + `
 
-The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the network, network interface, a public IP address and server resources.
+The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the the automatic creation of a TLS certificate resource.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -216,7 +216,7 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Certificate", fmt.Sprintf("Payload for create: %v", err))
 		return
@@ -233,8 +233,8 @@ func (r *certificatesResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id": projectId,
+		"cert_id":    *createResp.Id,
 		"region":     region,
-		"name":       *createResp.Name,
 	})
 	if resp.Diagnostics.HasError() {
 		return
@@ -266,12 +266,12 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	certId := model.CertID.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
+	certId := model.CertID.ValueString()
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "cert_id", certId)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "cert_id", certId)
 
 	readResp, err := r.client.GetCertificate(ctx, projectId, region, certId).Execute()
 	if err != nil {
@@ -307,7 +307,7 @@ func (r *certificatesResource) Read(ctx context.Context, req resource.ReadReques
 
 func (r *certificatesResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating certificates", "Certificates can't be updated")
+	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating certificate", "Certificates can't be updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -342,26 +342,26 @@ func (r *certificatesResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,name
+// The expected format of the resource import identifier is: project_id, region, cert_id
 func (r *certificatesResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing Certificate",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[name]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[cert_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cert_id"), idParts[2])...)
 	tflog.Info(ctx, "Certificate state imported")
 }
 
-// toCreatePayload and all other toX functions in this file turn a Terraform Certificate model into a createLoadBalancerPayload to be used with the Certificate API.
-func toCreatePayload(ctx context.Context, model *Model) (*certSdk.CreateCertificatePayload, error) {
+// toCreatePayload and all other toX functions in this file turn a Terraform Certificate model into a createCertificate to be used with the Certificate API.
+func toCreatePayload(model *Model) (*certSdk.CreateCertificatePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -382,19 +382,19 @@ func mapFields(cert *certSdk.GetCertificateResponse, m *Model, region string) er
 		return fmt.Errorf("model input is nil")
 	}
 
-	var name string
-	if m.Name.ValueString() != "" {
-		name = m.Name.ValueString()
-	} else if cert.Name != nil {
-		name = *cert.Name
+	var certID string
+	if m.CertID.ValueString() != "" {
+		certID = m.CertID.ValueString()
+	} else if cert.Id != nil {
+		certID = *cert.Id
 	} else {
-		return fmt.Errorf("name not present")
+		return fmt.Errorf("cert ID not present")
 	}
 	m.Region = types.StringValue(region)
-	m.Name = types.StringValue(name)
-	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), name)
+	m.CertID = types.StringValue(certID)
+	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), m.Region.ValueString(), certID)
+	m.Name = types.StringPointerValue(cert.Name)
 	m.PublicKey = types.StringPointerValue(cert.PublicKey)
-	m.CertID = types.StringPointerValue(cert.Id)
 
 	return nil
 }
