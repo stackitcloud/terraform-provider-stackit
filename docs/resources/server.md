@@ -404,6 +404,7 @@ import {
 ### Optional
 
 - `affinity_group` (String) The affinity group the server is assigned to.
+- `agent` (Attributes) The STACKIT Server Agent configured for the server (see [below for nested schema](#nestedatt--agent))
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
 - `desired_status` (String) The desired status of the server resource. Possible values are: `active`, `inactive`, `deallocated`.
@@ -421,6 +422,14 @@ import {
 - `launched_at` (String) Date-time when the server was launched
 - `server_id` (String) The server ID.
 - `updated_at` (String) Date-time when the server was updated
+
+<a id="nestedatt--agent"></a>
+### Nested Schema for `agent`
+
+Optional:
+
+- `provisioned` (Boolean) Whether a STACKIT Server Agent should be provisioned at the server
+
 
 <a id="nestedatt--boot_volume"></a>
 ### Nested Schema for `boot_volume`
