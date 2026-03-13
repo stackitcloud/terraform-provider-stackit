@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -42,7 +41,9 @@ var (
 )
 
 const (
-	ipv4BehaviorChangeTitle       = "Behavior of not configured `ipv4_nameservers` will change from January 2026"
+	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
+	ipv4BehaviorChangeTitle = "Behavior of not configured `ipv4_nameservers` has changed"
+	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
 	ipv4BehaviorChangeDescription = "When `ipv4_nameservers` is not set, it will be set to the network area's `default_nameservers`.\n" +
 		"To prevent any nameserver configuration, the `ipv4_nameservers` attribute should be explicitly set to an empty list `[]`.\n" +
 		"In cases where `ipv4_nameservers` are defined within the resource, the existing behavior will remain unchanged."
@@ -53,12 +54,10 @@ type Model struct {
 	ProjectId        types.String `tfsdk:"project_id"`
 	NetworkId        types.String `tfsdk:"network_id"`
 	Name             types.String `tfsdk:"name"`
-	Nameservers      types.List   `tfsdk:"nameservers"`
 	IPv4Gateway      types.String `tfsdk:"ipv4_gateway"`
 	IPv4Nameservers  types.List   `tfsdk:"ipv4_nameservers"`
 	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
 	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
-	Prefixes         types.List   `tfsdk:"prefixes"`
 	IPv4Prefixes     types.List   `tfsdk:"ipv4_prefixes"`
 	IPv6Gateway      types.String `tfsdk:"ipv6_gateway"`
 	IPv6Nameservers  types.List   `tfsdk:"ipv6_nameservers"`
@@ -126,6 +125,7 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		return
 	}
 
+	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
 	// Warning should only be shown during the plan of the creation. This can be detected by checking if the ID is set.
 	if utils.IsUndefined(planModel.Id) && utils.IsUndefined(planModel.IPv4Nameservers) {
 		addIPv4Warning(&resp.Diagnostics)
@@ -139,18 +139,6 @@ func (r *networkResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-}
-
-func (r *networkResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var resourceModel Model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !resourceModel.Nameservers.IsUnknown() && !resourceModel.IPv4Nameservers.IsUnknown() && !resourceModel.Nameservers.IsNull() && !resourceModel.IPv4Nameservers.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network", "You cannot provide both the `nameservers` and `ipv4_nameservers` fields simultaneously. Please remove the deprecated `nameservers` field, and use `ipv4_nameservers` to configure nameservers for IPv4.")
 	}
 }
 
@@ -229,13 +217,6 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					stringvalidator.LengthAtMost(63),
 				},
 			},
-			"nameservers": schema.ListAttribute{
-				Description:        "The nameservers of the network. This field is deprecated and will be removed in January 2026, use `ipv4_nameservers` to configure the nameservers for IPv4.",
-				DeprecationMessage: "Use `ipv4_nameservers` to configure the nameservers for IPv4.",
-				Optional:           true,
-				Computed:           true,
-				ElementType:        types.StringType,
-			},
 			"no_ipv4_gateway": schema.BoolAttribute{
 				Description: "If set to `true`, the network doesn't have a gateway.",
 				Optional:    true,
@@ -252,7 +233,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"ipv4_nameservers": schema.ListAttribute{
-				Description: "The IPv4 nameservers of the network.",
+				Description: "The IPv4 nameservers of the network. If not specified on creation, it will be set with the default nameservers from the network area. If not specified on update, it will remain unchanged.",
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
@@ -274,15 +255,6 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplaceIfConfigured(),
-				},
-			},
-			"prefixes": schema.ListAttribute{
-				Description:        "The prefixes of the network. This field is deprecated and will be removed in January 2026, use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
-				DeprecationMessage: "Use `ipv4_prefixes` to read the prefixes of the IPv4 networks.",
-				Computed:           true,
-				ElementType:        types.StringType,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"ipv4_prefixes": schema.ListAttribute{
@@ -403,15 +375,18 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// When IPv4Nameserver is not set, print warning that the behavior of ipv4_nameservers will change
-	if utils.IsUndefined(model.IPv4Nameservers) {
-		addIPv4Warning(&resp.Diagnostics)
-	}
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
+
+	// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
+	// When IPv4Nameserver is not set, print warning that the behavior of ipv4_nameservers has changed
+	if utils.IsUndefined(model.IPv4Nameservers) {
+		addIPv4Warning(&resp.Diagnostics)
+	}
 
 	// Generate API request body from model
 	payload, err := toCreatePayload(ctx, &model)
@@ -427,6 +402,8 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	if network.Id == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", "Got empty network id")
@@ -473,6 +450,9 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -490,6 +470,8 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, networkResp, &model, region)
@@ -515,6 +497,9 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx = core.InitProviderContext(ctx)
+
 	projectId := model.ProjectId.ValueString()
 	networkId := model.NetworkId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
@@ -536,6 +521,9 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
 	// Update existing network
 	err = r.client.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
@@ -640,38 +628,26 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	// IPv4
 
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Nameservers == nil {
-		model.Nameservers = types.ListNull(types.StringType)
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := *networkResp.Ipv4.Nameservers
-		modelNameservers, err := utils.ListValuetoStringSlice(model.Nameservers)
-		modelIPv4Nameservers, errIpv4 := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+		modelIPv4Nameservers, err := utils.ListValuetoStringSlice(model.IPv4Nameservers)
 		if err != nil {
-			return fmt.Errorf("get current network nameservers from model: %w", err)
-		}
-		if errIpv4 != nil {
-			return fmt.Errorf("get current IPv4 network nameservers from model: %w", errIpv4)
+			return fmt.Errorf("get current IPv4 network nameservers from model: %w", err)
 		}
 
-		reconciledNameservers := utils.ReconcileStringSlices(modelNameservers, respNameservers)
 		reconciledIPv4Nameservers := utils.ReconcileStringSlices(modelIPv4Nameservers, respNameservers)
 
-		nameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledNameservers)
-		ipv4NameserversTF, ipv4Diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
+		ipv4NameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledIPv4Nameservers)
 		if diags.HasError() {
-			return fmt.Errorf("map network nameservers: %w", core.DiagsToError(diags))
-		}
-		if ipv4Diags.HasError() {
-			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(ipv4Diags))
+			return fmt.Errorf("map IPv4 network nameservers: %w", core.DiagsToError(diags))
 		}
 
-		model.Nameservers = nameserversTF
 		model.IPv4Nameservers = ipv4NameserversTF
 	}
 
 	model.IPv4PrefixLength = types.Int64Null()
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Prefixes == nil {
-		model.Prefixes = types.ListNull(types.StringType)
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
 		respPrefixes := *networkResp.Ipv4.Prefixes
@@ -692,7 +668,6 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 			}
 		}
 
-		model.Prefixes = prefixesTF
 		model.IPv4Prefixes = prefixesTF
 	}
 
@@ -827,30 +802,28 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		}
 	}
 
-	modelIPv4Nameservers := []string{}
-	var modelIPv4List []attr.Value
+	var modelIPv4Nameservers []string
 
-	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown()) {
-		modelIPv4List = model.IPv4Nameservers.Elements()
-	} else {
-		modelIPv4List = model.Nameservers.Elements()
-	}
-
-	for _, ipv4ns := range modelIPv4List {
-		ipv4NameserverString, ok := ipv4ns.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("type assertion failed")
+	if !utils.IsUndefined(model.IPv4Nameservers) {
+		modelIPv4Nameservers = []string{}
+		for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+			ipv4NameserverString, ok := ipv4ns.(types.String)
+			if !ok {
+				return nil, fmt.Errorf("type assertion failed")
+			}
+			modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 		}
-		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 	}
 
 	var ipv4Body *iaas.CreateNetworkIPv4
 	if !utils.IsUndefined(model.IPv4PrefixLength) {
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefixLength: &iaas.CreateNetworkIPv4WithPrefixLength{
-				Nameservers:  &modelIPv4Nameservers,
 				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
 			},
+		}
+		if modelIPv4Nameservers != nil {
+			ipv4Body.CreateNetworkIPv4WithPrefixLength.Nameservers = &modelIPv4Nameservers
 		}
 	} else if !utils.IsUndefined(model.IPv4Prefix) {
 		var gateway *iaas.NullableString
@@ -862,10 +835,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefix: &iaas.CreateNetworkIPv4WithPrefix{
-				Nameservers: &modelIPv4Nameservers,
-				Prefix:      conversion.StringValueToPointer(model.IPv4Prefix),
-				Gateway:     gateway,
+				Prefix:  conversion.StringValueToPointer(model.IPv4Prefix),
+				Gateway: gateway,
 			},
+		}
+		if modelIPv4Nameservers != nil {
+			ipv4Body.CreateNetworkIPv4WithPrefix.Nameservers = &modelIPv4Nameservers
 		}
 	}
 
@@ -924,34 +899,28 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		}
 	}
 
-	modelIPv4Nameservers := []string{}
-	var modelIPv4List []attr.Value
-
-	if !(model.IPv4Nameservers.IsNull() || model.IPv4Nameservers.IsUnknown()) {
-		modelIPv4List = model.IPv4Nameservers.Elements()
-	} else {
-		modelIPv4List = model.Nameservers.Elements()
-	}
-	for _, ipv4ns := range modelIPv4List {
-		ipv4NameserverString, ok := ipv4ns.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("type assertion failed")
-		}
-		modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
-	}
-
 	var ipv4Body *iaas.UpdateNetworkIPv4Body
-	if !model.IPv4Nameservers.IsNull() || !model.Nameservers.IsNull() {
-		ipv4Body = &iaas.UpdateNetworkIPv4Body{
-			Nameservers: &modelIPv4Nameservers,
+	if model.isIPv4UpdateConfigSet() {
+		ipv4Body = &iaas.UpdateNetworkIPv4Body{}
+		if !utils.IsUndefined(model.IPv4Nameservers) {
+			modelIPv4Nameservers := []string{}
+			for _, ipv4ns := range model.IPv4Nameservers.Elements() {
+				ipv4NameserverString, ok := ipv4ns.(types.String)
+				if !ok {
+					return nil, fmt.Errorf("type assertion failed")
+				}
+				modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
+			}
+			ipv4Body.Nameservers = &modelIPv4Nameservers
 		}
 
 		if model.NoIPv4Gateway.ValueBool() {
 			ipv4Body.Gateway = iaas.NewNullableString(nil)
-		} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
+		} else if !utils.IsUndefined(model.IPv4Gateway) {
 			ipv4Body.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 		}
 	}
+
 	currentLabels := stateModel.Labels
 	labels, err := conversion.ToJSONMapPartialUpdatePayload(ctx, currentLabels, model.Labels)
 	if err != nil {
@@ -970,6 +939,11 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 	return &payload, nil
 }
 
+func (m *Model) isIPv4UpdateConfigSet() bool {
+	return !utils.IsUndefined(m.IPv4Nameservers) || m.NoIPv4Gateway.ValueBool() || !utils.IsUndefined(m.IPv4Gateway)
+}
+
+// Deprecated: Keep this warning until end of September 2026, to make aware of the changed behavior.
 func addIPv4Warning(diags *diag.Diagnostics) {
 	diags.AddAttributeWarning(path.Root("ipv4_nameservers"),
 		ipv4BehaviorChangeTitle,

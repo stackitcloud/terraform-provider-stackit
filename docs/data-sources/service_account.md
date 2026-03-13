@@ -31,3 +31,4 @@ data "stackit_service_account" "sa" {
 
 - `id` (String) Terraform's internal resource ID, structured as "`project_id`,`email`".
 - `name` (String) Name of the service account.
+- `service_account_id` (String) The internal UUID of the service account.

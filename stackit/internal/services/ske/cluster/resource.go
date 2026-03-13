@@ -11,16 +11,17 @@ import (
 
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
+	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -157,12 +158,23 @@ var maintenanceTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Network
 type network struct {
-	ID types.String `tfsdk:"id"`
+	ID           types.String `tfsdk:"id"`
+	ControlPlane types.Object `tfsdk:"control_plane"`
 }
 
 // Types corresponding to network
 var networkTypes = map[string]attr.Type{
-	"id": basetypes.StringType{},
+	"id":            basetypes.StringType{},
+	"control_plane": types.ObjectType{AttrTypes: controlPlaneTypes},
+}
+
+type controlPlane struct {
+	AccessScope types.String `tfsdk:"access_scope"`
+}
+
+// Types corresponding to control plane
+var controlPlaneTypes = map[string]attr.Type{
+	"access_scope": basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Hibernations[i]
@@ -367,7 +379,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					utils.UseStateForUnknownIf(hasKubernetesMinChanged, "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
+					stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "kubernetes_version_min", "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
 				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
@@ -450,7 +462,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								utils.UseStateForUnknownIf(hasOsVersionMinChanged, "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+								stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "os_version_min", "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
 							},
 						},
 						"volume_type": schema.StringAttribute{
@@ -565,6 +577,20 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
+					"control_plane": schema.SingleNestedAttribute{
+						Description: "Control plane for the cluster.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"access_scope": schema.StringAttribute{
+								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...) + " The field is immutable!",
+								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.RequiresReplace(),
+								},
+							},
+						},
+					},
 				},
 			},
 			"hibernations": schema.ListNestedAttribute{
@@ -661,6 +687,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Validators: []validator.List{
 									listvalidator.ValueStringsAre(validate.NoUUID()),
 								},
+								// By setting a Default value of an empty list, we tell Terraform to treat a missing
+								// zones block in the dns as if the user explicitly defined
+								// zones = []. This ensures the config (empty list) matches the
+								// API response (empty list).
+								Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 						},
 					},
@@ -723,9 +754,16 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
 	clusterName := model.Name.ValueString()
-	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "name", clusterName)
-	ctx = tflog.SetField(ctx, "region", region)
+
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": projectId,
+		"region":     region,
+		"name":       clusterName,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// If SKE functionality is not enabled, enable it
 	err := r.enablementClient.EnableServiceRegional(ctx, region, projectId, utils.SKEServiceId).Execute()
@@ -1354,8 +1392,21 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 		return nil, fmt.Errorf("converting network object: %v", diags.Errors())
 	}
 
+	var networkControlPlane *ske.V2ControlPlaneNetwork
+	if !utils.IsUndefined(network.ControlPlane) {
+		networkControlPlaneModel := controlPlane{}
+		diags = network.ControlPlane.As(ctx, &networkControlPlaneModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting network control plane: %w", core.DiagsToError(diags))
+		}
+		networkControlPlane = &ske.V2ControlPlaneNetwork{
+			AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(networkControlPlaneModel.AccessScope)),
+		}
+	}
+
 	return &ske.Network{
-		Id: conversion.StringValueToPointer(network.ID),
+		Id:           conversion.StringValueToPointer(network.ID),
+		ControlPlane: networkControlPlane,
 	}, nil
 }
 
@@ -1659,12 +1710,32 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 		return nil
 	}
 
+	var diags diag.Diagnostics
 	id := types.StringNull()
 	if cl.Network.Id != nil {
 		id = types.StringValue(*cl.Network.Id)
 	}
+
+	networkControlPlane := types.ObjectNull(controlPlaneTypes)
+	if cl.Network.ControlPlane != nil {
+		controlPlaneAccessScope := types.StringNull()
+		if cl.Network.ControlPlane.AccessScope != nil {
+			controlPlaneAccessScope = types.StringValue(string(cl.Network.ControlPlane.GetAccessScope()))
+		}
+
+		controlPlaneValues := map[string]attr.Value{
+			"access_scope": controlPlaneAccessScope,
+		}
+
+		networkControlPlane, diags = types.ObjectValue(controlPlaneTypes, controlPlaneValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating network control plane: %w", core.DiagsToError(diags))
+		}
+	}
+
 	networkValues := map[string]attr.Value{
-		"id": id,
+		"id":            id,
+		"control_plane": networkControlPlane,
 	}
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
@@ -2102,52 +2173,6 @@ func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*str
 	return latestVersion, nil
 }
 
-func hasKubernetesMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := path.Root("kubernetes_version_min")
-
-	var minVersionPlan types.String
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	var minVersionState types.String
-	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	if minVersionState == minVersionPlan {
-		response.UseStateForUnknown = true
-		return
-	}
-}
-
-func hasOsVersionMinChanged(ctx context.Context, request planmodifier.StringRequest, response *utils.UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := request.Path.ParentPath().AtName("os_version_min")
-
-	var minVersionPlan types.String
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &minVersionPlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	var minVersionState types.String
-	diags = request.State.GetAttribute(ctx, dependencyPath, &minVersionState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	if minVersionState == minVersionPlan {
-		response.UseStateForUnknown = true
-		return
-	}
-}
-
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var state Model
 	diags := req.State.Get(ctx, &state)
@@ -2276,8 +2301,10 @@ func (r *clusterResource) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"name":       idParts[2],
+	})
 	tflog.Info(ctx, "SKE cluster state imported")
 }

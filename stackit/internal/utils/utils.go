@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -209,4 +211,20 @@ func Join(separator string, parts ...types.String) types.String {
 		}
 	}
 	return types.StringValue(builder.String())
+}
+
+// PrettyApiErr will format your GenericOpenAPIError JSON body with indentation and line breaks, aka make it pretty.
+// It will also keep the entier body intact, instead of cutting out important information in long responses.
+func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) string {
+	var oapiErr *oapierror.GenericOpenAPIError
+	if errors.As(err, &oapiErr) {
+		var prettyJSON bytes.Buffer
+		if errJson := json.Indent(&prettyJSON, oapiErr.Body, "", "  "); errJson != nil {
+			core.LogAndAddError(ctx, diags, "Error indenting JSON response from API. This is an issue with the API. Please notify the respective team.", errJson.Error())
+			// if there is an error formating the JSON just return the unformatted error to the user
+			return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, string(oapiErr.Body))
+		}
+		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
+	}
+	return err.Error()
 }

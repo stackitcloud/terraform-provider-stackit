@@ -10,15 +10,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/logs"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 )
 
 var testTime = time.Now()
 
 func fixtureAccessToken(mods ...func(accessToken *logs.AccessToken)) *logs.AccessToken {
 	accessToken := &logs.AccessToken{
-		Id:     utils.Ptr("atid"),
-		Status: utils.Ptr(logs.ACCESSTOKENSTATUS_ACTIVE),
+		Id:     "atid",
+		Status: "active",
 	}
 	for _, mod := range mods {
 		mod(accessToken)
@@ -39,9 +39,9 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		DisplayName:   types.String{},
 		Expires:       types.Bool{},
 		ValidUntil:    types.String{},
-		Lifetime:      types.Int64{},
+		Lifetime:      types.Int32{},
 		Permissions:   types.ListNull(types.StringType),
-		Status:        types.StringValue(string(logs.ACCESSTOKENSTATUS_ACTIVE)),
+		Status:        types.StringValue("active"),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -58,18 +58,24 @@ func TestMapFields(t *testing.T) {
 	}{
 		{
 			description: "min values",
-			input:       fixtureAccessToken(),
-			expected:    fixtureModel(),
+			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
+				accessToken.DisplayName = "display-name"
+			}),
+			expected: fixtureModel(func(model *Model) {
+				model.DisplayName = types.StringValue("display-name")
+				model.Creator = types.StringValue("")
+				model.Expires = types.BoolValue(false)
+			}),
 		},
 		{
 			description: "max values",
 			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
-				accessToken.Permissions = &[]string{"write"}
+				accessToken.Permissions = []string{"write"}
 				accessToken.AccessToken = utils.Ptr("")
 				accessToken.Description = utils.Ptr("description")
-				accessToken.DisplayName = utils.Ptr("display-name")
-				accessToken.Creator = utils.Ptr("testUser")
-				accessToken.Expires = utils.Ptr(false)
+				accessToken.DisplayName = "display-name"
+				accessToken.Creator = "testUser"
+				accessToken.Expires = false
 				accessToken.ValidUntil = utils.Ptr(testTime)
 			}),
 			expected: fixtureModel(func(model *Model) {
@@ -141,13 +147,13 @@ func TestToCreatePayload(t *testing.T) {
 				})
 				model.Description = types.StringValue("description")
 				model.DisplayName = types.StringValue("display-name")
-				model.Lifetime = types.Int64Value(7)
+				model.Lifetime = types.Int32Value(7)
 			}),
 			expected: &logs.CreateAccessTokenPayload{
-				Permissions: &[]string{"read", "write"},
+				Permissions: []string{"read", "write"},
 				Description: utils.Ptr("description"),
-				DisplayName: utils.Ptr("display-name"),
-				Lifetime:    utils.Ptr(int64(7)),
+				DisplayName: "display-name",
+				Lifetime:    utils.Ptr(int32(7)),
 			},
 		},
 		{

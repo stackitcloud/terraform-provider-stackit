@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -314,6 +313,16 @@ func (a *alertGroupResource) Create(ctx context.Context, req resource.CreateRequ
 
 	ctx = core.LogResponse(ctx)
 
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": instanceId,
+		"name":        alertGroupName,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// all alert groups are returned. We have to search the map for the one corresponding to our name
 	for _, alertGroup := range *createAlertGroupResp.Data {
 		if model.Name.ValueString() != *alertGroup.Name {
@@ -430,9 +439,11 @@ func (a *alertGroupResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"instance_id": idParts[1],
+		"name":        idParts[2],
+	})
 	tflog.Info(ctx, "Observability alert group state imported")
 }
 
