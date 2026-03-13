@@ -115,7 +115,7 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 		"id":          "Terraform's internal resource identifier. It is structured as \"`resource_id`,`role`,`subject`\".",
 		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", resourceTitle),
 		"role":        "Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/permissions`",
-		"subject":     "Identifier of user, service account or client. Usually email address or name in case of clients",
+		"subject":     "Identifier of user, service account or client. Usually email address or name in case of clients. All letters must be lowercased.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -149,6 +149,9 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"subject": schema.StringAttribute{
 				Description: descriptions["subject"],
 				Required:    true,
+				Validators: []validator.String{
+					validate.IsLowercased(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
