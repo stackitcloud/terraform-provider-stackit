@@ -37,7 +37,7 @@ var testConfigVarsMin = config.Variables{
 	"rrule":              config.StringVariable("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 	"enabled":            config.BoolVariable(true),
 	"maintenance_window": config.IntegerVariable(1),
-	"server_id":          config.StringVariable(testutil.ServerId),
+	//"server_id":          config.StringVariable(testutil.ServerId),
 }
 
 var testConfigVarsMax = config.Variables{
@@ -48,7 +48,7 @@ var testConfigVarsMax = config.Variables{
 	"enabled":            config.BoolVariable(true),
 	"maintenance_window": config.IntegerVariable(1),
 	"region":             config.StringVariable("eu01"),
-	"server_id":          config.StringVariable(testutil.ServerId),
+	//"server_id":          config.StringVariable(testutil.ServerId),
 }
 
 func configVarsInvalid(vars config.Variables) config.Variables {
@@ -73,10 +73,10 @@ func configVarsMaxUpdated() config.Variables {
 }
 
 func TestAccServerUpdateScheduleMinResource(t *testing.T) {
-	if testutil.ServerId == "" {
+	/*if testutil.ServerId == "" {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
-	}
+	}*/
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerUpdateScheduleDestroy,
@@ -160,10 +160,10 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 }
 
 func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
-	if testutil.ServerId == "" {
+	/*if testutil.ServerId == "" {
 		fmt.Println("TF_ACC_SERVER_ID not set, skipping test")
 		return
-	}
+	}*/
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckServerUpdateScheduleDestroy,
@@ -222,7 +222,11 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute update_schedule_id")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, testutil.ServerId, scheduleId), nil
+					serverId, ok := r.Primary.Attributes["server_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute server_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, serverId, scheduleId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
