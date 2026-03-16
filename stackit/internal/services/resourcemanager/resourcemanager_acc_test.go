@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	wait "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -480,27 +480,28 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 		return fmt.Errorf("either TestProjectParentContainerID or TestProjectParentUUID must be set")
 	}
 
-	projectsResp, err := client.ListProjects(ctx).ContainerParentId(containerParentId).Execute()
+	projectsResp, err := client.DefaultAPI.ListProjects(ctx).ContainerParentId(containerParentId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting projectsResp: %w", err)
 	}
 
-	items := *projectsResp.Items
+	items := projectsResp.Items
 	for i := range items {
-		if *items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
+		if items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
 			continue
 		}
-		if !utils.Contains(projectsToDestroy, *items[i].ContainerId) {
+		if !utils.Contains(projectsToDestroy, items[i].ContainerId) {
 			continue
 		}
 
-		err := client.DeleteProjectExecute(ctx, *items[i].ContainerId)
+		err := client.DefaultAPI.DeleteProject(ctx, items[i].ContainerId).Execute()
 		if err != nil {
-			return fmt.Errorf("destroying project %s during CheckDestroy: %w", *items[i].ContainerId, err)
+			return fmt.Errorf("destroying project %s during CheckDestroy: %w", items[i].ContainerId, err)
 		}
-		_, err = wait.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
+
+		_, err = wait.DeleteProjectWaitHandler(ctx, client.DefaultAPI, items[i].ContainerId).WaitWithContext(ctx)
 		if err != nil {
-			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", *items[i].ContainerId, err)
+			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", items[i].ContainerId, err)
 		}
 	}
 	return nil
@@ -541,20 +542,20 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 		return fmt.Errorf("either TestProjectParentContainerID or TestProjectParentUUID must be set")
 	}
 
-	projectsResp, err := client.ListFolders(ctx).ContainerParentId(containerParentId).Execute()
+	projectsResp, err := client.DefaultAPI.ListFolders(ctx).ContainerParentId(containerParentId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting projectsResp: %w", err)
 	}
 
-	items := *projectsResp.Items
+	items := projectsResp.Items
 	for i := range items {
-		if !utils.Contains(foldersToDestroy, *items[i].ContainerId) {
+		if !utils.Contains(foldersToDestroy, items[i].ContainerId) {
 			continue
 		}
 
-		err := client.DeleteFolder(ctx, *items[i].ContainerId).Execute()
+		err := client.DefaultAPI.DeleteFolder(ctx, items[i].ContainerId).Execute()
 		if err != nil {
-			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", *items[i].ContainerId, err)
+			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", items[i].ContainerId, err)
 		}
 	}
 	return nil
