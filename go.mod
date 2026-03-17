@@ -23,7 +23,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.6
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.6
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.6.5
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.5.8
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
