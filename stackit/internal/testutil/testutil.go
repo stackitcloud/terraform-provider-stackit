@@ -51,8 +51,6 @@ var (
 	// ProjectId is the id of project used for tests
 	ProjectId = os.Getenv("TF_ACC_PROJECT_ID")
 	Region    = os.Getenv("TF_ACC_REGION")
-	// ServerId is the id of a server used for some tests
-	ServerId = getenv("TF_ACC_SERVER_ID", "") // TODO: ALEX REMOVE
 	// TestProjectParentContainerID is the container id of the parent resource under which projects are created as part of the resource-manager acceptance tests
 	TestProjectParentContainerID = os.Getenv("TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID")
 	// TestProjectParentUUID is the uuid of the parent resource under which projects are created as part of the resource-manager acceptance tests
