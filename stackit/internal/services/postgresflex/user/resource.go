@@ -423,7 +423,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// Delete existing record set
 	err := r.client.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
