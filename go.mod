@@ -27,7 +27,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.6
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.6
