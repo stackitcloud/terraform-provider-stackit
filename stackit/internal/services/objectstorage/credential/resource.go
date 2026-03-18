@@ -286,7 +286,16 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	credentialId := *credentialResp.KeyId
-	ctx = tflog.SetField(ctx, "credential_id", credentialId)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":           projectId,
+		"region":               region,
+		"credentials_group_id": credentialsGroupId,
+		"credential_id":        credentialId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Map response body to schema
 	err = mapFields(credentialResp, &model, region)
@@ -455,10 +464,12 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_group_id"), idParts[2])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credential_id"), idParts[3])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":           idParts[0],
+		"region":               idParts[1],
+		"credentials_group_id": idParts[2],
+		"credential_id":        idParts[3],
+	})
 	tflog.Info(ctx, "ObjectStorage credential state imported")
 }
 

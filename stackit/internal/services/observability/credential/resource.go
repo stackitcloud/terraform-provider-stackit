@@ -155,6 +155,21 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	ctx = core.LogResponse(ctx)
 
+	if got == nil || got.Credentials == nil || got.Credentials.Username == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty username")
+		return
+	}
+	username := *got.Credentials.Username
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": instanceId,
+		"username":    username,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	err = mapFields(got.Credentials, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))

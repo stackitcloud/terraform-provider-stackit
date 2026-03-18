@@ -23,8 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
@@ -86,6 +85,7 @@ func (r *folderResource) Configure(ctx context.Context, req resource.ConfigureRe
 		return
 	}
 	r.client = apiClient
+
 	tflog.Info(ctx, "Resource Manager client configured")
 }
 
@@ -206,7 +206,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	folderCreateResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
+	folderCreateResp, err := r.client.DefaultAPI.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -214,18 +214,23 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	if folderCreateResp.ContainerId == nil || *folderCreateResp.ContainerId == "" {
+	if folderCreateResp.ContainerId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", "Container ID is missing")
 		return
 	}
 
-	// This sleep is currently needed due to the IAM Cache.
-	time.Sleep(10 * time.Second)
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"container_id": *folderCreateResp.ContainerId,
+		"container_id": folderCreateResp.ContainerId,
 	})
 
-	folderGetResponse, err := r.client.GetFolderDetails(ctx, *folderCreateResp.ContainerId).Execute()
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(10 * time.Second): // This sleep is currently needed due to the IAM Cache.
+		// continue
+	}
+
+	folderGetResponse, err := r.client.DefaultAPI.GetFolderDetails(ctx, folderCreateResp.ContainerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -262,7 +267,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusForbidden {
@@ -312,7 +317,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing folder
-	_, err = r.client.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -321,7 +326,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Fetch updated folder
-	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
@@ -357,7 +362,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing folder
-	err := r.client.DeleteFolder(ctx, containerId).Execute()
+	err := r.client.DefaultAPI.DeleteFolder(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -405,8 +410,8 @@ func mapFolderFields(
 	var folderId string
 	if model.FolderId.ValueString() != "" {
 		folderId = model.FolderId.ValueString()
-	} else if folderGetResponse.FolderId != nil {
-		folderId = *folderGetResponse.FolderId
+	} else if folderGetResponse.FolderId != "" {
+		folderId = folderGetResponse.FolderId
 	} else {
 		return fmt.Errorf("folder id not present")
 	}
@@ -414,8 +419,8 @@ func mapFolderFields(
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
-	} else if folderGetResponse.ContainerId != nil {
-		containerId = *folderGetResponse.ContainerId
+	} else if folderGetResponse.ContainerId != "" {
+		containerId = folderGetResponse.ContainerId
 	} else {
 		return fmt.Errorf("container id not present")
 	}
@@ -431,24 +436,20 @@ func mapFolderFields(
 		tfLabels = types.MapNull(types.StringType)
 	}
 
-	var containerParentIdTF basetypes.StringValue
-	if folderGetResponse.Parent != nil {
-		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
-			// the provided containerParent is the UUID identifier
-			containerParentIdTF = types.StringPointerValue(folderGetResponse.Parent.Id)
-		} else {
-			// the provided containerParent is the user-friendly container id
-			containerParentIdTF = types.StringPointerValue(folderGetResponse.Parent.ContainerId)
-		}
+	var containerParentIdTF types.String
+	if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
+		// the provided containerParent is the UUID identifier
+		containerParentIdTF = types.StringValue(folderGetResponse.Parent.Id)
 	} else {
-		containerParentIdTF = types.StringNull()
+		// the provided containerParent is the user-friendly container id
+		containerParentIdTF = types.StringValue(folderGetResponse.Parent.ContainerId)
 	}
 
 	model.Id = types.StringValue(containerId)
 	model.FolderId = types.StringValue(folderId)
 	model.ContainerId = types.StringValue(containerId)
 	model.ContainerParentId = containerParentIdTF
-	model.Name = types.StringPointerValue(folderGetResponse.Name)
+	model.Name = types.StringValue(folderGetResponse.Name)
 	model.Labels = tfLabels
 	model.CreationTime = types.StringValue(folderGetResponse.CreationTime.Format(time.RFC3339))
 	model.UpdateTime = types.StringValue(folderGetResponse.UpdateTime.Format(time.RFC3339))
@@ -471,7 +472,7 @@ func mapFolderFields(
 	return nil
 }
 
-func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
+func toMembersPayload(model *ResourceModel) ([]resourcemanager.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -479,10 +480,10 @@ func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
 		return nil, fmt.Errorf("owner_email is null")
 	}
 
-	return &[]resourcemanager.Member{
+	return []resourcemanager.Member{
 		{
-			Subject: model.OwnerEmail.ValueStringPointer(),
-			Role:    sdkUtils.Ptr(projectOwnerRole),
+			Subject: model.OwnerEmail.ValueString(),
+			Role:    projectOwnerRole,
 		},
 	}, nil
 }
@@ -504,10 +505,10 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateFolderPayload
 	}
 
 	return &resourcemanager.CreateFolderPayload{
-		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
+		ContainerParentId: model.ContainerParentId.ValueString(),
 		Labels:            labels,
 		Members:           members,
-		Name:              conversion.StringValueToPointer(model.Name),
+		Name:              model.Name.ValueString(),
 	}, nil
 }
 

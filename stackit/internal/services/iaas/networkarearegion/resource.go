@@ -126,7 +126,7 @@ func (r *networkAreaRegionResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	r.resourceManagerClient = resourcemanagerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.resourceManagerClient = resourcemanagerUtils.ConfigureClientLegacy(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

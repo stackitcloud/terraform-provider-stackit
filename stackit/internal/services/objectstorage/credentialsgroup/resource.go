@@ -15,7 +15,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -207,6 +206,21 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 
 	ctx = core.LogResponse(ctx)
 
+	if got == nil || got.CredentialsGroup == nil || got.CredentialsGroup.CredentialsGroupId == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", "Got empty credential group id id")
+		return
+	}
+	credentialsGroupId := *got.CredentialsGroup.CredentialsGroupId
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":           projectId,
+		"region":               region,
+		"credentials_group_id": credentialsGroupId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Map response body to schema
 	err = mapFields(got, &model, region)
 	if err != nil {
@@ -317,9 +331,11 @@ func (r *credentialsGroupResource) ImportState(ctx context.Context, req resource
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials_group_id"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":           idParts[0],
+		"region":               idParts[1],
+		"credentials_group_id": idParts[2],
+	})
 	tflog.Info(ctx, "ObjectStorage credentials group state imported")
 }
 

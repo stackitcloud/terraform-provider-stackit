@@ -305,7 +305,7 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 		"continue": schema.BoolAttribute{
 			Description: routeDescriptions["continue"],
 			Optional:    !isDatasource,
-			Computed:    isDatasource,
+			Computed:    true,
 		},
 		"group_by": schema.ListAttribute{
 			Description: routeDescriptions["group_by"],
@@ -317,17 +317,11 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 			Description: routeDescriptions["group_interval"],
 			Optional:    !isDatasource,
 			Computed:    true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 		"group_wait": schema.StringAttribute{
 			Description: routeDescriptions["group_wait"],
 			Optional:    !isDatasource,
 			Computed:    true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 		"match": schema.MapAttribute{
 			Description:        routeDescriptions["match"],
@@ -358,9 +352,6 @@ func getRouteNestedObjectAux(isDatasource bool, level, limit int) schema.ListNes
 			Description: routeDescriptions["repeat_interval"],
 			Optional:    !isDatasource,
 			Computed:    true,
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.UseStateForUnknown(),
-			},
 		},
 	}
 
@@ -1011,7 +1002,15 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = core.LogResponse(ctx)
 
 	instanceId := createResp.InstanceId
-	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": instanceId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, *instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
@@ -1540,8 +1539,10 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[1])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"instance_id": idParts[1],
+	})
 	tflog.Info(ctx, "Observability instance state imported")
 }
 

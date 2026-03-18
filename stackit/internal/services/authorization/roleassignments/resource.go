@@ -29,6 +29,7 @@ var roleTargets = []string{
 	"project",
 	"organization",
 	"folder",
+	"service-account",
 }
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -69,7 +70,7 @@ type roleAssignmentResource struct {
 
 // Metadata returns the resource type name.
 func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, r.apiName)
+	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, strings.Replace(r.apiName, "-", "_", -1))
 }
 
 // Configure adds the provider configured client to the resource.
@@ -94,12 +95,27 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 
 // Schema defines the schema for the resource.
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	// Capitalize the first letter for display (e.g. "Project", "Service-account")
+	resourceTitle := fmt.Sprintf("%s%s", strings.ToUpper(r.apiName[:1]), strings.ToLower(r.apiName[1:]))
+
+	descriptionText := fmt.Sprintf("%s Role Assignment resource schema.", resourceTitle)
+
+	// Append specific use case note for service-account
+	if r.apiName == "service-account" {
+		descriptionText = fmt.Sprintf(
+			"%s\n\n~> **Important:** Use this resource to grant 'Act-As' permissions. "+
+				"This allows a service-account (the `subject`) to impersonate the target Service Account. "+
+				"A common example is authorizing the SKE Service Account to act as a project-specific Service Account to access APIs.",
+			descriptionText,
+		)
+	}
+
 	descriptions := map[string]string{
-		"main":        features.AddExperimentDescription(fmt.Sprintf("%s Role Assignment resource schema.", fmt.Sprintf("%s%s", strings.ToUpper(r.apiName[:1]), strings.ToLower(r.apiName[1:]))), features.IamExperiment, core.Resource),
+		"main":        features.AddExperimentDescription(descriptionText, features.IamExperiment, core.Resource),
 		"id":          "Terraform's internal resource identifier. It is structured as \"`resource_id`,`role`,`subject`\".",
-		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", r.apiName),
+		"resource_id": fmt.Sprintf("%s Resource to assign the role to.", resourceTitle),
 		"role":        "Role to be assigned. Available roles can be queried using stackit-cli: `stackit curl https://authorization.api.stackit.cloud/v2/permissions`",
-		"subject":     "Identifier of user, service account or client. Usually email address or name in case of clients",
+		"subject":     "Identifier of user, service account or client. Usually email address or name in case of clients. All letters must be lowercased.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -133,6 +149,9 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"subject": schema.StringAttribute{
 				Description: descriptions["subject"],
 				Required:    true,
+				Validators: []validator.String{
+					validate.IsLowercased(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},

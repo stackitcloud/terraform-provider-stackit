@@ -30,9 +30,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -209,7 +208,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	// Create new project
-	createResp, err := r.client.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -217,14 +216,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.ContainerId == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", "Got empty container id")
-		return
-	}
-	respContainerId := *createResp.ContainerId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"container_id": respContainerId,
+		"container_id": createResp.ContainerId,
 	})
 	if resp.Diagnostics.HasError() {
 		return
@@ -232,7 +226,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If the request has not been processed yet and the containerId doesn't exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
-	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, respContainerId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client.DefaultAPI, createResp.ContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -272,7 +266,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
+	projectResp, err := r.client.DefaultAPI.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusForbidden {
@@ -322,7 +316,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	// Update existing project
-	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -331,7 +325,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = core.LogResponse(ctx)
 
 	// Fetch updated project
-	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
+	projectResp, err := r.client.DefaultAPI.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
@@ -367,7 +361,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing project
-	err := r.client.DeleteProject(ctx, containerId).Execute()
+	err := r.client.DefaultAPI.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -375,7 +369,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).WaitWithContext(ctx)
+	_, err = wait.DeleteProjectWaitHandler(ctx, r.client.DefaultAPI, containerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -414,8 +408,8 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	var projectId string
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
-	} else if projectResp.ProjectId != nil {
-		projectId = *projectResp.ProjectId
+	} else if projectResp.ProjectId != "" {
+		projectId = projectResp.ProjectId
 	} else {
 		return fmt.Errorf("project id not present")
 	}
@@ -423,8 +417,8 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	var containerId string
 	if model.ContainerId.ValueString() != "" {
 		containerId = model.ContainerId.ValueString()
-	} else if projectResp.ContainerId != nil {
-		containerId = *projectResp.ContainerId
+	} else if projectResp.ContainerId != "" {
+		containerId = projectResp.ContainerId
 	} else {
 		return fmt.Errorf("container id not present")
 	}
@@ -439,24 +433,20 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 		labels = types.MapNull(types.StringType)
 	}
 
-	var containerParentIdTF basetypes.StringValue
-	if projectResp.Parent != nil {
-		if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
-			// the provided containerParentId is the UUID identifier
-			containerParentIdTF = types.StringPointerValue(projectResp.Parent.Id)
-		} else {
-			// the provided containerParentId is the user-friendly container id
-			containerParentIdTF = types.StringPointerValue(projectResp.Parent.ContainerId)
-		}
+	var containerParentIdTF types.String
+	if _, err := uuid.Parse(model.ContainerParentId.ValueString()); err == nil {
+		// the provided containerParentId is the UUID identifier
+		containerParentIdTF = types.StringValue(projectResp.Parent.Id)
 	} else {
-		containerParentIdTF = types.StringNull()
+		// the provided containerParentId is the user-friendly container id
+		containerParentIdTF = types.StringValue(projectResp.Parent.ContainerId)
 	}
 
 	model.Id = types.StringValue(containerId)
 	model.ProjectId = types.StringValue(projectId)
 	model.ContainerParentId = containerParentIdTF
 	model.ContainerId = types.StringValue(containerId)
-	model.Name = types.StringPointerValue(projectResp.Name)
+	model.Name = types.StringValue(projectResp.Name)
 	model.Labels = labels
 	model.CreationTime = types.StringValue(projectResp.CreationTime.Format(time.RFC3339))
 	model.UpdateTime = types.StringValue(projectResp.UpdateTime.Format(time.RFC3339))
@@ -479,7 +469,7 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 	return nil
 }
 
-func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
+func toMembersPayload(model *ResourceModel) ([]resourcemanager.Member, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -487,10 +477,10 @@ func toMembersPayload(model *ResourceModel) (*[]resourcemanager.Member, error) {
 		return nil, fmt.Errorf("owner_email is null")
 	}
 
-	return &[]resourcemanager.Member{
+	return []resourcemanager.Member{
 		{
-			Subject: model.OwnerEmail.ValueStringPointer(),
-			Role:    sdkUtils.Ptr(projectOwnerRole),
+			Subject: model.OwnerEmail.ValueString(),
+			Role:    projectOwnerRole,
 		},
 	}, nil
 }
@@ -512,10 +502,10 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayloa
 	}
 
 	return &resourcemanager.CreateProjectPayload{
-		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
+		ContainerParentId: model.ContainerParentId.ValueString(),
 		Labels:            labels,
 		Members:           members,
-		Name:              conversion.StringValueToPointer(model.Name),
+		Name:              model.Name.ValueString(),
 	}, nil
 }
 

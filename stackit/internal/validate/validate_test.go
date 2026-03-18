@@ -966,3 +966,45 @@ func TestValidNoTrailingNewline(t *testing.T) {
 		})
 	}
 }
+
+func TestIsLowercased(t *testing.T) {
+	tests := []struct {
+		description string
+		input       string
+		wantErr     bool
+	}{
+		{
+			description: "empty",
+			input:       "",
+		},
+		{
+			description: "simple lowercase",
+			input:       "lowercase",
+		},
+		{
+			description: "lowercase with numbers and symbols",
+			input:       "lowercase123!@#",
+		},
+		{
+			description: "uppercase letters",
+			input:       "UpperCase",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			r := validator.StringResponse{}
+			IsLowercased().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
+
+			if tt.wantErr && !r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to fail for input: %q", tt.input)
+			}
+			if !tt.wantErr && r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
+			}
+		})
+	}
+}
