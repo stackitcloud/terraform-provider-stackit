@@ -265,6 +265,11 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
+	if containerId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	projectResp, err := r.client.GetProject(ctx, containerId).Execute()

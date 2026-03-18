@@ -443,6 +443,11 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	if networkAreaId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 

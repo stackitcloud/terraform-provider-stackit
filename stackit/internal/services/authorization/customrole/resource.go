@@ -212,7 +212,14 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	ctx = r.annotateLogger(ctx, &model)
 
-	roleResp, err := r.client.GetRoleExecute(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString())
+	roleId := model.RoleId.ValueString()
+	if roleId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	roleResp, err := r.client.GetRoleExecute(ctx, r.resourceType, model.ResourceId.ValueString(), roleId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 
