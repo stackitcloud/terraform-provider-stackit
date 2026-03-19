@@ -75,10 +75,10 @@ func TestAccServiceAccountFederatedIdentityProviderWithAssertions(t *testing.T) 
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "issuer", "https://example.com"),
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.#", "2"),
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.item", "iss"),
-					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.operator", "EQUALS"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.operator", "equals"),
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.value", "https://example.com"),
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.item", "sub"),
-					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.operator", "EQUALS"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.operator", "equals"),
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.value", "user@example.com"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "id"),
 				),
@@ -123,12 +123,12 @@ func testAccFederatedIdentityProviderConfigWithAssertions() string {
 			assertions = [
 				{
 					item     = "iss"
-					operator = "EQUALS"
+					operator = "equals"
 					value    = "https://example.com"
 				},
 				{
 					item     = "sub"
-					operator = "EQUALS"
+					operator = "equals"
 					value    = "user@example.com"
 				}
 			]

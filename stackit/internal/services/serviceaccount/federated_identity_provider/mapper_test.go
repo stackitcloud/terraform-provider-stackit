@@ -52,13 +52,13 @@ func TestMapFields(t *testing.T) {
 				Name:   "provider-name",
 				Issuer: "https://issuer.example.com",
 				Assertions: []serviceaccount.FederatedIdentityProviderAssertionsInner{
-					{Item: "iss", Operator: "EQUALS", Value: "https://issuer.example.com"},
-					{Item: "sub", Operator: "EQUALS", Value: "user@example.com"},
+					{Item: "iss", Operator: "equals", Value: "https://issuer.example.com"},
+					{Item: "sub", Operator: "equals", Value: "user@example.com"},
 				},
 			},
 			expectedAssertions: []AssertionModel{
-				{Item: types.StringValue("iss"), Operator: types.StringValue("EQUALS"), Value: types.StringValue("https://issuer.example.com")},
-				{Item: types.StringValue("sub"), Operator: types.StringValue("EQUALS"), Value: types.StringValue("user@example.com")},
+				{Item: types.StringValue("iss"), Operator: types.StringValue("equals"), Value: types.StringValue("https://issuer.example.com")},
+				{Item: types.StringValue("sub"), Operator: types.StringValue("equals"), Value: types.StringValue("user@example.com")},
 			},
 		},
 		{
@@ -149,8 +149,8 @@ func TestToCreatePayload(t *testing.T) {
 	ctx := context.Background()
 
 	validAssertions := []AssertionModel{
-		{Item: types.StringValue("iss"), Operator: types.StringValue("EQUALS"), Value: types.StringValue("https://issuer.example.com")},
-		{Item: types.StringValue("sub"), Operator: types.StringValue("EQUALS"), Value: types.StringValue("user@example.com")},
+		{Item: types.StringValue("iss"), Operator: types.StringValue("equals"), Value: types.StringValue("https://issuer.example.com")},
+		{Item: types.StringValue("sub"), Operator: types.StringValue("equals"), Value: types.StringValue("user@example.com")},
 	}
 
 	tests := []struct {
@@ -222,7 +222,7 @@ func TestToCreatePayload(t *testing.T) {
 				if payload.Assertions[0].Item == nil || *payload.Assertions[0].Item != "iss" {
 					t.Fatalf("assertions[0].item mismatch")
 				}
-				if payload.Assertions[0].Operator == nil || *payload.Assertions[0].Operator != "EQUALS" {
+				if payload.Assertions[0].Operator == nil || *payload.Assertions[0].Operator != "equals" {
 					t.Fatalf("assertions[0].operator mismatch")
 				}
 				if payload.Assertions[0].Value == nil || *payload.Assertions[0].Value != "https://issuer.example.com" {
@@ -231,7 +231,7 @@ func TestToCreatePayload(t *testing.T) {
 				if payload.Assertions[1].Item == nil || *payload.Assertions[1].Item != "sub" {
 					t.Fatalf("assertions[1].item mismatch")
 				}
-				if payload.Assertions[1].Operator == nil || *payload.Assertions[1].Operator != "EQUALS" {
+				if payload.Assertions[1].Operator == nil || *payload.Assertions[1].Operator != "equals" {
 					t.Fatalf("assertions[1].operator mismatch")
 				}
 				if payload.Assertions[1].Value == nil || *payload.Assertions[1].Value != "user@example.com" {
