@@ -34,6 +34,7 @@ type DataSourceModel struct {
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
+	Agent             types.Object `tfsdk:"agent"`
 	AvailabilityZone  types.String `tfsdk:"availability_zone"`
 	BootVolume        types.Object `tfsdk:"boot_volume"`
 	ImageId           types.String `tfsdk:"image_id"`
@@ -50,6 +51,10 @@ type DataSourceModel struct {
 var bootVolumeDataTypes = map[string]attr.Type{
 	"id":                    basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
+}
+
+var agentDataTypes = map[string]attr.Type{
+	"provisioned": basetypes.BoolType{},
 }
 
 // NewServerDataSource is a helper function to simplify the provider implementation.
@@ -122,6 +127,16 @@ func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"machine_type": schema.StringAttribute{
 				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)",
 				Computed:            true,
+			},
+			"agent": schema.SingleNestedAttribute{
+				Description: "STACKIT Server Agent as setup on the server",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"provisioned": schema.BoolAttribute{
+						Description: "Whether a STACKIT Server Agent is provisioned at the server",
+						Computed:    true,
+					},
+				},
 			},
 			"availability_zone": schema.StringAttribute{
 				Description: "The availability zone of the server.",
@@ -302,6 +317,18 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		model.BootVolume = bootVolume
 	} else {
 		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)
+	}
+
+	if serverResp.Agent != nil {
+		agent, diags := types.ObjectValue(agentDataTypes, map[string]attr.Value{
+			"provisioned": types.BoolPointerValue(serverResp.Agent.Provisioned),
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+		}
+		model.Agent = agent
+	} else {
+		model.Agent = types.ObjectNull(agentDataTypes)
 	}
 
 	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
