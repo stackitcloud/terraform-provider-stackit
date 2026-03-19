@@ -301,6 +301,11 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
+	if resourcePoolId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)

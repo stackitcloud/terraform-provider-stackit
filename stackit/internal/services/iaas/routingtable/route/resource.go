@@ -301,6 +301,11 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	routingTableId := model.RoutingTableId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
 	routeId := model.RouteId.ValueString()
+	if routeId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)

@@ -3,6 +3,7 @@ package dns
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -267,6 +269,11 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	projectId := model.ProjectId.ValueString()
 	zoneId := model.ZoneId.ValueString()
 	recordSetId := model.RecordSetId.ValueString()
+	if recordSetId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
@@ -374,7 +381,12 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	// Delete existing record set
 	_, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)

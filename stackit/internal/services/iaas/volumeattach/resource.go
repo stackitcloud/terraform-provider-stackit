@@ -301,6 +301,10 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Remove volume from server
 	err := r.client.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

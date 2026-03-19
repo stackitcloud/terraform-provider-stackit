@@ -299,6 +299,11 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	if backupScheduleId == 0 {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)

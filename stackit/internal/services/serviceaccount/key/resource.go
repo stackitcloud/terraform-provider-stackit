@@ -222,6 +222,11 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	keyId := model.KeyId.ValueString()
+	if keyId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	_, err := r.client.GetServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
@@ -280,6 +285,10 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 	// Call API to delete the existing service account key.
 	err := r.client.DeleteServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

@@ -258,6 +258,11 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
+	if securityGroupId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 

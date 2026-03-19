@@ -296,6 +296,11 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceID := model.InstanceID.ValueString()
 	accessTokenID := model.AccessTokenID.ValueString()
+	if accessTokenID == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectID)
 	ctx = tflog.SetField(ctx, "region", region)

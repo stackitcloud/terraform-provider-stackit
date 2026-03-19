@@ -513,6 +513,11 @@ func (r *volumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	volumeId := model.VolumeId.ValueString()
+	if volumeId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 
