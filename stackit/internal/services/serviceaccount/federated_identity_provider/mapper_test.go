@@ -101,7 +101,7 @@ func TestMapFields(t *testing.T) {
 				if model.Name.ValueString() != "provider-name" {
 					t.Fatalf("name mismatch: got %q", model.Name.ValueString())
 				}
-				if model.Id.ValueString() != "pid,service-account@sa.stackit.cloud,provider-name" {
+				if model.Id.ValueString() != "pid,service-account@sa.stackit.cloud,fed-uuid-123" {
 					t.Fatalf("id mismatch: got %q", model.Id.ValueString())
 				}
 				if model.FederationId.ValueString() != "fed-uuid-123" {

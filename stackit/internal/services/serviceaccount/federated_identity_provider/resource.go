@@ -44,7 +44,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Metadata(_ context.Con
 	resp.TypeName = req.ProviderTypeName + "_service_account_federated_identity_provider"
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`federation_id`\".",
 		"main":                  "Service account federated identity provider schema.",
@@ -340,17 +340,24 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 	if apiResp == nil {
 		return fmt.Errorf("apiResp is nil")
 	}
-	model.Id = utils.BuildInternalTerraformId(projectId, serviceAccountEmail, *apiResp.Id)
+
+	federationId := ""
+	if apiResp.Id != nil {
+		federationId = *apiResp.Id
+	}
+	model.Id = utils.BuildInternalTerraformId(projectId, serviceAccountEmail, federationId)
 	model.ProjectId = types.StringValue(projectId)
 	model.ServiceAccountEmail = types.StringValue(serviceAccountEmail)
-	if apiResp.Id != nil {
-		model.FederationId = types.StringValue(*apiResp.Id)
+	if federationId != "" {
+		model.FederationId = types.StringValue(federationId)
 	} else {
 		model.FederationId = types.StringNull()
 	}
 
 	if apiResp.Name != "" {
 		model.Name = types.StringValue(apiResp.Name)
+	} else {
+		model.Name = types.StringNull()
 	}
 
 	if apiResp.Issuer != "" {
