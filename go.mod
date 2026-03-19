@@ -36,7 +36,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6
-	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.7.0
@@ -46,8 +46,8 @@ require (
 )
 
 require (
+	github.com/go-git/go-git/v5 v5.16.5 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260109210033-bd525da824e2 // indirect
 )
 
