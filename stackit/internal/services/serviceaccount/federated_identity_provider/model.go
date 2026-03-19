@@ -11,8 +11,6 @@ type Model struct {
 	Name                types.String `tfsdk:"name"`
 	Issuer              types.String `tfsdk:"issuer"`
 	Assertions          types.List   `tfsdk:"assertions"`
-	CreatedAt           types.String `tfsdk:"created_at"`
-	UpdatedAt           types.String `tfsdk:"updated_at"`
 }
 
 // AssertionModel describes an assertion in the assertions list.

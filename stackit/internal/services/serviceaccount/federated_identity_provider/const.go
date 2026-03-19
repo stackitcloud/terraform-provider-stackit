@@ -19,17 +19,17 @@ resource "stackit_service_account_federated_identity_provider" "provider" {
   assertions = [
     {
       item     = "aud" # Including the audience check is mandatory for security reasons, the value is free to choose
-      operator = "EQUALS"
+      operator = "equals"
       value    = "sts.accounts.stackit.cloud"
     },
     {
       item     = "iss"
-      operator = "EQUALS"
+      operator = "equals"
       value    = "https://auth.example.com"
     },
     {
       item     = "email"
-      operator = "EQUALS"
+      operator = "equals"
       value    = "terraform@example.com"
     }
   ]

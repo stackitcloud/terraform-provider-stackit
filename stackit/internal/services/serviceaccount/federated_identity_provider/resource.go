@@ -3,7 +3,6 @@ package federated_identity_provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -51,8 +50,6 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Schema(ctx context.Con
 		"project_id":            "The STACKIT project ID associated with the service account.",
 		"federation_id":         "The unique identifier for the federated identity provider associated with the service account.",
 		"service_account_email": "The email address associated with the service account, used for account identification and communication.",
-		"created_at":            "The timestamp when the federated identity provider was created.",
-		"updated_at":            "The timestamp when the federated identity provider was last updated.",
 		"name":                  "The name of the federated identity provider.",
 		"issuer":                "The issuer URL.",
 		"assertions":            "The assertions for the federated identity provider.",
@@ -66,6 +63,9 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Schema(ctx context.Con
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: descriptions["id"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 				},
@@ -90,13 +90,13 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Schema(ctx context.Con
 			"federation_id": schema.StringAttribute{
 				Description: descriptions["federation_id"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: descriptions["name"],
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"issuer": schema.StringAttribute{
 				Required:    true,
@@ -125,17 +125,10 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Schema(ctx context.Con
 				Required: true,
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
+					listvalidator.SizeAtMost(50), // This is the current page limit for assertions.
 					requireAssertions(),
 				},
 				Description: descriptions["assertions"],
-			},
-			"created_at": schema.StringAttribute{
-				Computed:    true,
-				Description: descriptions["created_at"],
-			},
-			"updated_at": schema.StringAttribute{
-				Computed:    true,
-				Description: descriptions["updated_at"],
 			},
 		},
 	}
@@ -234,7 +227,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 
 	var found *serviceaccount.FederatedIdentityProvider
 	for i, provider := range apiResp.Resources {
-		if *provider.Id != "" && *provider.Id == federationId {
+		if provider.Id != nil && *provider.Id == federationId {
 			found = &(apiResp.Resources)[i]
 			break
 		}
@@ -277,35 +270,14 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	federationId := model.FederationId.ValueString()
 
-	payload := serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload{}
-
-	if !model.Issuer.IsNull() {
-		payload.Issuer = model.Issuer.ValueString()
-	}
-	if !model.Name.IsNull() {
-		payload.Name = model.Name.ValueString()
-	}
-	if !model.Assertions.IsNull() {
-		var assertions []AssertionModel
-		diags := model.Assertions.ElementsAs(ctx, &assertions, false)
-		if diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-
-		assertionsPayload := make([]serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayloadAssertionsInner, len(assertions))
-		for i, assertion := range assertions {
-			assertionsPayload[i] = serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayloadAssertionsInner{
-				Item:     conversion.StringValueToPointer(assertion.Item),
-				Operator: conversion.StringValueToPointer(assertion.Operator),
-				Value:    conversion.StringValueToPointer(assertion.Value),
-			}
-		}
-		payload.Assertions = assertionsPayload
+	payload, err := toUpdatePayload(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update", fmt.Sprintf("failed to build update payload: %v", err))
+		return
 	}
 
 	apiResp, err := r.client.DefaultAPI.PartialUpdateServiceAccountFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
-		PartialUpdateServiceAccountFederatedIdentityProviderPayload(payload).
+		PartialUpdateServiceAccountFederatedIdentityProviderPayload(*payload).
 		Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
@@ -366,7 +338,11 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 	model.Id = utils.BuildInternalTerraformId(projectId, serviceAccountEmail, *apiResp.Id)
 	model.ProjectId = types.StringValue(projectId)
 	model.ServiceAccountEmail = types.StringValue(serviceAccountEmail)
-	model.FederationId = types.StringValue(*apiResp.Id)
+	if apiResp.Id != nil {
+		model.FederationId = types.StringValue(*apiResp.Id)
+	} else {
+		model.FederationId = types.StringNull()
+	}
 
 	if apiResp.Name != "" {
 		model.Name = types.StringValue(apiResp.Name)
@@ -376,18 +352,6 @@ func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityPro
 		model.Issuer = types.StringValue(apiResp.Issuer)
 	} else {
 		model.Issuer = types.StringNull()
-	}
-
-	if !apiResp.CreatedAt.IsZero() {
-		model.CreatedAt = types.StringValue(apiResp.CreatedAt.Format(time.RFC3339))
-	} else {
-		model.CreatedAt = types.StringNull()
-	}
-
-	if !apiResp.UpdatedAt.IsZero() {
-		model.UpdatedAt = types.StringValue(apiResp.UpdatedAt.Format(time.RFC3339))
-	} else {
-		model.UpdatedAt = types.StringNull()
 	}
 
 	// Map assertions
@@ -438,6 +402,36 @@ func toCreatePayload(ctx context.Context, model *Model) (*serviceaccount.CreateF
 		assertionsPayload := make([]serviceaccount.CreateFederatedIdentityProviderPayloadAssertionsInner, len(assertions))
 		for i, assertion := range assertions {
 			assertionsPayload[i] = serviceaccount.CreateFederatedIdentityProviderPayloadAssertionsInner{
+				Item:     conversion.StringValueToPointer(assertion.Item),
+				Operator: conversion.StringValueToPointer(assertion.Operator),
+				Value:    conversion.StringValueToPointer(assertion.Value),
+			}
+		}
+		payload.Assertions = assertionsPayload
+	}
+
+	return payload, nil
+}
+
+func toUpdatePayload(ctx context.Context, model *Model) (*serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload, error) {
+	payload := &serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload{}
+
+	if !model.Issuer.IsNull() {
+		payload.Issuer = model.Issuer.ValueString()
+	}
+	if !model.Name.IsNull() {
+		payload.Name = model.Name.ValueString()
+	}
+	if !model.Assertions.IsNull() {
+		var assertions []AssertionModel
+		diags := model.Assertions.ElementsAs(ctx, &assertions, false)
+		if diags.HasError() {
+			return nil, fmt.Errorf("failed to extract assertions from model")
+		}
+
+		assertionsPayload := make([]serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayloadAssertionsInner, len(assertions))
+		for i, assertion := range assertions {
+			assertionsPayload[i] = serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayloadAssertionsInner{
 				Item:     conversion.StringValueToPointer(assertion.Item),
 				Operator: conversion.StringValueToPointer(assertion.Operator),
 				Value:    conversion.StringValueToPointer(assertion.Value),

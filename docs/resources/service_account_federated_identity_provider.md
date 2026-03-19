@@ -20,13 +20,18 @@ description: |-
   
     assertions = [
       {
+        item     = "aud" # Including the audience check is mandatory for security reasons, the value is free to choose
+        operator = "equals"
+        value    = "sts.accounts.stackit.cloud"
+      },
+      {
         item     = "iss"
-        operator = "EQUALS"
+        operator = "equals"
         value    = "https://auth.example.com"
       },
       {
         item     = "email"
-        operator = "EQUALS"
+        operator = "equals"
         value    = "terraform@example.com"
       }
     ]
@@ -54,13 +59,18 @@ resource "stackit_service_account_federated_identity_provider" "provider" {
 
   assertions = [
     {
+      item     = "aud" # Including the audience check is mandatory for security reasons, the value is free to choose
+      operator = "equals"
+      value    = "sts.accounts.stackit.cloud"
+    },
+    {
       item     = "iss"
-      operator = "EQUALS"
+      operator = "equals"
       value    = "https://auth.example.com"
     },
     {
       item     = "email"
-      operator = "EQUALS"
+      operator = "equals"
       value    = "terraform@example.com"
     }
   ]
@@ -75,25 +85,21 @@ resource "stackit_service_account_federated_identity_provider" "provider" {
 
 ### Required
 
+- `assertions` (Attributes List) The assertions for the federated identity provider. (see [below for nested schema](#nestedatt--assertions))
 - `issuer` (String) The issuer URL.
 - `name` (String) The name of the federated identity provider.
 - `project_id` (String) The STACKIT project ID associated with the service account.
 - `service_account_email` (String) The email address associated with the service account, used for account identification and communication.
 
-### Optional
-
-- `assertions` (Attributes List) The assertions for the federated identity provider. (see [below for nested schema](#nestedatt--assertions))
-
 ### Read-Only
 
-- `created_at` (String) The timestamp when the federated identity provider was created.
+- `federation_id` (String) The unique identifier for the federated identity provider associated with the service account.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`service_account_email`,`federation_id`".
-- `updated_at` (String) The timestamp when the federated identity provider was last updated.
 
 <a id="nestedatt--assertions"></a>
 ### Nested Schema for `assertions`
 
-Optional:
+Required:
 
 - `item` (String) The assertion claim.
 - `operator` (String) The assertion operator.

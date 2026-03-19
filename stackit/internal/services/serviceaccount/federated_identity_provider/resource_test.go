@@ -27,8 +27,6 @@ func TestAccServiceAccountFederatedIdentityProvider(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "issuer", "https://example.com"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "service_account_email"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "created_at"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "updated_at"),
 				),
 			},
 			// Update
@@ -40,8 +38,6 @@ func TestAccServiceAccountFederatedIdentityProvider(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "issuer", "https://example.com"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "service_account_email"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "created_at"),
-					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "updated_at"),
 				),
 			},
 			// Import
