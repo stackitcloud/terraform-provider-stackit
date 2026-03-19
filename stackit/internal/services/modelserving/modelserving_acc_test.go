@@ -37,7 +37,7 @@ func inputTokenConfig(name, description string) string {
 			ttl_duration = "%s"
 		}
 		`,
-		testutil.ModelServingProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		tokenResource["project_id"],
 		tokenResource["region"],
 		name,

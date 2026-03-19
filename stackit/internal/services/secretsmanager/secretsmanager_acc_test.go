@@ -69,7 +69,7 @@ func TestAccSecretsManagerMin(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.SecretsManagerProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMin),
 				ExpectError:     regexp.MustCompile(`input variable "instance_name" is not set,`),
 			},
@@ -218,7 +218,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.SecretsManagerProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMax),
 				ExpectError:     regexp.MustCompile(`input variable "instance_name" is not set,`),
 			},

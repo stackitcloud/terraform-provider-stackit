@@ -89,13 +89,13 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMin),
 				ExpectError:     regexp.MustCompile(`.*backup_properties.retention_period value must be at least 1*`),
 			},
 			// Creation
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
@@ -113,7 +113,7 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
@@ -155,7 +155,7 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
@@ -187,13 +187,13 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMax),
 				ExpectError:     regexp.MustCompile(`.*backup_properties.retention_period value must be at least 1*`),
 			},
 			// Creation
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data
@@ -211,7 +211,7 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
@@ -253,7 +253,7 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Backup schedule data

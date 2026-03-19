@@ -68,7 +68,7 @@ func resourceConfig(params map[string]string) string {
 
 				%s
 				`,
-		testutil.RedisProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],

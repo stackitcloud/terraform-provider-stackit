@@ -69,7 +69,9 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 			want: `provider "stackit" {
     default_region = "eu01"
     enable_beta_resources = true
-}`,
+}
+
+`,
 		},
 		{
 			name: "region",
@@ -78,7 +80,9 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 			want: `provider "stackit" {
     default_region = "eu02"
     enable_beta_resources = true
-}`,
+}
+
+`,
 		},
 		{
 			name: "custom endpoints",
@@ -90,7 +94,9 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
     enable_beta_resources = true
     cdn_custom_endpoint = "http://cdn.example.com"
     dns_custom_endpoint = "http://dns.example.com"
-}`,
+}
+
+`,
 		},
 		{
 			name: "experiments",
@@ -100,7 +106,9 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
     default_region = "eu01"
     enable_beta_resources = true
     experiments = ["iam", "network"]
-}`,
+}
+
+`,
 		},
 		{
 			name: "token",
@@ -110,7 +118,9 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
     default_region = "eu01"
     enable_beta_resources = true
     service_account_token = "expected-token"
-}`,
+}
+
+`,
 		},
 		{
 			name: "everything",
@@ -124,7 +134,9 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
     experiments = ["iam"]
     service_account_token = "expected-token"
     cdn_custom_endpoint = "http://cdn.example.com"
-}`,
+}
+
+`,
 		},
 	}
 	for _, tt := range tests {
@@ -146,7 +158,9 @@ func TestConfigBuilderProviderConfigEnvVar(t *testing.T) {
     default_region = "eu01"
     enable_beta_resources = true
     cdn_custom_endpoint = "http://expected.example.com"
-}`
+}
+
+`
 	if d := cmp.Diff(got, want); d != "" {
 		t.Errorf("ConfigBuilder.BuildProviderConfig() = diff: %s", d)
 	}

@@ -123,7 +123,7 @@ func TestAccSKEMin(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config:          testutil.SKEProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -248,7 +248,7 @@ func TestAccSKEMax(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config:          testutil.SKEProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -477,7 +477,7 @@ func TestAccProviderOption(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ConfigVariables: testConfigDatasource,
-				Config:          testutil.SKEProviderConfig() + "\n" + dataSourceProviderOptions,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + dataSourceProviderOptions,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_ske_kubernetes_versions.example", "version_state", "SUPPORTED"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_kubernetes_versions.example", "kubernetes_versions.0.version"),

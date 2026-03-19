@@ -69,7 +69,7 @@ func TestAccEdgeCloudInstanceMin(t *testing.T) {
 		Steps: []resource.TestStep{
 			// resources
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// instance
@@ -96,7 +96,7 @@ func TestAccEdgeCloudInstanceMin(t *testing.T) {
 			// data sources
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_edgecloud_instances.this", "id", fmt.Sprintf("%s,%s",
 						testutil.ProjectId,
@@ -139,7 +139,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: initialVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_edgecloud_instance.test_instance", "project_id", testutil.ProjectId),
@@ -155,7 +155,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			// Data sources
 			{
 				ConfigVariables: initialVars,
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_edgecloud_instances.this", "id", fmt.Sprintf("%s,%s",
 						testutil.ProjectId,
@@ -177,7 +177,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			},
 			// Kubeconfig
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: initialVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Kubeconfig by name
@@ -203,7 +203,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			},
 			// Token
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: initialVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Token by name
@@ -229,7 +229,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: updatedVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_edgecloud_instance.test_instance", "plan_id", testPlanIdUpdated),
@@ -268,19 +268,19 @@ func TestAccEdgeCloudInstance_validation(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Display Name Too Short
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMax(tooShortDisplayName, testPlanId, testDescription, testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`string length must be between 4 and 8, got: %d`, len(tooShortDisplayName))),
 			},
 			// Display Name Too Long
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMax(tooLongDisplayName, testPlanId, testDescription, testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`string length must be between 4 and 8, got: %d`, len(tooLongDisplayName))),
 			},
 			// Invalid Project ID
 			{
-				Config: testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config: testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: config.Variables{
 					"project_id":   config.StringVariable(invalidUUID),
 					"region":       config.StringVariable(testutil.Region),
@@ -291,13 +291,13 @@ func TestAccEdgeCloudInstance_validation(t *testing.T) {
 			},
 			// Invalid Plan ID
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMax(validDisplayName, invalidUUID, testDescription, testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`Attribute plan_id value must be an UUID, got: %s`, invalidUUID)),
 			},
 			// Description Too Long
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMax(validDisplayName, testPlanId, acctest.RandString(257), testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(`Attribute description string length must be at most 256`),
 			},
@@ -315,13 +315,13 @@ func TestAccEdgeCloudKubeconfigToken_validation(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Expiration too short
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMax(displayName, testPlanId, testDescription, tooShortExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`Attribute expiration value must be between 600 and 15552000, got: %d`, tooShortExpiration)),
 			},
 			// Expiration Too Long
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMax(displayName, testPlanId, testDescription, tooLongExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`Attribute expiration value must be between 600 and 15552000, got: %d`, tooLongExpiration)),
 			},

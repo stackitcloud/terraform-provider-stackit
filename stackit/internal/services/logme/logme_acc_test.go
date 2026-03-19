@@ -100,7 +100,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 
 			// Creation
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -125,7 +125,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 			},
 			// Data source
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -158,7 +158,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 			},
 			// Import
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				ResourceName:    "stackit_logme_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -199,7 +199,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -223,7 +223,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 			// Creation
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -275,7 +275,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 			},
 			// Data source
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -335,7 +335,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 			},
 			// Import
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				ResourceName:    "stackit_logme_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -376,7 +376,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data

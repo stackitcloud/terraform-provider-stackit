@@ -75,7 +75,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -103,7 +103,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -130,7 +130,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -214,7 +214,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -240,7 +240,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -275,7 +275,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -310,7 +310,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -403,7 +403,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data

@@ -38,7 +38,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ObjectStorageProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -109,7 +109,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								credentials_group_id = stackit_objectstorage_credential.credential_time.credentials_group_id
 								credential_id  = stackit_objectstorage_credential.credential_time.credential_id
 							}`,
-					testutil.ObjectStorageProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data

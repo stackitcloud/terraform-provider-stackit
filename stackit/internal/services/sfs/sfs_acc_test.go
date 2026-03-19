@@ -41,7 +41,7 @@ func resourceConfigExportPolicy() string {
 		]
 		}
 	`,
-		testutil.SFSProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		exportPolicyResource["project_id"],
 		exportPolicyResource["name"],
 		exportPolicyResource["ip_acl_1"],
@@ -68,7 +68,7 @@ func resourceConfigUpdateExportPolicy() string {
 		]
 		}
 	`,
-		testutil.SFSProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		exportPolicyResource["project_id"],
 		exportPolicyResource["name"],
 		exportPolicyResource["ip_acl_1"],
@@ -80,7 +80,7 @@ func resourceConfigUpdateExportPolicy() string {
 
 var (
 	testCreateResourcePool = map[string]string{
-		"providerConfig":        testutil.SFSProviderConfig(),
+		"providerConfig":        testutil.NewConfigBuilder().BuildProviderConfig(),
 		"name":                  fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":            testutil.ProjectId,
 		"availability_zone":     "eu01-m",
@@ -91,7 +91,7 @@ var (
 	}
 
 	testUpdateResourcePool = map[string]string{
-		"providerConfig":        testutil.SFSProviderConfig(),
+		"providerConfig":        testutil.NewConfigBuilder().BuildProviderConfig(),
 		"name":                  fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":            testutil.ProjectId,
 		"availability_zone":     "eu01-m",
@@ -131,7 +131,7 @@ func resourcePoolConfig(configParams map[string]string) string {
 
 var (
 	testCreateShare = map[string]string{
-		"providerConfig":             testutil.SFSProviderConfig(),
+		"providerConfig":             testutil.NewConfigBuilder().BuildProviderConfig(),
 		"resource_pool_name":         fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"name":                       fmt.Sprintf("acc-sfs-share-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":                 testutil.ProjectId,
@@ -140,7 +140,7 @@ var (
 	}
 
 	testUpdateShare = map[string]string{
-		"providerConfig":             testutil.SFSProviderConfig(),
+		"providerConfig":             testutil.NewConfigBuilder().BuildProviderConfig(),
 		"resource_pool_name":         fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"name":                       fmt.Sprintf("acc-sfs-share-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":                 testutil.ProjectId,

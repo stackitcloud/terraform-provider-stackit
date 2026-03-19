@@ -157,7 +157,7 @@ func TestAccResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ObservabilityProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -258,7 +258,7 @@ func TestAccResourceMin(t *testing.T) {
 					  name        = stackit_observability_logalertgroup.logalertgroup.name
 					}
 					`,
-					testutil.ObservabilityProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -406,7 +406,7 @@ func TestAccResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ObservabilityProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -490,7 +490,7 @@ func TestAccResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ObservabilityProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -664,7 +664,7 @@ func TestAccResourceMax(t *testing.T) {
 					  name        = stackit_observability_logalertgroup.logalertgroup.name
 					}
 					`,
-					testutil.ObservabilityProviderConfig()+resourceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -897,7 +897,7 @@ func TestAccResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ObservabilityProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),

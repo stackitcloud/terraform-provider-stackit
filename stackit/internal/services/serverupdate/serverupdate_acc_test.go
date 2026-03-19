@@ -88,14 +88,14 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsInvalid(configVarsMinUpdated()),
 				ExpectError:     regexp.MustCompile(`.*maintenance_window value must be at least 1*`),
 			},
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -111,7 +111,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -155,7 +155,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
@@ -185,14 +185,14 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMax),
 				ExpectError:     regexp.MustCompile(`.*maintenance_window value must be at least 1*`),
 			},
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -210,7 +210,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -254,7 +254,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
