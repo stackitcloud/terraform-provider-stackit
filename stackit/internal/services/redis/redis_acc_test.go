@@ -20,9 +20,9 @@ import (
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("redis"),
-	"plan_id":         "96e24604-7a43-4ff8-9ba4-609d4235a137",
+	"plan_id":         "3849f72f-99cc-4e2c-afda-700d66ef08f2",
 	"plan_name":       "stackit-redis-1.4.10-single",
-	"version":         "6",
+	"version":         "7",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
 	"sgw_acl_valid2":  "10.10.10.0/24",

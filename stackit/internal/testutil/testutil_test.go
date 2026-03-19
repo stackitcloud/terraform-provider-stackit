@@ -181,7 +181,9 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 		{
 			name:    "default",
 			builder: NewConfigBuilder(),
-			want:    sdkConf.Configuration{},
+			want: sdkConf.Configuration{
+				Region: "eu01",
+			},
 		},
 		{
 			name: "custom token endpoint",
@@ -189,6 +191,7 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 				CustomEndpoint(TokenCustomEndpoint, "http://token.example.com"),
 			want: sdkConf.Configuration{
 				TokenCustomUrl: "http://token.example.com",
+				Region:         "eu01",
 			},
 		},
 		{
@@ -196,7 +199,8 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 			builder: NewConfigBuilder().
 				ServiceAccountToken("expected-token"),
 			want: sdkConf.Configuration{
-				Token: "expected-token",
+				Token:  "expected-token",
+				Region: "eu01",
 			},
 		},
 		{
@@ -210,6 +214,7 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 						Description: "User provided URL",
 					},
 				},
+				Region: "eu01",
 			},
 		},
 	}
@@ -255,6 +260,7 @@ func TestConfigBuilderClientOptionsEnvVar(t *testing.T) {
 				Description: "User provided URL",
 			},
 		},
+		Region: "eu01",
 	}
 	if d := cmp.Diff(got, want, cmpopts.IgnoreUnexported(sdkConf.Configuration{})); d != "" {
 		t.Errorf("ConfigBuilder.BuildClientOptions() = diff: %s", d)

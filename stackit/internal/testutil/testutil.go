@@ -255,6 +255,9 @@ func (b *ConfigBuilder) BuildClientOptions(service customEndpointConfig) []sdkCo
 	if tokenEndPoint != "" {
 		opts = append(opts, sdkConf.WithTokenEndpoint(tokenEndPoint))
 	}
+	if b.region != "" {
+		opts = append(opts, sdkConf.WithRegion(b.region))
+	}
 	return opts
 }
 
