@@ -14,8 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns/wait"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
+
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -523,22 +524,22 @@ func testAccCheckDnsDestroy(s *terraform.State) error {
 		zonesToDestroy = append(zonesToDestroy, zoneId)
 	}
 
-	zonesResp, err := client.ListZones(ctx, testutil.ProjectId).ActiveEq(true).Execute()
+	zonesResp, err := client.DefaultAPI.ListZones(ctx, testutil.ProjectId).ActiveEq(true).Execute()
 	if err != nil {
 		return fmt.Errorf("getting zonesResp: %w", err)
 	}
 
-	zones := *zonesResp.Zones
+	zones := zonesResp.Zones
 	for i := range zones {
-		id := *zones[i].Id
+		id := zones[i].Id
 		if utils.Contains(zonesToDestroy, id) {
-			_, err := client.DeleteZoneExecute(ctx, testutil.ProjectId, id)
+			_, err := client.DefaultAPI.DeleteZone(ctx, testutil.ProjectId, id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying zone %s during CheckDestroy: %w", *zones[i].Id, err)
+				return fmt.Errorf("destroying zone %s during CheckDestroy: %w", zones[i].Id, err)
 			}
-			_, err = wait.DeleteZoneWaitHandler(ctx, client, testutil.ProjectId, id).WaitWithContext(ctx)
+			_, err = wait.DeleteZoneWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, id).WaitWithContext(ctx)
 			if err != nil {
-				return fmt.Errorf("destroying zone %s during CheckDestroy: waiting for deletion %w", *zones[i].Id, err)
+				return fmt.Errorf("destroying zone %s during CheckDestroy: waiting for deletion %w", zones[i].Id, err)
 			}
 		}
 	}
