@@ -23,11 +23,6 @@ resource "stackit_service_account_federated_identity_provider" "provider" {
       value    = "sts.accounts.stackit.cloud"
     },
     {
-      item     = "iss"
-      operator = "equals"
-      value    = "https://auth.example.com"
-    },
-    {
       item     = "email"
       operator = "equals"
       value    = "terraform@example.com"

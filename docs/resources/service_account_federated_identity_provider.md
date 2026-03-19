@@ -25,11 +25,6 @@ description: |-
         value    = "sts.accounts.stackit.cloud"
       },
       {
-        item     = "iss"
-        operator = "equals"
-        value    = "https://auth.example.com"
-      },
-      {
         item     = "email"
         operator = "equals"
         value    = "terraform@example.com"
@@ -62,11 +57,6 @@ resource "stackit_service_account_federated_identity_provider" "provider" {
       item     = "aud" # Including the audience check is mandatory for security reasons, the value is free to choose
       operator = "equals"
       value    = "sts.accounts.stackit.cloud"
-    },
-    {
-      item     = "iss"
-      operator = "equals"
-      value    = "https://auth.example.com"
     },
     {
       item     = "email"
