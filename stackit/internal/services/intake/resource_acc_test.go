@@ -219,9 +219,7 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	var err error
 
 	if testutil.IntakeCustomEndpoint == "" {
-		client, err = intake.NewAPIClient(
-			sdkConfig.WithRegion(testutil.Region),
-		)
+		client, err = intake.NewAPIClient()
 	} else {
 		client, err = intake.NewAPIClient(
 			sdkConfig.WithEndpoint(testutil.IntakeCustomEndpoint),

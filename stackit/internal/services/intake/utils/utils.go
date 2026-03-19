@@ -19,7 +19,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	if providerData.IntakeCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.IntakeCustomEndpoint))
 	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
+		apiClientConfigOptions = append(apiClientConfigOptions)
 	}
 	apiClient, err := intake.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
