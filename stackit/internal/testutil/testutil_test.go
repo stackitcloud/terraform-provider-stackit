@@ -151,8 +151,13 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 }
 
 func TestConfigBuilderProviderConfigEnvVar(t *testing.T) {
-	os.Setenv(CdnCustomEndpoint.envVarName, "http://expected.example.com")
-	defer os.Unsetenv(CdnCustomEndpoint.envVarName)
+	os.Setenv(CdnCustomEndpoint.envVarName, "http://expected.example.com") // nolint:errcheck // test would fail
+	defer func() {
+		err := os.Unsetenv(CdnCustomEndpoint.envVarName)
+		if err != nil {
+			t.Fatalf("unset env: %v", err)
+		}
+	}()
 	got := NewConfigBuilder().BuildProviderConfig()
 	want := `provider "stackit" {
     default_region = "eu01"
@@ -228,8 +233,13 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 }
 
 func TestConfigBuilderClientOptionsEnvVar(t *testing.T) {
-	os.Setenv(CdnCustomEndpoint.envVarName, "http://cdn.example.com")
-	defer os.Unsetenv(CdnCustomEndpoint.envVarName)
+	os.Setenv(CdnCustomEndpoint.envVarName, "http://cdn.example.com") // nolint:errcheck // test would fail
+	defer func() {
+		err := os.Unsetenv(CdnCustomEndpoint.envVarName)
+		if err != nil {
+			t.Fatalf("unset env: %v", err)
+		}
+	}()
 	opts := NewConfigBuilder().BuildClientOptions(CdnCustomEndpoint)
 	got := sdkConf.Configuration{}
 	for _, opt := range opts {
