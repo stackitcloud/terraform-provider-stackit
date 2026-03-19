@@ -2,6 +2,7 @@ package federated_identity_provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
@@ -39,11 +40,11 @@ type ServiceAccountFederatedIdentityProviderResource struct {
 	client *serviceaccount.APIClient
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_account_federated_identity_provider"
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`federation_id`\".",
 		"main":                  "Service account federated identity provider schema.",
@@ -148,7 +149,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Configure(ctx context.
 	tflog.Info(ctx, "Service Account client configured")
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -173,7 +174,8 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 		CreateFederatedIdentityProviderPayload(*payload).
 		Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Create", fmt.Sprintf("failed to create federated identity provider: %s", oapiErr.Error()))
 		} else {
@@ -190,7 +192,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -207,7 +209,8 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 	apiResp, err := r.client.DefaultAPI.ListFederatedIdentityProviders(ctx, projectId, serviceAccountEmail).
 		Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok {
 			if oapiErr.StatusCode == 404 || oapiErr.StatusCode == 403 {
 				resp.State.RemoveResource(ctx)
@@ -246,7 +249,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Read the plan to get the desired configuration
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -280,7 +283,8 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 		PartialUpdateServiceAccountFederatedIdentityProviderPayload(*payload).
 		Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update", fmt.Sprintf("failed to update federated identity provider: %s", oapiErr.Error()))
 		} else {
@@ -297,7 +301,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *ServiceAccountFederatedIdentityProviderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -314,7 +318,8 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 	err := r.client.DefaultAPI.DeleteServiceFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
 		if ok {
 			if oapiErr.StatusCode == 404 || oapiErr.StatusCode == 403 {
 				return

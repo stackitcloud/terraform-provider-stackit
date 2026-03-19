@@ -19,10 +19,10 @@ func assertionsObjectType() types.ObjectType {
 	}
 }
 
-func assertionsListFromModels(t *testing.T, ctx context.Context, assertions []AssertionModel) types.List {
+func assertionsListFromModels(t *testing.T, assertions []AssertionModel) types.List {
 	t.Helper()
 
-	listValue, diags := types.ListValueFrom(ctx, assertionsObjectType(), assertions)
+	listValue, diags := types.ListValueFrom(t.Context(), assertionsObjectType(), assertions)
 	if diags.HasError() {
 		t.Fatalf("failed to build assertions list: %v", diags.Errors())
 	}
@@ -146,8 +146,6 @@ func TestMapFields(t *testing.T) {
 }
 
 func TestToCreatePayload(t *testing.T) {
-	ctx := context.Background()
-
 	validAssertions := []AssertionModel{
 		{Item: types.StringValue("iss"), Operator: types.StringValue("equals"), Value: types.StringValue("https://issuer.example.com")},
 		{Item: types.StringValue("sub"), Operator: types.StringValue("equals"), Value: types.StringValue("user@example.com")},
@@ -163,7 +161,7 @@ func TestToCreatePayload(t *testing.T) {
 			model: &Model{
 				Name:       types.StringValue("provider-name"),
 				Issuer:     types.StringValue("https://issuer.example.com"),
-				Assertions: assertionsListFromModels(t, ctx, validAssertions),
+				Assertions: assertionsListFromModels(t, validAssertions),
 			},
 		},
 		{
@@ -193,7 +191,7 @@ func TestToCreatePayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toCreatePayload(ctx, tt.model)
+			payload, err := toCreatePayload(t.Context(), tt.model)
 			if tt.expectError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")
@@ -247,8 +245,6 @@ func TestToCreatePayload(t *testing.T) {
 }
 
 func TestToUpdatePayload(t *testing.T) {
-	ctx := context.Background()
-
 	validAssertions := []AssertionModel{
 		{Item: types.StringValue("aud"), Operator: types.StringValue("equals"), Value: types.StringValue("https://example.com")},
 		{Item: types.StringValue("sub"), Operator: types.StringValue("equals"), Value: types.StringValue("user@example.com")},
@@ -264,7 +260,7 @@ func TestToUpdatePayload(t *testing.T) {
 			model: &Model{
 				Name:       types.StringValue("provider-name"),
 				Issuer:     types.StringValue("https://issuer.example.com"),
-				Assertions: assertionsListFromModels(t, ctx, validAssertions),
+				Assertions: assertionsListFromModels(t, validAssertions),
 			},
 		},
 		{
@@ -286,7 +282,7 @@ func TestToUpdatePayload(t *testing.T) {
 			model: &Model{
 				Name:       types.StringNull(),
 				Issuer:     types.StringNull(),
-				Assertions: assertionsListFromModels(t, ctx, validAssertions[:1]),
+				Assertions: assertionsListFromModels(t, validAssertions[:1]),
 			},
 		},
 		{
@@ -302,7 +298,7 @@ func TestToUpdatePayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toUpdatePayload(ctx, tt.model)
+			payload, err := toUpdatePayload(t.Context(), tt.model)
 			if tt.expectError {
 				if err == nil {
 					t.Fatalf("expected error but got nil")

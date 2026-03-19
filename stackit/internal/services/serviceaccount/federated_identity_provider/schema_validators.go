@@ -10,15 +10,15 @@ import (
 // assertionsValidator implements the validator.List interface.
 type assertionsValidator struct{}
 
-func (v assertionsValidator) Description(ctx context.Context) string {
+func (v assertionsValidator) Description(_ context.Context) string {
 	return "Ensure assertions are correct."
 }
 
-func (v assertionsValidator) MarkdownDescription(ctx context.Context) string {
+func (v assertionsValidator) MarkdownDescription(_ context.Context) string {
 	return "Ensure assertions are correct."
 }
 
-func (v assertionsValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+func (v assertionsValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) { //nolint:gocritic // function signature required by Terraform
 	// Skip validation when the value is null or unknown, for example during plan with computed values.
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
