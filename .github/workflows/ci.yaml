@@ -72,7 +72,7 @@ jobs:
       pull-requests: write # write permission needed to comment on PR
     steps:
       - name: Check new code coverage
-        uses: fgrosse/go-coverage-report@v1.2.0
+        uses: fgrosse/go-coverage-report@v1.3.0
         continue-on-error: true  # Add this line to prevent pipeline failures in forks
         with:
           coverage-artifact-name: ${{ env.CODE_COVERAGE_ARTIFACT_NAME }}
