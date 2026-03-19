@@ -42,6 +42,14 @@ type Model struct {
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
 	ACLs       types.Set    `tfsdk:"acls"`
+	KmsKey     *KmsKeyModel `tfsdk:"kms_key"`
+}
+
+type KmsKeyModel struct {
+	KeyId               types.String `tfsdk:"key_id"`
+	KeyRingId           types.String `tfsdk:"key_ring_id"`
+	KeyVersion          types.Int64  `tfsdk:"key_version"`
+	ServiceAccountEmail types.String `tfsdk:"service_account_email"`
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -77,12 +85,17 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
-		"instance_id": "ID of the Secrets Manager instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acls":        "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
+		"main":                          "Secrets Manager instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":                            "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"instance_id":                   "ID of the Secrets Manager instance.",
+		"project_id":                    "STACKIT project ID to which the instance is associated.",
+		"name":                          "Instance name.",
+		"acls":                          "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
+		"kms_key":                       "The STACKIT-KMS key for secret encryption and decryption.",
+		"kms_key.key_id":                "UUID of the key within the STACKIT-KMS to use for the encryption.",
+		"kms_key.key_ring_id":           "UUID of the keyring where the key is located within the STACKTI-KMS.",
+		"kms_key.key_version":           "Version of the key within the STACKIT-KMS to use for the encryption.",
+		"kms_key.service_account_email": "Service-Account linked to the Key within the STACKIT-KMS.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -118,11 +131,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: descriptions["name"],
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Description:   descriptions["name"],
+				Required:      true,
+				PlanModifiers: []planmodifier.String{},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
@@ -135,6 +146,28 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					setvalidator.ValueStringsAre(
 						validate.CIDR(),
 					),
+				},
+			},
+			"kms_key": schema.SingleNestedAttribute{
+				Description: descriptions["kms_key"],
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"key_id": schema.StringAttribute{
+						Description: descriptions["kms_key.key_id"],
+						Required:    true,
+					},
+					"key_ring_id": schema.StringAttribute{
+						Description: descriptions["kms_key.key_ring_id"],
+						Required:    true,
+					},
+					"key_version": schema.Int64Attribute{
+						Description: descriptions["kms_key.key_version"],
+						Required:    true,
+					},
+					"service_account_email": schema.StringAttribute{
+						Description: descriptions["kms_key.service_account_email"],
+						Required:    true,
+					},
 				},
 			},
 		},
@@ -284,6 +317,21 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
+	// Generate API request body from model
+	payload, err := toUpdatePayload(&model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	// Update instance
+	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
 	var acls []string
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
 		diags = model.ACLs.ElementsAs(ctx, &acls, false)
@@ -294,7 +342,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Update ACLs
-	err := updateACLs(ctx, projectId, instanceId, acls, r.client)
+	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
 		return
@@ -302,7 +350,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance acl", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -398,6 +446,15 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 
+	if instance.KmsKey != nil {
+		model.KmsKey = &KmsKeyModel{
+			KeyId:               types.StringPointerValue(instance.KmsKey.KeyId),
+			KeyRingId:           types.StringPointerValue(instance.KmsKey.KeyRingId),
+			KeyVersion:          types.Int64PointerValue(instance.KmsKey.KeyVersion),
+			ServiceAccountEmail: types.StringPointerValue(instance.KmsKey.ServiceAccountEmail),
+		}
+	}
+
 	err := mapACLs(aclList, model)
 	if err != nil {
 		return err
@@ -431,9 +488,41 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	return &secretsmanager.CreateInstancePayload{
+	payload := &secretsmanager.CreateInstancePayload{
 		Name: conversion.StringValueToPointer(model.Name),
-	}, nil
+	}
+
+	if model.KmsKey != nil {
+		payload.KmsKey = &secretsmanager.KmsKeyPayload{
+			KeyId:               conversion.StringValueToPointer(model.KmsKey.KeyId),
+			KeyRingId:           conversion.StringValueToPointer(model.KmsKey.KeyRingId),
+			KeyVersion:          conversion.Int64ValueToPointer(model.KmsKey.KeyVersion),
+			ServiceAccountEmail: conversion.StringValueToPointer(model.KmsKey.ServiceAccountEmail),
+		}
+	}
+
+	return payload, nil
+}
+
+func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	payload := &secretsmanager.UpdateInstancePayload{
+		Name: conversion.StringValueToPointer(model.Name),
+	}
+
+	if model.KmsKey != nil {
+		payload.KmsKey = &secretsmanager.KmsKeyPayload{
+			KeyId:               conversion.StringValueToPointer(model.KmsKey.KeyId),
+			KeyRingId:           conversion.StringValueToPointer(model.KmsKey.KeyRingId),
+			KeyVersion:          conversion.Int64ValueToPointer(model.KmsKey.KeyVersion),
+			ServiceAccountEmail: conversion.StringValueToPointer(model.KmsKey.ServiceAccountEmail),
+		}
+	}
+
+	return payload, nil
 }
 
 // updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model

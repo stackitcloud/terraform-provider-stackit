@@ -142,6 +142,28 @@ func TestToCreatePayload(t *testing.T) {
 			true,
 		},
 		{
+			"with_kms_key",
+			&Model{
+				Name: types.StringValue("name"),
+				KmsKey: &KmsKeyModel{
+					KeyId:               types.StringValue("kid"),
+					KeyRingId:           types.StringValue("key-ring-id"),
+					KeyVersion:          types.Int64Value(1),
+					ServiceAccountEmail: types.StringValue("service-account-email"),
+				},
+			},
+			&secretsmanager.CreateInstancePayload{
+				Name: utils.Ptr("name"),
+				KmsKey: &secretsmanager.KmsKeyPayload{
+					KeyId:               utils.Ptr("kid"),
+					KeyRingId:           utils.Ptr("key-ring-id"),
+					KeyVersion:          utils.Ptr(int64(1)),
+					ServiceAccountEmail: utils.Ptr("service-account-email"),
+				},
+			},
+			true,
+		},
+		{
 			"null_fields_and_int_conversions",
 			&Model{
 				Name: types.StringValue(""),
@@ -480,6 +502,87 @@ func TestUpdateACLs(t *testing.T) {
 				diff := cmp.Diff(aclsStates, tt.expectedACLsStates)
 				if diff != "" {
 					t.Fatalf("ACL states do not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestToUpdatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    *secretsmanager.UpdateInstancePayload
+		isValid     bool
+	}{
+		{
+			"default_values",
+			&Model{},
+			&secretsmanager.UpdateInstancePayload{},
+			true,
+		},
+		{
+			"simple_values",
+			&Model{
+				Name: types.StringValue("name"),
+			},
+			&secretsmanager.UpdateInstancePayload{
+				Name: utils.Ptr("name"),
+			},
+			true,
+		},
+		{
+			"with_kms_key",
+			&Model{
+				Name: types.StringValue("name"),
+				KmsKey: &KmsKeyModel{
+					KeyId:               types.StringValue("kid"),
+					KeyRingId:           types.StringValue("key-ring-id"),
+					KeyVersion:          types.Int64Value(1),
+					ServiceAccountEmail: types.StringValue("service-account-email"),
+				},
+			},
+			&secretsmanager.UpdateInstancePayload{
+				Name: utils.Ptr("name"),
+				KmsKey: &secretsmanager.KmsKeyPayload{
+					KeyId:               utils.Ptr("kid"),
+					KeyRingId:           utils.Ptr("key-ring-id"),
+					KeyVersion:          utils.Ptr(int64(1)),
+					ServiceAccountEmail: utils.Ptr("service-account-email"),
+				},
+			},
+			true,
+		},
+		{
+			"null_fields_and_int_conversions",
+			&Model{
+				Name: types.StringValue(""),
+			},
+			&secretsmanager.UpdateInstancePayload{
+				Name: utils.Ptr(""),
+			},
+			true,
+		},
+		{
+			"nil_model",
+			nil,
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, err := toUpdatePayload(tt.input)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(output, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
 				}
 			}
 		})

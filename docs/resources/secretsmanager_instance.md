@@ -37,8 +37,19 @@ import {
 ### Optional
 
 - `acls` (Set of String) The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation
+- `kms_key` (Attributes) The STACKIT-KMS key for secret encryption and decryption. (see [below for nested schema](#nestedatt--kms_key))
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`instance_id`".
 - `instance_id` (String) ID of the Secrets Manager instance.
+
+<a id="nestedatt--kms_key"></a>
+### Nested Schema for `kms_key`
+
+Required:
+
+- `key_id` (String) UUID of the key within the STACKIT-KMS to use for the encryption.
+- `key_ring_id` (String) UUID of the keyring where the key is located within the STACKTI-KMS.
+- `key_version` (Number) Version of the key within the STACKIT-KMS to use for the encryption.
+- `service_account_email` (String) Service-Account linked to the Key within the STACKIT-KMS.
