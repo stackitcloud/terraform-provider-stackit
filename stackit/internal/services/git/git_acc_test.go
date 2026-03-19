@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/git"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -297,16 +296,7 @@ func TestAccGitMax(t *testing.T) {
 
 func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *git.APIClient
-	var err error
-
-	if testutil.GitCustomEndpoint == "" {
-		client, err = git.NewAPIClient()
-	} else {
-		client, err = git.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.GitCustomEndpoint),
-		)
-	}
+	client, err := git.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint)...)
 
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)

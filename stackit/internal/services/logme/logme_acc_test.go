@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme/wait"
@@ -422,17 +421,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *logme.APIClient
-	var err error
-	if testutil.LogMeCustomEndpoint == "" {
-		client, err = logme.NewAPIClient(
-			core_config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = logme.NewAPIClient(
-			core_config.WithEndpoint(testutil.LogMeCustomEndpoint),
-		)
-	}
+	client, err := logme.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

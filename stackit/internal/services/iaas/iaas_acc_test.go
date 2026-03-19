@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
@@ -5502,15 +5501,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5544,15 +5535,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5587,15 +5570,7 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5632,15 +5607,7 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5677,15 +5644,7 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5722,21 +5681,9 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var alphaClient *iaas.APIClient
-	var client *iaas.APIClient
-	var err error
-	var alphaErr error
-	if testutil.IaaSCustomEndpoint == "" {
-		alphaClient, alphaErr = iaas.NewAPIClient()
-		client, err = iaas.NewAPIClient()
-	} else {
-		alphaClient, alphaErr = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-		client, err = iaas.NewAPIClient()
-	}
-	if err != nil || alphaErr != nil {
-		return fmt.Errorf("creating client: %w, %w", err, alphaErr)
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
 	}
 
 	// Servers
@@ -5751,7 +5698,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
-	serversResp, err := alphaClient.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
+	serversResp, err := client.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
 	if err != nil {
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
@@ -5762,7 +5709,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
-			err := alphaClient.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
+			err := client.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
 			}
@@ -5804,15 +5751,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 
 func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5849,15 +5788,7 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5894,15 +5825,7 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5939,15 +5862,7 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5983,16 +5898,7 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -6029,15 +5935,7 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 
 func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -6068,15 +5966,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 
 func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

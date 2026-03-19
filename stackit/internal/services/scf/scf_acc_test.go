@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -411,17 +410,7 @@ func TestAccScfOrgMax(t *testing.T) {
 
 func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *scf.APIClient
-	var err error
-
-	if testutil.ScfCustomEndpoint == "" {
-		client, err = scf.NewAPIClient()
-	} else {
-		client, err = scf.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ScfCustomEndpoint),
-		)
-	}
-
+	client, err := scf.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ScfCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

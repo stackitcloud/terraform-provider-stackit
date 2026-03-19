@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -644,15 +643,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *logs.APIClient
-	var err error
-	if testutil.LogsCustomEndpoint == "" {
-		client, err = logs.NewAPIClient()
-	} else {
-		client, err = logs.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.LogsCustomEndpoint),
-		)
-	}
+	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -685,15 +676,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 
 func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *logs.APIClient
-	var err error
-	if testutil.LogsCustomEndpoint == "" {
-		client, err = logs.NewAPIClient()
-	} else {
-		client, err = logs.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.LogsCustomEndpoint),
-		)
-	}
+	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

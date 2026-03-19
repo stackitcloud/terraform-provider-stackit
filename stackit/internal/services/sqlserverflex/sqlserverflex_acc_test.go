@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
@@ -432,15 +431,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 
 func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *sqlserverflex.APIClient
-	var err error
-	if testutil.SQLServerFlexCustomEndpoint == "" {
-		client, err = sqlserverflex.NewAPIClient()
-	} else {
-		client, err = sqlserverflex.NewAPIClient(
-			core_config.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
-		)
-	}
+	client, err := sqlserverflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SQLServerFlexCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

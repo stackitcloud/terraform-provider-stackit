@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis/wait"
@@ -273,17 +272,7 @@ func checkInstanceDeleteSuccess(i *redis.Instance) bool {
 
 func testAccCheckRedisDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *redis.APIClient
-	var err error
-	if testutil.RedisCustomEndpoint == "" {
-		client, err = redis.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = redis.NewAPIClient(
-			config.WithEndpoint(testutil.RedisCustomEndpoint),
-		)
-	}
+	client, err := redis.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RedisCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -298,15 +297,7 @@ func TestAccMongoDBFlexFlexResource(t *testing.T) {
 
 func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *mongodbflex.APIClient
-	var err error
-	if testutil.MongoDBFlexCustomEndpoint == "" {
-		client, err = mongodbflex.NewAPIClient()
-	} else {
-		client, err = mongodbflex.NewAPIClient(
-			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
-		)
-	}
+	client, err := mongodbflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.MongoDBFlexCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

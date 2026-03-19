@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/wait"
@@ -409,17 +408,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 
 func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *mariadb.APIClient
-	var err error
-	if testutil.MariaDBCustomEndpoint == "" {
-		client, err = mariadb.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = mariadb.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.MariaDBCustomEndpoint),
-		)
-	}
+	client, err := mariadb.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.MariaDBCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

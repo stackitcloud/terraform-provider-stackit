@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -189,16 +188,7 @@ func TestServiceAccount(t *testing.T) {
 
 func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *serviceaccount.APIClient
-	var err error
-
-	if testutil.ServiceAccountCustomEndpoint == "" {
-		client, err = serviceaccount.NewAPIClient()
-	} else {
-		client, err = serviceaccount.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ServiceAccountCustomEndpoint),
-		)
-	}
+	client, err := serviceaccount.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServiceAccountCustomEndpoint)...)
 
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)

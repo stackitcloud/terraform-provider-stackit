@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
@@ -553,15 +552,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -609,15 +600,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -658,15 +641,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 
 func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *authorization.APIClient
-	var err error
-	if testutil.AuthorizationCustomEndpoint == "" {
-		client, err = authorization.NewAPIClient()
-	} else {
-		client, err = authorization.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.AuthorizationCustomEndpoint),
-		)
-	}
+	client, err := authorization.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AuthorizationCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -705,15 +680,7 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 
 func testAccCheckServiceAccountRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *authorization.APIClient
-	var err error
-	if testutil.AuthorizationCustomEndpoint == "" {
-		client, err = authorization.NewAPIClient()
-	} else {
-		client, err = authorization.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.AuthorizationCustomEndpoint),
-		)
-	}
+	client, err := authorization.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AuthorizationCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

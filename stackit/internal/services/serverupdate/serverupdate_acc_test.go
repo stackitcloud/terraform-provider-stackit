@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
@@ -285,15 +284,7 @@ func testAccCheckServerUpdateScheduleDestroy(s *terraform.State) error {
 }
 
 func deleteSchedule(ctx context.Context, s *terraform.State) error {
-	var client *serverupdate.APIClient
-	var err error
-	if testutil.ServerUpdateCustomEndpoint == "" {
-		client, err = serverupdate.NewAPIClient()
-	} else {
-		client, err = serverupdate.NewAPIClient(
-			core_config.WithEndpoint(testutil.ServerUpdateCustomEndpoint),
-		)
-	}
+	client, err := serverupdate.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServerUpdateCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -350,16 +341,7 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 // Additional function to check if the server was deleted if something went wrong in the first case.
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			core_config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

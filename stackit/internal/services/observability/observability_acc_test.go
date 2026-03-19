@@ -18,8 +18,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
-
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 )
 
 //go:embed testdata/resource-min.tf
@@ -1051,17 +1049,7 @@ func TestAccResourceMax(t *testing.T) {
 
 func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *observability.APIClient
-	var err error
-	if testutil.ObservabilityCustomEndpoint == "" {
-		client, err = observability.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = observability.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ObservabilityCustomEndpoint),
-		)
-	}
+	client, err := observability.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

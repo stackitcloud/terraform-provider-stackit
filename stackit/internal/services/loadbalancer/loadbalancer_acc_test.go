@@ -16,7 +16,6 @@ import (
 
 	"maps"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -409,15 +408,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 
 func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *loadbalancer.APIClient
-	var err error
-	if testutil.LoadBalancerCustomEndpoint == "" {
-		client, err = loadbalancer.NewAPIClient()
-	} else {
-		client, err = loadbalancer.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.LoadBalancerCustomEndpoint),
-		)
-	}
+	client, err := loadbalancer.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LoadBalancerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

@@ -1,18 +1,21 @@
 package testutil
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
+	sdkConf "github.com/stackitcloud/stackit-sdk-go/core/config"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
@@ -63,540 +66,358 @@ var (
 	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
-	ALBCustomEndpoint             = os.Getenv("TF_ACC_ALB_CUSTOM_ENDPOINT")
-	CdnCustomEndpoint             = os.Getenv("TF_ACC_CDN_CUSTOM_ENDPOINT")
-	DnsCustomEndpoint             = os.Getenv("TF_ACC_DNS_CUSTOM_ENDPOINT")
-	EdgeCloudCustomEndpoint       = os.Getenv("TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT")
-	GitCustomEndpoint             = os.Getenv("TF_ACC_GIT_CUSTOM_ENDPOINT")
-	IaaSCustomEndpoint            = os.Getenv("TF_ACC_IAAS_CUSTOM_ENDPOINT")
-	KMSCustomEndpoint             = os.Getenv("TF_ACC_KMS_CUSTOM_ENDPOINT")
-	LoadBalancerCustomEndpoint    = os.Getenv("TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT")
-	LogMeCustomEndpoint           = os.Getenv("TF_ACC_LOGME_CUSTOM_ENDPOINT")
-	LogsCustomEndpoint            = os.Getenv("TF_ACC_LOGS_CUSTOM_ENDPOINT")
-	MariaDBCustomEndpoint         = os.Getenv("TF_ACC_MARIADB_CUSTOM_ENDPOINT")
-	ModelServingCustomEndpoint    = os.Getenv("TF_ACC_MODELSERVING_CUSTOM_ENDPOINT")
-	AuthorizationCustomEndpoint   = os.Getenv("TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT")
-	MongoDBFlexCustomEndpoint     = os.Getenv("TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT")
-	OpenSearchCustomEndpoint      = os.Getenv("TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT")
-	ObservabilityCustomEndpoint   = os.Getenv("TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT")
-	ObjectStorageCustomEndpoint   = os.Getenv("TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT")
-	PostgresFlexCustomEndpoint    = os.Getenv("TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT")
-	RabbitMQCustomEndpoint        = os.Getenv("TF_ACC_RABBITMQ_CUSTOM_ENDPOINT")
-	RedisCustomEndpoint           = os.Getenv("TF_ACC_REDIS_CUSTOM_ENDPOINT")
-	ResourceManagerCustomEndpoint = os.Getenv("TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT")
-	ScfCustomEndpoint             = os.Getenv("TF_ACC_SCF_CUSTOM_ENDPOINT")
-	SecretsManagerCustomEndpoint  = os.Getenv("TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT")
-	SQLServerFlexCustomEndpoint   = os.Getenv("TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT")
-	ServerBackupCustomEndpoint    = os.Getenv("TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT")
-	ServerUpdateCustomEndpoint    = os.Getenv("TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT")
-	SFSCustomEndpoint             = os.Getenv("TF_ACC_SFS_CUSTOM_ENDPOINT")
-	ServiceAccountCustomEndpoint  = os.Getenv("TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT")
-	TokenCustomEndpoint           = os.Getenv("TF_ACC_TOKEN_CUSTOM_ENDPOINT")
-	SKECustomEndpoint             = os.Getenv("TF_ACC_SKE_CUSTOM_ENDPOINT")
+	ALBCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_ALB_CUSTOM_ENDPOINT", providerName: "alb_custom_endpoint"}
+	CdnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
+	DnsCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
+	EdgeCloudCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
+	GitCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_GIT_CUSTOM_ENDPOINT", providerName: "git_custom_endpoint"}
+	IaaSCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_IAAS_CUSTOM_ENDPOINT", providerName: "iaas_custom_endpoint"}
+	KMSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_KMS_CUSTOM_ENDPOINT", providerName: "kms_custom_endpoint"}
+	LoadBalancerCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT", providerName: "loadbalancer_custom_endpoint"}
+	LogMeCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_LOGME_CUSTOM_ENDPOINT", providerName: "logme_custom_endpoint"}
+	LogsCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_LOGS_CUSTOM_ENDPOINT", providerName: "logs_custom_endpoint"}
+	MariaDBCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_MARIADB_CUSTOM_ENDPOINT", providerName: "mariadb_custom_endpoint"}
+	ModelServingCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_MODELSERVING_CUSTOM_ENDPOINT", providerName: "modelserving_custom_endpoint"}
+	AuthorizationCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT", providerName: "authorization_custom_endpoint"}
+	MongoDBFlexCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT", providerName: "mongodbflex_custom_endpoint"}
+	OpenSearchCustomEndpoint      = customEndpointConfig{envVarName: "TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT", providerName: "opensearch_custom_endpoint"}
+	ObservabilityCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT", providerName: "observability_custom_endpoint"}
+	ObjectStorageCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT", providerName: "objectstorage_custom_endpoint"}
+	PostgresFlexCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT", providerName: "postgresflex_custom_endpoint"}
+	RabbitMQCustomEndpoint        = customEndpointConfig{envVarName: "TF_ACC_RABBITMQ_CUSTOM_ENDPOINT", providerName: "rabbitmq_custom_endpoint"}
+	RedisCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_REDIS_CUSTOM_ENDPOINT", providerName: "redis_custom_endpoint"}
+	ResourceManagerCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT", providerName: "resourcemanager_custom_endpoint"}
+	ScfCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SCF_CUSTOM_ENDPOINT", providerName: "scf_custom_endpoint"}
+	SecretsManagerCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT", providerName: "secretsmanager_custom_endpoint"}
+	SQLServerFlexCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT", providerName: "sqlserverflex_custom_endpoint"}
+	ServerBackupCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT", providerName: "server_backup_custom_endpoint"}
+	ServerUpdateCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT", providerName: "server_update_custom_endpoint"}
+	SFSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SFS_CUSTOM_ENDPOINT", providerName: "sfs_custom_endpoint"}
+	ServiceAccountCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT", providerName: "service_account_custom_endpoint"}
+	TokenCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_TOKEN_CUSTOM_ENDPOINT", providerName: "token_custom_endpoint"}
+	SKECustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SKE_CUSTOM_ENDPOINT", providerName: "ske_custom_endpoint"}
+
+	allCustomEndpoints = []customEndpointConfig{
+		ALBCustomEndpoint,
+		CdnCustomEndpoint,
+		DnsCustomEndpoint,
+		EdgeCloudCustomEndpoint,
+		GitCustomEndpoint,
+		IaaSCustomEndpoint,
+		KMSCustomEndpoint,
+		LoadBalancerCustomEndpoint,
+		LogMeCustomEndpoint,
+		LogsCustomEndpoint,
+		MariaDBCustomEndpoint,
+		ModelServingCustomEndpoint,
+		AuthorizationCustomEndpoint,
+		MongoDBFlexCustomEndpoint,
+		OpenSearchCustomEndpoint,
+		ObservabilityCustomEndpoint,
+		ObjectStorageCustomEndpoint,
+		PostgresFlexCustomEndpoint,
+		RabbitMQCustomEndpoint,
+		RedisCustomEndpoint,
+		ResourceManagerCustomEndpoint,
+		ScfCustomEndpoint,
+		SecretsManagerCustomEndpoint,
+		SQLServerFlexCustomEndpoint,
+		ServerBackupCustomEndpoint,
+		ServerUpdateCustomEndpoint,
+		SFSCustomEndpoint,
+		ServiceAccountCustomEndpoint,
+		TokenCustomEndpoint,
+		SKECustomEndpoint,
+	}
 )
+
+type Experiment string
+
+const (
+	ExperimentRoutingTables Experiment = "routing-tables"
+	ExperimentNetwork       Experiment = "network"
+	ExperimentIAM           Experiment = "iam"
+)
+
+type customEndpointConfig struct {
+	envVarName   string
+	providerName string
+}
+
+type ConfigBuilder struct {
+	region              string
+	enableBetaResources bool
+	endpoints           map[string]string
+	experiments         []string
+	serviceAccountToken string
+}
+
+// NewConfigBuilder creates a new ConfigBuilder with enabled beta resources and region eu01 as default.
+// All custom endpoints defined in TF_ACC_*_CUSTOM_ENDPOINT env vars are also set.
+func NewConfigBuilder() *ConfigBuilder {
+	b := &ConfigBuilder{
+		region:              "eu01",
+		enableBetaResources: true,
+		endpoints:           make(map[string]string),
+	}
+	for _, endpoint := range allCustomEndpoints {
+		b.endpoints[endpoint.providerName] = os.Getenv(endpoint.envVarName)
+	}
+	return b
+}
+
+func (b *ConfigBuilder) Region(region string) *ConfigBuilder {
+	b.region = region
+	return b
+}
+
+func (b *ConfigBuilder) EnableBetaResources(enable bool) *ConfigBuilder {
+	b.enableBetaResources = enable
+	return b
+}
+
+func (b *ConfigBuilder) CustomEndpoint(endpoint customEndpointConfig, url string) *ConfigBuilder {
+	b.endpoints[endpoint.providerName] = url
+	return b
+}
+
+func (b *ConfigBuilder) Experiments(experiments ...Experiment) *ConfigBuilder {
+	for _, e := range experiments {
+		b.experiments = append(b.experiments, string(e))
+	}
+	return b
+}
+
+func (b *ConfigBuilder) ServiceAccountToken(token string) *ConfigBuilder {
+	b.serviceAccountToken = token
+	return b
+}
+
+func (b *ConfigBuilder) BuildProviderConfig() string {
+	tmpl := `provider "stackit" {
+    default_region = "{{ .Region }}"
+    enable_beta_resources = {{ .EnableBetaResources }}
+{{- if .Experiments }}
+    experiments = {{ .Experiments | tfslice }}
+{{- end }}
+{{- if .ServiceAccountToken }}
+    service_account_token = "{{ .ServiceAccountToken }}"
+{{- end }}
+{{- range $k, $v := .Endpoints }}
+    {{ $k }} = "{{ $v }}"
+{{- end }}
+}`
+	funcs := template.FuncMap{}
+	funcs["tfslice"] = func(s []string) string {
+		return "[\"" + strings.Join(s, "\", \"") + "\"]"
+	}
+	parsed := template.Must(template.New("providerConfig").Funcs(funcs).Parse(tmpl))
+	var bs bytes.Buffer
+	setEndpoints := make(map[string]string)
+	for k, v := range b.endpoints {
+		if v != "" {
+			setEndpoints[k] = v
+		}
+	}
+	// template needs public fields
+	data := struct {
+		Region              string
+		EnableBetaResources bool
+		Endpoints           map[string]string
+		Experiments         []string
+		ServiceAccountToken string
+	}{
+		b.region,
+		b.enableBetaResources,
+		setEndpoints,
+		b.experiments,
+		b.serviceAccountToken,
+	}
+	err := parsed.Execute(&bs, data)
+	if err != nil {
+		panic(err)
+	}
+	return bs.String()
+}
+
+func (b *ConfigBuilder) BuildClientOptions(service customEndpointConfig) []sdkConf.ConfigurationOption {
+	var opts []sdkConf.ConfigurationOption
+	if b.serviceAccountToken != "" {
+		opts = append(opts, sdkConf.WithToken(b.serviceAccountToken))
+	}
+	endpoint := b.endpoints[service.providerName]
+	if endpoint != "" {
+		opts = append(opts, sdkConf.WithEndpoint(endpoint))
+	}
+	tokenEndPoint := b.endpoints[TokenCustomEndpoint.providerName]
+	if tokenEndPoint != "" {
+		opts = append(opts, sdkConf.WithTokenEndpoint(tokenEndPoint))
+	}
+	return opts
+}
 
 // Provider config helper functions
 
+//go:fix inline
 func ALBProviderConfig() string {
-	if ALBCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			alb_custom_endpoint = "%s"
-		}`,
-		ALBCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
+
+//go:fix inline
 func ObservabilityProviderConfig() string {
-	if ObservabilityCustomEndpoint == "" {
-		return `provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			observability_custom_endpoint = "%s"
-		}`,
-		ObservabilityCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
+
+//go:fix inline
 func CdnProviderConfig() string {
-	if CdnCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			cdn_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		CdnCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func DnsProviderConfig() string {
-	if DnsCustomEndpoint == "" {
-		return `provider "stackit" {}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			dns_custom_endpoint = "%s"
-		}`,
-		DnsCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func EdgeCloudProviderConfig() string {
-	if EdgeCloudCustomEndpoint == "" {
-		return fmt.Sprintf(`
-			provider "stackit" {
-				enable_beta_resources = true
-				default_region 		    = "%s"
-			}`,
-			Region,
-		)
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			edgecloud_custom_endpoint = "%s"
-			enable_beta_resources = true
-			default_region 		    = "%s"
-		}`,
-		EdgeCloudCustomEndpoint,
-		Region,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func IaaSProviderConfig() string {
-	if IaaSCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			iaas_custom_endpoint = "%s"
-		}`,
-		IaaSCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func IaaSProviderConfigWithBetaResourcesEnabled() string {
-	if IaaSCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			enable_beta_resources = true
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			enable_beta_resources = true
-			iaas_custom_endpoint = "%s"
-		}`,
-		IaaSCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func IaaSProviderConfigWithExperiments() string {
-	if IaaSCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-  			experiments = [ "routing-tables", "network" ]
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			iaas_custom_endpoint = "%s"
-			experiments = [ "routing-tables", "network" ]
-		}`,
-		IaaSCustomEndpoint,
-	)
+	return NewConfigBuilder().
+		Experiments(ExperimentNetwork, ExperimentRoutingTables).
+		BuildProviderConfig()
 }
 
+//go:fix inline
 func KMSProviderConfig() string {
-	if KMSCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			kms_custom_endpoint = "%s"
-		}`,
-		KMSCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func LoadBalancerProviderConfig() string {
-	if LoadBalancerCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			loadbalancer_custom_endpoint = "%s"
-		}`,
-		LoadBalancerCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func LogMeProviderConfig() string {
-	if LogMeCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			logme_custom_endpoint = "%s"
-		}`,
-		LogMeCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func LogsProviderConfig() string {
-	if LogsCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			enable_beta_resources = true
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			enable_beta_resources = true
-			logs_custom_endpoint = "%s"
-		}`,
-		LogsCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func MariaDBProviderConfig() string {
-	if MariaDBCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			mariadb_custom_endpoint = "%s"
-		}`,
-		MariaDBCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func ModelServingProviderConfig() string {
-	if ModelServingCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}
-		`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			modelserving_custom_endpoint = "%s"
-		}`,
-		ModelServingCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func MongoDBFlexProviderConfig() string {
-	if MongoDBFlexCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			mongodbflex_custom_endpoint = "%s"
-		}`,
-		MongoDBFlexCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func ObjectStorageProviderConfig() string {
-	if ObjectStorageCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			objectstorage_custom_endpoint = "%s"
-		}`,
-		ObjectStorageCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func OpenSearchProviderConfig() string {
-	if OpenSearchCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			opensearch_custom_endpoint = "%s"
-		}`,
-		OpenSearchCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func PostgresFlexProviderConfig() string {
-	if PostgresFlexCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			postgresflex_custom_endpoint = "%s"
-		}`,
-		PostgresFlexCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func RabbitMQProviderConfig() string {
-	if RabbitMQCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			rabbitmq_custom_endpoint = "%s"
-		}`,
-		RabbitMQCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func RedisProviderConfig() string {
-	if RedisCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			redis_custom_endpoint = "%s"
-		}`,
-		RedisCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func ResourceManagerProviderConfig() string {
 	token := GetTestProjectServiceAccountToken("")
-	if ResourceManagerCustomEndpoint == "" || AuthorizationCustomEndpoint == "" {
-		return fmt.Sprintf(`
-		provider "stackit" {
-			service_account_token = "%s"
-		}`,
-			token,
-		)
-	}
-	return fmt.Sprintf(`
-	provider "stackit" {
-		resourcemanager_custom_endpoint = "%s"
-		authorization_custom_endpoint = "%s"
-		service_account_token = "%s"
-	}`,
-		ResourceManagerCustomEndpoint,
-		AuthorizationCustomEndpoint,
-		token,
-	)
+	return NewConfigBuilder().
+		ServiceAccountToken(token).
+		BuildProviderConfig()
 }
 
+//go:fix inline
 func SecretsManagerProviderConfig() string {
-	if SecretsManagerCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			secretsmanager_custom_endpoint = "%s"
-		}`,
-		SecretsManagerCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func SQLServerFlexProviderConfig() string {
-	if SQLServerFlexCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			sqlserverflex_custom_endpoint = "%s"
-		}`,
-		SQLServerFlexCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func ServerBackupProviderConfig() string {
-	if ServerBackupCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			server_backup_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		ServerBackupCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func ServerUpdateProviderConfig() string {
-	if ServerUpdateCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			server_update_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		ServerUpdateCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func SFSProviderConfig() string {
-	if SFSCustomEndpoint == "" || TokenCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			region = "eu01"
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			region = "eu01"
-			sfs_custom_endpoint = "%s"
-			token_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		SFSCustomEndpoint,
-		TokenCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func SKEProviderConfig() string {
-	if SKECustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			ske_custom_endpoint = "%s"
-		}`,
-		SKECustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func AuthorizationProviderConfig() string {
-	if AuthorizationCustomEndpoint == "" || ServiceAccountCustomEndpoint == "" || ResourceManagerCustomEndpoint == "" || TokenCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-			experiments = ["iam"]
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			authorization_custom_endpoint = "%s"
-			service_account_custom_endpoint = "%s"
-			resourcemanager_custom_endpoint = "%s"
-			token_custom_endpoint = "%s"
-			experiments = ["iam"]
-		}`,
-		AuthorizationCustomEndpoint,
-		ServiceAccountCustomEndpoint,
-		ResourceManagerCustomEndpoint,
-		TokenCustomEndpoint,
-	)
+	return NewConfigBuilder().
+		Experiments(ExperimentIAM).
+		BuildProviderConfig()
 }
 
+//go:fix inline
 func ServiceAccountProviderConfig() string {
-	if ServiceAccountCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			service_account_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		ServiceAccountCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func GitProviderConfig() string {
-	if GitCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-			enable_beta_resources = true
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			git_custom_endpoint = "%s"
-			enable_beta_resources = true
-		}`,
-		GitCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
+//go:fix inline
 func ScfProviderConfig() string {
-	if ScfCustomEndpoint == "" {
-		return `
-		provider "stackit" {
-			default_region = "eu01"
-		}`
-	}
-	return fmt.Sprintf(`
-		provider "stackit" {
-			default_region = "eu01"
-			scf_custom_endpoint = "%s"
-		}`,
-		ScfCustomEndpoint,
-	)
+	return NewConfigBuilder().BuildProviderConfig()
 }
 
 func ResourceNameWithDateTime(name string) string {

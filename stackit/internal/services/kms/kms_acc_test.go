@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/kms"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -909,15 +908,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckKeyRingDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *kms.APIClient
-	var err error
-	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient()
-	} else {
-		client, err = kms.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
-		)
-	}
+	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -954,15 +945,7 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 
 func testAccCheckKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *kms.APIClient
-	var err error
-	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient()
-	} else {
-		client, err = kms.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
-		)
-	}
+	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -998,15 +981,7 @@ func testAccCheckKeyDestroy(s *terraform.State) error {
 
 func testAccCheckWrappingKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *kms.APIClient
-	var err error
-	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient()
-	} else {
-		client, err = kms.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
-		)
-	}
+	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

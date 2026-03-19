@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/wait"
@@ -245,17 +244,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 
 func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *rabbitmq.APIClient
-	var err error
-	if testutil.RabbitMQCustomEndpoint == "" {
-		client, err = rabbitmq.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = rabbitmq.NewAPIClient(
-			config.WithEndpoint(testutil.RabbitMQCustomEndpoint),
-		)
-	}
+	client, err := rabbitmq.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RabbitMQCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

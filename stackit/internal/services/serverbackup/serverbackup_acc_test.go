@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
@@ -278,15 +277,7 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 
 func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *serverbackup.APIClient
-	var err error
-	if testutil.ServerBackupCustomEndpoint == "" {
-		client, err = serverbackup.NewAPIClient()
-	} else {
-		client, err = serverbackup.NewAPIClient(
-			core_config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
-		)
-	}
+	client, err := serverbackup.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServerBackupCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating serverbackup client: %w", err)
 	}
@@ -343,16 +334,7 @@ func testAccCheckServerBackupScheduleDestroy(s *terraform.State) error {
 // Additional function to check if the server was deleted if something went wrong in the first case.
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			core_config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	wait "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api/wait"
@@ -447,15 +446,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -509,15 +500,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

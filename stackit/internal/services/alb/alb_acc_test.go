@@ -15,7 +15,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/alb/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/alb"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -621,15 +620,7 @@ func TestAccALBResourceMax(t *testing.T) {
 
 func testAccCheckALBDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *alb.APIClient
-	var err error
-	if testutil.ALBCustomEndpoint == "" {
-		client, err = alb.NewAPIClient()
-	} else {
-		client, err = alb.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ALBCustomEndpoint),
-		)
-	}
+	client, err := alb.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

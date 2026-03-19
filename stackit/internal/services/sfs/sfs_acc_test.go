@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -431,16 +430,7 @@ func TestAccShareResource(t *testing.T) {
 }
 
 func createClient() (*sfs.APIClient, error) {
-	var client *sfs.APIClient
-	var err error
-	if testutil.SFSCustomEndpoint == "" {
-		client, err = sfs.NewAPIClient()
-	} else {
-		client, err = sfs.NewAPIClient(
-			config.WithEndpoint(testutil.SFSCustomEndpoint),
-			config.WithTokenEndpoint(testutil.TokenCustomEndpoint),
-		)
-	}
+	client, err := sfs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SFSCustomEndpoint)...)
 	if err != nil {
 		return nil, fmt.Errorf("creating client: %w", err)
 	}

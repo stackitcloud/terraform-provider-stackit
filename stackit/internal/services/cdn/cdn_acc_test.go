@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -536,15 +535,7 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 }
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *cdn.APIClient
-	var err error
-	if testutil.MongoDBFlexCustomEndpoint == "" {
-		client, err = cdn.NewAPIClient()
-	} else {
-		client, err = cdn.NewAPIClient(
-			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
-		)
-	}
+	client, err := cdn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

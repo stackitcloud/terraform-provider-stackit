@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/wait"
@@ -236,17 +235,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *objectstorage.APIClient
-	var err error
-	if testutil.ObjectStorageCustomEndpoint == "" {
-		client, err = objectstorage.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = objectstorage.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ObjectStorageCustomEndpoint),
-		)
-	}
+	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
