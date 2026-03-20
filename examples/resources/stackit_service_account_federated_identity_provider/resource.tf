@@ -14,7 +14,7 @@ resource "stackit_service_account_federated_identity_provider" "provider" {
       item     = "aud"
       operator = "equals"
       value    = "sts.accounts.stackit.cloud"
-    }
+    },
     {
       item     = "sub"
       operator = "equals"
