@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -18,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
-	wait "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/logs/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
@@ -249,6 +248,21 @@ func (r *logsInstanceResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.LogResponse(ctx)
 
+	if createResp == nil || createResp.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", "Create API response: Incomplete response (id missing)")
+		return
+	}
+	instanceId := createResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"region":      region,
+		"instance_id": instanceId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateLogsInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, regionId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Logs Instance", fmt.Sprintf("Waiting for Logs Instance to become active: %v", err))
@@ -403,9 +417,12 @@ func (r *logsInstanceResource) ImportState(ctx context.Context, req resource.Imp
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing Logs Instance", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`", req.ID))
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
+	})
 	tflog.Info(ctx, "Logs Instance state imported")
 }
 

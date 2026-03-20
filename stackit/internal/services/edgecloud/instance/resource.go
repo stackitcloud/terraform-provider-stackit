@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -281,12 +280,17 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API returned nil Instance ID")
 		return
 	}
+
 	edgeCloudInstanceId := *createResp.Id
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"instance_id": edgeCloudInstanceId,
 		"region":      region,
 	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client, projectId, region, edgeCloudInstanceId).WaitWithContext(ctx)
 	if err != nil {
@@ -436,9 +440,12 @@ func (i *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		)
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
+	})
+	tflog.Info(ctx, "Edge cloud Instance state imported")
 }
 
 // mapFields maps the API response to the Terraform model.
