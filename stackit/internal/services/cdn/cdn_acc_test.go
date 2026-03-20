@@ -2,184 +2,95 @@ package cdn_test
 
 import (
 	"context"
-	cryptoRand "crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
+	_ "embed"
 	"fmt"
-	"math/big"
+	"maps"
 	"net"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-var instanceResource = map[string]string{
-	"project_id":                testutil.ProjectId,
-	"config_backend_type":       "http",
-	"config_backend_origin_url": "https://test-backend-1.cdn-dev.runs.onstackit.cloud",
-	"config_regions":            "\"EU\", \"US\"",
-	"config_regions_updated":    "\"EU\", \"US\", \"ASIA\"",
-	"blocked_countries":         "\"CU\", \"AQ\"", // Do NOT use DE or AT here, because the request might be blocked by bunny at the time of creation - don't lock yourself out
-	"custom_domain_prefix":      uuid.NewString(), // we use a different domain prefix each test run due to inconsistent upstream release of domains, which might impair consecutive test runs
-	"dns_name":                  fmt.Sprintf("tf-acc-%s.stackit.gg", strings.Split(uuid.NewString(), "-")[0]),
+var (
+	bucketName             = "acc-b" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+	bucketNameUpdated      = "acc-b-updated" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+	credentialsName        = "acc-c" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+	credentialsNameUpdated = "acc-c-updated" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+	httpTestName           = "acc-h" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
+	dnsNameHttp            = fmt.Sprintf("tf-%s.runs.onstackit.cloud", httpTestName)
+	dnsRecordNameHttp      = uuid.NewString()
+)
+
+var (
+	//go:embed testdata/resource-bucket.tf
+	resourceBucket string
+
+	//go:embed testdata/resource-http.tf
+	resourceHttp string
+)
+
+var testConfigVarsBucket = config.Variables{
+	"project_id":          config.StringVariable(testutil.ProjectId),
+	"bucket_name":         config.StringVariable(bucketName),
+	"credentials_name":    config.StringVariable(credentialsName),
+	"backend_bucket_type": config.StringVariable("bucket"),
+	"regions":             config.ListVariable(config.StringVariable("EU"), config.StringVariable("US")),
+	"region":              config.StringVariable("eu01"),
+	"optimizer":           config.BoolVariable(true),
 }
 
-func configResources(regions string, geofencingCountries []string, blockedCountries *string) string {
-	var quotedCountries []string
-	for _, country := range geofencingCountries {
-		quotedCountries = append(quotedCountries, fmt.Sprintf(`%q`, country))
-	}
+func configVarsBucketUpdated() config.Variables {
+	updatedConfig := maps.Clone(testConfigVarsBucket)
+	updatedConfig["bucket_name"] = config.StringVariable(bucketNameUpdated)
+	updatedConfig["credentials_name"] = config.StringVariable(credentialsNameUpdated)
 
-	geofencingList := strings.Join(quotedCountries, ",")
-
-	blockedCountriesConfig := ""
-	if blockedCountries != nil {
-		blockedCountriesConfig = fmt.Sprintf("blocked_countries = [%s]", *blockedCountries)
-	}
-
-	return fmt.Sprintf(`
-				%s
-
-				resource "stackit_cdn_distribution" "distribution" {
-					project_id = "%s"
-		            config = {
-						backend = {
-							type = "http"
-							origin_url = "%s"
-							geofencing = {
-								"%s" = [%s]  
-							}
-						}
-						regions           = [%s]
-						%s
-            
-						optimizer = {
-							enabled = true
-						}
-					}
-				}
-
-				resource "stackit_dns_zone" "dns_zone" {
-					project_id    = "%s"
-					name          = "cdn_acc_test_zone"
-					dns_name      = "%s"
-					contact_email = "aa@bb.cc"
-					type          = "primary"
-					default_ttl   = 3600
-				}
-				resource "stackit_dns_record_set" "dns_record" {
-					project_id = "%s"
-					zone_id    = stackit_dns_zone.dns_zone.zone_id
-					name       = "%s"
-					type       = "CNAME"
-					records    = ["${stackit_cdn_distribution.distribution.domains[0].name}."]
-				}
-		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"], instanceResource["config_backend_origin_url"], geofencingList,
-		regions, blockedCountriesConfig, testutil.ProjectId, instanceResource["dns_name"],
-		testutil.ProjectId, instanceResource["custom_domain_prefix"])
+	return updatedConfig
 }
 
-func configCustomDomainResources(regions, cert, key string, geofencingCountries []string, blockedCountries *string) string {
-	return fmt.Sprintf(`
-				%s
-
-		        resource "stackit_cdn_custom_domain" "custom_domain" {
-					project_id = stackit_cdn_distribution.distribution.project_id
-					distribution_id = stackit_cdn_distribution.distribution.distribution_id
-		            name = "${stackit_dns_record_set.dns_record.name}.${stackit_dns_zone.dns_zone.dns_name}"
-					certificate = {
-						certificate = %q
-						private_key = %q
-					}
-				}
-`, configResources(regions, geofencingCountries, blockedCountries), cert, key)
+var testConfigVarsHttp = config.Variables{
+	"project_id":                   config.StringVariable(testutil.ProjectId),
+	"name":                         config.StringVariable(httpTestName),
+	"regions":                      config.ListVariable(config.StringVariable("EU"), config.StringVariable("US")),
+	"dns_zone_name":                config.StringVariable("acc_cdn_test_zone"),
+	"dns_name":                     config.StringVariable(dnsNameHttp),
+	"dns_record_name":              config.StringVariable(dnsRecordNameHttp),
+	"optimizer":                    config.BoolVariable(true),
+	"backend_http_type":            config.StringVariable("http"),
+	"blocked_countries":            config.ListVariable(config.StringVariable("CU")),
+	"backend_origin_url":           config.StringVariable("https://test-backend-1.cdn-dev.runs.onstackit.cloud"),
+	"geofencing_list":              config.ListVariable(config.StringVariable("DE")),
+	"origin_request_headers_name":  config.StringVariable("X-Custom-Header"),
+	"origin_request_headers_value": config.StringVariable("x-custom-value"),
 }
 
-func configDatasources(regions, cert, key string, geofencingCountries []string, blockedCountries *string) string {
-	return fmt.Sprintf(`
-        %s 
+func configVarsHttpUpdated() config.Variables {
+	updatedConfig := maps.Clone(testConfigVarsHttp)
+	updatedConfig["regions"] = config.ListVariable(config.StringVariable("EU"), config.StringVariable("US"), config.StringVariable("ASIA"))
 
-        data "stackit_cdn_distribution" "distribution" {
-					project_id = stackit_cdn_distribution.distribution.project_id
-            distribution_id = stackit_cdn_distribution.distribution.distribution_id
-        }
-        
-        data "stackit_cdn_custom_domain" "custom_domain" {
-					project_id = stackit_cdn_custom_domain.custom_domain.project_id
-					distribution_id = stackit_cdn_custom_domain.custom_domain.distribution_id
-					name = stackit_cdn_custom_domain.custom_domain.name
-
-        }
-		`, configCustomDomainResources(regions, cert, key, geofencingCountries, blockedCountries))
+	return updatedConfig
 }
-func makeCertAndKey(t *testing.T, organization string) (cert, key []byte) {
-	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("failed to generate key: %s", err.Error())
-	}
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Issuer:       pkix.Name{CommonName: organization},
-		Subject: pkix.Name{
-			Organization: []string{organization},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour),
 
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-	cert, err = x509.CreateCertificate(
-		cryptoRand.Reader,
-		&template,
-		&template,
-		&privateKey.PublicKey,
-		privateKey,
-	)
-	if err != nil {
-		t.Fatalf("failed to generate cert: %s", err.Error())
-	}
-
-	return pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: cert,
-		}), pem.EncodeToMemory(&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
-		})
-}
-func TestAccCDNDistributionResource(t *testing.T) {
-	fullDomainName := fmt.Sprintf("%s.%s", instanceResource["custom_domain_prefix"], instanceResource["dns_name"])
-	organization := fmt.Sprintf("organization-%s", uuid.NewString())
-	cert, key := makeCertAndKey(t, organization)
-	geofencing := []string{"DE", "ES"}
-
-	organization_updated := fmt.Sprintf("organization-updated-%s", uuid.NewString())
-	cert_updated, key_updated := makeCertAndKey(t, organization_updated)
-
-	// Helper for default blocked countries
-	defaultBlockedCountries := cdn.PtrString(instanceResource["blocked_countries"])
-
+func TestAccCDNDistributionHttp(t *testing.T) {
+	fullDomainName := fmt.Sprintf("%s.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["dns_record_name"]), testutil.ConvertConfigVariable(testConfigVarsHttp["dns_name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckCDNDistributionDestroy,
 		Steps: []resource.TestStep{
 			// Distribution Create
 			{
-				Config: configResources(instanceResource["config_regions"], geofencing, defaultBlockedCountries),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
@@ -191,27 +102,27 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "1"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "AQ"),
 					resource.TestCheckResourceAttr(
 						"stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.0", instanceResource["config_backend_origin_url"]),
+						fmt.Sprintf("config.backend.origin_request_headers.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_name"])),
+						testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_value"]),
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
 						"DE",
 					),
-					resource.TestCheckResourceAttr(
-						"stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.1", instanceResource["config_backend_origin_url"]),
-						"ES",
-					),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 				),
 			},
 			// Wait step, that confirms the CNAME record has "propagated"
 			{
-				Config: configResources(instanceResource["config_regions"], geofencing, defaultBlockedCountries),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				ConfigVariables: testConfigVarsHttp,
 				Check: func(_ *terraform.State) error {
 					_, err := blockUntilDomainResolves(fullDomainName)
 					return err
@@ -219,7 +130,8 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Custom Domain Create
 			{
-				Config: configCustomDomainResources(instanceResource["config_regions"], string(cert), string(key), geofencing, defaultBlockedCountries),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
@@ -229,7 +141,8 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Import
 			{
-				ResourceName: "stackit_cdn_distribution.distribution",
+				ResourceName:    "stackit_cdn_distribution.distribution",
+				ConfigVariables: testConfigVarsHttp,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_cdn_distribution.distribution"]
 					if !ok {
@@ -247,7 +160,8 @@ func TestAccCDNDistributionResource(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"domains"}, // we added a domain in the meantime...
 			},
 			{
-				ResourceName: "stackit_cdn_custom_domain.custom_domain",
+				ResourceName:    "stackit_cdn_custom_domain.custom_domain",
+				ConfigVariables: testConfigVarsHttp,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_cdn_custom_domain.custom_domain"]
 					if !ok {
@@ -273,7 +187,8 @@ func TestAccCDNDistributionResource(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config: configDatasources(instanceResource["config_regions"], string(cert), string(key), geofencing, defaultBlockedCountries),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "created_at"),
@@ -288,31 +203,31 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.#", "2"),
 					resource.TestCheckResourceAttr(
 						"data.stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.0", instanceResource["config_backend_origin_url"]),
-						"DE",
+						fmt.Sprintf("config.backend.origin_request_headers.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_name"])),
+						testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_value"]),
 					),
 					resource.TestCheckResourceAttr(
 						"data.stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.1", instanceResource["config_backend_origin_url"]),
-						"ES",
+						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
+						"DE",
 					),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.1", "US"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "AQ"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.optimizer.enabled", "true"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.blocked_countries.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 				),
 			},
 			// Update
 			{
-				Config: configCustomDomainResources(instanceResource["config_regions_updated"], string(cert_updated), string(key_updated), geofencing, defaultBlockedCountries),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				ConfigVariables: configVarsHttpUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
@@ -328,104 +243,33 @@ func TestAccCDNDistributionResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.2", "ASIA"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "1"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "AQ"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr(
+						"stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.origin_request_headers.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_name"])),
+						testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_value"]),
+					),
+					resource.TestCheckResourceAttr(
+						"stackit_cdn_distribution.distribution",
+						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
+						"DE",
+					),
+
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
-					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "certificate.version", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "project_id", "stackit_cdn_custom_domain.custom_domain", "project_id"),
-				),
-			},
-			// Bug Fix Verification: Omitted Field Handling
-			//
-			// This step verifies that omitting 'blocked_countries' from the Terraform configuration
-			// (by setting the pointer to nil) does not cause an "inconsistent result" error.
-			//
-			// Previously, omitting the field resulted in a 'null' config, but the API returned an
-			// empty list '[]', causing a state mismatch. The 'Default' modifier in the schema now
-			// ensures the missing config is treated as an empty list, matching the API response.
-			{
-				Config: configResources(instanceResource["config_regions"], geofencing, nil),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "0"),
 				),
 			},
 		},
 	})
 }
 
-func configBucketResources(bucketName, credentialsGroupName string) string {
-	return fmt.Sprintf(`
-		%s
-
-		resource "stackit_objectstorage_bucket" "bucket" {
-			project_id = "%s"
-			name       = "%s"
-		}
-
-		resource "stackit_objectstorage_credentials_group" "group" {
-			project_id = "%s"
-			name       = "%s"
-		}
-
-		resource "stackit_objectstorage_credential" "creds" {
-			project_id           = "%s"
-			credentials_group_id = stackit_objectstorage_credentials_group.group.credentials_group_id
-		}
-
-		resource "stackit_cdn_distribution" "distribution" {
-			project_id = "%s"
-			config = {
-				backend = {
-					type       = "bucket"
-					# Construct the URL dynamically using the bucket name
-					bucket_url = "https://${stackit_objectstorage_bucket.bucket.name}.object.storage.eu01.onstackit.cloud"
-					region     = "eu01"
-					
-					# Pass the keys via credentials block
-                    credentials = {
-                        access_key_id = stackit_objectstorage_credential.creds.access_key
-                        secret_access_key = stackit_objectstorage_credential.creds.secret_access_key
-                    }
-				}
-				regions           = ["EU", "US"]
-				blocked_countries = ["CN", "RU"] 
-	
-				optimizer = {
-					enabled = false
-				}
-			}
-		}
-		`, testutil.CdnProviderConfig(),
-		testutil.ProjectId, bucketName,
-		testutil.ProjectId, credentialsGroupName,
-		testutil.ProjectId,
-		testutil.ProjectId,
-	)
-}
-
-func configBucketDatasource(bucketName, credentialsGroupName string) string {
-	return fmt.Sprintf(`
-		%s
-
-		data "stackit_cdn_distribution" "bucket_ds" {
-			project_id      = stackit_cdn_distribution.distribution.project_id
-			distribution_id = stackit_cdn_distribution.distribution.distribution_id
-		}
-	`, configBucketResources(bucketName, credentialsGroupName))
-}
-
-func TestAccCDNDistributionBucketResource(t *testing.T) {
-	bucketName := fmt.Sprintf("tf-acc-bucket-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-	credentialsGroupName := fmt.Sprintf("tf-acc-group-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-	bucketNameUpdated := fmt.Sprintf("tf-acc-bucket-upd-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-	credentialsGroupNameUpdated := fmt.Sprintf("tf-acc-group-upd-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))
-
+func TestAccCDNDistributionBucket(t *testing.T) {
 	expectedBucketUrl := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketName)
 	expectedBucketUrlUpdated := fmt.Sprintf("https://%s.object.storage.eu01.onstackit.cloud", bucketNameUpdated)
 
@@ -433,30 +277,28 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckCDNDistributionDestroy,
 		Steps: []resource.TestStep{
-			// Step 1: Create Resource (Real Bucket & Creds)
+			// Distribution Create
 			{
-				Config: configBucketResources(bucketName, credentialsGroupName),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.#", "1"),
+					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "domains.0.name"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "2"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CN"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.1", "RU"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", "false"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.type", "bucket"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsBucket["optimizer"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 
-					// Verify the Bucket URL matches the one we constructed
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.type", testutil.ConvertConfigVariable(testConfigVarsBucket["backend_bucket_type"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", expectedBucketUrl),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", "eu01"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.region", testutil.ConvertConfigVariable(testConfigVarsBucket["region"])),
 
 					// CRITICAL: Verify that the CDN keys match the Object Storage keys
 					// We use AttrPair because the values are generated dynamically on the server side
@@ -470,52 +312,59 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					),
 				),
 			},
+			// Import
 			{
-				ResourceName: "stackit_cdn_distribution.distribution",
+				ResourceName:    "stackit_cdn_distribution.distribution",
+				ConfigVariables: testConfigVarsBucket,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_cdn_distribution.distribution"]
 					if !ok {
-						return "", fmt.Errorf("couldn't find resource")
+						return "", fmt.Errorf("couldn't find resource stackit_cdn_distribution.distribution")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, r.Primary.Attributes["distribution_id"]), nil
+					distributionId, ok := r.Primary.Attributes["distribution_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute distribution_id")
+					}
+
+					return fmt.Sprintf("%s,%s", testutil.ProjectId, distributionId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
 				// We MUST ignore credentials on import verification
 				// 1. API doesn't return them (security).
 				// 2. State has them (from resource creation).
-				ImportStateVerifyIgnore: []string{"config.backend.credentials"},
-			},
-			// Step 3: Data Source
+				ImportStateVerifyIgnore: []string{"config.backend.credentials"}},
+			// Data Source
 			{
-				Config: configBucketDatasource(bucketName, credentialsGroupName),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "distribution_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "created_at"),
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "updated_at"),
-					resource.TestCheckResourceAttrPair("data.stackit_cdn_distribution.bucket_ds", "project_id", "stackit_cdn_distribution.distribution", "project_id"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.type", "managed"),
+					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "domains.0.name"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.#", "2"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.1", "US"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.0", "CN"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.blocked_countries.1", "RU"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.optimizer.enabled", "false"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.type", "bucket"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsBucket["optimizer"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.type", testutil.ConvertConfigVariable(testConfigVarsBucket["backend_bucket_type"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.bucket_url", expectedBucketUrl),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.region", testutil.ConvertConfigVariable(testConfigVarsBucket["region"])),
 
 					// Security Check: Secrets should NOT be in Data Source
 					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.access_key_id"),
 					resource.TestCheckNoResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.backend.credentials.secret_access_key"),
 				),
 			},
-			// Step 4: Update Resource (Change Bucket & Creds)
+			// Update
 			{
-				Config: configBucketResources(bucketNameUpdated, credentialsGroupNameUpdated),
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.backend.bucket_url", expectedBucketUrlUpdated),
@@ -531,18 +380,34 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 					),
 				),
 			},
+			// Bug Fix Verification: Omitted Field Handling
+			//
+			// This step verifies that omitting 'blocked_countries' from the Terraform configuration
+			// (by setting the pointer to nil) does not cause an "inconsistent result" error.
+			//
+			// Previously, omitting the field resulted in a 'null' config, but the API returned an
+			// empty list '[]', causing a state mismatch. The 'Default' modifier in the schema now
+			// ensures the missing config is treated as an empty list, matching the API response.
+			{
+				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				ConfigVariables: configVarsBucketUpdated(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "0"),
+				),
+			},
 		},
 	})
 }
+
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	var client *cdn.APIClient
 	var err error
-	if testutil.MongoDBFlexCustomEndpoint == "" {
+	if testutil.CdnCustomEndpoint == "" {
 		client, err = cdn.NewAPIClient()
 	} else {
 		client, err = cdn.NewAPIClient(
-			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
+			coreConfig.WithEndpoint(testutil.CdnCustomEndpoint),
 		)
 	}
 	if err != nil {
@@ -551,7 +416,7 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 
 	distributionsToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_mongodbflex_instance" {
+		if rs.Type != "stackit_cdn_distribution" {
 			continue
 		}
 		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
@@ -576,7 +441,7 @@ const (
 	recordCheckAttempts               = 100 // wait up to 5 minutes for record to be come available (normally takes less than 2 minutes)
 )
 
-func blockUntilDomainResolves(domain string) (net.IP, error) {
+func blockUntilDomainResolves(domain string) (string, error) {
 	// Create a custom resolver that bypasses the local system DNS settings/cache
 	// and queries Google DNS (8.8.8.8) directly.
 	r := &net.Resolver{
@@ -589,23 +454,17 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 			return d.DialContext(ctx, network, "8.8.8.8:53")
 		},
 	}
-
 	// wait until it becomes ready
-	isReady := func() (net.IP, error) {
+	isReady := func() (string, error) {
 		// Use a context for the individual query timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		ips, err := r.LookupIP(ctx, "ip", domain)
+		cname, err := r.LookupCNAME(ctx, domain)
 		if err != nil {
-			return nil, fmt.Errorf("error looking up IP for domain %s: %w", domain, err)
+			return "", fmt.Errorf("error looking up CNAME for domain %s: %w", domain, err)
 		}
-		for _, ip := range ips {
-			if ip.String() != "<nil>" {
-				return ip, nil
-			}
-		}
-		return nil, fmt.Errorf("no IP for domain: %v", domain)
+		return cname, nil
 	}
 
 	return retry(recordCheckAttempts, recordCheckInterval, isReady)
