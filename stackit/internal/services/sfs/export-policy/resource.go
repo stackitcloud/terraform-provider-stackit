@@ -287,7 +287,7 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 		"policy_id":  *createResp.ShareExportPolicy.Id,
@@ -472,10 +472,11 @@ func (r *exportPolicyResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("policy_id"), idParts[2])...)
-
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id": idParts[0],
+		"region":     idParts[1],
+		"policy_id":  idParts[2],
+	})
 	tflog.Info(ctx, "SFS export policy state import")
 }
 
