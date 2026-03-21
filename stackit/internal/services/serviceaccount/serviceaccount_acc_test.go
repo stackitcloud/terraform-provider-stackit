@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -74,7 +73,7 @@ func TestServiceAccount(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVars,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVars["project_id"])),
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", testutil.ConvertConfigVariable(testConfigVars["name"])),
@@ -89,7 +88,7 @@ func TestServiceAccount(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsUpdate,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
 					resource.TestCheckResourceAttr("stackit_service_account.sa", "name", testutil.ConvertConfigVariable(testConfigVarsUpdate["name"])),
@@ -104,7 +103,7 @@ func TestServiceAccount(t *testing.T) {
 			// Data source (Using exact email)
 			{
 				ConfigVariables: testConfigVarsUpdate,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccount,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccount,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_account.sa", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_account.sa", "service_account_id"),
@@ -129,13 +128,13 @@ func TestServiceAccount(t *testing.T) {
 			// Data source (Singular Exact Email - Not Found Expectation)
 			{
 				ConfigVariables: testConfigVarsExactNotFound,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountExactNotFound,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountExactNotFound,
 				ExpectError:     regexp.MustCompile(`Service account not found`),
 			},
 			// Data source (Plural / List of Service Accounts - No filter)
 			{
 				ConfigVariables: testConfigVarsUpdate,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccounts,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccounts,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_accounts.list", "project_id", testutil.ConvertConfigVariable(testConfigVarsUpdate["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list", "items.0.email"),
@@ -146,7 +145,7 @@ func TestServiceAccount(t *testing.T) {
 			// Data source (Plural - Filtered by Regex)
 			{
 				ConfigVariables: testConfigVarsPluralRegex,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountsRegex,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountsRegex,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_accounts.list_regex", "project_id", testutil.ConvertConfigVariable(testConfigVarsPluralRegex["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_regex", "items.0.email"),
@@ -156,7 +155,7 @@ func TestServiceAccount(t *testing.T) {
 			// Data source (Plural - Filtered by Suffix)
 			{
 				ConfigVariables: testConfigVarsPluralSuffix,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountsSuffix,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount + "\n" + datasourceServiceAccountsSuffix,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_service_accounts.list_suffix", "project_id", testutil.ConvertConfigVariable(testConfigVarsPluralSuffix["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_service_accounts.list_suffix", "items.0.email"),
@@ -166,7 +165,7 @@ func TestServiceAccount(t *testing.T) {
 			// Import
 			{
 				ConfigVariables: testConfigVarsUpdate,
-				Config:          testutil.ServiceAccountProviderConfig() + "\n" + resourceServiceAccount,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceServiceAccount,
 				ResourceName:    "stackit_service_account.sa",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources["stackit_service_account.sa"]
@@ -189,16 +188,7 @@ func TestServiceAccount(t *testing.T) {
 
 func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *serviceaccount.APIClient
-	var err error
-
-	if testutil.ServiceAccountCustomEndpoint == "" {
-		client, err = serviceaccount.NewAPIClient()
-	} else {
-		client, err = serviceaccount.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ServiceAccountCustomEndpoint),
-		)
-	}
+	client, err := serviceaccount.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServiceAccountCustomEndpoint)...)
 
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)

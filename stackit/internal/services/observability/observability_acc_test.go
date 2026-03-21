@@ -18,8 +18,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
-
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 )
 
 //go:embed testdata/resource-min.tf
@@ -159,7 +157,7 @@ func TestAccResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ObservabilityProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -260,7 +258,7 @@ func TestAccResourceMin(t *testing.T) {
 					  name        = stackit_observability_logalertgroup.logalertgroup.name
 					}
 					`,
-					testutil.ObservabilityProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -408,7 +406,7 @@ func TestAccResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ObservabilityProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -492,7 +490,7 @@ func TestAccResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ObservabilityProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -666,7 +664,7 @@ func TestAccResourceMax(t *testing.T) {
 					  name        = stackit_observability_logalertgroup.logalertgroup.name
 					}
 					`,
-					testutil.ObservabilityProviderConfig()+resourceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -899,7 +897,7 @@ func TestAccResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ObservabilityProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_observability_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -1051,17 +1049,7 @@ func TestAccResourceMax(t *testing.T) {
 
 func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *observability.APIClient
-	var err error
-	if testutil.ObservabilityCustomEndpoint == "" {
-		client, err = observability.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = observability.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ObservabilityCustomEndpoint),
-		)
-	}
+	client, err := observability.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

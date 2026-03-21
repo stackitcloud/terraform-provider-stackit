@@ -16,7 +16,6 @@ import (
 
 	"maps"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -114,7 +113,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.LoadBalancerProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -156,7 +155,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 							name    = stackit_loadbalancer.loadbalancer.name
 						}
 						`,
-					testutil.LoadBalancerProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance
@@ -219,7 +218,7 @@ func TestAccLoadBalancerResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.LoadBalancerProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMin["loadbalancer_name"])),
@@ -239,7 +238,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.LoadBalancerProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -312,7 +311,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 							name    = stackit_loadbalancer.loadbalancer.name
 						}
 						`,
-					testutil.LoadBalancerProviderConfig()+resourceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance
@@ -395,7 +394,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.LoadBalancerProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMax["loadbalancer_name"])),
@@ -409,15 +408,7 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 
 func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *loadbalancer.APIClient
-	var err error
-	if testutil.LoadBalancerCustomEndpoint == "" {
-		client, err = loadbalancer.NewAPIClient()
-	} else {
-		client, err = loadbalancer.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.LoadBalancerCustomEndpoint),
-		)
-	}
+	client, err := loadbalancer.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LoadBalancerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

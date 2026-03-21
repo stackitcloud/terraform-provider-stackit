@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -87,7 +86,7 @@ func configResources(backupSchedule string, region *string) string {
 					owner = stackit_postgresflex_user.user.username
 				}
 				`,
-		testutil.PostgresFlexProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["acl"],
@@ -321,15 +320,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 
 func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *postgresflex.APIClient
-	var err error
-	if testutil.PostgresFlexCustomEndpoint == "" {
-		client, err = postgresflex.NewAPIClient()
-	} else {
-		client, err = postgresflex.NewAPIClient(
-			config.WithEndpoint(testutil.PostgresFlexCustomEndpoint),
-		)
-	}
+	client, err := postgresflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.PostgresFlexCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

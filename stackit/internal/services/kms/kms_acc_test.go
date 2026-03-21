@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/kms"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -170,7 +169,7 @@ func TestAccKeyRingMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigKeyRingVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyRingMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
@@ -196,7 +195,7 @@ func TestAccKeyRingMin(t *testing.T) {
 						keyring_id = stackit_kms_keyring.keyring.keyring_id
 					}
 					`,
-					testutil.KMSProviderConfig(), resourceKeyRingMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyRingMinConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -236,7 +235,7 @@ func TestAccKeyRingMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigKeyRingVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyRingMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionReplace),
@@ -263,7 +262,7 @@ func TestAccKeyRingMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigKeyRingVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyRingMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
@@ -289,7 +288,7 @@ func TestAccKeyRingMax(t *testing.T) {
 						keyring_id = stackit_kms_keyring.keyring.keyring_id
 					}
 					`,
-					testutil.KMSProviderConfig(), resourceKeyRingMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyRingMaxConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -331,7 +330,7 @@ func TestAccKeyRingMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigKeyRingVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyRingMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyRingMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionReplace),
@@ -358,7 +357,7 @@ func TestAccKeyMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigKeyVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
@@ -395,7 +394,7 @@ func TestAccKeyMin(t *testing.T) {
 						key_id = stackit_kms_key.key.key_id
 					}
 					`,
-					testutil.KMSProviderConfig(), resourceKeyMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyMinConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -451,7 +450,7 @@ func TestAccKeyMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigKeyVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
@@ -488,7 +487,7 @@ func TestAccKeyMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigKeyVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
@@ -525,7 +524,7 @@ func TestAccKeyMax(t *testing.T) {
 						key_id = stackit_kms_key.key.key_id
 					}
 					`,
-					testutil.KMSProviderConfig(), resourceKeyMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyMaxConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -581,7 +580,7 @@ func TestAccKeyMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigKeyVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceKeyMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
@@ -618,7 +617,7 @@ func TestAccWrappingKeyMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigWrappingKeyVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceWrappingKeyMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceWrappingKeyMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
@@ -657,7 +656,7 @@ func TestAccWrappingKeyMin(t *testing.T) {
 						wrapping_key_id = stackit_kms_wrapping_key.wrapping_key.wrapping_key_id
 					}
 					`,
-					testutil.KMSProviderConfig(), resourceWrappingKeyMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceWrappingKeyMinConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -715,7 +714,7 @@ func TestAccWrappingKeyMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigWrappingKeyVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceWrappingKeyMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceWrappingKeyMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
@@ -754,7 +753,7 @@ func TestAccWrappingKeyMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigWrappingKeyVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceWrappingKeyMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceWrappingKeyMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionCreate),
@@ -793,7 +792,7 @@ func TestAccWrappingKeyMax(t *testing.T) {
 						wrapping_key_id = stackit_kms_wrapping_key.wrapping_key.wrapping_key_id
 					}
 					`,
-					testutil.KMSProviderConfig(), resourceWrappingKeyMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceWrappingKeyMaxConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -851,7 +850,7 @@ func TestAccWrappingKeyMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigWrappingKeyVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.KMSProviderConfig(), resourceWrappingKeyMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceWrappingKeyMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_kms_keyring.keyring", plancheck.ResourceActionNoop),
@@ -909,15 +908,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckKeyRingDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *kms.APIClient
-	var err error
-	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient()
-	} else {
-		client, err = kms.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
-		)
-	}
+	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -954,15 +945,7 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 
 func testAccCheckKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *kms.APIClient
-	var err error
-	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient()
-	} else {
-		client, err = kms.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
-		)
-	}
+	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -998,15 +981,7 @@ func testAccCheckKeyDestroy(s *terraform.State) error {
 
 func testAccCheckWrappingKeyDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *kms.APIClient
-	var err error
-	if testutil.KMSCustomEndpoint == "" {
-		client, err = kms.NewAPIClient()
-	} else {
-		client, err = kms.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.KMSCustomEndpoint),
-		)
-	}
+	client, err := kms.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.KMSCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

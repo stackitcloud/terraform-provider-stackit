@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/opensearch"
 	"github.com/stackitcloud/stackit-sdk-go/services/opensearch/wait"
@@ -70,7 +69,7 @@ func resourceConfig(params map[string]string) string {
 					instance_id = stackit_opensearch_instance.instance.instance_id
 				}
 				`,
-		testutil.OpenSearchProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],
@@ -237,17 +236,7 @@ func TestAccOpenSearchResource(t *testing.T) {
 
 func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *opensearch.APIClient
-	var err error
-	if testutil.OpenSearchCustomEndpoint == "" {
-		client, err = opensearch.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = opensearch.NewAPIClient(
-			config.WithEndpoint(testutil.OpenSearchCustomEndpoint),
-		)
-	}
+	client, err := opensearch.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.OpenSearchCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

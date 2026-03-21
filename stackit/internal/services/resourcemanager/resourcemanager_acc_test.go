@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	wait "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api/wait"
@@ -76,6 +75,9 @@ var testConfigResourceFolderParentUUID = config.Variables{
 	"labels":              defaultLabels,
 }
 
+var token = testutil.GetTestProjectServiceAccountToken("")
+var providerConfig = testutil.NewConfigBuilder().ServiceAccountToken(token).BuildProviderConfig()
+
 func testConfigProjectNameParentContainerIdUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testConfigResourceProjectParentContainerId))
 	maps.Copy(tempConfig, testConfigResourceProjectParentContainerId)
@@ -113,7 +115,7 @@ func TestAccResourceManagerProjectContainerId(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigResourceProjectParentContainerId,
-				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
+				Config:          providerConfig + resourceProject,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["parent_container_id"])),
@@ -138,7 +140,7 @@ func TestAccResourceManagerProjectContainerId(t *testing.T) {
                     data "stackit_resourcemanager_project" "example" {
                         project_id = stackit_resourcemanager_project.example.project_id
                     }
-                `, testutil.ResourceManagerProviderConfig(), resourceProject),
+                `, providerConfig, resourceProject),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["name"])),
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["parent_container_id"])),
@@ -165,7 +167,7 @@ func TestAccResourceManagerProjectContainerId(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigProjectNameParentContainerIdUpdated(),
-				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
+				Config:          providerConfig + resourceProject,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigProjectNameParentContainerIdUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentContainerId["parent_container_id"])),
@@ -193,7 +195,7 @@ func TestAccResourceManagerProjectParentUUID(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigResourceProjectParentUUID,
-				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
+				Config:          providerConfig + resourceProject,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["parent_container_id"])),
@@ -218,7 +220,7 @@ func TestAccResourceManagerProjectParentUUID(t *testing.T) {
                     data "stackit_resourcemanager_project" "example" {
                         project_id = stackit_resourcemanager_project.example.project_id
                     }
-                `, testutil.ResourceManagerProviderConfig(), resourceProject),
+                `, providerConfig, resourceProject),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["name"])),
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_project.example", "labels.%", "1"),
@@ -245,7 +247,7 @@ func TestAccResourceManagerProjectParentUUID(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigProjectNameParentUUIDUpdated(),
-				Config:          testutil.ResourceManagerProviderConfig() + resourceProject,
+				Config:          providerConfig + resourceProject,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "name", testutil.ConvertConfigVariable(testConfigProjectNameParentUUIDUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceProjectParentUUID["parent_container_id"])),
@@ -273,7 +275,7 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigResourceFolderParentContainerId,
-				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
+				Config:          providerConfig + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["parent_container_id"])),
@@ -297,7 +299,7 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 					data "stackit_resourcemanager_folder" "example" {
 						container_id = stackit_resourcemanager_folder.example.container_id
 					}
-				`, testutil.ResourceManagerProviderConfig(), resourceFolder),
+				`, providerConfig, resourceFolder),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentContainerId["name"])),
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.%", "1"),
@@ -324,7 +326,7 @@ func TestAccResourceManagerFolderContainerId(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigFolderNameParentContainerIdUpdated(),
-				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
+				Config:          providerConfig + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigFolderNameParentContainerIdUpdated()["parent_container_id"])),
@@ -352,7 +354,7 @@ func TestAccResourceManagerFolderParentUUID(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigResourceFolderParentUUID,
-				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
+				Config:          providerConfig + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["parent_container_id"])),
@@ -376,7 +378,7 @@ func TestAccResourceManagerFolderParentUUID(t *testing.T) {
 					data "stackit_resourcemanager_folder" "example" {
 						container_id = stackit_resourcemanager_folder.example.container_id
 					}
-				`, testutil.ResourceManagerProviderConfig(), resourceFolder),
+				`, providerConfig, resourceFolder),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigResourceFolderParentUUID["name"])),
 					resource.TestCheckResourceAttr("data.stackit_resourcemanager_folder.example", "labels.%", "1"),
@@ -403,7 +405,7 @@ func TestAccResourceManagerFolderParentUUID(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigFolderNameParentUUIDUpdated(),
-				Config:          testutil.ResourceManagerProviderConfig() + resourceFolder,
+				Config:          providerConfig + resourceFolder,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "name", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.example", "parent_container_id", testutil.ConvertConfigVariable(testConfigFolderNameParentUUIDUpdated()["parent_container_id"])),
@@ -447,15 +449,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -509,15 +503,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			sdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

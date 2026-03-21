@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/wait"
@@ -39,7 +38,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ObjectStorageProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -110,7 +109,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								credentials_group_id = stackit_objectstorage_credential.credential_time.credentials_group_id
 								credential_id  = stackit_objectstorage_credential.credential_time.credential_id
 							}`,
-					testutil.ObjectStorageProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data
@@ -236,17 +235,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *objectstorage.APIClient
-	var err error
-	if testutil.ObjectStorageCustomEndpoint == "" {
-		client, err = objectstorage.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = objectstorage.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ObjectStorageCustomEndpoint),
-		)
-	}
+	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

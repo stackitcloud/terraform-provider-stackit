@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/wait"
@@ -70,7 +69,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceMinConfig),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -121,7 +120,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 						project_id = stackit_mariadb_credential.credential.project_id
 						instance_id = stackit_mariadb_credential.credential.instance_id
 					    credential_id = stackit_mariadb_credential.credential.credential_id
-					}`, testutil.MariaDBProviderConfig(), resourceMinConfig,
+					}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceMinConfig,
 				),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance data
@@ -206,7 +205,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceMaxConfig),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -271,7 +270,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 						project_id = stackit_mariadb_credential.credential.project_id
 						instance_id = stackit_mariadb_credential.credential.instance_id
 					    credential_id = stackit_mariadb_credential.credential.credential_id
-					}`, testutil.MariaDBProviderConfig(), resourceMaxConfig,
+					}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceMaxConfig,
 				),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance data
@@ -354,7 +353,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
@@ -409,17 +408,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 
 func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *mariadb.APIClient
-	var err error
-	if testutil.MariaDBCustomEndpoint == "" {
-		client, err = mariadb.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = mariadb.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.MariaDBCustomEndpoint),
-		)
-	}
+	client, err := mariadb.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.MariaDBCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

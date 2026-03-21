@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 
@@ -510,15 +509,7 @@ func TestAccDnsMaxResource(t *testing.T) {
 
 func testAccCheckDnsDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *dns.APIClient
-	var err error
-	if testutil.DnsCustomEndpoint == "" {
-		client, err = dns.NewAPIClient()
-	} else {
-		client, err = dns.NewAPIClient(
-			core_config.WithEndpoint(testutil.DnsCustomEndpoint),
-		)
-	}
+	client, err := dns.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.DnsCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

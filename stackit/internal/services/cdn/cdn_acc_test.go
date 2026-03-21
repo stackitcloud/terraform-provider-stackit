@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -86,7 +85,7 @@ func configResources(regions string, geofencingCountries []string, blockedCountr
 					type       = "CNAME"
 					records    = ["${stackit_cdn_distribution.distribution.domains[0].name}."]
 				}
-		`, testutil.CdnProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"], instanceResource["config_backend_origin_url"], geofencingList,
+		`, testutil.NewConfigBuilder().BuildProviderConfig(), testutil.ProjectId, instanceResource["config_backend_origin_url"], instanceResource["config_backend_origin_url"], geofencingList,
 		regions, blockedCountriesConfig, testutil.ProjectId, instanceResource["dns_name"],
 		testutil.ProjectId, instanceResource["custom_domain_prefix"])
 }
@@ -401,7 +400,7 @@ func configBucketResources(bucketName, credentialsGroupName string) string {
 				}
 			}
 		}
-		`, testutil.CdnProviderConfig(),
+		`, testutil.NewConfigBuilder().BuildProviderConfig(),
 		testutil.ProjectId, bucketName,
 		testutil.ProjectId, credentialsGroupName,
 		testutil.ProjectId,
@@ -536,15 +535,7 @@ func TestAccCDNDistributionBucketResource(t *testing.T) {
 }
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *cdn.APIClient
-	var err error
-	if testutil.MongoDBFlexCustomEndpoint == "" {
-		client, err = cdn.NewAPIClient()
-	} else {
-		client, err = cdn.NewAPIClient(
-			config.WithEndpoint(testutil.MongoDBFlexCustomEndpoint),
-		)
-	}
+	client, err := cdn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -614,7 +605,7 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
 	var zero T
 	var errOuter error
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		dist, err := f()
 		if err == nil {
 			return dist, nil
