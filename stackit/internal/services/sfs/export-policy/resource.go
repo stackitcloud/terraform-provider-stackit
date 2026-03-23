@@ -276,7 +276,7 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 
 	createResp, err := r.client.CreateShareExportPolicy(ctx, projectId, region).CreateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API: %v", err))
+		sfsUtils.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", "Calling API", err)
 		return
 	}
 
@@ -402,7 +402,7 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 
 	_, err = r.client.UpdateShareExportPolicy(ctx, projectId, region, exportPolicyId).UpdateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
+		sfsUtils.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", "Calling API to update export policy", err)
 		return
 	}
 

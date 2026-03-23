@@ -53,17 +53,18 @@ func (m *MockServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		next.Handler(w, r)
 		return
 	}
+	status := next.StatusCode
+	if status == 0 {
+		status = http.StatusOK
+	}
 	if next.ToJsonBody != nil {
 		bs, err := json.Marshal(next.ToJsonBody)
 		if err != nil {
 			m.t.Fatalf("Error marshaling response body: %v", err)
 		}
 		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(status)
 		w.Write(bs) //nolint:errcheck //test will fail when this happens
-	}
-	status := next.StatusCode
-	if status == 0 {
-		status = http.StatusOK
 	}
 	w.WriteHeader(status)
 }

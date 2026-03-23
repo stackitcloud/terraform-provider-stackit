@@ -162,3 +162,48 @@ resource "stackit_sfs_share" "example" {
 		},
 	})
 }
+
+func TestLogAndErrorPrintsValidationMessage(t *testing.T) {
+	projectId := uuid.NewString()
+	const region = "eu01"
+	s := testutil.NewMockServer(t)
+	defer s.Server.Close()
+	tfConfig := fmt.Sprintf(`
+provider "stackit" {
+	default_region = "%s"
+	sfs_custom_endpoint = "%s"
+	service_account_token = "mock-server-needs-no-auth"
+	enable_beta_resources = true
+}
+resource "stackit_sfs_resource_pool" "resourcepool" {
+  project_id        = "%s"
+  name              = "sfs-instance"
+  availability_zone = "eu01-m"
+  performance_class = "Standard"
+  size_gigabytes    = 512
+  ip_acl            = ["192.168.2.0/24"]
+}
+`, region, s.Server.URL, projectId)
+	s.Reset(testutil.MockResponse{
+		StatusCode: http.StatusBadRequest,
+		ToJsonBody: sfs.ValidationError{
+			Type:  utils.Ptr("storage.stackit.cloud/validation-error"),
+			Title: utils.Ptr("Validation Failed"),
+			Fields: &[]sfs.ValidationErrorField{
+				{
+					Field:  utils.Ptr("ip"),
+					Reason: utils.Ptr("999.999.999 is not a valid ip address"),
+				},
+			},
+		},
+	})
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile(".*Calling API: Validation Failed\n\nField: ip \\| Reason: 999.999.999 is not a valid ip address"),
+			},
+		},
+	})
+}

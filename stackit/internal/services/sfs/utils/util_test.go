@@ -6,9 +6,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	utils2 "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -89,5 +91,52 @@ func TestConfigureClient(t *testing.T) {
 				t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
 			}
 		})
+	}
+}
+
+func TestDescribeValidationError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  sfs.ValidationError
+		want string
+	}{
+		{
+			name: "just title",
+			err: sfs.ValidationError{
+				Title: utils2.Ptr("nice title"),
+			},
+			want: `nice title
+`,
+		},
+		{
+			name: "with fields",
+			err: sfs.ValidationError{
+				Title: utils2.Ptr("nice title"),
+				Fields: &[]sfs.ValidationErrorField{
+					{
+						Field:  utils2.Ptr("field-a"),
+						Reason: utils2.Ptr("reason-a"),
+					},
+					{
+						Reason: utils2.Ptr("reason-b"),
+					},
+					{
+						Field: utils2.Ptr("field-c"),
+					},
+				},
+			},
+			want: `nice title
+
+Field: field-a | Reason: reason-a
+Field:  | Reason: reason-b
+Field: field-c | Reason: `,
+		},
+	}
+
+	for _, tt := range tests {
+		got := DescribeValidationError(tt.err)
+		if d := cmp.Diff(got, tt.want); d != "" {
+			t.Errorf("DescribeValidationError() = got diff: %s", d)
+		}
 	}
 }

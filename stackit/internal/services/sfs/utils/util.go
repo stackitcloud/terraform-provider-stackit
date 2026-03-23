@@ -2,8 +2,11 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -27,4 +30,41 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 
 	return apiClient
+}
+
+func DescribeValidationError(err sfs.ValidationError) string {
+	var sb strings.Builder
+	if err.Title != nil {
+		sb.WriteString(*err.Title)
+		sb.WriteRune('\n')
+	}
+	if fields := err.Fields; fields != nil {
+		for _, field := range *fields {
+			sb.WriteRune('\n')
+			sb.WriteString("Field: ")
+			if field.Field != nil {
+				sb.WriteString(*field.Field)
+			}
+			sb.WriteString(" | Reason: ")
+			if field.Reason != nil {
+				sb.WriteString(*field.Reason)
+			}
+		}
+	}
+	return sb.String()
+}
+
+func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detail string, err error) {
+	if err == nil {
+		return
+	}
+	message := err.Error()
+	var oapiErr *oapierror.GenericOpenAPIError
+	if errors.As(err, &oapiErr) {
+		errModel := oapiErr.Model
+		if validationErr, ok := errModel.(sfs.ValidationError); ok {
+			message = DescribeValidationError(validationErr)
+		}
+	}
+	core.LogAndAddError(ctx, diags, summary, fmt.Sprintf("%s: %v", detail, message))
 }

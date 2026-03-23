@@ -232,7 +232,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		CreateResourcePoolPayload(*payload).
 		Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Calling API: %v", err))
+		sfsUtils.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "Calling API", err)
 		return
 	}
 
@@ -380,7 +380,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 				return
 			}
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", fmt.Sprintf("Calling API: %v", err))
+		sfsUtils.LogAndAddError(ctx, &resp.Diagnostics, "Error updating resource pool", "Calling API", err)
 		return
 	}
 

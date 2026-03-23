@@ -230,7 +230,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		CreateSharePayload(payload).
 		Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("Calling API: %v", err))
+		sfsUtils.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "Calling API", err)
 		return
 	}
 
@@ -382,7 +382,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 				return
 			}
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", fmt.Sprintf("Calling API: %v", err))
+		sfsUtils.LogAndAddError(ctx, &resp.Diagnostics, "Error updating share", "Calling API", err)
 		return
 	}
 
