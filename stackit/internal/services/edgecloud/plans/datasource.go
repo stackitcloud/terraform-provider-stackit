@@ -37,6 +37,7 @@ var planTypes = map[string]attr.Type{
 	"id":             types.StringType,
 	"name":           types.StringType,
 	"description":    types.StringType,
+	"min_edge_hosts": types.Int64Type,
 	"max_edge_hosts": types.Int64Type,
 }
 
@@ -106,6 +107,10 @@ func (d *plansDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 						},
 						"description": schema.StringAttribute{
 							Description: "Description of the plan.",
+							Computed:    true,
+						},
+						"min_edge_hosts": schema.Int64Attribute{
+							Description: "Minimum number of Edge Cloud hosts charged.",
 							Computed:    true,
 						},
 						"max_edge_hosts": schema.Int64Attribute{
@@ -190,7 +195,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 // mapPlanToAttrs maps a single edge.Plan to a map of Terraform attributes.
 func mapPlanToAttrs(plan *edge.Plan) (map[string]attr.Value, error) {
-	if plan == nil || plan.Id == nil || plan.Name == nil || plan.MaxEdgeHosts == nil {
+	if plan == nil || plan.Id == nil || plan.Name == nil || plan.MaxEdgeHosts == nil || plan.MinEdgeHosts == nil {
 		return nil, fmt.Errorf("received nil or incomplete plan from API")
 	}
 
@@ -198,6 +203,7 @@ func mapPlanToAttrs(plan *edge.Plan) (map[string]attr.Value, error) {
 		"id":             types.StringValue(plan.GetId()),
 		"name":           types.StringValue(plan.GetName()),
 		"description":    types.StringValue(plan.GetDescription()),
+		"min_edge_hosts": types.Int64Value(plan.GetMinEdgeHosts()),
 		"max_edge_hosts": types.Int64Value(plan.GetMaxEdgeHosts()),
 	}
 

@@ -15,7 +15,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.9.3
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
-	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.3
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.3
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2

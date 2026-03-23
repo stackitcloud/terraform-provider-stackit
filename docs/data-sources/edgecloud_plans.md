@@ -43,4 +43,5 @@ Read-Only:
 - `description` (String) Description of the plan.
 - `id` (String) The ID of the plan.
 - `max_edge_hosts` (Number) Maximum number of Edge Cloud hosts that can be used.
+- `min_edge_hosts` (Number) Minimum number of Edge Cloud hosts charged.
 - `name` (String) The name of the plan.
