@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 )
 
 func TestMapFieldsCreate(t *testing.T) {
@@ -47,7 +47,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&sqlserverflex.CreateUserResponse{
 				Item: &sqlserverflex.SingleUser{
 					Id: utils.Ptr("uid"),
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -82,7 +82,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&sqlserverflex.CreateUserResponse{
 				Item: &sqlserverflex.SingleUser{
 					Id:       utils.Ptr("uid"),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Password: utils.Ptr(""),
 					Host:     nil,
@@ -194,7 +194,7 @@ func TestMapFields(t *testing.T) {
 			"simple_values",
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -227,7 +227,7 @@ func TestMapFields(t *testing.T) {
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{
 					Id:       utils.Ptr("uid"),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Host:     nil,
 					Port:     utils.Ptr(int64(2123456789)),
@@ -308,8 +308,8 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&sqlserverflex.CreateUserPayload{
-				Roles:    &[]string{},
-				Username: nil,
+				Roles:    []string{},
+				Username: "",
 			},
 			true,
 		},
@@ -323,11 +323,11 @@ func TestToCreatePayload(t *testing.T) {
 				"role_2",
 			},
 			&sqlserverflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
-				Username: utils.Ptr("username"),
+				Username: "username",
 			},
 			true,
 		},
@@ -340,10 +340,10 @@ func TestToCreatePayload(t *testing.T) {
 				"",
 			},
 			&sqlserverflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
-				Username: nil,
+				Username: "",
 			},
 			true,
 		},
@@ -361,8 +361,8 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			[]string{},
 			&sqlserverflex.CreateUserPayload{
-				Roles:    &[]string{},
-				Username: utils.Ptr("username"),
+				Roles:    []string{},
+				Username: "username",
 			},
 			true,
 		},
