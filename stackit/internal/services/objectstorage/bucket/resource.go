@@ -115,7 +115,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
-		"object_lock":              "Enable S3 Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.",
+		"object_lock":              "Enable Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
 		"region":                   "The resource region. If not defined, the provider region is used.",

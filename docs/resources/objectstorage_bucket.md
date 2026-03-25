@@ -48,7 +48,7 @@ import {
 
 ### Optional
 
-- `object_lock` (Boolean) Enable S3 Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.
+- `object_lock` (Boolean) Enable Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
