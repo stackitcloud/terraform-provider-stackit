@@ -81,6 +81,10 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "name"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "access_key"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "secret_access_key"),
+
+					// compliance lock
+					resource.TestCheckResourceAttr("stackit_objectstorage_compliance_lock.compliance_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_compliance_lock.compliance_lock", "max_retention_days"),
 				),
 			},
 			// Data source
@@ -109,6 +113,9 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								project_id  = stackit_objectstorage_credential.credential_time.project_id
 								credentials_group_id = stackit_objectstorage_credential.credential_time.credentials_group_id
 								credential_id  = stackit_objectstorage_credential.credential_time.credential_id
+							}
+							data "stackit_objectstorage_compliance_lock" "compliance_lock" {
+								project_id = stackit_objectstorage_compliance_lock.compliance_lock.project_id
 							}`,
 					testutil.ObjectStorageProviderConfig()+resourceMinConfig,
 				),
@@ -186,6 +193,10 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 						"stackit_objectstorage_credential.credential_time", "expiration_timestamp",
 						"data.stackit_objectstorage_credential.credential_time", "expiration_timestamp",
 					),
+
+					// Compliance lock
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_compliance_lock.compliance_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_objectstorage_compliance_lock.compliance_lock", "max_retention_days"),
 				),
 			},
 			// Import
