@@ -24,3 +24,7 @@ resource "stackit_objectstorage_credential" "credential_time" {
   credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
   expiration_timestamp = var.expiration_timestamp
 }
+
+resource "stackit_objectstorage_compliance_lock" "compliance_lock" {
+  project_id = var.project_id
+}

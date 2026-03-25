@@ -74,6 +74,7 @@ import (
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
+	compliancelock "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/compliance-lock"
 	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
 	alertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/alertgroup"
@@ -682,6 +683,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		share.NewShareDataSource,
 		exportpolicy.NewExportPolicyDataSource,
 		snapshots.NewResourcePoolSnapshotDataSource,
+		compliancelock.NewComplianceLockDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 
@@ -767,6 +769,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resourcepool.NewResourcePoolResource,
 		share.NewShareResource,
 		exportpolicy.NewExportPolicyResource,
+		compliancelock.NewComplianceLockResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
