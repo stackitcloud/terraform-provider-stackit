@@ -56,12 +56,14 @@ func TestMapFields(t *testing.T) {
 				Bucket: &objectstorage.Bucket{
 					UrlPathStyle:          utils.Ptr("url/path/style"),
 					UrlVirtualHostedStyle: utils.Ptr("url/virtual/hosted/style"),
+					ObjectLockEnabled:     utils.Ptr(true),
 				},
 			},
 			Model{
 				Id:                    types.StringValue(id),
 				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
+				ObjectLock:            types.BoolValue(true),
 				URLPathStyle:          types.StringValue("url/path/style"),
 				URLVirtualHostedStyle: types.StringValue("url/virtual/hosted/style"),
 				Region:                types.StringValue("eu01"),

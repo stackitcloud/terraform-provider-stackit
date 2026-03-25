@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
 
@@ -41,6 +43,7 @@ type Model struct {
 	URLPathStyle          types.String `tfsdk:"url_path_style"`
 	URLVirtualHostedStyle types.String `tfsdk:"url_virtual_hosted_style"`
 	Region                types.String `tfsdk:"region"`
+	ObjectLock            types.Bool   `tfsdk:"object_lock"`
 }
 
 // NewBucketResource is a helper function to simplify the provider implementation.
@@ -112,6 +115,7 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
+		"object_lock":              "Enable S3 Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
 		"region":                   "The resource region. If not defined, the provider region is used.",
@@ -148,6 +152,15 @@ func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"object_lock": schema.BoolAttribute{
+				Description: descriptions["object_lock"],
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
 				},
 			},
 			"url_path_style": schema.StringAttribute{
@@ -196,7 +209,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Create new bucket
-	_, err = r.client.CreateBucket(ctx, projectId, region, bucketName).Execute()
+	_, err = r.client.CreateBucket(ctx, projectId, region, bucketName).ObjectLockEnabled(model.ObjectLock.ValueBool()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -367,6 +380,7 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region
 	model.URLPathStyle = types.StringPointerValue(bucket.UrlPathStyle)
 	model.URLVirtualHostedStyle = types.StringPointerValue(bucket.UrlVirtualHostedStyle)
 	model.Region = types.StringValue(region)
+	model.ObjectLock = types.BoolPointerValue(bucket.ObjectLockEnabled)
 	return nil
 }
 

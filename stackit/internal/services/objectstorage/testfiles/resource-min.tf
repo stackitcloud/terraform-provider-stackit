@@ -4,6 +4,9 @@ variable "objectstorage_bucket_name" {}
 variable "objectstorage_credentials_group_name" {}
 variable "expiration_timestamp" {}
 
+variable "objectstorage_bucket_name_with_lock" {}
+variable "object_lock" {}
+
 resource "stackit_objectstorage_bucket" "bucket" {
   project_id = var.project_id
   name       = var.objectstorage_bucket_name
@@ -27,4 +30,11 @@ resource "stackit_objectstorage_credential" "credential_time" {
 
 resource "stackit_objectstorage_compliance_lock" "compliance_lock" {
   project_id = var.project_id
+}
+
+resource "stackit_objectstorage_bucket" "bucket_object_lock" {
+  depends_on  = [stackit_objectstorage_compliance_lock.compliance_lock]
+  project_id  = var.project_id
+  name        = var.objectstorage_bucket_name_with_lock
+  object_lock = var.object_lock
 }
