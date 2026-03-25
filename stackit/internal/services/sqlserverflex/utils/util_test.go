@@ -45,7 +45,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *sqlserverflex.APIClient {
 				apiClient, err := sqlserverflex.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
