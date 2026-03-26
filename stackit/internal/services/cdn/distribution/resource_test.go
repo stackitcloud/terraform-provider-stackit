@@ -521,11 +521,56 @@ func TestMapFields(t *testing.T) {
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
+
+	redirectsAttrTypes := configTypes["redirects"].(basetypes.ObjectType).AttrTypes
+
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
+		"redirects":         types.ObjectNull(redirectsAttrTypes),
+	})
+
+	redirectsInput := &cdn.RedirectConfig{
+		Rules: &[]cdn.RedirectRule{
+			{
+				Description:        cdn.PtrString("Test redirect"),
+				Enabled:            cdn.PtrBool(true),
+				TargetUrl:          cdn.PtrString("https://example.com/redirect"),
+				StatusCode:         cdn.RedirectRuleStatusCode(301).Ptr(),
+				RuleMatchCondition: cdn.MatchCondition("ANY").Ptr(),
+				Matchers: &[]cdn.Matcher{
+					{
+						Values:              &[]string{"/shop/*"},
+						ValueMatchCondition: cdn.MatchCondition("ANY").Ptr(),
+					},
+				},
+			},
+		},
+	}
+
+	matcherValuesExpected := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("/shop/*"),
+	})
+	matcherValExpected := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
+		"values":                matcherValuesExpected,
+		"value_match_condition": types.StringValue("ANY"),
+	})
+	matchersListExpected := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherValExpected})
+
+	ruleValExpected := types.ObjectValueMust(redirectRuleTypes, map[string]attr.Value{
+		"description":          types.StringValue("Test redirect"),
+		"enabled":              types.BoolValue(true),
+		"target_url":           types.StringValue("https://example.com/redirect"),
+		"status_code":          types.Int32Value(301),
+		"rule_match_condition": types.StringValue("ANY"),
+		"matchers":             matchersListExpected,
+	})
+	rulesListExpected := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleValExpected})
+
+	redirectsConfigExpected := types.ObjectValueMust(redirectsTypes, map[string]attr.Value{
+		"rules": rulesListExpected,
 	})
 
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
@@ -607,6 +652,7 @@ func TestMapFields(t *testing.T) {
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
+		"redirects":         types.ObjectNull(redirectsAttrTypes),
 	})
 	tests := map[string]struct {
 		Input        *cdn.Distribution
@@ -626,6 +672,7 @@ func TestMapFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdn.Distribution) {
@@ -651,10 +698,26 @@ func TestMapFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdn.Distribution) {
 				d.Config.Backend.HttpBackend.Geofencing = &geofencingInput
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_redirects": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         redirectsConfigExpected,
+				})
+			}),
+			Input: distributionFixture(func(d *cdn.Distribution) {
+				d.Config.Redirects = redirectsInput
 			}),
 			IsValid: true,
 		},
