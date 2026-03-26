@@ -1144,6 +1144,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		Backend:          backend,
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
+		Redirects:        cfg.Redirects,
 	}
 
 	return payload, nil

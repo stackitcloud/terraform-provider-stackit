@@ -41,12 +41,40 @@ func TestToCreatePayload(t *testing.T) {
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
+
+	redirectsAttrTypes := configTypes["redirects"].(basetypes.ObjectType).AttrTypes
+
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
+		"redirects":         types.ObjectNull(redirectsAttrTypes),
 	})
+
+	matcherValues := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("/shop/*"),
+	})
+	matcherVal := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
+		"values":                matcherValues,
+		"value_match_condition": types.StringValue("ANY"),
+	})
+	matchersList := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherVal})
+
+	ruleVal := types.ObjectValueMust(redirectRuleTypes, map[string]attr.Value{
+		"description":          types.StringValue("Test redirect"),
+		"enabled":              types.BoolValue(true),
+		"target_url":           types.StringValue("https://example.com/redirect"),
+		"status_code":          types.Int32Value(301),
+		"rule_match_condition": types.StringValue("ANY"),
+		"matchers":             matchersList,
+	})
+	rulesList := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleVal})
+
+	redirectsConfigVal := types.ObjectValueMust(redirectsTypes, map[string]attr.Value{
+		"rules": rulesList,
+	})
+
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
 			DistributionId: types.StringValue("test-distribution-id"),
@@ -86,6 +114,7 @@ func TestToCreatePayload(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
 				})
 			}),
 			Expected: &cdn.CreateDistributionPayload{
@@ -98,6 +127,47 @@ func TestToCreatePayload(t *testing.T) {
 						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
 						OriginUrl:            cdn.PtrString("https://www.mycoolapp.com"),
 						Type:                 cdn.PtrString("http"),
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_redirects": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         redirectsConfigVal,
+				})
+			}),
+			Expected: &cdn.CreateDistributionPayload{
+				Regions:          &[]cdn.Region{"EU", "US"},
+				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Backend: &cdn.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdn.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            cdn.PtrString("https://www.mycoolapp.com"),
+						Type:                 cdn.PtrString("http"),
+					},
+				},
+				Redirects: &cdn.RedirectConfig{
+					Rules: &[]cdn.RedirectRule{
+						{
+							Description:        cdn.PtrString("Test redirect"),
+							Enabled:            cdn.PtrBool(true),
+							TargetUrl:          cdn.PtrString("https://example.com/redirect"),
+							StatusCode:         cdn.RedirectRuleStatusCode(301).Ptr(),
+							RuleMatchCondition: cdn.MatchCondition("ANY").Ptr(),
+							Matchers: &[]cdn.Matcher{
+								{
+									Values:              &[]string{"/shop/*"},
+									ValueMatchCondition: cdn.MatchCondition("ANY").Ptr(),
+								},
+							},
+						},
 					},
 				},
 			},
@@ -123,6 +193,7 @@ func TestToCreatePayload(t *testing.T) {
 					"regions":           regionsFixture, // reusing the existing one
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
 				})
 			}),
 			Expected: &cdn.CreateDistributionPayload{
