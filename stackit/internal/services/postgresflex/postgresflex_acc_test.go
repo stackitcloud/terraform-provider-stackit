@@ -202,7 +202,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "acl.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "acl.0", instanceResource["acl"]),
-					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "backup_schedule", "0 16 * * *"),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.id", instanceResource["flavor_id"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.description", instanceResource["flavor_description"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
