@@ -697,6 +697,51 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = &tempBlockedCountries
 	}
 
+	// redirects
+	var redirectsConfig *cdn.RedirectConfig
+	if configModel.Redirects != nil {
+		sdkRules := []cdn.RedirectRule{}
+		if len(configModel.Redirects.Rules) > 0 {
+			for _, rule := range configModel.Redirects.Rules {
+				matchers := []cdn.Matcher{}
+				for _, matcher := range rule.Matchers {
+					var matchCond *cdn.MatchCondition
+					if matcher.ValueMatchCondition != nil {
+						cond := cdn.MatchCondition(*matcher.ValueMatchCondition)
+						matchCond = &cond
+					}
+
+					matchers = append(matchers, cdn.Matcher{
+						Values:              &matcher.Values,
+						ValueMatchCondition: matchCond,
+					})
+				}
+
+				var ruleMatchCond *cdn.MatchCondition
+				if rule.RuleMatchCondition != nil {
+					cond := cdn.MatchCondition(*rule.RuleMatchCondition)
+					ruleMatchCond = &cond
+				}
+
+				statusCode := cdn.RedirectRuleStatusCode(rule.StatusCode)
+				targetUrl := rule.TargetUrl
+
+				sdkConfigRule := cdn.RedirectRule{
+					Description:        rule.Description,
+					Enabled:            rule.Enabled,
+					Matchers:           &matchers,
+					RuleMatchCondition: ruleMatchCond,
+					StatusCode:         &statusCode,
+					TargetUrl:          &targetUrl,
+				}
+				sdkRules = append(sdkRules, sdkConfigRule)
+			}
+		}
+		redirectsConfig = &cdn.RedirectConfig{
+			Rules: &sdkRules,
+		}
+	}
+
 	configPatchBackend := &cdn.ConfigPatchBackend{}
 
 	if configModel.Backend.Type == "http" {
