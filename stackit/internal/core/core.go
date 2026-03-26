@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 )
 
 type ResourceType string
@@ -78,6 +80,9 @@ type ProviderData struct {
 	VpnCustomEndpoint               string
 	EnableBetaResources             bool
 	Experiments                     []string
+
+	EdgeApiClient              edge.DefaultAPI
+	ServiceenablementApiClient serviceenablement.DefaultAPI
 
 	Version string // version of the STACKIT Terraform provider
 }

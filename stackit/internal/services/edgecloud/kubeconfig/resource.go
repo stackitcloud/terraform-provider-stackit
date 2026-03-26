@@ -77,7 +77,6 @@ func NewKubeconfigResource() resource.Resource {
 
 // kubeconfigResource is the resource implementation.
 type kubeconfigResource struct {
-	client       *edgeCloud.APIClient
 	providerData core.ProviderData
 }
 
@@ -97,13 +96,6 @@ func (r *kubeconfigResource) Configure(ctx context.Context, req resource.Configu
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	apiClient := edgeCloudUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
-	tflog.Info(ctx, "Edge Cloud kubeconfig client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -310,7 +302,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
+		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.providerData.EdgeApiClient, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
@@ -319,7 +311,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
+		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.providerData.EdgeApiClient, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return

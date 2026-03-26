@@ -75,7 +75,6 @@ func NewTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client       *edgeCloud.APIClient
 	providerData core.ProviderData
 }
 
@@ -95,13 +94,6 @@ func (r *tokenResource) Configure(ctx context.Context, req resource.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	apiClient := edgeCloudUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
-	tflog.Info(ctx, "Edge Cloud token client configured")
 }
 
 // Schema defines the schema for the resource.
@@ -308,7 +300,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
+		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.providerData.EdgeApiClient, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return
@@ -317,7 +309,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
+		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.providerData.EdgeApiClient, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return

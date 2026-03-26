@@ -20,14 +20,12 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	edgewait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
-	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	edgeutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/utils"
-	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -61,9 +59,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource implements the resource interface for Edge Cloud instances.
 type instanceResource struct {
-	client           *edge.APIClient
-	enablementClient *serviceenablement.APIClient
-	providerData     core.ProviderData
+	providerData core.ProviderData
 }
 
 func (i *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
@@ -119,17 +115,6 @@ func (i *instanceResource) Configure(ctx context.Context, req resource.Configure
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	apiClient := edgeutils.ConfigureClient(ctx, &i.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	serviceEnablementClient := serviceenablementUtils.ConfigureClient(ctx, &i.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	i.client = apiClient
-	i.enablementClient = serviceEnablementClient
-	tflog.Info(ctx, "edge client configured")
 }
 
 // Metadata sets the resource type name for the Edge Cloud instance resource.
@@ -251,13 +236,13 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// If the service edge-cloud is not enabled, enable it
-	err := i.enablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.EdgecloudServiceId).Execute()
+	err := i.providerData.ServiceenablementApiClient.EnableServiceRegional(ctx, region, projectId, utils.EdgecloudServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API to enable edge-cloud: %v", err))
 		return
 	}
 
-	_, err = enablementWait.EnableServiceWaitHandler(ctx, i.enablementClient.DefaultAPI, region, projectId, utils.EdgecloudServiceId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, i.providerData.ServiceenablementApiClient, region, projectId, utils.EdgecloudServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait for edge-cloud enablement: %v", err))
 		return
@@ -265,7 +250,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	tflog.Info(ctx, "Creating new Edge Cloud instance")
 	payload := toCreatePayload(&model)
-	createResp, err := i.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(payload).Execute()
+	createResp, err := i.providerData.EdgeApiClient.CreateInstance(ctx, projectId, region).CreateInstancePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -288,7 +273,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, createResp.Id).WaitWithContext(ctx)
+	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.providerData.EdgeApiClient, projectId, region, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance waiting: %v", err))
 		return
@@ -330,7 +315,7 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	edgeCloudInstanceResp, err := i.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	edgeCloudInstanceResp, err := i.providerData.EdgeApiClient.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -373,7 +358,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	tflog.Info(ctx, "Updating Edge Cloud instance", map[string]any{"instance_id": instanceId})
 	payload := toUpdatePayload(&model)
-	err := i.client.DefaultAPI.UpdateInstance(ctx, projectId, region, instanceId).UpdateInstancePayload(payload).Execute()
+	err := i.providerData.EdgeApiClient.UpdateInstance(ctx, projectId, region, instanceId).UpdateInstancePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -381,7 +366,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.providerData.EdgeApiClient, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance waiting: %v", err))
 		return
@@ -415,7 +400,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := i.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	err := i.providerData.EdgeApiClient.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -427,7 +412,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = edgewait.DeleteInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	_, err = edgewait.DeleteInstanceWaitHandler(ctx, i.providerData.EdgeApiClient, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
