@@ -173,6 +173,31 @@ func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
 	return &result, nil
 }
 
+// StringSetToSlice converts basetypes.SetValue to a slice of strings.
+// It returns nil if the value is null or unknown.
+// Note: It sorts the resulting slice to ensure deterministic behavior.
+func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
+	if set.IsNull() || set.IsUnknown() {
+		return nil, nil
+	}
+	elements := set.Elements()
+	result := make([]string, 0, len(elements))
+
+	for i, el := range elements {
+		elStr, ok := el.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("element %d in set is not a string (type: %T)", i, el)
+		}
+		result = append(result, elStr.ValueString())
+	}
+
+	// Because Sets are unordered in Terraform, we sort here to
+	// prevent non-deterministic behavior in the provider logic or API calls.
+	sort.Strings(result)
+
+	return result, nil
+}
+
 // ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
 // It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
 // and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys

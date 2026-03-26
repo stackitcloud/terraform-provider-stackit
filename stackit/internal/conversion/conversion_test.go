@@ -393,3 +393,59 @@ func TestParseEphemeralProviderData(t *testing.T) {
 		})
 	}
 }
+
+func TestStringSetToSlice(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		in      basetypes.SetValue
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "unknown",
+			in:   basetypes.NewSetUnknown(types.StringType),
+			want: nil,
+		},
+		{
+			name: "null",
+			in:   basetypes.NewSetNull(types.StringType),
+			want: nil,
+		},
+		{
+			name:    "invalid type",
+			in:      basetypes.NewSetValueMust(types.Int64Type, []attr.Value{types.Int64Value(123)}),
+			wantErr: true,
+		},
+		{
+			name: "some values, sorting",
+			in: basetypes.NewSetValueMust(
+				types.StringType,
+				[]attr.Value{
+					types.StringValue("xyz"),
+					types.StringValue("abc"),
+				},
+			),
+			want: []string{
+				"abc",
+				"xyz",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := StringSetToSlice(tt.in)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			if d := cmp.Diff(got, tt.want); d != "" {
+				t.Fatalf("no match, diff: %s", d)
+			}
+		})
+	}
+}
