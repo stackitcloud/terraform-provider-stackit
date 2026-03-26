@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,8 +19,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -43,29 +47,38 @@ var (
 )
 
 var schemaDescriptions = map[string]string{
-	"id":                                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`distribution_id`\".",
-	"distribution_id":                       "CDN distribution ID",
-	"project_id":                            "STACKIT project ID associated with the distribution",
-	"status":                                "Status of the distribution",
-	"created_at":                            "Time when the distribution was created",
-	"updated_at":                            "Time when the distribution was last updated",
-	"errors":                                "List of distribution errors",
-	"domains":                               "List of configured domains for the distribution",
-	"config":                                "The distribution configuration",
-	"config_backend":                        "The configured backend for the distribution",
-	"config_regions":                        "The configured regions where content will be hosted",
-	"config_backend_type":                   "The configured backend type. ",
-	"config_optimizer":                      "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
-	"config_backend_origin_url":             "The configured backend type http for the distribution",
-	"config_backend_origin_request_headers": "The configured type http origin request headers for the backend",
-	"config_backend_geofencing":             "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
-	"config_blocked_countries":              "The configured countries where distribution of content is blocked",
-	"domain_name":                           "The name of the domain",
-	"domain_status":                         "The status of the domain",
-	"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
-	"domain_errors":                         "List of domain errors",
-	"config_backend_bucket_url":             "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
-	"config_backend_region":                 "The region where the bucket is hosted. Required if type is 'bucket'.",
+	"id":                                           "Terraform's internal resource identifier. It is structured as \"`project_id`,`distribution_id`\".",
+	"distribution_id":                              "CDN distribution ID",
+	"project_id":                                   "STACKIT project ID associated with the distribution",
+	"status":                                       "Status of the distribution",
+	"created_at":                                   "Time when the distribution was created",
+	"updated_at":                                   "Time when the distribution was last updated",
+	"errors":                                       "List of distribution errors",
+	"domains":                                      "List of configured domains for the distribution",
+	"config":                                       "The distribution configuration",
+	"config_backend":                               "The configured backend for the distribution",
+	"config_regions":                               "The configured regions where content will be hosted",
+	"config_backend_type":                          "The configured backend type. ",
+	"config_optimizer":                             "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
+	"config_backend_origin_url":                    "The configured backend type http for the distribution",
+	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
+	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
+	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
+	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
+	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
+	"config_redirects_rule_description":            "An optional description for the redirect rule",
+	"config_redirects_rule_enabled":                "A toggle to enable or disable the redirect rule. Default to true",
+	"config_redirects_rule_target_url":             "The target URL to redirect to. Must be a valid URI",
+	"config_redirects_rule_status_code":            "The HTTP status code for the redirect. Must be one of 301, 302, 303, 307, or 308.",
+	"config_redirects_rule_matchers":               "A list of matchers that define when this rule should apply. At least one matcher is required",
+	"config_redirects_rule_matcher_values":         "A list of glob patterns to match against the request path. At least one value is required. Examples: \"/shop/*\" or \"*/img/*\"",
+	"config_redirects_rule_match_condition":        "Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.",
+	"domain_name":                                  "The name of the domain",
+	"domain_status":                                "The status of the domain",
+	"domain_type":                                  "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
+	"domain_errors":                                "List of domain errors",
+	"config_backend_bucket_url":                    "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
+	"config_backend_region":                        "The region where the bucket is hosted. Required if type is 'bucket'.",
 	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
@@ -83,11 +96,30 @@ type Model struct {
 	Config         types.Object `tfsdk:"config"`          // the configuration of the distribution
 }
 
+type matcher struct {
+	Values              []string `tfsdk:"values"`
+	ValueMatchCondition *string  `tfsdk:"value_match_condition"`
+}
+
+type redirectRule struct {
+	Description        *string   `tfsdk:"description"`
+	Enabled            *bool     `tfsdk:"enabled"`
+	TargetUrl          string    `tfsdk:"target_url"`
+	StatusCode         int32     `tfsdk:"status_code"`
+	Matchers           []matcher `tfsdk:"matchers"`
+	RuleMatchCondition *string   `tfsdk:"rule_match_condition"`
+}
+
+type redirectConfig struct {
+	Rules []redirectRule `tfsdk:"rules"`
+}
+
 type distributionConfig struct {
-	Backend          backend      `tfsdk:"backend"`           // The backend associated with the distribution
-	Regions          *[]string    `tfsdk:"regions"`           // The regions in which data will be cached
-	BlockedCountries *[]string    `tfsdk:"blocked_countries"` // The countries for which content will be blocked
-	Optimizer        types.Object `tfsdk:"optimizer"`         // The optimizer configuration
+	Backend          backend         `tfsdk:"backend"`           // The backend associated with the distribution
+	Redirects        *redirectConfig `tfsdk:"redirects"`         // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
+	Regions          *[]string       `tfsdk:"regions"`           // The regions in which data will be cached
+	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
+	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
 }
 
 type optimizerConfig struct {
@@ -95,7 +127,7 @@ type optimizerConfig struct {
 }
 
 type backend struct {
-	Type                 string                `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
+	Type                 string                `tfsdk:"type"`                   // The type of the backend. Currently, only "http" and "bucket" backend is supported
 	OriginURL            *string               `tfsdk:"origin_url"`             // The origin URL of the backend
 	OriginRequestHeaders *map[string]string    `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
 	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
@@ -116,6 +148,9 @@ var configTypes = map[string]attr.Type{
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes,
 	},
+	"redirects": types.ObjectType{
+		AttrTypes: redirectsTypes,
+	},
 }
 
 var optimizerTypes = map[string]attr.Type{
@@ -125,6 +160,32 @@ var optimizerTypes = map[string]attr.Type{
 var geofencingTypes = types.MapType{ElemType: types.ListType{
 	ElemType: types.StringType,
 }}
+
+var matcherTypes = map[string]attr.Type{
+	"values":                types.ListType{ElemType: types.StringType},
+	"value_match_condition": types.StringType,
+}
+
+var redirectRuleTypes = map[string]attr.Type{
+	"description":          types.StringType,
+	"enabled":              types.BoolType,
+	"target_url":           types.StringType,
+	"status_code":          types.Int32Type,
+	"rule_match_condition": types.StringType,
+	"matchers": types.ListType{
+		ElemType: types.ObjectType{
+			AttrTypes: matcherTypes,
+		},
+	},
+}
+
+var redirectsTypes = map[string]attr.Type{
+	"rules": types.ListType{
+		ElemType: types.ObjectType{
+			AttrTypes: redirectRuleTypes,
+		},
+	},
+}
 
 var backendTypes = map[string]attr.Type{
 	"type":                   types.StringType,
@@ -183,6 +244,8 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	backendOptions := []string{"http", "bucket"}
+	matchCondition := []string{"ANY", "ALL", "NONE"}
+	statusCode := []int32{301, 302, 303, 307, 308}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
@@ -265,6 +328,73 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 						Validators: []validator.Object{
 							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+					},
+					"redirects": schema.SingleNestedAttribute{
+						Required:    true,
+						Description: schemaDescriptions["config_redirects"],
+						Attributes: map[string]schema.Attribute{
+							"rules": schema.ListNestedAttribute{
+								Description: schemaDescriptions["config_redirects_rules"],
+								Required:    true,
+								Validators: []validator.List{
+									listvalidator.SizeAtLeast(1),
+								},
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"description": schema.StringAttribute{
+											Description: schemaDescriptions["config_redirects_rule_description"],
+											Optional:    true,
+										},
+										"enabled": schema.BoolAttribute{
+											Optional:    true,
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_enabled"],
+											Default:     booldefault.StaticBool(true),
+										},
+										"targetUrl": schema.StringAttribute{
+											Required:    true,
+											Description: schemaDescriptions["config_redirects_rule_target_url"],
+										},
+										"statusCode": schema.Int32Attribute{
+											Required:    true,
+											Description: schemaDescriptions["config_redirects_rule_status_code"],
+											Validators:  []validator.Int32{int32validator.OneOf(statusCode...)},
+										},
+										"ruleMatchCondition": schema.StringAttribute{
+											Optional:    true,
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_match_condition"],
+											Default:     stringdefault.StaticString("ANY"),
+											Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(matchCondition...)},
+										},
+										"matchers": schema.ListNestedAttribute{
+											Description: schemaDescriptions["config_redirects_rule_matchers"],
+											Required:    true,
+											Validators: []validator.List{
+												listvalidator.SizeAtLeast(1),
+											},
+											NestedObject: schema.NestedAttributeObject{
+												Attributes: map[string]schema.Attribute{
+													"values": schema.ListAttribute{
+														Description: schemaDescriptions["config_redirects_rule_matcher_values"],
+														Required:    true,
+														Validators: []validator.List{
+															listvalidator.SizeAtLeast(1),
+														},
+													},
+													"ruleMatchCondition": schema.StringAttribute{
+														Optional:    true,
+														Description: schemaDescriptions["config_redirects_rule_match_condition"],
+														Default:     stringdefault.StaticString("ANY"),
+														Computed:    true,
+														Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(matchCondition...)},
+													},
+												},
+											},
+										}},
+								},
+							},
 						},
 					},
 					"backend": schema.SingleNestedAttribute{
@@ -1023,6 +1153,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	if model == nil {
 		return nil, errors.New("model cannot be nil")
 	}
+
 	if model.Config.IsNull() || model.Config.IsUnknown() {
 		return nil, errors.New("config cannot be nil or unknown")
 	}
@@ -1057,6 +1188,53 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 	}
 
+	// redirects
+	var redirectsConfig *cdn.RedirectConfig
+
+	if configModel.Redirects != nil {
+		sdkRules := []cdn.RedirectRule{}
+
+		if len(configModel.Redirects.Rules) > 0 {
+			for _, rule := range configModel.Redirects.Rules {
+				matchers := []cdn.Matcher{}
+				for _, matcher := range rule.Matchers {
+					var matchCond *cdn.MatchCondition
+					if matcher.ValueMatchCondition != nil {
+						cond := cdn.MatchCondition(*matcher.ValueMatchCondition)
+						matchCond = &cond
+					}
+
+					matchers = append(matchers, cdn.Matcher{
+						Values:              &matcher.Values,
+						ValueMatchCondition: matchCond,
+					})
+				}
+
+				var ruleMatchCond *cdn.MatchCondition
+				if rule.RuleMatchCondition != nil {
+					cond := cdn.MatchCondition(*rule.RuleMatchCondition)
+					ruleMatchCond = &cond
+				}
+
+				statusCode := cdn.RedirectRuleStatusCode(rule.StatusCode)
+				targerUrl := rule.TargetUrl
+
+				sdkConfigRule := cdn.RedirectRule{
+					Description:        rule.Description,
+					Enabled:            rule.Enabled,
+					Matchers:           &matchers,
+					RuleMatchCondition: ruleMatchCond,
+					StatusCode:         &statusCode,
+					TargetUrl:          &targerUrl,
+				}
+				sdkRules = append(sdkRules, sdkConfigRule)
+			}
+		}
+		redirectsConfig = &cdn.RedirectConfig{
+			Rules: &sdkRules,
+		}
+	}
+
 	// geofencing
 	geofencing := map[string][]string{}
 	if configModel.Backend.Geofencing != nil {
@@ -1080,6 +1258,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		Backend:          &cdn.ConfigBackend{},
 		Regions:          &regions,
 		BlockedCountries: &blockedCountries,
+		Redirects:        redirectsConfig,
 	}
 
 	if configModel.Backend.Type == "http" {
