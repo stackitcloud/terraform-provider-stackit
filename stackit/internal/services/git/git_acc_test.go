@@ -328,7 +328,7 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 
 	gitInstances := instancesResp.Instances
 	for i := range gitInstances {
-		if utils.Contains(instancesToDestroy, gitInstances[i].Id) {
+		if slices.Contains(instancesToDestroy, gitInstances[i].Id) {
 			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, gitInstances[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying git instance %s during CheckDestroy: %w", gitInstances[i].Id, err)
