@@ -164,7 +164,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: git.CreateInstancePayload{
 				Name:   "my-instance",
-				Flavor: utils.Ptr("git-100"),
+				Flavor: new("git-100"),
 				Acl:    []string{"10.0.0.1", "10.0.0.2"},
 			},
 			expectError: false,
@@ -178,7 +178,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: git.CreateInstancePayload{
 				Name:   "my-instance",
-				Flavor: utils.Ptr("git-100"),
+				Flavor: new("git-100"),
 				Acl:    []string{},
 			},
 			expectError: false,

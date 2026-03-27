@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 func TestReconcileStrLists(t *testing.T) {
@@ -152,12 +151,12 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		},
 		{
 			description: "slice with valid pointers",
-			input:       []*string{utils.Ptr("apple"), utils.Ptr("banana"), utils.Ptr("cherry")},
+			input:       []*string{new("apple"), new("banana"), new("cherry")},
 			expected:    []string{"apple", "banana", "cherry"},
 		},
 		{
 			description: "slice with some nil pointers",
-			input:       []*string{utils.Ptr("apple"), nil, utils.Ptr("cherry"), nil},
+			input:       []*string{new("apple"), nil, new("cherry"), nil},
 			expected:    []string{"apple", "cherry"},
 		},
 		{
@@ -167,7 +166,7 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		},
 		{
 			description: "slice with a pointer to an empty string",
-			input:       []*string{utils.Ptr("apple"), utils.Ptr(""), utils.Ptr("cherry")},
+			input:       []*string{new("apple"), new(""), new("cherry")},
 			expected:    []string{"apple", "", "cherry"},
 		},
 	}
@@ -535,7 +534,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 	type args struct {
 		diags  *diag.Diagnostics
 		state  *tfsdk.State
-		values map[string]interface{}
+		values map[string]any
 	}
 	type want struct {
 		hasError bool
@@ -551,7 +550,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 			args: args{
 				diags:  &diag.Diagnostics{},
 				state:  &tfsdk.State{},
-				values: map[string]interface{}{},
+				values: map[string]any{},
 			},
 			want: want{
 				hasError: false,
@@ -573,7 +572,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 					}
 					return &state
 				}(),
-				values: map[string]interface{}{
+				values: map[string]any{
 					"project_id":  "a414f971-3f7a-4e9a-8671-51a8acb7bcc8",
 					"instance_id": "97073250-8cad-46c3-8424-6258ac0b3731",
 				},

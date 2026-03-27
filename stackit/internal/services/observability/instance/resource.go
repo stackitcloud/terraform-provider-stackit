@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -1889,25 +1888,25 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
-			smtpSmartHost = sdkUtils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
+			smtpSmartHost = new(globalConfigsTF.SmtpSmartHost.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthIdentity == nil &&
 			!globalConfigsTF.SmtpAuthIdentity.IsNull() && !globalConfigsTF.SmtpAuthIdentity.IsUnknown() {
-			smtpAuthIdentity = sdkUtils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
+			smtpAuthIdentity = new(globalConfigsTF.SmtpAuthIdentity.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthPassword == nil &&
 			!globalConfigsTF.SmtpAuthPassword.IsNull() && !globalConfigsTF.SmtpAuthPassword.IsUnknown() {
-			smtpAuthPassword = sdkUtils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
+			smtpAuthPassword = new(globalConfigsTF.SmtpAuthPassword.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthUsername == nil &&
 			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
-			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
+			smtpAuthUsername = new(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
 		if respGlobalConfigs.OpsgenieApiKey == nil {
-			opsgenieApiKey = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiKey.ValueString())
+			opsgenieApiKey = new(globalConfigsTF.OpsgenieApiKey.ValueString())
 		}
 		if respGlobalConfigs.OpsgenieApiUrl == nil {
-			opsgenieApiUrl = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiUrl.ValueString())
+			opsgenieApiUrl = new(globalConfigsTF.OpsgenieApiUrl.ValueString())
 		}
 	}
 
@@ -2154,7 +2153,7 @@ func toCreatePayload(model *Model, setGrafanaAdminEnabled bool) (*observability.
 		return nil, fmt.Errorf("nil model")
 	}
 	elements := model.Parameters.Elements()
-	pa := make(map[string]interface{}, len(elements))
+	pa := make(map[string]any, len(elements))
 	for k := range elements {
 		pa[k] = elements[k].String()
 	}
@@ -2206,7 +2205,7 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 
 func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *observability.APIClient) error {
 	payload := observability.UpdateACLPayload{
-		Acl: sdkUtils.Ptr(acl),
+		Acl: new(acl),
 	}
 
 	_, err := client.UpdateACL(ctx, instanceId, projectId).UpdateACLPayload(payload).Execute()
@@ -2222,7 +2221,7 @@ func toUpdatePayload(model *Model, setGrafanaAdminEnabled bool) (*observability.
 		return nil, fmt.Errorf("nil model")
 	}
 	elements := model.Parameters.Elements()
-	pa := make(map[string]interface{}, len(elements))
+	pa := make(map[string]any, len(elements))
 	for k, v := range elements {
 		pa[k] = v.String()
 	}
@@ -2439,7 +2438,7 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 	}
 
 	var groupByPayload, matchersPayload *[]string
-	var matchPayload, matchRegexPayload *map[string]interface{}
+	var matchPayload, matchRegexPayload *map[string]any
 
 	if !utils.IsUndefined(routeTF.GroupBy) {
 		groupByPayload = &[]string{}

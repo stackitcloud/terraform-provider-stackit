@@ -56,7 +56,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	customDomainFixture := func(mods ...func(*cdn.GetCustomDomainResponse)) *cdn.GetCustomDomainResponse {
 		distribution := &cdn.CustomDomain{
 			Errors: &[]cdn.StatusError{},
-			Name:   cdn.PtrString("https://testdomain.com"),
+			Name:   new("https://testdomain.com"),
 			Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
 		}
 		customDomainResponse := &cdn.GetCustomDomainResponse{

@@ -49,7 +49,7 @@ resource "stackit_mariadb_instance" "example" {
 				{
 					Plans: &[]mariadb.Plan{
 						{
-							Id:   utils.Ptr(planId),
+							Id:   new(planId),
 							Name: utils.Ptr(planName),
 						},
 					},
@@ -69,7 +69,7 @@ resource "stackit_mariadb_instance" "example" {
 						testutil.MockResponse{
 							Description: "create instance",
 							ToJsonBody: mariadb.CreateInstanceResponse{
-								InstanceId: utils.Ptr(instanceId),
+								InstanceId: new(instanceId),
 							},
 						},
 						testutil.MockResponse{
@@ -139,7 +139,7 @@ resource "stackit_mariadb_credential" "example" {
 						testutil.MockResponse{
 							Description: "create credentials",
 							ToJsonBody: mariadb.CredentialsResponse{
-								Id: utils.Ptr(credentialId),
+								Id: new(credentialId),
 							},
 						},
 						testutil.MockResponse{

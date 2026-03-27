@@ -354,7 +354,7 @@ func (g *gitResource) ImportState(ctx context.Context, req resource.ImportStateR
 		return
 	}
 	// Set the project ID and instance ID attributes in the state.
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
 		"instance_id": idParts[1],
 	})

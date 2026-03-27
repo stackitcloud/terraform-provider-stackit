@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
 )
 
@@ -44,14 +43,14 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 })
 
 var fixtureInstanceParameters = rabbitmq.InstanceParameters{
-	SgwAcl:               utils.Ptr("acl"),
-	ConsumerTimeout:      utils.Ptr(int64(10)),
-	EnableMonitoring:     utils.Ptr(true),
-	Graphite:             utils.Ptr("1.1.1.1:91"),
-	MaxDiskThreshold:     utils.Ptr(int64(100)),
-	MetricsFrequency:     utils.Ptr(int64(10)),
-	MetricsPrefix:        utils.Ptr("prefix"),
-	MonitoringInstanceId: utils.Ptr("mid"),
+	SgwAcl:               new("acl"),
+	ConsumerTimeout:      new(int64(10)),
+	EnableMonitoring:     new(true),
+	Graphite:             new("1.1.1.1:91"),
+	MaxDiskThreshold:     new(int64(100)),
+	MetricsFrequency:     new(int64(10)),
+	MetricsPrefix:        new("prefix"),
+	MonitoringInstanceId: new("mid"),
 	Plugins:              &[]string{"plugin1", "plugin2"},
 	Roles:                &[]string{"role1", "role2"},
 	Syslog:               &[]string{"syslog", "syslog2"},
@@ -87,15 +86,15 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&rabbitmq.Instance{
-				PlanId:             utils.Ptr("plan"),
-				CfGuid:             utils.Ptr("cf"),
-				CfSpaceGuid:        utils.Ptr("space"),
-				DashboardUrl:       utils.Ptr("dashboard"),
-				ImageUrl:           utils.Ptr("image"),
-				InstanceId:         utils.Ptr("iid"),
-				Name:               utils.Ptr("name"),
-				CfOrganizationGuid: utils.Ptr("org"),
-				Parameters: &map[string]interface{}{
+				PlanId:             new("plan"),
+				CfGuid:             new("cf"),
+				CfSpaceGuid:        new("space"),
+				DashboardUrl:       new("dashboard"),
+				ImageUrl:           new("image"),
+				InstanceId:         new("iid"),
+				Name:               new("name"),
+				CfOrganizationGuid: new("org"),
+				Parameters: &map[string]any{
 					"sgw_acl":                "acl",
 					"consumer_timeout":       10,
 					"enable_monitoring":      true,
@@ -142,7 +141,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&rabbitmq.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -152,7 +151,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&rabbitmq.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": 1,
 				},
 			},
@@ -204,9 +203,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&rabbitmq.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
+				InstanceName: new("name"),
 				Parameters:   &fixtureInstanceParameters,
-				PlanId:       utils.Ptr("plan"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -218,8 +217,8 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&rabbitmq.CreateInstancePayload{
-				InstanceName: utils.Ptr(""),
-				PlanId:       utils.Ptr(""),
+				InstanceName: new(""),
+				PlanId:       new(""),
 				Parameters:   &fixtureInstanceParameters,
 			},
 			true,
@@ -237,8 +236,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&rabbitmq.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: new("name"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -294,7 +293,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&rabbitmq.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr("plan"),
+				PlanId:     new("plan"),
 			},
 			true,
 		},
@@ -306,7 +305,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&rabbitmq.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr(""),
+				PlanId:     new(""),
 			},
 			true,
 		},
@@ -322,7 +321,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&rabbitmq.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId: new("plan"),
 			},
 			true,
 		},

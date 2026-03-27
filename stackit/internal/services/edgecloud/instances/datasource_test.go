@@ -32,13 +32,13 @@ func fixtureInstance(mods ...func(instance *edge.Instance)) edge.Instance {
 	description := "some-description"
 
 	instance := &edge.Instance{
-		Id:          utils.Ptr(id),
-		DisplayName: utils.Ptr(displayName),
+		Id:          new(id),
+		DisplayName: new(displayName),
 		PlanId:      &defaultPlanId,
-		FrontendUrl: utils.Ptr(fmt.Sprintf("https://%s.example.com", id)),
+		FrontendUrl: new(fmt.Sprintf("https://%s.example.com", id)),
 		Status:      utils.Ptr(edge.InstanceStatus("ACTIVE")),
 		Created:     &testTime,
-		Description: utils.Ptr(description),
+		Description: new(description),
 	}
 
 	for _, mod := range mods {
@@ -87,7 +87,7 @@ func TestMapInstanceToAttrs(t *testing.T) {
 		{
 			description: "valid instance, empty description",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Description = utils.Ptr("")
+				i.Description = new("")
 			}),
 			expected: fixtureAttrs(validInstanceAttrs, func(m map[string]attr.Value) {
 				m["description"] = types.StringValue("")
@@ -105,7 +105,7 @@ func TestMapInstanceToAttrs(t *testing.T) {
 		{
 			description: "error, empty display name",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.DisplayName = utils.Ptr("")
+				i.DisplayName = new("")
 			}),
 			expectError: true,
 			errorMsg:    "missing a 'displayName'",
@@ -191,13 +191,13 @@ func TestBuildInstancesList(t *testing.T) {
 	ctx := context.Background()
 
 	instance1 := fixtureInstance(func(i *edge.Instance) {
-		i.Id = utils.Ptr("first-ab75568")
-		i.DisplayName = utils.Ptr("first")
+		i.Id = new("first-ab75568")
+		i.DisplayName = new("first")
 	})
 
 	instance2 := fixtureInstance(func(i *edge.Instance) {
-		i.Id = utils.Ptr("second-ab75568")
-		i.DisplayName = utils.Ptr("second")
+		i.Id = new("second-ab75568")
+		i.DisplayName = new("second")
 	})
 
 	instanceInvalidPlan := fixtureInstance(func(i *edge.Instance) {
@@ -211,7 +211,7 @@ func TestBuildInstancesList(t *testing.T) {
 
 	// Invalid: Empty Display Name
 	instanceEmptyName := fixtureInstance(func(i *edge.Instance) {
-		i.DisplayName = utils.Ptr("")
+		i.DisplayName = new("")
 	})
 
 	// Invalid: Nil ID and Nil Display Name

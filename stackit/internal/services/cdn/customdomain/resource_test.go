@@ -76,7 +76,7 @@ func TestMapFields(t *testing.T) {
 	customDomainFixture := func(mods ...func(*cdn.GetCustomDomainResponse)) *cdn.GetCustomDomainResponse {
 		distribution := &cdn.CustomDomain{
 			Errors: &[]cdn.StatusError{},
-			Name:   cdn.PtrString("https://testdomain.com"),
+			Name:   new("https://testdomain.com"),
 			Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
 		}
 		customDomainResponse := &cdn.GetCustomDomainResponse{
@@ -92,7 +92,7 @@ func TestMapFields(t *testing.T) {
 
 	tests := map[string]struct {
 		Input          *cdn.GetCustomDomainResponse
-		Certificate    interface{}
+		Certificate    any
 		Expected       *CustomDomainModel
 		InitialModel   *CustomDomainModel
 		IsValid        bool

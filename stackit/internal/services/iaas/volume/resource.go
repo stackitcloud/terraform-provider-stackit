@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 
@@ -774,9 +773,9 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 	if model.EncryptionParameters != nil {
 		var keyPayload *[]byte
 		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
-			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString()))
+			keyPayload = new([]byte(model.EncryptionParameters.KeyPayloadBase64WriteOnly.ValueString()))
 		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
-			keyPayload = sdkUtils.Ptr([]byte(model.EncryptionParameters.KeyPayloadBase64.ValueString()))
+			keyPayload = new([]byte(model.EncryptionParameters.KeyPayloadBase64.ValueString()))
 		}
 
 		payload.EncryptionParameters = &iaas.VolumeEncryptionParameter{

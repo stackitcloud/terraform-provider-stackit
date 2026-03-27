@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -22,7 +21,7 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 	}
 
 	return &objectstorage.ProjectStatus{
-		Project: utils.Ptr(projectId),
+		Project: new(projectId),
 	}, nil
 }
 
@@ -62,8 +61,8 @@ func TestMapFields(t *testing.T) {
 			"simple_values",
 			&objectstorage.CreateCredentialsGroupResponse{
 				CredentialsGroup: &objectstorage.CredentialsGroup{
-					DisplayName: utils.Ptr("name"),
-					Urn:         utils.Ptr("urn"),
+					DisplayName: new("name"),
+					Urn:         new("urn"),
 				},
 			},
 			Model{
@@ -80,8 +79,8 @@ func TestMapFields(t *testing.T) {
 			"empty_strings",
 			&objectstorage.CreateCredentialsGroupResponse{
 				CredentialsGroup: &objectstorage.CredentialsGroup{
-					DisplayName: utils.Ptr(""),
-					Urn:         utils.Ptr(""),
+					DisplayName: new(""),
+					Urn:         new(""),
 				},
 			},
 			Model{
@@ -179,10 +178,10 @@ func TestReadCredentialsGroups(t *testing.T) {
 			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
-						CredentialsGroupId: utils.Ptr("cid"),
+						CredentialsGroupId: new("cid"),
 					},
 					{
-						CredentialsGroupId: utils.Ptr("foo-id"),
+						CredentialsGroupId: new("foo-id"),
 					},
 				},
 			},
@@ -202,14 +201,14 @@ func TestReadCredentialsGroups(t *testing.T) {
 			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
-						CredentialsGroupId: utils.Ptr("cid"),
-						DisplayName:        utils.Ptr("name"),
-						Urn:                utils.Ptr("urn"),
+						CredentialsGroupId: new("cid"),
+						DisplayName:        new("name"),
+						Urn:                new("urn"),
 					},
 					{
-						CredentialsGroupId: utils.Ptr("foo-cid"),
-						DisplayName:        utils.Ptr("foo-name"),
-						Urn:                utils.Ptr("foo-urn"),
+						CredentialsGroupId: new("foo-cid"),
+						DisplayName:        new("foo-name"),
+						Urn:                new("foo-urn"),
 					},
 				},
 			},
@@ -257,9 +256,9 @@ func TestReadCredentialsGroups(t *testing.T) {
 			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
-						CredentialsGroupId: utils.Ptr("foo-other"),
-						DisplayName:        utils.Ptr("foo-name"),
-						Urn:                utils.Ptr("foo-urn"),
+						CredentialsGroupId: new("foo-other"),
+						DisplayName:        new("foo-name"),
+						Urn:                new("foo-urn"),
 					},
 				},
 			},
@@ -273,9 +272,9 @@ func TestReadCredentialsGroups(t *testing.T) {
 			&objectstorage.ListCredentialsGroupsResponse{
 				CredentialsGroups: &[]objectstorage.CredentialsGroup{
 					{
-						CredentialsGroupId: utils.Ptr("other_id"),
-						DisplayName:        utils.Ptr("name"),
-						Urn:                utils.Ptr("urn"),
+						CredentialsGroupId: new("other_id"),
+						DisplayName:        new("name"),
+						Urn:                new("urn"),
 					},
 				},
 			},

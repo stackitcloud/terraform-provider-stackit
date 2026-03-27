@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 const (
@@ -42,8 +41,8 @@ func Test_mapDatasourceFields(t *testing.T) {
 				NetworkAreaId:  types.StringValue(networkAreaId.String()),
 			},
 			&iaas.RoutingTable{
-				Id:   utils.Ptr(routingTableId.String()),
-				Name: utils.Ptr("default_values"),
+				Id:   new(routingTableId.String()),
+				Name: new("default_values"),
 			},
 			shared.RoutingTableDataSourceModel{
 				Id:             types.StringValue(id),
@@ -66,10 +65,10 @@ func Test_mapDatasourceFields(t *testing.T) {
 				RoutingTableReadModel: shared.RoutingTableReadModel{},
 			},
 			&iaas.RoutingTable{
-				Id:          utils.Ptr(routingTableId.String()),
-				Name:        utils.Ptr("values_ok"),
-				Description: utils.Ptr("Description"),
-				Labels: &map[string]interface{}{
+				Id:          new(routingTableId.String()),
+				Name:        new("values_ok"),
+				Description: new("Description"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
 			},

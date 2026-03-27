@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 )
 
@@ -41,8 +40,8 @@ func TestToCreatePayload(t *testing.T) {
 				Interval: types.StringValue("5m"),
 			},
 			expect: &observability.CreateAlertgroupsPayload{
-				Name:     utils.Ptr("test-alertgroup"),
-				Interval: utils.Ptr("5m"),
+				Name:     new("test-alertgroup"),
+				Interval: new("5m"),
 			},
 			expectErr: false,
 		},
@@ -79,20 +78,20 @@ func TestToCreatePayload(t *testing.T) {
 				),
 			},
 			expect: &observability.CreateAlertgroupsPayload{
-				Name:     utils.Ptr("full-alertgroup"),
-				Interval: utils.Ptr("10m"),
+				Name:     new("full-alertgroup"),
+				Interval: new("10m"),
 				Rules: &[]observability.UpdateAlertgroupsRequestInnerRulesInner{
 					{
-						Alert: utils.Ptr("alert"),
-						Annotations: &map[string]interface{}{
+						Alert: new("alert"),
+						Annotations: &map[string]any{
 							"k": "v",
 						},
-						Expr: utils.Ptr("expression"),
-						For:  utils.Ptr("10s"),
-						Labels: &map[string]interface{}{
+						Expr: new("expression"),
+						For:  new("10s"),
+						Labels: &map[string]any{
 							"k": "v",
 						},
-						Record: utils.Ptr("record"),
+						Record: new("record"),
 					},
 				},
 			},
@@ -161,16 +160,16 @@ func TestToRulesPayload(t *testing.T) {
 			},
 			expect: []observability.UpdateAlertgroupsRequestInnerRulesInner{
 				{
-					Alert: utils.Ptr("alert"),
-					Expr:  utils.Ptr("expr"),
-					For:   utils.Ptr("5s"),
-					Labels: &map[string]interface{}{
+					Alert: new("alert"),
+					Expr:  new("expr"),
+					For:   new("5s"),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					Annotations: &map[string]interface{}{
+					Annotations: &map[string]any{
 						"note": "important",
 					},
-					Record: utils.Ptr("record"),
+					Record: new("record"),
 				},
 			},
 			expectErr: false,
@@ -203,22 +202,22 @@ func TestToRulesPayload(t *testing.T) {
 			},
 			expect: []observability.UpdateAlertgroupsRequestInnerRulesInner{
 				{
-					Alert:  utils.Ptr("alert1"),
-					Expr:   utils.Ptr("expr1"),
-					For:    utils.Ptr("5s"),
-					Record: utils.Ptr("record1"),
+					Alert:  new("alert1"),
+					Expr:   new("expr1"),
+					For:    new("5s"),
+					Record: new("record1"),
 				},
 				{
-					Alert: utils.Ptr("alert2"),
-					Expr:  utils.Ptr("expr2"),
-					For:   utils.Ptr("10s"),
-					Labels: &map[string]interface{}{
+					Alert: new("alert2"),
+					Expr:  new("expr2"),
+					For:   new("10s"),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					Annotations: &map[string]interface{}{
+					Annotations: &map[string]any{
 						"note": "important",
 					},
-					Record: utils.Ptr("record2"),
+					Record: new("record2"),
 				},
 			},
 			expectErr: false,
@@ -265,7 +264,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "Interval Missing",
 			alertGroup: &observability.AlertGroup{
-				Name: utils.Ptr("alert-group-name"),
+				Name: new("alert-group-name"),
 			},
 			model: &Model{
 				Name:       types.StringValue("alert-group-name"),
@@ -279,7 +278,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "Name Missing",
 			alertGroup: &observability.AlertGroup{
-				Interval: utils.Ptr("5m"),
+				Interval: new("5m"),
 			},
 			model: &Model{
 				Name:       types.StringValue("model-name"),
@@ -290,8 +289,8 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "Complete Model and AlertGroup",
 			alertGroup: &observability.AlertGroup{
-				Name:     utils.Ptr("alert-group-name"),
-				Interval: utils.Ptr("10m"),
+				Name:     new("alert-group-name"),
+				Interval: new("10m"),
 			},
 			model: &Model{
 				Name:       types.StringValue("alert-group-name"),
@@ -347,12 +346,12 @@ func TestMapRules(t *testing.T) {
 			alertGroup: &observability.AlertGroup{
 				Rules: &[]observability.AlertRuleRecord{
 					{
-						Alert:       utils.Ptr("HighCPUUsage"),
-						Expr:        utils.Ptr("rate(cpu_usage[5m]) > 0.9"),
-						For:         utils.Ptr("2m"),
+						Alert:       new("HighCPUUsage"),
+						Expr:        new("rate(cpu_usage[5m]) > 0.9"),
+						For:         new("2m"),
 						Labels:      &map[string]string{"severity": "critical"},
 						Annotations: &map[string]string{"summary": "CPU usage high"},
-						Record:      utils.Ptr("record1"),
+						Record:      new("record1"),
 					},
 				},
 			},

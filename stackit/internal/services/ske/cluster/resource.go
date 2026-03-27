@@ -1358,7 +1358,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
-		timeWindowStart = sdkUtils.Ptr(tempTime)
+		timeWindowStart = new(tempTime)
 	}
 
 	var timeWindowEnd *time.Time
@@ -1367,7 +1367,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
-		timeWindowEnd = sdkUtils.Ptr(tempTime)
+		timeWindowEnd = new(tempTime)
 	}
 
 	return &ske.Maintenance{

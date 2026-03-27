@@ -10,8 +10,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -715,7 +713,7 @@ func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId 
 			payload := iaas.CreateNetworkAreaRangePayload{
 				Ipv4: &[]iaas.NetworkRange{
 					{
-						Prefix: sdkUtils.Ptr(prefix),
+						Prefix: new(prefix),
 					},
 				},
 			}

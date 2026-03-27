@@ -30,11 +30,11 @@ func TestMapDatasourceFields(t *testing.T) {
 			&sfs.GetShareResponseShare{
 				ExportPolicy: sfs.NewNullableShareExportPolicy(&sfs.ShareExportPolicy{
 					Id:   testId.ValueStringPointer(),
-					Name: utils.Ptr("test-policy"),
+					Name: new("test-policy"),
 				}),
 				Id:                      testShareId.ValueStringPointer(),
-				MountPath:               utils.Ptr("/testmount"),
-				Name:                    utils.Ptr("test-name"),
+				MountPath:               new("/testmount"),
+				Name:                    new("test-name"),
 				SpaceHardLimitGigabytes: utils.Ptr[int64](42),
 			},
 			&dataSourceModel{

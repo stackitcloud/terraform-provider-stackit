@@ -73,15 +73,15 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "kubernetes versions",
 							ToJsonBody: ske.ProviderOptions{
-								MachineImages: utils.Ptr([]ske.MachineImage{
+								MachineImages: new([]ske.MachineImage{
 									{
-										Name: utils.Ptr("flatcar"),
-										Versions: utils.Ptr([]ske.MachineImageVersion{
+										Name: new("flatcar"),
+										Versions: new([]ske.MachineImageVersion{
 											{
-												State:          utils.Ptr("supported"),
-												Version:        utils.Ptr("1.0.0"),
+												State:          new("supported"),
+												Version:        new("1.0.0"),
 												ExpirationDate: nil,
-												Cri: utils.Ptr([]ske.CRI{
+												Cri: new([]ske.CRI{
 													{
 														Name: utils.Ptr(ske.CRINAME_CONTAINERD),
 													},
@@ -90,14 +90,14 @@ resource "stackit_ske_cluster" "cluster" {
 										}),
 									},
 								}),
-								MachineTypes: utils.Ptr([]ske.MachineType{
+								MachineTypes: new([]ske.MachineType{
 									{
 										Name: utils.Ptr(machineType),
 									},
 								}),
-								KubernetesVersions: utils.Ptr([]ske.KubernetesVersion{
+								KubernetesVersions: new([]ske.KubernetesVersion{
 									{
-										State:          utils.Ptr("supported"),
+										State:          new("supported"),
 										ExpirationDate: nil,
 										Version:        utils.Ptr(kubernetesVersionMin),
 									},

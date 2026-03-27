@@ -45,7 +45,7 @@ func TestMapFields(t *testing.T) {
 					ServerId:  types.StringValue("sid"),
 				},
 				input: &iaas.Server{
-					Id: utils.Ptr("sid"),
+					Id: new("sid"),
 				},
 				region: "eu01",
 			},
@@ -77,27 +77,27 @@ func TestMapFields(t *testing.T) {
 					Region:    types.StringValue("eu01"),
 				},
 				input: &iaas.Server{
-					Id:               utils.Ptr("sid"),
-					Name:             utils.Ptr("name"),
-					AvailabilityZone: utils.Ptr("zone"),
-					Labels: &map[string]interface{}{
+					Id:               new("sid"),
+					Name:             new("name"),
+					AvailabilityZone: new("zone"),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					ImageId: utils.Ptr("image_id"),
+					ImageId: new("image_id"),
 					Nics: &[]iaas.ServerNetwork{
 						{
-							NicId: utils.Ptr("nic1"),
+							NicId: new("nic1"),
 						},
 						{
-							NicId: utils.Ptr("nic2"),
+							NicId: new("nic2"),
 						},
 					},
-					KeypairName:   utils.Ptr("keypair_name"),
-					AffinityGroup: utils.Ptr("group_id"),
-					CreatedAt:     utils.Ptr(testTimestamp()),
-					UpdatedAt:     utils.Ptr(testTimestamp()),
-					LaunchedAt:    utils.Ptr(testTimestamp()),
-					Status:        utils.Ptr("active"),
+					KeypairName:   new("keypair_name"),
+					AffinityGroup: new("group_id"),
+					CreatedAt:     new(testTimestamp()),
+					UpdatedAt:     new(testTimestamp()),
+					LaunchedAt:    new(testTimestamp()),
+					Status:        new("active"),
 				},
 				region: "eu02",
 			},
@@ -130,7 +130,7 @@ func TestMapFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Server{
-					Id: utils.Ptr("sid"),
+					Id: new("sid"),
 				},
 				region: "eu01",
 			},
@@ -218,23 +218,23 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateServerPayload{
-				Name:             utils.Ptr("name"),
-				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
+				Name:             new("name"),
+				AvailabilityZone: new("zone"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
 				BootVolume: &iaas.ServerBootVolume{
-					PerformanceClass: utils.Ptr("class"),
-					Size:             utils.Ptr(int64(1)),
+					PerformanceClass: new("class"),
+					Size:             new(int64(1)),
 					Source: &iaas.BootVolumeSource{
-						Type: utils.Ptr("type"),
-						Id:   utils.Ptr("id"),
+						Type: new("type"),
+						Id:   new("id"),
 					},
 				},
-				ImageId:     utils.Ptr("image"),
-				KeypairName: utils.Ptr("keypair"),
-				MachineType: utils.Ptr("machine_type"),
-				UserData:    utils.Ptr([]byte(base64EncodedUserData)),
+				ImageId:     new("image"),
+				KeypairName: new("keypair"),
+				MachineType: new("machine_type"),
+				UserData:    new([]byte(base64EncodedUserData)),
 				Networking: &iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
 						NicIds: &[]string{"nic1", "nic2"},
@@ -269,24 +269,24 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateServerPayload{
-				Name:             utils.Ptr("name"),
-				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
+				Name:             new("name"),
+				AvailabilityZone: new("zone"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
 				BootVolume: &iaas.ServerBootVolume{
-					PerformanceClass: utils.Ptr("class"),
-					Size:             utils.Ptr(int64(1)),
+					PerformanceClass: new("class"),
+					Size:             new(int64(1)),
 					Source: &iaas.BootVolumeSource{
-						Type: utils.Ptr("image"),
-						Id:   utils.Ptr("id"),
+						Type: new("image"),
+						Id:   new("id"),
 					},
-					DeleteOnTermination: utils.Ptr(true),
+					DeleteOnTermination: new(true),
 				},
-				ImageId:     utils.Ptr("image"),
-				KeypairName: utils.Ptr("keypair"),
-				MachineType: utils.Ptr("machine_type"),
-				UserData:    utils.Ptr([]byte(base64EncodedUserData)),
+				ImageId:     new("image"),
+				KeypairName: new("keypair"),
+				MachineType: new("machine_type"),
+				UserData:    new([]byte(base64EncodedUserData)),
 				Networking: &iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
 						NicIds: &[]string{"nic1", "nic2"},
@@ -331,8 +331,8 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdateServerPayload{
-				Name: utils.Ptr("name"),
-				Labels: &map[string]interface{}{
+				Name: new("name"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
 			},
@@ -432,7 +432,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
-							Id:     utils.Ptr(serverId.ValueString()),
+							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerActiveStatus),
 						}, nil
 					},
@@ -462,7 +462,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							state = wait.ServerInactiveStatus
 						}
 						return &iaas.Server{
-							Id:     utils.Ptr(serverId.ValueString()),
+							Id:     new(serverId.ValueString()),
 							Status: &state,
 						}, nil
 					},
@@ -498,7 +498,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							state = wait.ServerDeallocatedStatus
 						}
 						return &iaas.Server{
-							Id:     utils.Ptr(serverId.ValueString()),
+							Id:     new(serverId.ValueString()),
 							Status: &state,
 						}, nil
 					},
@@ -525,7 +525,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
-							Id:     utils.Ptr(serverId.ValueString()),
+							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerActiveStatus),
 						}, nil
 					},
@@ -550,7 +550,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
-							Id:     utils.Ptr(serverId.ValueString()),
+							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerInactiveStatus),
 						}, nil
 					},
@@ -575,7 +575,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				client: &mockServerControlClient{
 					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
 						return &iaas.Server{
-							Id:     utils.Ptr(serverId.ValueString()),
+							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerDeallocatedStatus),
 						}, nil
 					},

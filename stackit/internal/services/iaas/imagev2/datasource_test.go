@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,7 +30,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					ImageId:   types.StringValue("iid"),
 				},
 				input: &iaas.Image{
-					Id: utils.Ptr("iid"),
+					Id: new("iid"),
 				},
 				region: "eu01",
 			},
@@ -53,33 +52,33 @@ func TestMapDataSourceFields(t *testing.T) {
 					Region:    types.StringValue("eu01"),
 				},
 				input: &iaas.Image{
-					Id:          utils.Ptr("iid"),
-					Name:        utils.Ptr("name"),
-					DiskFormat:  utils.Ptr("format"),
-					MinDiskSize: utils.Ptr(int64(1)),
-					MinRam:      utils.Ptr(int64(1)),
-					Protected:   utils.Ptr(true),
-					Scope:       utils.Ptr("scope"),
+					Id:          new("iid"),
+					Name:        new("name"),
+					DiskFormat:  new("format"),
+					MinDiskSize: new(int64(1)),
+					MinRam:      new(int64(1)),
+					Protected:   new(true),
+					Scope:       new("scope"),
 					Config: &iaas.ImageConfig{
-						BootMenu:               utils.Ptr(true),
-						CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
-						DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
-						NicModel:               iaas.NewNullableString(utils.Ptr("model")),
-						OperatingSystem:        utils.Ptr("os"),
-						OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
-						OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
-						RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
-						RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
-						SecureBoot:             utils.Ptr(true),
-						Uefi:                   utils.Ptr(true),
-						VideoModel:             iaas.NewNullableString(utils.Ptr("model")),
-						VirtioScsi:             utils.Ptr(true),
+						BootMenu:               new(true),
+						CdromBus:               iaas.NewNullableString(new("cdrom_bus")),
+						DiskBus:                iaas.NewNullableString(new("disk_bus")),
+						NicModel:               iaas.NewNullableString(new("model")),
+						OperatingSystem:        new("os"),
+						OperatingSystemDistro:  iaas.NewNullableString(new("os_distro")),
+						OperatingSystemVersion: iaas.NewNullableString(new("os_version")),
+						RescueBus:              iaas.NewNullableString(new("rescue_bus")),
+						RescueDevice:           iaas.NewNullableString(new("rescue_device")),
+						SecureBoot:             new(true),
+						Uefi:                   new(true),
+						VideoModel:             iaas.NewNullableString(new("model")),
+						VirtioScsi:             new(true),
 					},
 					Checksum: &iaas.ImageChecksum{
-						Algorithm: utils.Ptr("algorithm"),
-						Digest:    utils.Ptr("digest"),
+						Algorithm: new("algorithm"),
+						Digest:    new("digest"),
 					},
-					Labels: &map[string]interface{}{
+					Labels: &map[string]any{
 						"key": "value",
 					},
 				},
@@ -130,7 +129,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Image{
-					Id: utils.Ptr("iid"),
+					Id: new("iid"),
 				},
 				region: "eu01",
 			},
@@ -198,11 +197,11 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "all fields match",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystem:        utils.Ptr("linux"),
-					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("ubuntu")),
-					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("22.04")),
-					Uefi:                   utils.Ptr(true),
-					SecureBoot:             utils.Ptr(true),
+					OperatingSystem:        new("linux"),
+					OperatingSystemDistro:  iaas.NewNullableString(new("ubuntu")),
+					OperatingSystemVersion: iaas.NewNullableString(new("22.04")),
+					Uefi:                   new(true),
+					SecureBoot:             new(true),
 				},
 			},
 			filter: &Filter{
@@ -218,7 +217,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "OS mismatch",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystem: utils.Ptr("windows"),
+					OperatingSystem: new("windows"),
 				},
 			},
 			filter: &Filter{
@@ -230,7 +229,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "Distro mismatch",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystemDistro: iaas.NewNullableString(utils.Ptr("debian")),
+					OperatingSystemDistro: iaas.NewNullableString(new("debian")),
 				},
 			},
 			filter: &Filter{
@@ -242,7 +241,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "Version mismatch",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("20.04")),
+					OperatingSystemVersion: iaas.NewNullableString(new("20.04")),
 				},
 			},
 			filter: &Filter{
@@ -254,7 +253,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "UEFI mismatch",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					Uefi: utils.Ptr(false),
+					Uefi: new(false),
 				},
 			},
 			filter: &Filter{
@@ -266,7 +265,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "SecureBoot mismatch",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					SecureBoot: utils.Ptr(false),
+					SecureBoot: new(false),
 				},
 			},
 			filter: &Filter{
@@ -278,7 +277,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "SecureBoot match - true",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					SecureBoot: utils.Ptr(true),
+					SecureBoot: new(true),
 				},
 			},
 			filter: &Filter{
@@ -290,7 +289,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "SecureBoot match - false",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					SecureBoot: utils.Ptr(false),
+					SecureBoot: new(false),
 				},
 			},
 			filter: &Filter{
@@ -314,7 +313,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "partial filter match - only distro set and match",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystemDistro: iaas.NewNullableString(utils.Ptr("ubuntu")),
+					OperatingSystemDistro: iaas.NewNullableString(new("ubuntu")),
 				},
 			},
 			filter: &Filter{
@@ -326,7 +325,7 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "partial filter match - distro mismatch",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystemDistro: iaas.NewNullableString(utils.Ptr("centos")),
+					OperatingSystemDistro: iaas.NewNullableString(new("centos")),
 				},
 			},
 			filter: &Filter{
@@ -350,11 +349,11 @@ func TestImageMatchesFilter(t *testing.T) {
 			name: "image has valid config, but filter has null values",
 			img: &iaas.Image{
 				Config: &iaas.ImageConfig{
-					OperatingSystem:        utils.Ptr("linux"),
-					OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("ubuntu")),
-					OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("22.04")),
-					Uefi:                   utils.Ptr(false),
-					SecureBoot:             utils.Ptr(false),
+					OperatingSystem:        new("linux"),
+					OperatingSystemDistro:  iaas.NewNullableString(new("ubuntu")),
+					OperatingSystemVersion: iaas.NewNullableString(new("22.04")),
+					Uefi:                   new(false),
+					SecureBoot:             new(false),
 				},
 			},
 			filter: &Filter{
@@ -409,9 +408,9 @@ func TestSortImagesByName(t *testing.T) {
 			desc:      "ascending by name",
 			ascending: true,
 			input: []*iaas.Image{
-				{Name: utils.Ptr("Ubuntu 22.04")},
-				{Name: utils.Ptr("Ubuntu 18.04")},
-				{Name: utils.Ptr("Ubuntu 20.04")},
+				{Name: new("Ubuntu 22.04")},
+				{Name: new("Ubuntu 18.04")},
+				{Name: new("Ubuntu 20.04")},
 			},
 			wantSorted: []string{"Ubuntu 18.04", "Ubuntu 20.04", "Ubuntu 22.04"},
 		},
@@ -419,9 +418,9 @@ func TestSortImagesByName(t *testing.T) {
 			desc:      "descending by name",
 			ascending: false,
 			input: []*iaas.Image{
-				{Name: utils.Ptr("Ubuntu 22.04")},
-				{Name: utils.Ptr("Ubuntu 18.04")},
-				{Name: utils.Ptr("Ubuntu 20.04")},
+				{Name: new("Ubuntu 22.04")},
+				{Name: new("Ubuntu 18.04")},
+				{Name: new("Ubuntu 20.04")},
 			},
 			wantSorted: []string{"Ubuntu 22.04", "Ubuntu 20.04", "Ubuntu 18.04"},
 		},
@@ -430,9 +429,9 @@ func TestSortImagesByName(t *testing.T) {
 			ascending: true,
 			input: []*iaas.Image{
 				{Name: nil},
-				{Name: utils.Ptr("Ubuntu 18.04")},
+				{Name: new("Ubuntu 18.04")},
 				{Name: nil},
-				{Name: utils.Ptr("Ubuntu 20.04")},
+				{Name: new("Ubuntu 20.04")},
 			},
 			wantSorted: []string{"Ubuntu 18.04", "Ubuntu 20.04", "<nil>", "<nil>"},
 		},
@@ -441,8 +440,8 @@ func TestSortImagesByName(t *testing.T) {
 			ascending: false,
 			input: []*iaas.Image{
 				{Name: nil},
-				{Name: utils.Ptr("Ubuntu 18.04")},
-				{Name: utils.Ptr("Ubuntu 20.04")},
+				{Name: new("Ubuntu 18.04")},
+				{Name: new("Ubuntu 20.04")},
 				{Name: nil},
 			},
 			wantSorted: []string{"Ubuntu 20.04", "Ubuntu 18.04", "<nil>", "<nil>"},
@@ -457,7 +456,7 @@ func TestSortImagesByName(t *testing.T) {
 			desc:      "single element slice",
 			ascending: true,
 			input: []*iaas.Image{
-				{Name: utils.Ptr("Ubuntu 22.04")},
+				{Name: new("Ubuntu 22.04")},
 			},
 			wantSorted: []string{"Ubuntu 22.04"},
 		},

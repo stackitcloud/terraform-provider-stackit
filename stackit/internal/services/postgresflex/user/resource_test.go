@@ -6,7 +6,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
 
@@ -23,8 +22,8 @@ func TestMapFieldsCreate(t *testing.T) {
 			"default_values",
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{
-					Id:       utils.Ptr("uid"),
-					Password: utils.Ptr(""),
+					Id:       new("uid"),
+					Password: new(""),
 				},
 			},
 			testRegion,
@@ -47,17 +46,17 @@ func TestMapFieldsCreate(t *testing.T) {
 			"simple_values",
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{
-					Id: utils.Ptr("uid"),
+					Id: new("uid"),
 					Roles: &[]string{
 						"role_1",
 						"role_2",
 						"",
 					},
-					Username: utils.Ptr("username"),
-					Password: utils.Ptr("password"),
-					Host:     utils.Ptr("host"),
-					Port:     utils.Ptr(int64(1234)),
-					Uri:      utils.Ptr("uri"),
+					Username: new("username"),
+					Password: new("password"),
+					Host:     new("host"),
+					Port:     new(int64(1234)),
+					Uri:      new("uri"),
 				},
 			},
 			testRegion,
@@ -84,12 +83,12 @@ func TestMapFieldsCreate(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{
-					Id:       utils.Ptr("uid"),
+					Id:       new("uid"),
 					Roles:    &[]string{},
 					Username: nil,
-					Password: utils.Ptr(""),
+					Password: new(""),
 					Host:     nil,
-					Port:     utils.Ptr(int64(2123456789)),
+					Port:     new(int64(2123456789)),
 					Uri:      nil,
 				},
 			},
@@ -136,7 +135,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			"no_password",
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{
-					Id: utils.Ptr("uid"),
+					Id: new("uid"),
 				},
 			},
 			testRegion,
@@ -204,9 +203,9 @@ func TestMapFields(t *testing.T) {
 						"role_2",
 						"",
 					},
-					Username: utils.Ptr("username"),
-					Host:     utils.Ptr("host"),
-					Port:     utils.Ptr(int64(1234)),
+					Username: new("username"),
+					Host:     new("host"),
+					Port:     new(int64(1234)),
 				},
 			},
 			testRegion,
@@ -231,11 +230,11 @@ func TestMapFields(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&postgresflex.GetUserResponse{
 				Item: &postgresflex.UserResponse{
-					Id:       utils.Ptr("uid"),
+					Id:       new("uid"),
 					Roles:    &[]string{},
 					Username: nil,
 					Host:     nil,
-					Port:     utils.Ptr(int64(2123456789)),
+					Port:     new(int64(2123456789)),
 				},
 			},
 			testRegion,
@@ -332,7 +331,7 @@ func TestToCreatePayload(t *testing.T) {
 					"role_1",
 					"role_2",
 				},
-				Username: utils.Ptr("username"),
+				Username: new("username"),
 			},
 			true,
 		},
