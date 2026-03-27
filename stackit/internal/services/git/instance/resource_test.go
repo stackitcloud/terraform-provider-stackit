@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/git"
+	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 )
 
 var (
@@ -34,8 +34,8 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "minimal_input_name_only",
 			input: &git.Instance{
-				Id:   utils.Ptr(testInstanceId),
-				Name: utils.Ptr("git-min-instance"),
+				Id:   testInstanceId,
+				Name: "git-min-instance",
 			},
 			expected: &Model{
 				Id:                    types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testInstanceId)),
@@ -43,27 +43,27 @@ func TestMapFields(t *testing.T) {
 				InstanceId:            types.StringValue(testInstanceId),
 				Name:                  types.StringValue("git-min-instance"),
 				ACL:                   types.ListNull(types.StringType),
-				Flavor:                types.StringNull(),
-				Url:                   types.StringNull(),
-				Version:               types.StringNull(),
-				Created:               types.StringNull(),
-				ConsumedDisk:          types.StringNull(),
-				ConsumedObjectStorage: types.StringNull(),
+				Flavor:                types.StringValue(""),
+				Url:                   types.StringValue(""),
+				Version:               types.StringValue(""),
+				Created:               types.StringValue("0001-01-01 00:00:00 +0000 UTC"),
+				ConsumedDisk:          types.StringValue(""),
+				ConsumedObjectStorage: types.StringValue(""),
 			},
 			isValid: true,
 		},
 		{
 			description: "full_input_with_acl_and_flavor",
 			input: &git.Instance{
-				Acl:                   &[]string{"192.168.0.0/24"},
-				ConsumedDisk:          utils.Ptr("1.00 GB"),
-				ConsumedObjectStorage: utils.Ptr("2.00 GB"),
-				Created:               &createdTime,
-				Flavor:                utils.Ptr("git-100"),
-				Id:                    utils.Ptr(testInstanceId),
-				Name:                  utils.Ptr("git-full-instance"),
-				Url:                   utils.Ptr("https://git-full-instance.git.onstackit.cloud"),
-				Version:               utils.Ptr("v1.9.1"),
+				Acl:                   []string{"192.168.0.0/24"},
+				ConsumedDisk:          "1.00 GB",
+				ConsumedObjectStorage: "2.00 GB",
+				Created:               createdTime,
+				Flavor:                "git-100",
+				Id:                    testInstanceId,
+				Name:                  "git-full-instance",
+				Url:                   "https://git-full-instance.git.onstackit.cloud",
+				Version:               "v1.9.1",
 			},
 			expected: &Model{
 				Id:                    types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testInstanceId)),
@@ -83,9 +83,9 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "empty_acls",
 			input: &git.Instance{
-				Id:   utils.Ptr(testInstanceId),
-				Name: utils.Ptr("git-empty-acl"),
-				Acl:  &[]string{},
+				Id:   testInstanceId,
+				Name: "git-empty-acl",
+				Acl:  []string{},
 			},
 			expected: &Model{
 				Id:                    types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testInstanceId)),
@@ -93,12 +93,12 @@ func TestMapFields(t *testing.T) {
 				InstanceId:            types.StringValue(testInstanceId),
 				Name:                  types.StringValue("git-empty-acl"),
 				ACL:                   types.ListNull(types.StringType),
-				Flavor:                types.StringNull(),
-				Url:                   types.StringNull(),
-				Version:               types.StringNull(),
-				Created:               types.StringNull(),
-				ConsumedDisk:          types.StringNull(),
-				ConsumedObjectStorage: types.StringNull(),
+				Flavor:                types.StringValue(""),
+				Url:                   types.StringValue(""),
+				Version:               types.StringValue(""),
+				Created:               types.StringValue("0001-01-01 00:00:00 +0000 UTC"),
+				ConsumedDisk:          types.StringValue(""),
+				ConsumedObjectStorage: types.StringValue(""),
 			},
 			isValid: true,
 		},
@@ -107,20 +107,6 @@ func TestMapFields(t *testing.T) {
 			input:       nil,
 			expected:    nil,
 			isValid:     false,
-		},
-		{
-			description: "empty_instance",
-			input:       &git.Instance{},
-			expected:    nil,
-			isValid:     false,
-		},
-		{
-			description: "missing_id",
-			input: &git.Instance{
-				Name: utils.Ptr("git-missing-id"),
-			},
-			expected: nil,
-			isValid:  false,
 		},
 	}
 
@@ -162,7 +148,7 @@ func TestToCreatePayload(t *testing.T) {
 				ACL:    types.ListNull(types.StringType),
 			},
 			expected: git.CreateInstancePayload{
-				Name: utils.Ptr("example-instance"),
+				Name: "example-instance",
 			},
 			expectError: false,
 		},
@@ -177,9 +163,9 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: git.CreateInstancePayload{
-				Name:   utils.Ptr("my-instance"),
-				Flavor: git.INSTANCEFLAVOR__100.Ptr(),
-				Acl:    &[]string{"10.0.0.1", "10.0.0.2"},
+				Name:   "my-instance",
+				Flavor: utils.Ptr("git-100"),
+				Acl:    []string{"10.0.0.1", "10.0.0.2"},
 			},
 			expectError: false,
 		},
@@ -191,9 +177,9 @@ func TestToCreatePayload(t *testing.T) {
 				ACL:    types.ListValueMust(types.StringType, []attr.Value{}),
 			},
 			expected: git.CreateInstancePayload{
-				Name:   utils.Ptr("my-instance"),
-				Flavor: git.INSTANCEFLAVOR__100.Ptr(),
-				Acl:    &[]string{},
+				Name:   "my-instance",
+				Flavor: utils.Ptr("git-100"),
+				Acl:    []string{},
 			},
 			expectError: false,
 		},
