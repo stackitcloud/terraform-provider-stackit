@@ -331,7 +331,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 					},
 					"redirects": schema.SingleNestedAttribute{
-						Required:    true,
+						Optional:    true,
 						Description: schemaDescriptions["config_redirects"],
 						Attributes: map[string]schema.Attribute{
 							"rules": schema.ListNestedAttribute{
@@ -352,16 +352,16 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 											Description: schemaDescriptions["config_redirects_rule_enabled"],
 											Default:     booldefault.StaticBool(true),
 										},
-										"targetUrl": schema.StringAttribute{
+										"target_url": schema.StringAttribute{
 											Required:    true,
 											Description: schemaDescriptions["config_redirects_rule_target_url"],
 										},
-										"statusCode": schema.Int32Attribute{
+										"status_code": schema.Int32Attribute{
 											Required:    true,
 											Description: schemaDescriptions["config_redirects_rule_status_code"],
 											Validators:  []validator.Int32{int32validator.OneOf(statusCode...)},
 										},
-										"ruleMatchCondition": schema.StringAttribute{
+										"rule_match_condition": schema.StringAttribute{
 											Optional:    true,
 											Computed:    true,
 											Description: schemaDescriptions["config_redirects_rule_match_condition"],
@@ -379,11 +379,12 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 													"values": schema.ListAttribute{
 														Description: schemaDescriptions["config_redirects_rule_matcher_values"],
 														Required:    true,
+														ElementType: types.StringType,
 														Validators: []validator.List{
 															listvalidator.SizeAtLeast(1),
 														},
 													},
-													"ruleMatchCondition": schema.StringAttribute{
+													"value_match_condition": schema.StringAttribute{
 														Optional:    true,
 														Description: schemaDescriptions["config_redirects_rule_match_condition"],
 														Default:     stringdefault.StaticString("ANY"),

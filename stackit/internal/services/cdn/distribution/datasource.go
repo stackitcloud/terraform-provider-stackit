@@ -38,6 +38,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes, // Shared from resource.go
 	},
+	"redirects": types.ObjectType{
+		AttrTypes: redirectsTypes, // Shared from resource.go
+	},
 }
 
 type distributionDataSource struct {
@@ -199,6 +202,57 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							},
 						},
 					},
+					"redirects": schema.SingleNestedAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_redirects"],
+						Attributes: map[string]schema.Attribute{
+							"rules": schema.ListNestedAttribute{
+								Description: schemaDescriptions["config_redirects_rules"],
+								Computed:    true,
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"description": schema.StringAttribute{
+											Description: schemaDescriptions["config_redirects_rule_description"],
+											Computed:    true,
+										},
+										"enabled": schema.BoolAttribute{
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_enabled"],
+										},
+										"target_url": schema.StringAttribute{
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_target_url"],
+										},
+										"status_code": schema.Int32Attribute{
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_status_code"],
+										},
+										"rule_match_condition": schema.StringAttribute{
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_match_condition"],
+										},
+										"matchers": schema.ListNestedAttribute{
+											Description: schemaDescriptions["config_redirects_rule_matchers"],
+											Computed:    true,
+											NestedObject: schema.NestedAttributeObject{
+												Attributes: map[string]schema.Attribute{
+													"values": schema.ListAttribute{
+														Description: schemaDescriptions["config_redirects_rule_matcher_values"],
+														Computed:    true,
+														ElementType: types.StringType,
+													},
+													"value_match_condition": schema.StringAttribute{
+														Description: schemaDescriptions["config_redirects_rule_match_condition"],
+														Computed:    true,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -300,6 +354,99 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 		return core.DiagsToError(diags)
 	}
 
+	// redirects
+	redirectsVal := types.ObjectNull(redirectsTypes)
+	if distribution.Config != nil && distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
+		var tfRules []attr.Value
+		for _, r := range *distribution.Config.Redirects.Rules {
+			var tfMatchers []attr.Value
+			if r.Matchers != nil {
+				for _, m := range *r.Matchers {
+					var tfValues []attr.Value
+					if m.Values != nil {
+						for _, v := range *m.Values {
+							tfValues = append(tfValues, types.StringValue(v))
+						}
+					}
+					tfValuesList, diags := types.ListValue(types.StringType, tfValues)
+					if diags.HasError() {
+						return core.DiagsToError(diags)
+					}
+
+					tfValMatchCond := types.StringNull()
+					if m.ValueMatchCondition != nil {
+						tfValMatchCond = types.StringValue(string(*m.ValueMatchCondition))
+					}
+
+					tfMatcherObj, diags := types.ObjectValue(matcherTypes, map[string]attr.Value{
+						"values":                tfValuesList,
+						"value_match_condition": tfValMatchCond,
+					})
+					if diags.HasError() {
+						return core.DiagsToError(diags)
+					}
+					tfMatchers = append(tfMatchers, tfMatcherObj)
+				}
+			}
+
+			tfMatchersList, diags := types.ListValue(types.ObjectType{AttrTypes: matcherTypes}, tfMatchers)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+
+			tfDesc := types.StringNull()
+			if r.Description != nil {
+				tfDesc = types.StringValue(*r.Description)
+			}
+
+			tfEnabled := types.BoolNull()
+			if r.Enabled != nil {
+				tfEnabled = types.BoolValue(*r.Enabled)
+			}
+
+			tfTargetUrl := types.StringNull()
+			if r.TargetUrl != nil {
+				tfTargetUrl = types.StringValue(*r.TargetUrl)
+			}
+
+			tfStatusCode := types.Int32Null()
+			if r.StatusCode != nil {
+				tfStatusCode = types.Int32Value(int32(*r.StatusCode))
+			}
+
+			tfRuleMatchCond := types.StringNull()
+			if r.RuleMatchCondition != nil {
+				tfRuleMatchCond = types.StringValue(string(*r.RuleMatchCondition))
+			}
+
+			tfRuleObj, diags := types.ObjectValue(redirectRuleTypes, map[string]attr.Value{
+				"description":          tfDesc,
+				"enabled":              tfEnabled,
+				"target_url":           tfTargetUrl,
+				"status_code":          tfStatusCode,
+				"rule_match_condition": tfRuleMatchCond,
+				"matchers":             tfMatchersList,
+			})
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+			tfRules = append(tfRules, tfRuleObj)
+		}
+
+		tfRulesList, diags := types.ListValue(types.ObjectType{AttrTypes: redirectRuleTypes}, tfRules)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+
+		var objDiags diag.Diagnostics
+		redirectsVal, objDiags = types.ObjectValue(redirectsTypes, map[string]attr.Value{
+			"rules": tfRulesList,
+		})
+		if objDiags.HasError() {
+			return core.DiagsToError(objDiags)
+		}
+	}
+
 	// Prepare Backend Values
 	var backendValues map[string]attr.Value
 	originRequestHeaders := types.MapNull(types.StringType)
@@ -383,6 +530,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 		"regions":           modelRegions,
 		"blocked_countries": modelBlockedCountries,
 		"optimizer":         optimizerVal,
+		"redirects":         redirectsVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
