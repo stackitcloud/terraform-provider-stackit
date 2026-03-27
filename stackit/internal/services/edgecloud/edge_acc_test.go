@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/edge"
 	"github.com/stackitcloud/stackit-sdk-go/services/edge/wait"
@@ -335,14 +334,7 @@ func TestAccEdgeCloudKubeconfigToken_validation(t *testing.T) {
 // testAccCheckEdgeCloudInstanceDestroy verifies that test resources are properly destroyed
 func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *edge.APIClient
-	var err error
-
-	if testutil.EdgeCloudCustomEndpoint != "" {
-		client, err = edge.NewAPIClient(coreConfig.WithEndpoint(testutil.EdgeCloudCustomEndpoint))
-	} else {
-		client, err = edge.NewAPIClient()
-	}
+	client, err := edge.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.EdgeCloudCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

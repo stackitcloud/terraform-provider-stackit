@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -450,17 +449,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 
 func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *secretsmanager.APIClient
-	var err error
-	if testutil.SecretsManagerCustomEndpoint == "" {
-		client, err = secretsmanager.NewAPIClient(
-			core_config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = secretsmanager.NewAPIClient(
-			core_config.WithEndpoint(testutil.SecretsManagerCustomEndpoint),
-		)
-	}
+	client, err := secretsmanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SecretsManagerCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
