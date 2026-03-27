@@ -135,7 +135,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Distribution Create
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttp,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -167,7 +167,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Wait step, that confirms the CNAME record has "propagated"
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttp,
 				ConfigVariables: testConfigVarsHttp,
 				Check: func(_ *terraform.State) error {
 					_, err := blockUntilDomainResolves(fullDomainName)
@@ -176,7 +176,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Custom Domain Create
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttp,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
@@ -234,7 +234,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttp,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "distribution_id"),
@@ -274,7 +274,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttp,
 				ConfigVariables: configVarsHttpUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -328,7 +328,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Distribution Create
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -387,7 +387,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "distribution_id"),
@@ -414,7 +414,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -440,7 +440,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			// empty list '[]', causing a state mismatch. The 'Default' modifier in the schema now
 			// ensures the missing config is treated as an empty list, matching the API response.
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "0"),
@@ -516,7 +516,7 @@ func blockUntilDomainResolves(domain string) (string, error) {
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
 	var zero T
 	var errOuter error
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		dist, err := f()
 		if err == nil {
 			return dist, nil

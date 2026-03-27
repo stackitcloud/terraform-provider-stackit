@@ -84,7 +84,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ScfProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
@@ -120,7 +120,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 	                	org_id = stackit_scf_organization.org.org_id
 	                	project_id = stackit_scf_organization.org.project_id
 	                }
-					`, testutil.ScfProviderConfig()+resourceMin,
+					`, testutil.NewConfigBuilder().BuildProviderConfig()+resourceMin,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -212,7 +212,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testScfOrgConfigVarsMinUpdated(),
-				Config:          testutil.ScfProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testScfOrgConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testScfOrgConfigVarsMinUpdated()["name"])),
@@ -238,7 +238,7 @@ func TestAccScfOrgMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ScfProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
@@ -284,7 +284,7 @@ func TestAccScfOrgMax(t *testing.T) {
 	                	platform_id = stackit_scf_organization.org.platform_id
 	                	project_id = stackit_scf_organization.org.project_id
 	                }
-					`, testutil.ScfProviderConfig()+resourceMax,
+					`, testutil.NewConfigBuilder().BuildProviderConfig()+resourceMax,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -390,7 +390,7 @@ func TestAccScfOrgMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testScfOrgConfigVarsMaxUpdated(),
-				Config:          testutil.ScfProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testScfOrgConfigVarsMaxUpdated()["name"])),

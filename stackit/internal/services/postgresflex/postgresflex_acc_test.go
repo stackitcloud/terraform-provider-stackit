@@ -86,7 +86,7 @@ func configResources(backupSchedule string, region *string) string {
 					owner = stackit_postgresflex_user.user.username
 				}
 				`,
-		testutil.PostgresFlexProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["acl"],

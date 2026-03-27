@@ -84,7 +84,7 @@ func configResources(version, backupSchedule, snapshotRetentionDays string) stri
 					database = "%s"
 				}
 				`,
-		testutil.MongoDBFlexProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["acl"],

@@ -64,7 +64,7 @@ func resourceConfig(params map[string]string) string {
 
 				%s
 				`,
-		testutil.RabbitMQProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],

@@ -69,7 +69,7 @@ func resourceConfig(params map[string]string) string {
 					instance_id = stackit_opensearch_instance.instance.instance_id
 				}
 				`,
-		testutil.OpenSearchProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],

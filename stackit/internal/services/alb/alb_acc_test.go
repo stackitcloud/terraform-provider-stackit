@@ -148,7 +148,7 @@ func TestAccALBResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ALBProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -186,7 +186,7 @@ func TestAccALBResourceMin(t *testing.T) {
 							name    = stackit_application_load_balancer.loadbalancer.name
 						}
 						`,
-					testutil.ALBProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance
@@ -283,7 +283,7 @@ func TestAccALBResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ALBProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMin["loadbalancer_name"])),
@@ -324,7 +324,7 @@ func TestAccALBResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ALBProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -419,7 +419,7 @@ func TestAccALBResourceMax(t *testing.T) {
 							name    = stackit_application_load_balancer.loadbalancer.name
 						}
 						`,
-					testutil.ALBProviderConfig()+resourceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance
@@ -528,7 +528,7 @@ func TestAccALBResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ALBProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
