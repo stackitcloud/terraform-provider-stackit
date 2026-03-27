@@ -51,6 +51,7 @@ Read-Only:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
+- `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 - `regions` (List of String) The configured regions where content will be hosted
 
 <a id="nestedatt--config--backend"></a>
@@ -72,6 +73,36 @@ Read-Only:
 Read-Only:
 
 - `enabled` (Boolean)
+
+
+<a id="nestedatt--config--redirects"></a>
+### Nested Schema for `config.redirects`
+
+Read-Only:
+
+- `rules` (Attributes List) A list of redirect rules. The order of rules matters for evaluation (see [below for nested schema](#nestedatt--config--redirects--rules))
+
+<a id="nestedatt--config--redirects--rules"></a>
+### Nested Schema for `config.redirects.rules`
+
+Read-Only:
+
+- `description` (String) An optional description for the redirect rule
+- `enabled` (Boolean) A toggle to enable or disable the redirect rule. Default to true
+- `matchers` (Attributes List) A list of matchers that define when this rule should apply. At least one matcher is required (see [below for nested schema](#nestedatt--config--redirects--rules--matchers))
+- `rule_match_condition` (String) Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.
+- `status_code` (Number) The HTTP status code for the redirect. Must be one of 301, 302, 303, 307, or 308.
+- `target_url` (String) The target URL to redirect to. Must be a valid URI
+
+<a id="nestedatt--config--redirects--rules--matchers"></a>
+### Nested Schema for `config.redirects.rules.matchers`
+
+Read-Only:
+
+- `value_match_condition` (String) Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.
+- `values` (List of String) A list of glob patterns to match against the request path. At least one value is required. Examples: "/shop/*" or "*/img/*"
+
+
 
 
 
