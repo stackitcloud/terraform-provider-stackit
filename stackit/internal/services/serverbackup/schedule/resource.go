@@ -248,7 +248,13 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Deprecation warning for enableBackupService.
+	resp.Diagnostics.AddWarning("Deprecation warning",
+		"This resource is using a built in function to enable the backup service which will be removed on 26.09.2026. "+
+			"Use the new `server_backup_enable` resource instead to prevent unexpected behavior.")
+
 	// Enable backups if not already enabled
+	// Deprecated: This function will be removed on 26.09.2026. Use `server_backup_enable` resource instead.
 	err := r.enableBackupsService(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Enabling server backup project before creation: %v", err))
@@ -506,6 +512,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 }
 
 // If already enabled, just continues
+// Deprecated: This function will be removed on 26.09.2026. Use `server_backup_enable` resource instead.
 func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
@@ -527,6 +534,7 @@ func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Mode
 }
 
 // Disables only if no backup schedules are present and no backups are present
+// Deprecated: This function will be removed on 26.09.2026. Use `server_backup_enable` resource instead.
 func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Model) error {
 	tflog.Debug(ctx, "Disabling server backup service (in case there are no backups and no backup schedules)")
 
