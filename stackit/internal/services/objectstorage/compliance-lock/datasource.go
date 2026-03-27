@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
@@ -79,7 +79,7 @@ func (d *compliancelockDataSource) Schema(_ context.Context, _ datasource.Schema
 					validate.NoSeparator(),
 				},
 			},
-			"max_retention_days": schema.Int64Attribute{
+			"max_retention_days": schema.Int32Attribute{
 				Description: descriptions["max_retention_days"],
 				Computed:    true,
 			},
@@ -109,7 +109,7 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := d.client.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := d.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
