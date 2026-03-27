@@ -512,6 +512,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 }
 
 // If already enabled, just continues
+
 // Deprecated: This function will be removed on 26.09.2026. Use `server_backup_enable` resource instead.
 func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
@@ -534,6 +535,7 @@ func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Mode
 }
 
 // Disables only if no backup schedules are present and no backups are present
+
 // Deprecated: This function will be removed on 26.09.2026. Use `server_backup_enable` resource instead.
 func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Model) error {
 	tflog.Debug(ctx, "Disabling server backup service (in case there are no backups and no backup schedules)")
@@ -547,7 +549,7 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
-	if *backups.Items != nil && len(*backups.Items) > 0 {
+	if len(*backups.Items) > 0 {
 		tflog.Debug(ctx, "Backups found - will not disable server backup service")
 		return nil
 	}

@@ -70,7 +70,7 @@ type roleAssignmentResource struct {
 
 // Metadata returns the resource type name.
 func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, strings.Replace(r.apiName, "-", "_", -1))
+	resp.TypeName = fmt.Sprintf("%s_authorization_%s_role_assignment", req.ProviderTypeName, strings.ReplaceAll(r.apiName, "-", "_"))
 }
 
 // Configure adds the provider configured client to the resource.

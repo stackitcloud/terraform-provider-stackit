@@ -2540,30 +2540,30 @@ func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *ale
 	if utils.IsUndefined(model.AlertConfig) {
 		*alertConfig, err = getMockAlertConfig(ctx)
 		if err != nil {
-			return fmt.Errorf("Getting mock alert config: %w", err)
+			return fmt.Errorf("getting mock alert config: %w", err)
 		}
 	}
 
 	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
 	if err != nil {
-		return fmt.Errorf("Building alert config payload: %w", err)
+		return fmt.Errorf("building alert config payload: %w", err)
 	}
 
 	if alertConfigPayload != nil {
 		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting alert config: %w", err)
+			return fmt.Errorf("setting alert config: %w", err)
 		}
 	}
 
 	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		return fmt.Errorf("Calling API to get alert config: %w", err)
+		return fmt.Errorf("calling API to get alert config: %w", err)
 	}
 	// Map response body to schema
 	err = mapAlertConfigField(ctx, alertConfigResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the alert config: %w", err)
+		return fmt.Errorf("processing API response for the alert config: %w", err)
 	}
 	return nil
 }
@@ -2576,7 +2576,7 @@ func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model)
 	if tracesRetentionDays != nil {
 		tracesResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
-			return fmt.Errorf("Getting traces retention policy: %w", err)
+			return fmt.Errorf("getting traces retention policy: %w", err)
 		}
 		if tracesResp == nil {
 			return fmt.Errorf("nil response")
@@ -2585,18 +2585,18 @@ func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model)
 		retentionDays := fmt.Sprintf("%dh", *tracesRetentionDays*24)
 		_, err = r.client.UpdateTracesConfigs(ctx, instanceId, projectId).UpdateTracesConfigsPayload(observability.UpdateTracesConfigsPayload{Retention: &retentionDays}).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting traces retention policy: %w", err)
+			return fmt.Errorf("setting traces retention policy: %w", err)
 		}
 	}
 
 	tracesResp, err := r.client.GetTracesConfigsExecute(ctx, instanceId, projectId)
 	if err != nil {
-		return fmt.Errorf("Getting traces retention policy: %w", err)
+		return fmt.Errorf("getting traces retention policy: %w", err)
 	}
 
 	err = mapTracesRetentionField(tracesResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the traces retention %w", err)
+		return fmt.Errorf("processing API response for the traces retention %w", err)
 	}
 
 	return nil
@@ -2610,7 +2610,7 @@ func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) e
 	if logsRetentionDays != nil {
 		logsResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
-			return fmt.Errorf("Getting logs retention policy: %w", err)
+			return fmt.Errorf("getting logs retention policy: %w", err)
 		}
 		if logsResp == nil {
 			return fmt.Errorf("nil response")
@@ -2619,18 +2619,18 @@ func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) e
 		retentionDays := fmt.Sprintf("%dh", *logsRetentionDays*24)
 		_, err = r.client.UpdateLogsConfigs(ctx, instanceId, projectId).UpdateLogsConfigsPayload(observability.UpdateLogsConfigsPayload{Retention: &retentionDays}).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting logs retention policy: %w", err)
+			return fmt.Errorf("setting logs retention policy: %w", err)
 		}
 	}
 
 	logsResp, err := r.client.GetLogsConfigsExecute(ctx, instanceId, projectId)
 	if err != nil {
-		return fmt.Errorf("Getting logs retention policy: %w", err)
+		return fmt.Errorf("getting logs retention policy: %w", err)
 	}
 
 	err = mapLogsRetentionField(logsResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the logs retention %w", err)
+		return fmt.Errorf("processing API response for the logs retention %w", err)
 	}
 
 	return nil
@@ -2648,29 +2648,29 @@ func (r *instanceResource) getMetricsRetention(ctx context.Context, model *Model
 		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
 		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
 		if err != nil {
-			return fmt.Errorf("Getting metrics retention policy: %w", err)
+			return fmt.Errorf("getting metrics retention policy: %w", err)
 		}
 
 		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
 		if err != nil {
-			return fmt.Errorf("Building metrics retention policy payload: %w", err)
+			return fmt.Errorf("building metrics retention policy payload: %w", err)
 		}
 		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting metrics retention policy: %w", err)
+			return fmt.Errorf("setting metrics retention policy: %w", err)
 		}
 	}
 
 	// Get metrics retention policy after update
 	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
 	if err != nil {
-		return fmt.Errorf("Getting metrics retention policy: %w", err)
+		return fmt.Errorf("getting metrics retention policy: %w", err)
 	}
 
 	// Map response body to schema
 	err = mapMetricsRetentionField(metricsResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the metrics retention %w", err)
+		return fmt.Errorf("processing API response for the metrics retention %w", err)
 	}
 	return nil
 }

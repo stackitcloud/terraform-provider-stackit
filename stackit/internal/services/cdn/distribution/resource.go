@@ -570,7 +570,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	configPatchBackend := &cdn.ConfigPatchBackend{}
 
-	if configModel.Backend.Type == "http" {
+	switch configModel.Backend.Type {
+	case "http":
 		geofencingPatch := map[string][]string{}
 		if configModel.Backend.Geofencing != nil {
 			gf := make(map[string][]string)
@@ -594,7 +595,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			Type:                 new("http"),
 			Geofencing:           &geofencingPatch,
 		}
-	} else if configModel.Backend.Type == "bucket" {
+	case "bucket":
 		configPatchBackend.BucketBackendPatch = &cdn.BucketBackendPatch{
 			Type:      new("bucket"),
 			BucketUrl: configModel.Backend.BucketURL,
@@ -713,7 +714,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	}
 
 	if distribution.ProjectId == nil {
-		return fmt.Errorf("Project ID not present")
+		return fmt.Errorf("'Project ID' not present")
 	}
 
 	if distribution.Id == nil {
@@ -721,15 +722,15 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	}
 
 	if distribution.CreatedAt == nil {
-		return fmt.Errorf("CreatedAt missing in response")
+		return fmt.Errorf("'CreatedAt' missing in response")
 	}
 
 	if distribution.UpdatedAt == nil {
-		return fmt.Errorf("UpdatedAt missing in response")
+		return fmt.Errorf("'UpdatedAt' missing in response")
 	}
 
 	if distribution.Status == nil {
-		return fmt.Errorf("Status missing in response")
+		return fmt.Errorf("'Status' missing in response")
 	}
 
 	model.ID = utils.BuildInternalTerraformId(*distribution.ProjectId, *distribution.Id)
@@ -1083,7 +1084,8 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		BlockedCountries: &blockedCountries,
 	}
 
-	if configModel.Backend.Type == "http" {
+	switch configModel.Backend.Type {
+	case "http":
 		originRequestHeaders := map[string]string{}
 		if configModel.Backend.OriginRequestHeaders != nil {
 			maps.Copy(originRequestHeaders, *configModel.Backend.OriginRequestHeaders)
@@ -1094,7 +1096,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 			Type:                 new("http"),
 			Geofencing:           &geofencing,
 		}
-	} else if configModel.Backend.Type == "bucket" {
+	case "bucket":
 		cdnConfig.Backend.BucketBackend = &cdn.BucketBackend{
 			Type:      new("bucket"),
 			BucketUrl: configModel.Backend.BucketURL,

@@ -905,9 +905,10 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			// Setup server and client
 			router := mux.NewRouter()
 			router.HandleFunc("/v2/organizations/{organizationId}/network-areas/{areaId}/regions/{region}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == "GET" {
+				switch r.Method {
+				case http.MethodGet:
 					getAllNetworkRangesHandler(w, r)
-				} else if r.Method == "POST" {
+				case http.MethodPost:
 					createNetworkRangeHandler(w, r)
 				}
 			})

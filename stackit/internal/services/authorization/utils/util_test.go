@@ -172,7 +172,6 @@ func TestLockAssignment(t *testing.T) {
 		// Wait a tiny bit to ensure G1 has started and acquired the lock
 		time.Sleep(10 * time.Millisecond)
 		wg.Go(func() {
-
 			// This should block until G1 releases the lock
 			unlock := LockAssignment(key)
 			defer unlock()

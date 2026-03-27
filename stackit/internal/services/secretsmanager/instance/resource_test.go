@@ -472,9 +472,10 @@ func TestUpdateACLs(t *testing.T) {
 			// Setup server and client
 			router := mux.NewRouter()
 			router.HandleFunc("/v1/projects/{projectId}/instances/{instanceId}/acls", func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == "GET" {
+				switch r.Method {
+				case http.MethodGet:
 					getAllACLsHandler(w, r)
-				} else if r.Method == "POST" {
+				case http.MethodPost:
 					createACLHandler(w, r)
 				}
 			})

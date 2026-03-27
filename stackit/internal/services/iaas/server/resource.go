@@ -711,7 +711,7 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 	// Generate API request body from model
 	payload, err := toUpdatePayload(ctx, model, stateModel.Labels)
 	if err != nil {
-		return nil, fmt.Errorf("Creating API payload: %w", err)
+		return nil, fmt.Errorf("creating API payload: %w", err)
 	}
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
@@ -720,7 +720,7 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 	// Update existing server
 	updatedServer, err = r.client.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("Calling API: %w", err)
+		return nil, fmt.Errorf("calling API: %w", err)
 	}
 
 	// Update machine type
@@ -731,7 +731,7 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 		}
 		err := r.client.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
-			return nil, fmt.Errorf("Resizing the server, calling API: %w", err)
+			return nil, fmt.Errorf("resizing the server, calling API: %w", err)
 		}
 
 		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)

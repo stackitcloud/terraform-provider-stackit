@@ -226,7 +226,7 @@ func mapDatasourceFields(ctx context.Context, volumeResp *iaas.Volume, model *Da
 	} else if volumeResp.Id != nil {
 		volumeId = *volumeResp.Id
 	} else {
-		return fmt.Errorf("Volume id not present")
+		return fmt.Errorf("volume id not present")
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, volumeId)
