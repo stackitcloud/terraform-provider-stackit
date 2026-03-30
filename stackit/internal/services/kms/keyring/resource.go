@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms/wait"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/kms/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -191,7 +191,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResponse, err := r.client.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
+	createResponse, err := r.client.DefaultAPI.CreateKeyRing(ctx, projectId, region).CreateKeyRingPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -199,12 +199,12 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	if createResponse == nil || createResponse.Id == nil {
+	if createResponse == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", "API returned empty response")
 		return
 	}
 
-	keyRingId := *createResponse.Id
+	keyRingId := createResponse.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
@@ -212,7 +212,7 @@ func (r *keyRingResource) Create(ctx context.Context, req resource.CreateRequest
 		"keyring_id": keyRingId,
 	})
 
-	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, r.client, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateKeyRingWaitHandler(ctx, r.client.DefaultAPI, projectId, region, keyRingId).SetSleepBeforeWait(5 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating keyring", fmt.Sprintf("Key Ring creation waiting: %v", err))
 		return
@@ -250,7 +250,7 @@ func (r *keyRingResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	keyRingResponse, err := r.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
+	keyRingResponse, err := r.client.DefaultAPI.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -328,23 +328,15 @@ func mapFields(keyRing *kms.KeyRing, model *Model, region string) error {
 	var keyRingId string
 	if model.KeyRingId.ValueString() != "" {
 		keyRingId = model.KeyRingId.ValueString()
-	} else if keyRing.Id != nil {
-		keyRingId = *keyRing.Id
 	} else {
-		return fmt.Errorf("keyring id not present")
+		keyRingId = keyRing.Id
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, keyRingId)
 	model.KeyRingId = types.StringValue(keyRingId)
-	model.DisplayName = types.StringPointerValue(keyRing.DisplayName)
+	model.DisplayName = types.StringValue(keyRing.DisplayName)
 	model.Region = types.StringValue(region)
-
-	// TODO: workaround - remove once STACKITKMS-377 is resolved (just write the return value from the API to the state then)
-	if !(model.Description.IsNull() && keyRing.Description != nil && *keyRing.Description == "") {
-		model.Description = types.StringPointerValue(keyRing.Description)
-	} else {
-		model.Description = types.StringNull()
-	}
+	model.Description = types.StringPointerValue(keyRing.Description)
 
 	return nil
 }
@@ -356,6 +348,6 @@ func toCreatePayload(model *Model) (*kms.CreateKeyRingPayload, error) {
 
 	return &kms.CreateKeyRingPayload{
 		Description: conversion.StringValueToPointer(model.Description),
-		DisplayName: conversion.StringValueToPointer(model.DisplayName),
+		DisplayName: model.DisplayName.ValueString(),
 	}, nil
 }

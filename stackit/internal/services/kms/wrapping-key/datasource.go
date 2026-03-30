@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -147,7 +147,7 @@ func (w *wrappingKeyDataSource) Read(ctx context.Context, request datasource.Rea
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "wrapping_key_id", wrappingKeyId)
 
-	wrappingKeyResponse, err := w.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	wrappingKeyResponse, err := w.client.DefaultAPI.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
