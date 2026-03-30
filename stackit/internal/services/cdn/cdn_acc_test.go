@@ -42,7 +42,6 @@ var (
 	// Build the full domain name here so we can use it to sign the certificate
 	fullDomainNameHttp = fmt.Sprintf("%s.%s", dnsRecordNameHttp, dnsNameHttp)
 
-	// Pass the full domain to the certificate generation
 	cert, key = makeCertAndKey(testutil.OrganizationId, fullDomainNameHttp)
 )
 
@@ -114,7 +113,7 @@ func makeCertAndKey(organization string, domain string) (cert, key []byte) {
 			Organization: []string{organization},
 			CommonName:   domain, // Required by most modern TLS validations
 		},
-		DNSNames:              []string{domain}, // Subject Alternative Name (SAN) is strictly required now
+		DNSNames:              []string{domain},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
