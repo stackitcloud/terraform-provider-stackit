@@ -620,7 +620,7 @@ func TestAccALBResourceMax(t *testing.T) {
 
 func testAccCheckALBDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := alb.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCustomEndpoint, false)...)
+	client, err := albSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCustomEndpoint, false)...)
 
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
