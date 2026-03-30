@@ -47,9 +47,9 @@ resource "stackit_objectstorage_bucket" "instance" {
 						},
 						testutil.MockResponse{
 							Description: "create bucket",
-							ToJsonBody: objectstorage.Bucket{
-								Name:   name,
-								Region: region,
+							ToJsonBody: objectstorage.CreateBucketResponse{
+								Bucket:  name,
+								Project: projectId,
 							},
 						},
 						testutil.MockResponse{

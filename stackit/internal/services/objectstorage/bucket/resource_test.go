@@ -17,7 +17,7 @@ type mockSettings struct {
 
 func newAPIMock(settings *mockSettings) objectstorage.DefaultAPI {
 	return &objectstorage.DefaultAPIServiceMock{
-		EnableServiceExecuteMock: new(func(r objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
+		EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
 			if settings.returnError {
 				return nil, fmt.Errorf("create project failed")
 			}
