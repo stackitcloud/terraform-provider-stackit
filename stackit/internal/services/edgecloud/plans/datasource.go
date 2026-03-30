@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -140,7 +140,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Fetch all Plans for the project
-	plansResp, err := d.client.ListPlansProject(ctx, projectId).Execute()
+	plansResp, err := d.client.DefaultAPI.ListPlansProject(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -160,7 +160,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	// Process the API response and build the list
 	var plansList []attr.Value
 	if plansResp.ValidPlans != nil {
-		for _, plan := range *plansResp.ValidPlans {
+		for _, plan := range plansResp.ValidPlans {
 			planAttrs, err := mapPlanToAttrs(&plan)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Edge Cloud plans", fmt.Sprintf("Could not process plans: %v", err))
@@ -203,8 +203,8 @@ func mapPlanToAttrs(plan *edge.Plan) (map[string]attr.Value, error) {
 		"id":             types.StringValue(plan.GetId()),
 		"name":           types.StringValue(plan.GetName()),
 		"description":    types.StringValue(plan.GetDescription()),
-		"min_edge_hosts": types.Int64Value(plan.GetMinEdgeHosts()),
-		"max_edge_hosts": types.Int64Value(plan.GetMaxEdgeHosts()),
+		"min_edge_hosts": types.Int32Value(plan.GetMinEdgeHosts()),
+		"max_edge_hosts": types.Int32Value(plan.GetMaxEdgeHosts()),
 	}
 
 	return attrs, nil

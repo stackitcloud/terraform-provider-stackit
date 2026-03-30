@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 )
 
 // testTime is a shared helper for generating consistent timestamps
@@ -32,12 +32,12 @@ func fixtureInstance(mods ...func(instance *edge.Instance)) edge.Instance {
 	description := "some-description"
 
 	instance := &edge.Instance{
-		Id:          utils.Ptr(id),
-		DisplayName: utils.Ptr(displayName),
-		PlanId:      &defaultPlanId,
-		FrontendUrl: utils.Ptr(fmt.Sprintf("https://%s.example.com", id)),
-		Status:      utils.Ptr(edge.InstanceStatus("ACTIVE")),
-		Created:     &testTime,
+		Id:          id,
+		DisplayName: displayName,
+		PlanId:      defaultPlanId,
+		FrontendUrl: fmt.Sprintf("https://%s.example.com", id),
+		Status:      "ACTIVE",
+		Created:     testTime,
 		Description: utils.Ptr(description),
 	}
 
@@ -61,14 +61,14 @@ func TestMapInstanceToAttrs(t *testing.T) {
 	validInstance := fixtureInstance()
 
 	validInstanceAttrs := map[string]attr.Value{
-		"instance_id":  types.StringValue(*validInstance.Id),
-		"display_name": types.StringValue(*validInstance.DisplayName),
+		"instance_id":  types.StringValue(validInstance.Id),
+		"display_name": types.StringValue(validInstance.DisplayName),
 		"region":       types.StringValue(region),
-		"plan_id":      types.StringValue(*validInstance.PlanId),
-		"frontend_url": types.StringValue(*validInstance.FrontendUrl),
-		"status":       types.StringValue(string(*validInstance.Status)),
+		"plan_id":      types.StringValue(validInstance.PlanId),
+		"frontend_url": types.StringValue(validInstance.FrontendUrl),
+		"status":       types.StringValue(validInstance.Status),
 		"created":      types.StringValue(testTime.String()),
-		"description":  types.StringValue(*validInstance.Description),
+		"description":  types.StringPointerValue(validInstance.Description),
 	}
 
 	tests := []struct {
@@ -90,73 +90,59 @@ func TestMapInstanceToAttrs(t *testing.T) {
 				i.Description = utils.Ptr("")
 			}),
 			expected: fixtureAttrs(validInstanceAttrs, func(m map[string]attr.Value) {
-				m["description"] = types.StringValue("")
+				m["description"] = types.StringPointerValue(utils.Ptr(""))
 			}),
 			expectError: false,
 		},
 		{
-			description: "error, nil display name",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.DisplayName = nil
-			}),
-			expectError: true,
-			errorMsg:    "missing a 'displayName'",
-		},
-		{
 			description: "error, empty display name",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.DisplayName = utils.Ptr("")
+				i.DisplayName = ""
 			}),
 			expectError: true,
 			errorMsg:    "missing a 'displayName'",
 		},
 		{
-			description: "error, nil id",
+			description: "error, empty id",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Id = nil
+				i.Id = ""
 			}),
 			expectError: true,
 			errorMsg:    "missing an 'id'",
 		},
 		{
-			description: "error, nil planId",
+			description: "error, empty planId",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.PlanId = nil
+				i.PlanId = ""
 			}),
 			expectError: true,
 			errorMsg:    "missing a 'planId'",
 		},
 		{
-			description: "error, nil frontendUrl",
+			description: "error, empty frontendUrl",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.FrontendUrl = nil
+				i.FrontendUrl = ""
 			}),
 			expectError: true,
 			errorMsg:    "missing a 'frontendUrl'",
 		},
 		{
-			description: "error, nil status",
+			description: "error, empty status",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Status = nil
+				i.Status = ""
 			}),
 			expectError: true,
 			errorMsg:    "missing a 'status'",
-		},
-		{
-			description: "error, nil created",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Created = nil
-			}),
-			expectError: true,
-			errorMsg:    "missing a 'created' timestamp",
 		},
 		{
 			description: "error, nil description",
 			instance: fixtureInstance(func(i *edge.Instance) {
 				i.Description = nil
 			}),
-			expectError: true,
-			errorMsg:    "missing a 'description'",
+			expectError: false,
+			expected: fixtureAttrs(validInstanceAttrs, func(m map[string]attr.Value) {
+				m["description"] = types.StringPointerValue(nil)
+			}),
 		},
 	}
 
@@ -191,33 +177,28 @@ func TestBuildInstancesList(t *testing.T) {
 	ctx := context.Background()
 
 	instance1 := fixtureInstance(func(i *edge.Instance) {
-		i.Id = utils.Ptr("first-ab75568")
-		i.DisplayName = utils.Ptr("first")
+		i.Id = "first-ab75568"
+		i.DisplayName = "first"
 	})
 
 	instance2 := fixtureInstance(func(i *edge.Instance) {
-		i.Id = utils.Ptr("second-ab75568")
-		i.DisplayName = utils.Ptr("second")
+		i.Id = "second-ab75568"
+		i.DisplayName = "second"
 	})
 
 	instanceInvalidPlan := fixtureInstance(func(i *edge.Instance) {
-		i.PlanId = nil
-	})
-
-	// Invalid: Nil Display Name
-	instanceNilName := fixtureInstance(func(i *edge.Instance) {
-		i.DisplayName = nil
+		i.PlanId = ""
 	})
 
 	// Invalid: Empty Display Name
 	instanceEmptyName := fixtureInstance(func(i *edge.Instance) {
-		i.DisplayName = utils.Ptr("")
+		i.DisplayName = ""
 	})
 
-	// Invalid: Nil ID and Nil Display Name
-	instanceNilIdAndName := fixtureInstance(func(i *edge.Instance) {
-		i.Id = nil
-		i.DisplayName = nil
+	// Invalid: Empty ID and Empty Display Name
+	instanceEmptyIdAndName := fixtureInstance(func(i *edge.Instance) {
+		i.Id = ""
+		i.DisplayName = ""
 	})
 
 	// Pre-calculate expected mapped objects for the valid instances
@@ -229,43 +210,37 @@ func TestBuildInstancesList(t *testing.T) {
 
 	tests := []struct {
 		description       string
-		instances         edge.InstanceListGetInstancesAttributeType
+		instances         []edge.Instance
 		expectedList      []attr.Value
 		expectedDiagCount int
 	}{
 		{
 			description:       "empty instance list",
-			instances:         &[]edge.Instance{}, // No test case for nil, since this is checked before buildInstancesList is called
+			instances:         []edge.Instance{}, // No test case for nil, since this is checked before buildInstancesList is called
 			expectedList:      []attr.Value{},
 			expectedDiagCount: 0,
 		},
 		{
 			description:       "two valid instances",
-			instances:         &[]edge.Instance{instance1, instance2},
+			instances:         []edge.Instance{instance1, instance2},
 			expectedList:      []attr.Value{obj1, obj2},
 			expectedDiagCount: 0,
 		},
 		{
-			description:       "one valid, one invalid (nil planId)",
-			instances:         &[]edge.Instance{instance1, instanceInvalidPlan},
-			expectedList:      []attr.Value{obj1},
-			expectedDiagCount: 1,
-		},
-		{
-			description:       "one valid, one invalid (nil display name)",
-			instances:         &[]edge.Instance{instance1, instanceNilName},
+			description:       "one valid, one invalid (empty planId)",
+			instances:         []edge.Instance{instance1, instanceInvalidPlan},
 			expectedList:      []attr.Value{obj1},
 			expectedDiagCount: 1,
 		},
 		{
 			description:       "one valid, one invalid (empty display name)",
-			instances:         &[]edge.Instance{instance1, instanceEmptyName},
+			instances:         []edge.Instance{instance1, instanceEmptyName},
 			expectedList:      []attr.Value{obj1},
 			expectedDiagCount: 1,
 		},
 		{
-			description:       "one valid, one invalid (nil id and nil display name)",
-			instances:         &[]edge.Instance{instance1, instanceNilIdAndName},
+			description:       "one valid, one invalid (empty id and empty display name)",
+			instances:         []edge.Instance{instance1, instanceEmptyIdAndName},
 			expectedList:      []attr.Value{obj1},
 			expectedDiagCount: 1,
 		},
