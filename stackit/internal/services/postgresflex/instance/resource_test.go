@@ -279,7 +279,7 @@ func TestMapFields(t *testing.T) {
 			}),
 			input: &postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
-					BackupSchedule: utils.Ptr("0 0 * * *"),
+					BackupSchedule: new("0 0 * * *"),
 				},
 			},
 			flavor:  &flavorModel{},
@@ -297,7 +297,7 @@ func TestMapFields(t *testing.T) {
 			}),
 			input: &postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
-					BackupSchedule: utils.Ptr("0 2 * * *"),
+					BackupSchedule: new("0 2 * * *"),
 				},
 			},
 			flavor:  &flavorModel{},
