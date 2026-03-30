@@ -449,6 +449,7 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region strin
 }
 
 // If already enabled, just continues
+
 // Deprecated: This function will be removed on 26.09.2026. Use `server_update_enable` resource instead.
 func enableUpdatesService(ctx context.Context, model *Model, client *serverupdate.APIClient, region string) error {
 	projectId := model.ProjectId.ValueString()
