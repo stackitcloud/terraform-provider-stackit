@@ -276,23 +276,18 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API returned nil response")
 		return
 	}
-	if createResp.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API returned empty Instance ID")
-		return
-	}
 
-	edgeCloudInstanceId := createResp.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
-		"instance_id": edgeCloudInstanceId,
+		"instance_id": createResp.Id,
 		"region":      region,
 	})
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, edgeCloudInstanceId).WaitWithContext(ctx)
+	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance waiting: %v", err))
 		return
