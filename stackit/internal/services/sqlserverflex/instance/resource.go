@@ -230,8 +230,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifierCustom.CronNormalizationModifier{},
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
