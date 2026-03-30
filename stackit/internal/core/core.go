@@ -157,7 +157,7 @@ func LogResponse(ctx context.Context) context.Context {
 	traceId := runtime.GetTraceId(ctx)
 	ctx = tflog.SetField(ctx, "x-trace-id", traceId)
 
-	tflog.Info(ctx, "response data", map[string]interface{}{
+	tflog.Info(ctx, "response data", map[string]any{
 		"x-trace-id": traceId,
 	})
 	return ctx

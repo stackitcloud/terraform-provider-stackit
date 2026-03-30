@@ -325,7 +325,7 @@ func (r *logsAccessTokenResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs access token read", map[string]interface{}{
+	tflog.Info(ctx, "Logs access token read", map[string]any{
 		"access_token_id": accessTokenID,
 	})
 }
@@ -381,7 +381,7 @@ func (r *logsAccessTokenResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs access token updated", map[string]interface{}{
+	tflog.Info(ctx, "Logs access token updated", map[string]any{
 		"access_token_id": accessTokenID,
 	})
 }

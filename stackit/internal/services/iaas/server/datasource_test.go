@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,7 +30,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					ServerId:  types.StringValue("sid"),
 				},
 				input: &iaas.Server{
-					Id: utils.Ptr("sid"),
+					Id: new("sid"),
 				},
 				region: "eu01",
 			},
@@ -63,27 +62,27 @@ func TestMapDataSourceFields(t *testing.T) {
 					Region:    types.StringValue("eu01"),
 				},
 				input: &iaas.Server{
-					Id:               utils.Ptr("sid"),
-					Name:             utils.Ptr("name"),
-					AvailabilityZone: utils.Ptr("zone"),
-					Labels: &map[string]interface{}{
+					Id:               new("sid"),
+					Name:             new("name"),
+					AvailabilityZone: new("zone"),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					ImageId: utils.Ptr("image_id"),
+					ImageId: new("image_id"),
 					Nics: &[]iaas.ServerNetwork{
 						{
-							NicId: utils.Ptr("nic1"),
+							NicId: new("nic1"),
 						},
 						{
-							NicId: utils.Ptr("nic2"),
+							NicId: new("nic2"),
 						},
 					},
-					KeypairName:   utils.Ptr("keypair_name"),
-					AffinityGroup: utils.Ptr("group_id"),
-					CreatedAt:     utils.Ptr(testTimestamp()),
-					UpdatedAt:     utils.Ptr(testTimestamp()),
-					LaunchedAt:    utils.Ptr(testTimestamp()),
-					Status:        utils.Ptr("active"),
+					KeypairName:   new("keypair_name"),
+					AffinityGroup: new("group_id"),
+					CreatedAt:     new(testTimestamp()),
+					UpdatedAt:     new(testTimestamp()),
+					LaunchedAt:    new(testTimestamp()),
+					Status:        new("active"),
 				},
 				region: "eu02",
 			},
@@ -119,7 +118,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Server{
-					Id: utils.Ptr("sid"),
+					Id: new("sid"),
 				},
 				region: "eu01",
 			},

@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 )
 
@@ -557,7 +556,7 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 	for cidr, state := range aclsState {
 		if state.isInModel && !state.isCreated {
 			payload := secretsmanager.CreateACLPayload{
-				Cidr: sdkUtils.Ptr(cidr),
+				Cidr: new(cidr),
 			}
 			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {

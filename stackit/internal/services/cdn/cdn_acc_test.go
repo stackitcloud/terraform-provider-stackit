@@ -525,7 +525,7 @@ func blockUntilDomainResolves(domain string) (string, error) {
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
 	var zero T
 	var errOuter error
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		dist, err := f()
 		if err == nil {
 			return dist, nil

@@ -50,11 +50,11 @@ resource "stackit_opensearch_instance" "instance" {
 							ToJsonBody: &opensearch.ListOfferingsResponse{
 								Offerings: &[]opensearch.Offering{
 									{
-										Name:    utils.Ptr("offering-name"),
+										Name:    new("offering-name"),
 										Version: utils.Ptr(version),
 										Plans: &[]opensearch.Plan{
 											{
-												Id:   utils.Ptr("plan-id"),
+												Id:   new("plan-id"),
 												Name: utils.Ptr(planName),
 											},
 										},
@@ -65,7 +65,7 @@ resource "stackit_opensearch_instance" "instance" {
 						testutil.MockResponse{
 							Description: "create instance",
 							ToJsonBody: &opensearch.CreateInstanceResponse{
-								InstanceId: utils.Ptr(instanceId),
+								InstanceId: new(instanceId),
 							},
 						},
 						testutil.MockResponse{Description: "failing waiter", StatusCode: http.StatusInternalServerError},
@@ -127,7 +127,7 @@ resource "stackit_opensearch_credential" "credential" {
 						testutil.MockResponse{
 							Description: "create credential",
 							ToJsonBody: &opensearch.CredentialsResponse{
-								Id: utils.Ptr(credentialId),
+								Id: new(credentialId),
 							},
 						},
 						testutil.MockResponse{Description: "create waiter", StatusCode: http.StatusInternalServerError},

@@ -15,7 +15,7 @@ import (
 )
 
 type attributeGetter interface {
-	GetAttribute(ctx context.Context, attributePath path.Path, target interface{}) diag.Diagnostics
+	GetAttribute(ctx context.Context, attributePath path.Path, target any) diag.Diagnostics
 }
 
 func ToTime(ctx context.Context, format string, val types.String, target *time.Time) (diags diag.Diagnostics) {

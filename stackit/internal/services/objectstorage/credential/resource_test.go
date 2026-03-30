@@ -12,7 +12,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -26,7 +25,7 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 	}
 
 	return &objectstorage.ProjectStatus{
-		Project: utils.Ptr(projectId),
+		Project: new(projectId),
 	}, nil
 }
 
@@ -59,10 +58,10 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&objectstorage.CreateAccessKeyResponse{
-				AccessKey:       utils.Ptr("key"),
-				DisplayName:     utils.Ptr("name"),
-				Expires:         objectstorage.NewNullableString(utils.Ptr(now.Format(time.RFC3339))),
-				SecretAccessKey: utils.Ptr("secret-key"),
+				AccessKey:       new("key"),
+				DisplayName:     new("name"),
+				Expires:         objectstorage.NewNullableString(new(now.Format(time.RFC3339))),
+				SecretAccessKey: new("secret-key"),
 			},
 			Model{
 				Id:                  types.StringValue(id),
@@ -80,9 +79,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty_strings",
 			&objectstorage.CreateAccessKeyResponse{
-				AccessKey:       utils.Ptr(""),
-				DisplayName:     utils.Ptr(""),
-				SecretAccessKey: utils.Ptr(""),
+				AccessKey:       new(""),
+				DisplayName:     new(""),
+				SecretAccessKey: new(""),
 			},
 			Model{
 				Id:                  types.StringValue(id),
@@ -100,7 +99,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"expiration_timestamp_with_fractional_seconds",
 			&objectstorage.CreateAccessKeyResponse{
-				Expires: objectstorage.NewNullableString(utils.Ptr(now.Format(time.RFC3339Nano))),
+				Expires: objectstorage.NewNullableString(new(now.Format(time.RFC3339Nano))),
 			},
 			Model{
 				Id:                  types.StringValue(id),
@@ -123,7 +122,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"bad_time",
 			&objectstorage.CreateAccessKeyResponse{
-				Expires: objectstorage.NewNullableString(utils.Ptr("foo-bar")),
+				Expires: objectstorage.NewNullableString(new("foo-bar")),
 			},
 			Model{},
 			false,
@@ -231,13 +230,13 @@ func TestReadCredentials(t *testing.T) {
 			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
-						KeyId: utils.Ptr("foo-cid"),
+						KeyId: new("foo-cid"),
 					},
 					{
-						KeyId: utils.Ptr("bar-cid"),
+						KeyId: new("bar-cid"),
 					},
 					{
-						KeyId: utils.Ptr("cid"),
+						KeyId: new("cid"),
 					},
 				},
 			},
@@ -261,19 +260,19 @@ func TestReadCredentials(t *testing.T) {
 			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
-						KeyId:       utils.Ptr("foo-cid"),
-						DisplayName: utils.Ptr("foo-name"),
-						Expires:     utils.Ptr(now.Add(time.Hour).Format(time.RFC3339)),
+						KeyId:       new("foo-cid"),
+						DisplayName: new("foo-name"),
+						Expires:     new(now.Add(time.Hour).Format(time.RFC3339)),
 					},
 					{
-						KeyId:       utils.Ptr("bar-cid"),
-						DisplayName: utils.Ptr("bar-name"),
-						Expires:     utils.Ptr(now.Add(time.Minute).Format(time.RFC3339)),
+						KeyId:       new("bar-cid"),
+						DisplayName: new("bar-name"),
+						Expires:     new(now.Add(time.Minute).Format(time.RFC3339)),
 					},
 					{
-						KeyId:       utils.Ptr("cid"),
-						DisplayName: utils.Ptr("name"),
-						Expires:     utils.Ptr(now.Format(time.RFC3339)),
+						KeyId:       new("cid"),
+						DisplayName: new("name"),
+						Expires:     new(now.Format(time.RFC3339)),
 					},
 				},
 			},
@@ -297,19 +296,19 @@ func TestReadCredentials(t *testing.T) {
 			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
-						KeyId:       utils.Ptr("foo-cid"),
-						DisplayName: utils.Ptr("foo-name"),
-						Expires:     utils.Ptr(now.Add(time.Hour).Format(time.RFC3339Nano)),
+						KeyId:       new("foo-cid"),
+						DisplayName: new("foo-name"),
+						Expires:     new(now.Add(time.Hour).Format(time.RFC3339Nano)),
 					},
 					{
-						KeyId:       utils.Ptr("bar-cid"),
-						DisplayName: utils.Ptr("bar-name"),
-						Expires:     utils.Ptr(now.Add(time.Minute).Format(time.RFC3339Nano)),
+						KeyId:       new("bar-cid"),
+						DisplayName: new("bar-name"),
+						Expires:     new(now.Add(time.Minute).Format(time.RFC3339Nano)),
 					},
 					{
-						KeyId:       utils.Ptr("cid"),
-						DisplayName: utils.Ptr("name"),
-						Expires:     utils.Ptr(now.Format(time.RFC3339Nano)),
+						KeyId:       new("cid"),
+						DisplayName: new("name"),
+						Expires:     new(now.Format(time.RFC3339Nano)),
 					},
 				},
 			},
@@ -353,14 +352,14 @@ func TestReadCredentials(t *testing.T) {
 			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
-						KeyId:       utils.Ptr("foo-cid"),
-						DisplayName: utils.Ptr("foo-name"),
-						Expires:     utils.Ptr(now.Add(time.Hour).Format(time.RFC3339)),
+						KeyId:       new("foo-cid"),
+						DisplayName: new("foo-name"),
+						Expires:     new(now.Add(time.Hour).Format(time.RFC3339)),
 					},
 					{
-						KeyId:       utils.Ptr("bar-cid"),
-						DisplayName: utils.Ptr("bar-name"),
-						Expires:     utils.Ptr(now.Add(time.Minute).Format(time.RFC3339)),
+						KeyId:       new("bar-cid"),
+						DisplayName: new("bar-name"),
+						Expires:     new(now.Add(time.Minute).Format(time.RFC3339)),
 					},
 				},
 			},
@@ -376,9 +375,9 @@ func TestReadCredentials(t *testing.T) {
 			&objectstorage.ListAccessKeysResponse{
 				AccessKeys: &[]objectstorage.AccessKey{
 					{
-						KeyId:       utils.Ptr("cid"),
-						DisplayName: utils.Ptr("name"),
-						Expires:     utils.Ptr(now.Format(time.RFC3339)),
+						KeyId:       new("cid"),
+						DisplayName: new("name"),
+						Expires:     new(now.Format(time.RFC3339)),
 					},
 				},
 			},

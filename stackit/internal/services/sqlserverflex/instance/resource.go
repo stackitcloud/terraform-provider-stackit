@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	coreUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
 )
@@ -826,7 +825,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		retentionDaysInt := conversion.Int64ValueToPointer(options.RetentionDays)
 		var retentionDays *string
 		if retentionDaysInt != nil {
-			retentionDays = coreUtils.Ptr(strconv.FormatInt(*retentionDaysInt, 10))
+			retentionDays = new(strconv.FormatInt(*retentionDaysInt, 10))
 		}
 		optionsPayload.RetentionDays = retentionDays
 	}

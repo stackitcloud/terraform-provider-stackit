@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 )
 
@@ -21,7 +20,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_ok",
 			&observability.Job{
-				JobName: utils.Ptr("name"),
+				JobName: new("name"),
 			},
 			Model{
 				Id:             types.StringValue("pid,iid,name"),
@@ -41,17 +40,17 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "values_ok",
 			input: &observability.Job{
-				JobName:     utils.Ptr("name"),
-				MetricsPath: utils.Ptr("/m"),
+				JobName:     new("name"),
+				MetricsPath: new("/m"),
 				BasicAuth: &observability.BasicAuth{
-					Password: utils.Ptr("p"),
-					Username: utils.Ptr("u"),
+					Password: new("p"),
+					Username: new("u"),
 				},
 				Params:         &map[string][]string{"saml2": {"disabled"}, "x": {"y", "z"}},
 				Scheme:         observability.JOBSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("1"),
-				ScrapeTimeout:  utils.Ptr("2"),
-				SampleLimit:    utils.Ptr(int64(17)),
+				ScrapeInterval: new("1"),
+				ScrapeTimeout:  new("2"),
+				SampleLimit:    new(int64(17)),
 				StaticConfigs: &[]observability.StaticConfigs{
 					{
 						Labels:  &map[string]string{"k1": "v1"},
@@ -161,12 +160,12 @@ func TestToCreatePayload(t *testing.T) {
 			&basicAuthModel{},
 			[]targetModel{},
 			&observability.CreateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
+				MetricsPath: new("/metrics"),
 				// Defaults
 				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
@@ -184,14 +183,14 @@ func TestToCreatePayload(t *testing.T) {
 			&basicAuthModel{},
 			[]targetModel{},
 			&observability.CreateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
-				JobName:     utils.Ptr("Name"),
+				MetricsPath: new("/metrics"),
+				JobName:     new("Name"),
 				Params:      &map[string]any{"saml2": []string{"disabled"}},
 				// Defaults
 				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 			},
 			true,
@@ -208,14 +207,14 @@ func TestToCreatePayload(t *testing.T) {
 			&basicAuthModel{},
 			[]targetModel{},
 			&observability.CreateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
-				JobName:     utils.Ptr("Name"),
+				MetricsPath: new("/metrics"),
+				JobName:     new("Name"),
 				Params:      &map[string]any{"saml2": []string{"enabled"}},
 				// Defaults
 				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 			},
 			true,
@@ -233,17 +232,17 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			[]targetModel{},
 			&observability.CreateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
-				JobName:     utils.Ptr("Name"),
+				MetricsPath: new("/metrics"),
+				JobName:     new("Name"),
 				BasicAuth: &observability.PartialUpdateScrapeConfigsRequestInnerBasicAuth{
-					Username: utils.Ptr("u"),
-					Password: utils.Ptr("p"),
+					Username: new("u"),
+					Password: new("p"),
 				},
 				// Defaults
 				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
@@ -272,27 +271,27 @@ func TestToCreatePayload(t *testing.T) {
 				},
 			},
 			&observability.CreateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
-				JobName:     utils.Ptr("Name"),
+				MetricsPath: new("/metrics"),
+				JobName:     new("Name"),
 				StaticConfigs: &[]observability.PartialUpdateScrapeConfigsRequestInnerStaticConfigsInner{
 					{
 						Targets: &[]string{"url1"},
-						Labels:  &map[string]interface{}{"k1": "v1"},
+						Labels:  &map[string]any{"k1": "v1"},
 					},
 					{
 						Targets: &[]string{"url1", "url3"},
-						Labels:  &map[string]interface{}{"k2": "v2", "k3": "v3"},
+						Labels:  &map[string]any{"k2": "v2", "k3": "v3"},
 					},
 					{
 						Targets: &[]string{},
-						Labels:  &map[string]interface{}{},
+						Labels:  &map[string]any{},
 					},
 				},
 				// Defaults
 				Scheme:         observability.CREATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
 			true,
@@ -345,12 +344,12 @@ func TestToUpdatePayload(t *testing.T) {
 			&basicAuthModel{},
 			[]targetModel{},
 			&observability.UpdateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
+				MetricsPath: new("/metrics"),
 				// Defaults
 				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.UpdateScrapeConfigPayloadStaticConfigsInner{},
 			},
 			true,
@@ -367,12 +366,12 @@ func TestToUpdatePayload(t *testing.T) {
 			&basicAuthModel{},
 			[]targetModel{},
 			&observability.UpdateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
+				MetricsPath: new("/metrics"),
 				// Defaults
 				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.UpdateScrapeConfigPayloadStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"enabled"}},
 			},
@@ -390,12 +389,12 @@ func TestToUpdatePayload(t *testing.T) {
 			&basicAuthModel{},
 			[]targetModel{},
 			&observability.UpdateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
+				MetricsPath: new("/metrics"),
 				// Defaults
 				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.UpdateScrapeConfigPayloadStaticConfigsInner{},
 				Params:         &map[string]any{"saml2": []string{"disabled"}},
 			},
@@ -414,16 +413,16 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			[]targetModel{},
 			&observability.UpdateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
+				MetricsPath: new("/metrics"),
 				BasicAuth: &observability.PartialUpdateScrapeConfigsRequestInnerBasicAuth{
-					Username: utils.Ptr("u"),
-					Password: utils.Ptr("p"),
+					Username: new("u"),
+					Password: new("p"),
 				},
 				// Defaults
 				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 				StaticConfigs:  &[]observability.UpdateScrapeConfigPayloadStaticConfigsInner{},
 			},
 			true,
@@ -451,26 +450,26 @@ func TestToUpdatePayload(t *testing.T) {
 				},
 			},
 			&observability.UpdateScrapeConfigPayload{
-				MetricsPath: utils.Ptr("/metrics"),
+				MetricsPath: new("/metrics"),
 				StaticConfigs: &[]observability.UpdateScrapeConfigPayloadStaticConfigsInner{
 					{
 						Targets: &[]string{"url1"},
-						Labels:  &map[string]interface{}{"k1": "v1"},
+						Labels:  &map[string]any{"k1": "v1"},
 					},
 					{
 						Targets: &[]string{"url1", "url3"},
-						Labels:  &map[string]interface{}{"k2": "v2", "k3": "v3"},
+						Labels:  &map[string]any{"k2": "v2", "k3": "v3"},
 					},
 					{
 						Targets: &[]string{},
-						Labels:  &map[string]interface{}{},
+						Labels:  &map[string]any{},
 					},
 				},
 				// Defaults
 				Scheme:         observability.UPDATESCRAPECONFIGPAYLOADSCHEME_HTTP.Ptr(),
-				ScrapeInterval: utils.Ptr("5m"),
-				ScrapeTimeout:  utils.Ptr("2m"),
-				SampleLimit:    utils.Ptr(float64(5000)),
+				ScrapeInterval: new("5m"),
+				ScrapeTimeout:  new("2m"),
+				SampleLimit:    new(float64(5000)),
 			},
 			true,
 		},

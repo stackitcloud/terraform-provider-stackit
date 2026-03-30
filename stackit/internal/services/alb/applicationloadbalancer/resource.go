@@ -1174,7 +1174,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 		"name":       *createResp.Name,

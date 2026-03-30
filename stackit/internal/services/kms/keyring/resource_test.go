@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/kms"
 )
 
@@ -27,7 +26,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 			},
 			&kms.KeyRing{
-				Id: utils.Ptr("krid"),
+				Id: new("krid"),
 			},
 			Model{
 				Description: types.StringNull(),
@@ -46,9 +45,9 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 			},
 			&kms.KeyRing{
-				Description: utils.Ptr("descr"),
-				DisplayName: utils.Ptr("name"),
-				Id:          utils.Ptr("krid"),
+				Description: new("descr"),
+				DisplayName: new("name"),
+				Id:          new("krid"),
 			},
 			Model{
 				Description: types.StringValue("descr"),
@@ -130,7 +129,7 @@ func TestToCreatePayload(t *testing.T) {
 				DisplayName: types.StringValue("name"),
 			},
 			&kms.CreateKeyRingPayload{
-				DisplayName: utils.Ptr("name"),
+				DisplayName: new("name"),
 			},
 			true,
 		},
@@ -141,8 +140,8 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue(""),
 			},
 			&kms.CreateKeyRingPayload{
-				DisplayName: utils.Ptr(""),
-				Description: utils.Ptr(""),
+				DisplayName: new(""),
+				Description: new(""),
 			},
 			true,
 		},

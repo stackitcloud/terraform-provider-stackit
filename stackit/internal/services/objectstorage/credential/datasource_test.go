@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -39,8 +38,8 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"simple_values",
 			&objectstorage.AccessKey{
-				DisplayName: utils.Ptr("name"),
-				Expires:     utils.Ptr(now.Format(time.RFC3339)),
+				DisplayName: new("name"),
+				Expires:     new(now.Format(time.RFC3339)),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -56,7 +55,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"empty_strings",
 			&objectstorage.AccessKey{
-				DisplayName: utils.Ptr(""),
+				DisplayName: new(""),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -72,7 +71,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"expiration_timestamp_with_fractional_seconds",
 			&objectstorage.AccessKey{
-				Expires: utils.Ptr(now.Format(time.RFC3339Nano)),
+				Expires: new(now.Format(time.RFC3339Nano)),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -94,7 +93,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"bad_time",
 			&objectstorage.AccessKey{
-				Expires: utils.Ptr("foo-bar"),
+				Expires: new("foo-bar"),
 			},
 			DataSourceModel{},
 			false,

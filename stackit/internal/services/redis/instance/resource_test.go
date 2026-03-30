@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
 )
 
@@ -44,27 +43,27 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 })
 
 var fixtureInstanceParameters = redis.InstanceParameters{
-	SgwAcl:                utils.Ptr("acl"),
-	DownAfterMilliseconds: utils.Ptr(int64(10)),
-	EnableMonitoring:      utils.Ptr(true),
-	FailoverTimeout:       utils.Ptr(int64(10)),
-	Graphite:              utils.Ptr("1.1.1.1:91"),
+	SgwAcl:                new("acl"),
+	DownAfterMilliseconds: new(int64(10)),
+	EnableMonitoring:      new(true),
+	FailoverTimeout:       new(int64(10)),
+	Graphite:              new("1.1.1.1:91"),
 	LazyfreeLazyEviction:  redis.INSTANCEPARAMETERSLAZYFREE_LAZY_EVICTION_NO.Ptr(),
 	LazyfreeLazyExpire:    redis.INSTANCEPARAMETERSLAZYFREE_LAZY_EXPIRE_NO.Ptr(),
-	LuaTimeLimit:          utils.Ptr(int64(10)),
-	MaxDiskThreshold:      utils.Ptr(int64(100)),
-	Maxclients:            utils.Ptr(int64(10)),
+	LuaTimeLimit:          new(int64(10)),
+	MaxDiskThreshold:      new(int64(100)),
+	Maxclients:            new(int64(10)),
 	MaxmemoryPolicy:       redis.INSTANCEPARAMETERSMAXMEMORY_POLICY_ALLKEYS_LRU.Ptr(),
-	MaxmemorySamples:      utils.Ptr(int64(10)),
-	MetricsFrequency:      utils.Ptr(int64(10)),
-	MetricsPrefix:         utils.Ptr("prefix"),
-	MinReplicasMaxLag:     utils.Ptr(int64(10)),
-	MonitoringInstanceId:  utils.Ptr("mid"),
-	NotifyKeyspaceEvents:  utils.Ptr("events"),
-	Snapshot:              utils.Ptr("snapshot"),
+	MaxmemorySamples:      new(int64(10)),
+	MetricsFrequency:      new(int64(10)),
+	MetricsPrefix:         new("prefix"),
+	MinReplicasMaxLag:     new(int64(10)),
+	MonitoringInstanceId:  new("mid"),
+	NotifyKeyspaceEvents:  new("events"),
+	Snapshot:              new("snapshot"),
 	Syslog:                &[]string{"syslog", "syslog2"},
 	TlsCiphers:            &[]string{"ciphers1", "ciphers2"},
-	TlsCiphersuites:       utils.Ptr("ciphersuites"),
+	TlsCiphersuites:       new("ciphersuites"),
 	TlsProtocols:          redis.INSTANCEPARAMETERSTLS_PROTOCOLS__2.Ptr(),
 }
 
@@ -96,15 +95,15 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&redis.Instance{
-				PlanId:             utils.Ptr("plan"),
-				CfGuid:             utils.Ptr("cf"),
-				CfSpaceGuid:        utils.Ptr("space"),
-				DashboardUrl:       utils.Ptr("dashboard"),
-				ImageUrl:           utils.Ptr("image"),
-				InstanceId:         utils.Ptr("iid"),
-				Name:               utils.Ptr("name"),
-				CfOrganizationGuid: utils.Ptr("org"),
-				Parameters: &map[string]interface{}{
+				PlanId:             new("plan"),
+				CfGuid:             new("cf"),
+				CfSpaceGuid:        new("space"),
+				DashboardUrl:       new("dashboard"),
+				ImageUrl:           new("image"),
+				InstanceId:         new("iid"),
+				Name:               new("name"),
+				CfOrganizationGuid: new("org"),
+				Parameters: &map[string]any{
 					"sgw_acl":                 "acl",
 					"down-after-milliseconds": int64(10),
 					"enable_monitoring":       true,
@@ -159,7 +158,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&redis.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -169,7 +168,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&redis.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": 1,
 				},
 			},
@@ -221,9 +220,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&redis.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
+				InstanceName: new("name"),
 				Parameters:   &fixtureInstanceParameters,
-				PlanId:       utils.Ptr("plan"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -235,9 +234,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&redis.CreateInstancePayload{
-				InstanceName: utils.Ptr(""),
+				InstanceName: new(""),
 				Parameters:   &fixtureInstanceParameters,
-				PlanId:       utils.Ptr(""),
+				PlanId:       new(""),
 			},
 			true,
 		},
@@ -254,8 +253,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&redis.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: new("name"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -310,7 +309,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&redis.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr("plan"),
+				PlanId:     new("plan"),
 			},
 			true,
 		},
@@ -322,7 +321,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&redis.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr(""),
+				PlanId:     new(""),
 			},
 			true,
 		},
@@ -338,7 +337,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&redis.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId: new("plan"),
 			},
 			true,
 		},

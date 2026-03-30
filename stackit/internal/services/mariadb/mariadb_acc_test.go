@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -49,9 +50,7 @@ var testConfigVarsMax = config.Variables{
 
 func configVarsMaxUpdated() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigVarsMax)
 	updatedConfig["parameters_max_disk_threshold"] = config.IntegerVariable(85)
 	updatedConfig["parameters_metrics_frequency"] = config.IntegerVariable(10)
 	updatedConfig["parameters_graphite"] = config.StringVariable("graphite.stackit.cloud:2003")

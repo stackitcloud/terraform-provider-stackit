@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
 
@@ -20,7 +19,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&sdk.BackupSchedule{
-				Id: utils.Ptr(int64(5)),
+				Id: new(int64(5)),
 			},
 			Model{
 				ID:               types.StringValue("project_uid,eu01,server_uid,5"),
@@ -33,13 +32,13 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&sdk.BackupSchedule{
-				Id:      utils.Ptr(int64(5)),
-				Enabled: utils.Ptr(true),
-				Name:    utils.Ptr("backup_schedule_name_1"),
-				Rrule:   utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+				Id:      new(int64(5)),
+				Enabled: new(true),
+				Name:    new("backup_schedule_name_1"),
+				Rrule:   new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				BackupProperties: &sdk.BackupProperties{
-					Name:            utils.Ptr("backup_name_1"),
-					RetentionPeriod: utils.Ptr(int64(3)),
+					Name:            new("backup_name_1"),
+					RetentionPeriod: new(int64(3)),
 					VolumeIds:       &[]string{"uuid1", "uuid2"},
 				},
 			},
@@ -121,9 +120,9 @@ func TestToCreatePayload(t *testing.T) {
 				BackupProperties: nil,
 			},
 			&sdk.CreateBackupSchedulePayload{
-				Name:             utils.Ptr("name"),
-				Enabled:          utils.Ptr(true),
-				Rrule:            utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+				Name:             new("name"),
+				Enabled:          new(true),
+				Rrule:            new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				BackupProperties: &sdk.BackupProperties{},
 			},
 			true,
@@ -136,8 +135,8 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&sdk.CreateBackupSchedulePayload{
 				BackupProperties: &sdk.BackupProperties{},
-				Name:             utils.Ptr(""),
-				Rrule:            utils.Ptr(""),
+				Name:             new(""),
+				Rrule:            new(""),
 			},
 			true,
 		},
@@ -191,9 +190,9 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupProperties: nil,
 			},
 			&sdk.UpdateBackupSchedulePayload{
-				Name:             utils.Ptr("name"),
-				Enabled:          utils.Ptr(true),
-				Rrule:            utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+				Name:             new("name"),
+				Enabled:          new(true),
+				Rrule:            new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				BackupProperties: &sdk.BackupProperties{},
 			},
 			true,
@@ -206,8 +205,8 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&sdk.UpdateBackupSchedulePayload{
 				BackupProperties: &sdk.BackupProperties{},
-				Name:             utils.Ptr(""),
-				Rrule:            utils.Ptr(""),
+				Name:             new(""),
+				Rrule:            new(""),
 			},
 			true,
 		},

@@ -127,9 +127,7 @@ var testConfigServerVarsMin = config.Variables{
 
 var testConfigServerVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigServerVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigServerVarsMin)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	return updatedConfig
@@ -155,9 +153,7 @@ var testConfigServerVarsMax = config.Variables{
 
 var testConfigServerVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigServerVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigServerVarsMax)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
@@ -167,9 +163,7 @@ var testConfigServerVarsMaxUpdated = func() config.Variables {
 
 var testConfigServerVarsMaxUpdatedDesiredStatus = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigServerVarsMaxUpdated {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigServerVarsMaxUpdated)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
@@ -207,9 +201,7 @@ var testConfigNetworkInterfaceVarsMax = config.Variables{
 
 var testConfigNetworkInterfaceVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkInterfaceVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkInterfaceVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"])))
 	updatedConfig["ipv4"] = config.StringVariable("10.2.10.21")
 	updatedConfig["security"] = config.BoolVariable(false)
@@ -227,9 +219,7 @@ var testConfigVolumeVarsMin = config.Variables{
 
 var testConfigVolumeVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigVolumeVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigVolumeVarsMin)
 	updatedConfig["size"] = config.IntegerVariable(20)
 	return updatedConfig
 }()
@@ -250,9 +240,7 @@ var testConfigVolumeVarsMax = config.Variables{
 
 var testConfigVolumeVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigVolumeVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigVolumeVarsMax)
 	updatedConfig["size"] = config.IntegerVariable(20)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])))
@@ -310,9 +298,7 @@ var testConfigNetworkAreaVarsMin = config.Variables{
 
 var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	return updatedConfig
 }()
@@ -337,9 +323,7 @@ var testConfigNetworkAreaVarsMax = config.Variables{
 
 var testConfigNetworkAreaVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	updatedConfig["default_nameservers"] = config.StringVariable("1.1.1.2")
@@ -366,9 +350,7 @@ var testConfigNetworkAreaRegionVarsMin = config.Variables{
 
 var testConfigNetworkAreaRegionVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaRegionVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaRegionVarsMin)
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	return updatedConfig
 }()
@@ -388,9 +370,7 @@ var testConfigNetworkAreaRegionVarsMax = config.Variables{
 
 var testConfigNetworkAreaRegionVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaRegionVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaRegionVarsMax)
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	updatedConfig["default_nameservers"] = config.StringVariable("8.8.8.8")
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
@@ -409,9 +389,7 @@ var testConfigSecurityGroupsVarsMin = config.Variables{
 
 func testConfigSecurityGroupsVarsMinUpdated() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigSecurityGroupsVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigSecurityGroupsVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	return updatedConfig
 }
@@ -437,9 +415,7 @@ var testConfigSecurityGroupsVarsMax = config.Variables{
 
 func testConfigSecurityGroupsVarsMaxUpdated() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigSecurityGroupsVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigSecurityGroupsVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["name_remote"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name_remote"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["description"])))
@@ -470,9 +446,7 @@ var testConfigImageVarsMin = func() config.Variables {
 
 var testConfigImageVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigImageVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigImageVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	return updatedConfig
 }()
@@ -515,9 +489,7 @@ var testConfigImageVarsMax = func() config.Variables {
 
 var testConfigImageVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigImageVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigImageVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["min_disk_size"] = config.IntegerVariable(25)
 	updatedConfig["min_ram"] = config.IntegerVariable(4096)
@@ -555,9 +527,7 @@ var testConfigKeyPairMax = config.Variables{
 
 var testConfigKeyPairMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigKeyPairMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigKeyPairMax)
 	updatedConfig["label"] = config.StringVariable("updated")
 	return updatedConfig
 }()
@@ -590,9 +560,7 @@ var testConfigRoutingTableMax = config.Variables{
 
 var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigRoutingTableMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigRoutingTableMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -22,7 +21,7 @@ func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, proj
 	}
 
 	return &objectstorage.ProjectStatus{
-		Project: utils.Ptr(projectId),
+		Project: new(projectId),
 	}, nil
 }
 
@@ -54,9 +53,9 @@ func TestMapFields(t *testing.T) {
 			"simple_values",
 			&objectstorage.GetBucketResponse{
 				Bucket: &objectstorage.Bucket{
-					UrlPathStyle:          utils.Ptr("url/path/style"),
-					UrlVirtualHostedStyle: utils.Ptr("url/virtual/hosted/style"),
-					ObjectLockEnabled:     utils.Ptr(true),
+					UrlPathStyle:          new("url/path/style"),
+					UrlVirtualHostedStyle: new("url/virtual/hosted/style"),
+					ObjectLockEnabled:     new(true),
 				},
 			},
 			Model{
@@ -74,8 +73,8 @@ func TestMapFields(t *testing.T) {
 			"empty_strings",
 			&objectstorage.GetBucketResponse{
 				Bucket: &objectstorage.Bucket{
-					UrlPathStyle:          utils.Ptr(""),
-					UrlVirtualHostedStyle: utils.Ptr(""),
+					UrlPathStyle:          new(""),
+					UrlVirtualHostedStyle: new(""),
 				},
 			},
 			Model{

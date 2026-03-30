@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 )
 
@@ -19,8 +18,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"ok",
 			&observability.Credentials{
-				Username: utils.Ptr("username"),
-				Password: utils.Ptr("password"),
+				Username: new("username"),
+				Password: new("password"),
 			},
 			Model{
 				Id:         types.StringValue("pid,iid,username"),

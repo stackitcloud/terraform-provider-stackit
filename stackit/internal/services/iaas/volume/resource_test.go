@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,7 +30,7 @@ func TestMapFields(t *testing.T) {
 					VolumeId:  types.StringValue("nid"),
 				},
 				input: &iaas.Volume{
-					Id:                   utils.Ptr("nid"),
+					Id:                   new("nid"),
 					EncryptionParameters: nil,
 				},
 				region: "eu01",
@@ -69,25 +68,25 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				input: &iaas.Volume{
-					Id:               utils.Ptr("nid"),
-					Name:             utils.Ptr("name"),
-					AvailabilityZone: utils.Ptr("zone"),
-					Labels: &map[string]interface{}{
+					Id:               new("nid"),
+					Name:             new("name"),
+					AvailabilityZone: new("zone"),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					Description:      utils.Ptr("desc"),
-					PerformanceClass: utils.Ptr("class"),
-					ServerId:         utils.Ptr("sid"),
-					Size:             utils.Ptr(int64(1)),
+					Description:      new("desc"),
+					PerformanceClass: new("class"),
+					ServerId:         new("sid"),
+					Size:             new(int64(1)),
 					Source:           &iaas.VolumeSource{},
-					Encrypted:        utils.Ptr(true),
+					Encrypted:        new(true),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{
-						KekKeyId:       utils.Ptr("kek-key-id"),
-						KekKeyVersion:  utils.Ptr(int64(1)),
-						KekKeyringId:   utils.Ptr("kek-keyring-id"),
-						KekProjectId:   utils.Ptr("kek-project-id"),
+						KekKeyId:       new("kek-key-id"),
+						KekKeyVersion:  new(int64(1)),
+						KekKeyringId:   new("kek-keyring-id"),
+						KekProjectId:   new("kek-project-id"),
 						KeyPayload:     nil,
-						ServiceAccount: utils.Ptr("test-sa@sa.stackit.cloud"),
+						ServiceAccount: new("test-sa@sa.stackit.cloud"),
 					},
 				},
 				region: "eu02",
@@ -130,7 +129,7 @@ func TestMapFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Volume{
-					Id: utils.Ptr("nid"),
+					Id: new("nid"),
 				},
 				region: "eu01",
 			},
@@ -213,17 +212,17 @@ func TestToCreatePayload(t *testing.T) {
 				Id:   types.StringValue("id"),
 			},
 			expected: &iaas.CreateVolumePayload{
-				Name:             utils.Ptr("name"),
-				AvailabilityZone: utils.Ptr("zone"),
-				Labels: &map[string]interface{}{
+				Name:             new("name"),
+				AvailabilityZone: new("zone"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
-				Description:      utils.Ptr("desc"),
-				PerformanceClass: utils.Ptr("class"),
-				Size:             utils.Ptr(int64(1)),
+				Description:      new("desc"),
+				PerformanceClass: new("class"),
+				Size:             new(int64(1)),
 				Source: &iaas.VolumeSource{
-					Type: utils.Ptr("volume"),
-					Id:   utils.Ptr("id"),
+					Type: new("volume"),
+					Id:   new("id"),
 				},
 			},
 			isValid: true,
@@ -246,17 +245,17 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &iaas.CreateVolumePayload{
 				Source: &iaas.VolumeSource{
-					Type: utils.Ptr("volume"),
-					Id:   utils.Ptr("id"),
+					Type: new("volume"),
+					Id:   new("id"),
 				},
-				Labels: &map[string]interface{}{},
+				Labels: &map[string]any{},
 				EncryptionParameters: &iaas.VolumeEncryptionParameter{
-					KekKeyId:       utils.Ptr("kek-key-id"),
-					KekKeyVersion:  utils.Ptr(int64(1)),
-					KekKeyringId:   utils.Ptr("kek-keyring-id"),
+					KekKeyId:       new("kek-key-id"),
+					KekKeyVersion:  new(int64(1)),
+					KekKeyringId:   new("kek-keyring-id"),
 					KekProjectId:   nil,
 					KeyPayload:     nil,
-					ServiceAccount: utils.Ptr("test-sa@sa.stackit.cloud"),
+					ServiceAccount: new("test-sa@sa.stackit.cloud"),
 				},
 			},
 			isValid: true,
@@ -279,14 +278,14 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &iaas.CreateVolumePayload{
 				Source: &iaas.VolumeSource{
-					Type: utils.Ptr("volume"),
-					Id:   utils.Ptr("id"),
+					Type: new("volume"),
+					Id:   new("id"),
 				},
-				Labels: &map[string]interface{}{},
+				Labels: &map[string]any{},
 				EncryptionParameters: &iaas.VolumeEncryptionParameter{
-					KekKeyId:      utils.Ptr("kek-key-id"),
-					KekKeyVersion: utils.Ptr(int64(1)),
-					KekKeyringId:  utils.Ptr("kek-keyring-id"),
+					KekKeyId:      new("kek-key-id"),
+					KekKeyVersion: new(int64(1)),
+					KekKeyringId:  new("kek-keyring-id"),
 					KekProjectId:  nil,
 					KeyPayload: func() *[]byte {
 						keyPayload := []byte{
@@ -297,7 +296,7 @@ func TestToCreatePayload(t *testing.T) {
 						}
 						return &keyPayload
 					}(),
-					ServiceAccount: utils.Ptr("test-sa@sa.stackit.cloud"),
+					ServiceAccount: new("test-sa@sa.stackit.cloud"),
 				},
 			},
 			isValid: true,
@@ -339,11 +338,11 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			&iaas.UpdateVolumePayload{
-				Name: utils.Ptr("name"),
-				Labels: &map[string]interface{}{
+				Name: new("name"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
-				Description: utils.Ptr("desc"),
+				Description: new("desc"),
 			},
 			true,
 		},

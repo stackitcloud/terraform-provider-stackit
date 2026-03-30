@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -49,7 +48,7 @@ func TestMapFields(t *testing.T) {
 			types.ObjectNull(extensionsTypes),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			testRegion,
 			Model{
@@ -75,49 +74,49 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
-						Enabled:      utils.Ptr(true),
+						Enabled:      new(true),
 					},
 					Observability: &ske.Observability{
-						InstanceId: utils.Ptr("aid"),
-						Enabled:    utils.Ptr(true),
+						InstanceId: new("aid"),
+						Enabled:    new(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   &[]string{"foo.onstackit.cloud"},
-						Enabled: utils.Ptr(true),
+						Enabled: new(true),
 					},
 				},
 				Hibernation: &ske.Hibernation{
 					Schedules: &[]ske.HibernationSchedule{
 						{
-							End:      utils.Ptr("2"),
-							Start:    utils.Ptr("1"),
-							Timezone: utils.Ptr("CET"),
+							End:      new("2"),
+							Start:    new("1"),
+							Timezone: new("CET"),
 						},
 					},
 				},
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("1.2.3"),
+					Version: new("1.2.3"),
 				},
 				Maintenance: &ske.Maintenance{
 					AutoUpdate: &ske.MaintenanceAutoUpdate{
-						KubernetesVersion:   utils.Ptr(true),
-						MachineImageVersion: utils.Ptr(true),
+						KubernetesVersion:   new(true),
+						MachineImageVersion: new(true),
 					},
 					TimeWindow: &ske.TimeWindow{
-						Start: utils.Ptr(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
-						End:   utils.Ptr(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
+						Start: new(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
+						End:   new(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
 					},
 				},
 				Network: &ske.Network{
-					Id: utils.Ptr("nid"),
+					Id: new("nid"),
 					ControlPlane: &ske.V2ControlPlaneNetwork{
-						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(new("SNA")),
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				Nodepools: &[]ske.Nodepool{
 					{
-						AllowSystemComponents: utils.Ptr(true),
+						AllowSystemComponents: new(true),
 						AvailabilityZones:     &[]string{"z1", "z2"},
 						Cri: &ske.CRI{
 							Name: ske.CRINAME_DOCKER.Ptr(),
@@ -125,26 +124,26 @@ func TestMapFields(t *testing.T) {
 						Labels: &map[string]string{"k": "v"},
 						Machine: &ske.Machine{
 							Image: &ske.Image{
-								Name:    utils.Ptr("os"),
-								Version: utils.Ptr("os-ver"),
+								Name:    new("os"),
+								Version: new("os-ver"),
 							},
-							Type: utils.Ptr("B"),
+							Type: new("B"),
 						},
-						MaxSurge:       utils.Ptr(int64(3)),
+						MaxSurge:       new(int64(3)),
 						MaxUnavailable: nil,
-						Maximum:        utils.Ptr(int64(5)),
-						Minimum:        utils.Ptr(int64(1)),
-						Name:           utils.Ptr("node"),
+						Maximum:        new(int64(5)),
+						Minimum:        new(int64(1)),
+						Name:           new("node"),
 						Taints: &[]ske.Taint{
 							{
 								Effect: ske.TAINTEFFECT_NO_EXECUTE.Ptr(),
-								Key:    utils.Ptr("key"),
-								Value:  utils.Ptr("value"),
+								Key:    new("key"),
+								Value:  new("value"),
 							},
 						},
 						Volume: &ske.Volume{
-							Size: utils.Ptr(int64(3)),
-							Type: utils.Ptr("type"),
+							Size: new(int64(3)),
+							Type: new("type"),
 						},
 					},
 				},
@@ -279,7 +278,7 @@ func TestMapFields(t *testing.T) {
 			types.ObjectNull(extensionsTypes),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
-				Name:    utils.Ptr("name"),
+				Name:    new("name"),
 				Network: &ske.Network{},
 			},
 			testRegion,
@@ -306,18 +305,18 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: nil,
-						Enabled:      utils.Ptr(true),
+						Enabled:      new(true),
 					},
 					Observability: &ske.Observability{
 						InstanceId: nil,
-						Enabled:    utils.Ptr(true),
+						Enabled:    new(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   nil,
-						Enabled: utils.Ptr(true),
+						Enabled: new(true),
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			testRegion,
 			Model{
@@ -368,7 +367,7 @@ func TestMapFields(t *testing.T) {
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
-				Name:       utils.Ptr("name"),
+				Name:       new("name"),
 			},
 			testRegion,
 			Model{
@@ -423,14 +422,14 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
-						Enabled:      utils.Ptr(true),
+						Enabled:      new(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   nil,
-						Enabled: utils.Ptr(true),
+						Enabled: new(true),
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			testRegion,
 			Model{
@@ -469,7 +468,7 @@ func TestMapFields(t *testing.T) {
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
-				Name:       utils.Ptr("name"),
+				Name:       new("name"),
 			},
 			testRegion,
 			Model{
@@ -531,46 +530,46 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: &[]string{"cidr1"},
-						Enabled:      utils.Ptr(true),
+						Enabled:      new(true),
 					},
 					Observability: &ske.Observability{
-						InstanceId: utils.Ptr("aid"),
-						Enabled:    utils.Ptr(true),
+						InstanceId: new("aid"),
+						Enabled:    new(true),
 					},
 					Dns: &ske.DNS{
 						Zones:   &[]string{"zone1"},
-						Enabled: utils.Ptr(true),
+						Enabled: new(true),
 					},
 				},
 				Hibernation: &ske.Hibernation{
 					Schedules: &[]ske.HibernationSchedule{
 						{
-							End:      utils.Ptr("2"),
-							Start:    utils.Ptr("1"),
-							Timezone: utils.Ptr("CET"),
+							End:      new("2"),
+							Start:    new("1"),
+							Timezone: new("CET"),
 						},
 					},
 				},
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("1.2.3"),
+					Version: new("1.2.3"),
 				},
 				Maintenance: &ske.Maintenance{
 					AutoUpdate: &ske.MaintenanceAutoUpdate{
-						KubernetesVersion:   utils.Ptr(true),
-						MachineImageVersion: utils.Ptr(true),
+						KubernetesVersion:   new(true),
+						MachineImageVersion: new(true),
 					},
 					TimeWindow: &ske.TimeWindow{
-						Start: utils.Ptr(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
-						End:   utils.Ptr(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
+						Start: new(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
+						End:   new(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
 					},
 				},
 				Network: &ske.Network{
-					Id: utils.Ptr("nid"),
+					Id: new("nid"),
 					ControlPlane: &ske.V2ControlPlaneNetwork{
-						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(new("SNA")),
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				Nodepools: &[]ske.Nodepool{
 					{
 						AvailabilityZones: &[]string{"z1", "z2"},
@@ -580,20 +579,20 @@ func TestMapFields(t *testing.T) {
 						Labels: &map[string]string{"k": "v"},
 						Machine: &ske.Machine{
 							Image: &ske.Image{
-								Name:    utils.Ptr("os"),
-								Version: utils.Ptr("os-ver"),
+								Name:    new("os"),
+								Version: new("os-ver"),
 							},
-							Type: utils.Ptr("B"),
+							Type: new("B"),
 						},
-						MaxSurge:       utils.Ptr(int64(3)),
+						MaxSurge:       new(int64(3)),
 						MaxUnavailable: nil,
-						Maximum:        utils.Ptr(int64(5)),
-						Minimum:        utils.Ptr(int64(1)),
-						Name:           utils.Ptr("node"),
+						Maximum:        new(int64(5)),
+						Minimum:        new(int64(1)),
+						Name:           new("node"),
 						Taints:         nil,
 						Volume: &ske.Volume{
-							Size: utils.Ptr(int64(3)),
-							Type: utils.Ptr("type"),
+							Size: new(int64(3)),
+							Type: new("type"),
 						},
 					},
 				},
@@ -755,25 +754,25 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"available_version",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.1"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.1"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.2"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.2"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20.1"),
+			new("1.20.1"),
 			nil,
-			utils.Ptr("1.20.1"),
+			new("1.20.1"),
 			false,
 			false,
 			true,
@@ -782,25 +781,25 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"available_version_zero_patch",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.1"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.1"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.2"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.2"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			false,
 			true,
@@ -809,25 +808,25 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"available_version_with_no_provided_patch",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.1"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.1"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.2"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.2"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			nil,
-			utils.Ptr("1.20.2"),
+			new("1.20.2"),
 			false,
 			false,
 			true,
@@ -836,25 +835,25 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"available_version_with_higher_preview_patch_not_selected",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.1"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.1"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.2"),
-					State:   utils.Ptr(VersionStatePreview),
+					Version: new("1.20.2"),
+					State:   new(VersionStatePreview),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			nil,
-			utils.Ptr("1.20.1"),
+			new("1.20.1"),
 			false,
 			false,
 			true,
@@ -863,17 +862,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"available_version_no_provided_patch_2",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			false,
 			true,
@@ -882,17 +881,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"deprecated_version",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateDeprecated),
+					Version: new("1.19.0"),
+					State:   new(VersionStateDeprecated),
 				},
 			},
-			utils.Ptr("1.19"),
+			new("1.19"),
 			nil,
-			utils.Ptr("1.19.0"),
+			new("1.19.0"),
 			true,
 			false,
 			true,
@@ -901,17 +900,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"preview_version",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStatePreview),
+					Version: new("1.20.0"),
+					State:   new(VersionStatePreview),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 			true,
@@ -920,17 +919,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"nil_provided_version_get_latest",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
 			nil,
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			false,
 			true,
@@ -939,17 +938,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"nil_provided_version_use_current",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
 			nil,
-			utils.Ptr("1.19.0"),
-			utils.Ptr("1.19.0"),
+			new("1.19.0"),
+			new("1.19.0"),
 			false,
 			false,
 			true,
@@ -958,17 +957,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"update_lower_min_provided",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.19"),
-			utils.Ptr("1.20.0"),
-			utils.Ptr("1.20.0"),
+			new("1.19"),
+			new("1.20.0"),
+			new("1.20.0"),
 			false,
 			false,
 			true,
@@ -977,21 +976,21 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"update_lower_min_provided_deprecated_version",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.21.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.21.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateDeprecated),
+					Version: new("1.20.0"),
+					State:   new(VersionStateDeprecated),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateDeprecated),
+					Version: new("1.19.0"),
+					State:   new(VersionStateDeprecated),
 				},
 			},
-			utils.Ptr("1.19"),
-			utils.Ptr("1.20.0"),
-			utils.Ptr("1.20.0"),
+			new("1.19"),
+			new("1.20.0"),
+			new("1.20.0"),
 			true,
 			false,
 			true,
@@ -1000,17 +999,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"update_matching_min_provided",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
-			utils.Ptr("1.20.0"),
-			utils.Ptr("1.20.0"),
+			new("1.20"),
+			new("1.20.0"),
+			new("1.20.0"),
 			false,
 			false,
 			true,
@@ -1019,17 +1018,17 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"update_higher_min_provided",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.20"),
-			utils.Ptr("1.19.0"),
-			utils.Ptr("1.20.0"),
+			new("1.20"),
+			new("1.19.0"),
+			new("1.20.0"),
 			false,
 			false,
 			true,
@@ -1038,15 +1037,15 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"no_matching_available_versions",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.21"),
+			new("1.21"),
 			nil,
 			nil,
 			false,
@@ -1057,19 +1056,19 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"no_matching_available_versions_patch",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.21.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.21.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.21.1"),
+			new("1.21.1"),
 			nil,
 			nil,
 			false,
@@ -1080,19 +1079,19 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"no_matching_available_versions_patch_2",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.21.2"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.21.2"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr("1.21.1"),
+			new("1.21.1"),
 			nil,
 			nil,
 			false,
@@ -1103,20 +1102,20 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"no_matching_available_versions_patch_current",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.21.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.21.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
 			nil,
-			utils.Ptr("1.21.1"),
+			new("1.21.1"),
 			nil,
 			false,
 			false,
@@ -1126,20 +1125,20 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"no_matching_available_versions_patch_2_current",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.21.2"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.21.2"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
 			nil,
-			utils.Ptr("1.21.1"),
+			new("1.21.1"),
 			nil,
 			false,
 			false,
@@ -1148,7 +1147,7 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		{
 			"no_available_version",
 			[]ske.KubernetesVersion{},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			nil,
 			nil,
 			false,
@@ -1158,7 +1157,7 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		{
 			"nil_available_version",
 			nil,
-			utils.Ptr("1.20"),
+			new("1.20"),
 			nil,
 			nil,
 			false,
@@ -1169,15 +1168,15 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 			"empty_provided_version",
 			[]ske.KubernetesVersion{
 				{
-					Version: utils.Ptr("1.20.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.20.0"),
+					State:   new(VersionStateSupported),
 				},
 				{
-					Version: utils.Ptr("1.19.0"),
-					State:   utils.Ptr(VersionStateSupported),
+					Version: new("1.19.0"),
+					State:   new(VersionStateSupported),
 				},
 			},
-			utils.Ptr(""),
+			new(""),
 			nil,
 			nil,
 			false,
@@ -1187,15 +1186,15 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		{
 			description: "minimum_version_without_patch_version_results_in_latest_supported_version,even_if_preview_is_available",
 			availableVersions: []ske.KubernetesVersion{
-				{Version: utils.Ptr("1.20.0"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.20.1"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.20.2"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.20.3"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.20.4"), State: utils.Ptr(VersionStatePreview)},
+				{Version: new("1.20.0"), State: new(VersionStateSupported)},
+				{Version: new("1.20.1"), State: new(VersionStateSupported)},
+				{Version: new("1.20.2"), State: new(VersionStateSupported)},
+				{Version: new("1.20.3"), State: new(VersionStateSupported)},
+				{Version: new("1.20.4"), State: new(VersionStatePreview)},
 			},
-			kubernetesVersionMin:         utils.Ptr("1.20"),
+			kubernetesVersionMin:         new("1.20"),
 			currentKubernetesVersion:     nil,
-			expectedVersionUsed:          utils.Ptr("1.20.3"),
+			expectedVersionUsed:          new("1.20.3"),
 			expectedHasDeprecatedVersion: false,
 			expectedWarning:              false,
 			isValid:                      true,
@@ -1203,15 +1202,15 @@ func TestLatestMatchingKubernetesVersion(t *testing.T) {
 		{
 			description: "use_preview_when_no_supported_release_is_available",
 			availableVersions: []ske.KubernetesVersion{
-				{Version: utils.Ptr("1.19.5"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.19.6"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.19.7"), State: utils.Ptr(VersionStateSupported)},
-				{Version: utils.Ptr("1.20.0"), State: utils.Ptr(VersionStateDeprecated)},
-				{Version: utils.Ptr("1.20.1"), State: utils.Ptr(VersionStatePreview)},
+				{Version: new("1.19.5"), State: new(VersionStateSupported)},
+				{Version: new("1.19.6"), State: new(VersionStateSupported)},
+				{Version: new("1.19.7"), State: new(VersionStateSupported)},
+				{Version: new("1.20.0"), State: new(VersionStateDeprecated)},
+				{Version: new("1.20.1"), State: new(VersionStatePreview)},
 			},
-			kubernetesVersionMin:         utils.Ptr("1.20"),
+			kubernetesVersionMin:         new("1.20"),
 			currentKubernetesVersion:     nil,
-			expectedVersionUsed:          utils.Ptr("1.20.1"),
+			expectedVersionUsed:          new("1.20.1"),
 			expectedHasDeprecatedVersion: false,
 			expectedWarning:              true,
 			isValid:                      true,
@@ -1257,31 +1256,31 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"available_version",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.1"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.1"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.2"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.2"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20.1"),
+			new("1.20.1"),
 			"foo",
 			nil,
-			utils.Ptr("1.20.1"),
+			new("1.20.1"),
 			false,
 			true,
 		},
@@ -1289,31 +1288,31 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"available_version_zero_patch",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.1"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.1"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.2"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.2"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			"foo",
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1321,31 +1320,31 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"available_version_with_no_provided_patch",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.1"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.1"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.2"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.2"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
-			utils.Ptr("1.20.2"),
+			new("1.20.2"),
 			false,
 			true,
 		},
@@ -1353,31 +1352,31 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"available_version_with_higher_preview_patch_not_selected",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.1"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.1"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.2"),
-							State:   utils.Ptr(VersionStatePreview),
+							Version: new("1.20.2"),
+							State:   new(VersionStatePreview),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
-			utils.Ptr("1.20.1"),
+			new("1.20.1"),
 			false,
 			true,
 		},
@@ -1385,23 +1384,23 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"available_version_with_no_provided_patch_2",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1409,23 +1408,23 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"deprecated_version",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateDeprecated),
+							Version: new("1.19.0"),
+							State:   new(VersionStateDeprecated),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.19"),
+			new("1.19"),
 			"foo",
 			nil,
-			utils.Ptr("1.19.0"),
+			new("1.19.0"),
 			true,
 			true,
 		},
@@ -1433,23 +1432,23 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"preview_version_selected",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStatePreview),
+							Version: new("1.20.0"),
+							State:   new(VersionStatePreview),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateDeprecated),
+							Version: new("1.19.0"),
+							State:   new(VersionStateDeprecated),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			"foo",
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1457,15 +1456,15 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"nil_provided_version_get_latest",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
@@ -1473,7 +1472,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			nil,
 			"foo",
 			nil,
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1481,15 +1480,15 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"nil_provided_version_use_current",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
@@ -1497,10 +1496,10 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			nil,
 			"foo",
 			&ske.Image{
-				Name:    utils.Ptr("foo"),
-				Version: utils.Ptr("1.19.0"),
+				Name:    new("foo"),
+				Version: new("1.19.0"),
 			},
-			utils.Ptr("1.19.0"),
+			new("1.19.0"),
 			false,
 			true,
 		},
@@ -1508,15 +1507,15 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"nil_provided_version_os_image_update_get_latest",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
@@ -1524,10 +1523,10 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			nil,
 			"foo",
 			&ske.Image{
-				Name:    utils.Ptr("bar"),
-				Version: utils.Ptr("1.19.0"),
+				Name:    new("bar"),
+				Version: new("1.19.0"),
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1535,26 +1534,26 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"update_lower_min_provided",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.19"),
+			new("1.19"),
 			"foo",
 			&ske.Image{
-				Name:    utils.Ptr("foo"),
-				Version: utils.Ptr("1.20.0"),
+				Name:    new("foo"),
+				Version: new("1.20.0"),
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1562,30 +1561,30 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"update_lower_min_provided_deprecated_version",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.21.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.21.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateDeprecated),
+							Version: new("1.20.0"),
+							State:   new(VersionStateDeprecated),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.19"),
+			new("1.19"),
 			"foo",
 			&ske.Image{
-				Name:    utils.Ptr("foo"),
-				Version: utils.Ptr("1.20.0"),
+				Name:    new("foo"),
+				Version: new("1.20.0"),
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			true,
 			true,
 		},
@@ -1593,26 +1592,26 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"update_higher_min_provided",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			&ske.Image{
-				Name:    utils.Ptr("foo"),
-				Version: utils.Ptr("1.19.0"),
+				Name:    new("foo"),
+				Version: new("1.19.0"),
 			},
-			utils.Ptr("1.20.0"),
+			new("1.20.0"),
 			false,
 			true,
 		},
@@ -1620,20 +1619,20 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"no_matching_available_versions",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 						{
-							Version: utils.Ptr("1.19.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.19.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.21"),
+			new("1.21"),
 			"foo",
 			nil,
 			nil,
@@ -1644,11 +1643,11 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"no_available_versions",
 			[]ske.MachineImage{
 				{
-					Name:     utils.Ptr("foo"),
+					Name:     new("foo"),
 					Versions: &[]ske.MachineImageVersion{},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
 			nil,
@@ -1659,11 +1658,11 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"nil_available_versions",
 			[]ske.MachineImage{
 				{
-					Name:     utils.Ptr("foo"),
+					Name:     new("foo"),
 					Versions: nil,
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
 			nil,
@@ -1677,13 +1676,13 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 					Name: nil,
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
 			nil,
@@ -1694,16 +1693,16 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"name_not_available",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("bar"),
+					Name: new("bar"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr("1.20"),
+			new("1.20"),
 			"foo",
 			nil,
 			nil,
@@ -1714,16 +1713,16 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			"empty_provided_version",
 			[]ske.MachineImage{
 				{
-					Name: utils.Ptr("foo"),
+					Name: new("foo"),
 					Versions: &[]ske.MachineImageVersion{
 						{
-							Version: utils.Ptr("1.20.0"),
-							State:   utils.Ptr(VersionStateSupported),
+							Version: new("1.20.0"),
+							State:   new(VersionStateSupported),
 						},
 					},
 				},
 			},
-			utils.Ptr(""),
+			new(""),
 			"foo",
 			nil,
 			nil,
@@ -1782,9 +1781,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "tf_state_filled_in_1",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
-			startTF:       utils.Ptr("04:05:06+07:08"),
+			startTF:       new("04:05:06+07:08"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
-			endTF:         utils.Ptr("14:15:16+17:18"),
+			endTF:         new("14:15:16+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
 			endExpected:   "14:15:16+17:18",
@@ -1792,9 +1791,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "tf_state_filled_in_2",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 0, time.UTC),
-			startTF:       utils.Ptr("04:05:06+00:00"),
+			startTF:       new("04:05:06+00:00"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 0, time.UTC),
-			endTF:         utils.Ptr("14:15:16+00:00"),
+			endTF:         new("14:15:16+00:00"),
 			isValid:       true,
 			startExpected: "04:05:06+00:00",
 			endExpected:   "14:15:16+00:00",
@@ -1802,9 +1801,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "tf_state_filled_in_3",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 0, time.UTC),
-			startTF:       utils.Ptr("04:05:06Z"),
+			startTF:       new("04:05:06Z"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 0, time.UTC),
-			endTF:         utils.Ptr("14:15:16Z"),
+			endTF:         new("14:15:16Z"),
 			isValid:       true,
 			startExpected: "04:05:06Z",
 			endExpected:   "14:15:16Z",
@@ -1812,9 +1811,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "api_takes_precedence_if_different_1",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
-			startTF:       utils.Ptr("00:00:00+07:08"),
+			startTF:       new("00:00:00+07:08"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
-			endTF:         utils.Ptr("14:15:16+17:18"),
+			endTF:         new("14:15:16+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
 			endExpected:   "14:15:16+17:18",
@@ -1822,9 +1821,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "api_takes_precedence_if_different_2",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
-			startTF:       utils.Ptr("04:05:06+07:08"),
+			startTF:       new("04:05:06+07:08"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
-			endTF:         utils.Ptr("00:00:00+17:18"),
+			endTF:         new("00:00:00+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
 			endExpected:   "14:15:16+17:18",
@@ -1832,9 +1831,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "api_takes_precedence_if_different_3",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
-			startTF:       utils.Ptr("04:05:06Z"),
+			startTF:       new("04:05:06Z"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
-			endTF:         utils.Ptr("14:15:16+17:18"),
+			endTF:         new("14:15:16+17:18"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
 			endExpected:   "14:15:16+17:18",
@@ -1842,9 +1841,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		{
 			description:   "api_takes_precedence_if_different_3",
 			startAPI:      time.Date(1, 2, 3, 4, 5, 6, 7, time.FixedZone("UTC+7:08", 7*60*60+8*60)),
-			startTF:       utils.Ptr("04:05:06+07:08"),
+			startTF:       new("04:05:06+07:08"),
 			endAPI:        time.Date(11, 12, 13, 14, 15, 16, 17, time.FixedZone("UTC+17:18", 17*60*60+18*60)),
-			endTF:         utils.Ptr("14:15:16Z"),
+			endTF:         new("14:15:16Z"),
 			isValid:       true,
 			startExpected: "04:05:06+07:08",
 			endExpected:   "14:15:16+17:18",
@@ -1855,8 +1854,8 @@ func TestGetMaintenanceTimes(t *testing.T) {
 			apiResponse := &ske.Cluster{
 				Maintenance: &ske.Maintenance{
 					TimeWindow: &ske.TimeWindow{
-						Start: utils.Ptr(tt.startAPI),
-						End:   utils.Ptr(tt.endAPI),
+						Start: new(tt.startAPI),
+						End:   new(tt.endAPI),
 					},
 				},
 			}
@@ -1908,38 +1907,38 @@ func TestGetCurrentVersion(t *testing.T) {
 			"ok",
 			&ske.Cluster{
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("v1.0.0"),
+					Version: new("v1.0.0"),
 				},
 				Nodepools: &[]ske.Nodepool{
 					{
-						Name: utils.Ptr("foo"),
+						Name: new("foo"),
 						Machine: &ske.Machine{
 							Image: &ske.Image{
-								Name:    utils.Ptr("foo"),
-								Version: utils.Ptr("v1.0.0"),
+								Name:    new("foo"),
+								Version: new("v1.0.0"),
 							},
 						},
 					},
 					{
-						Name: utils.Ptr("bar"),
+						Name: new("bar"),
 						Machine: &ske.Machine{
 							Image: &ske.Image{
-								Name:    utils.Ptr("bar"),
-								Version: utils.Ptr("v2.0.0"),
+								Name:    new("bar"),
+								Version: new("v2.0.0"),
 							},
 						},
 					},
 				},
 			},
-			utils.Ptr("v1.0.0"),
+			new("v1.0.0"),
 			map[string]*ske.Image{
 				"foo": {
-					Name:    utils.Ptr("foo"),
-					Version: utils.Ptr("v1.0.0"),
+					Name:    new("foo"),
+					Version: new("v1.0.0"),
 				},
 				"bar": {
-					Name:    utils.Ptr("bar"),
-					Version: utils.Ptr("v2.0.0"),
+					Name:    new("bar"),
+					Version: new("v2.0.0"),
 				},
 			},
 			false,
@@ -1975,11 +1974,11 @@ func TestGetCurrentVersion(t *testing.T) {
 			"nil nodepools",
 			&ske.Cluster{
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("v1.0.0"),
+					Version: new("v1.0.0"),
 				},
 				Nodepools: nil,
 			},
-			utils.Ptr("v1.0.0"),
+			new("v1.0.0"),
 			nil,
 			false,
 		},
@@ -1987,16 +1986,16 @@ func TestGetCurrentVersion(t *testing.T) {
 			"nil nodepools machine",
 			&ske.Cluster{
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("v1.0.0"),
+					Version: new("v1.0.0"),
 				},
 				Nodepools: &[]ske.Nodepool{
 					{
-						Name:    utils.Ptr("foo"),
+						Name:    new("foo"),
 						Machine: nil,
 					},
 				},
 			},
-			utils.Ptr("v1.0.0"),
+			new("v1.0.0"),
 			map[string]*ske.Image{},
 			false,
 		},
@@ -2004,18 +2003,18 @@ func TestGetCurrentVersion(t *testing.T) {
 			"nil nodepools machine image",
 			&ske.Cluster{
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("v1.0.0"),
+					Version: new("v1.0.0"),
 				},
 				Nodepools: &[]ske.Nodepool{
 					{
-						Name: utils.Ptr("foo"),
+						Name: new("foo"),
 						Machine: &ske.Machine{
 							Image: nil,
 						},
 					},
 				},
 			},
-			utils.Ptr("v1.0.0"),
+			new("v1.0.0"),
 			map[string]*ske.Image{},
 			false,
 		},
@@ -2023,11 +2022,11 @@ func TestGetCurrentVersion(t *testing.T) {
 			"nil nodepools machine image name",
 			&ske.Cluster{
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("v1.0.0"),
+					Version: new("v1.0.0"),
 				},
 				Nodepools: &[]ske.Nodepool{
 					{
-						Name: utils.Ptr("foo"),
+						Name: new("foo"),
 						Machine: &ske.Machine{
 							Image: &ske.Image{
 								Name: nil,
@@ -2036,7 +2035,7 @@ func TestGetCurrentVersion(t *testing.T) {
 					},
 				},
 			},
-			utils.Ptr("v1.0.0"),
+			new("v1.0.0"),
 			map[string]*ske.Image{},
 			false,
 		},
@@ -2044,24 +2043,24 @@ func TestGetCurrentVersion(t *testing.T) {
 			"nil nodepools machine image version",
 			&ske.Cluster{
 				Kubernetes: &ske.Kubernetes{
-					Version: utils.Ptr("v1.0.0"),
+					Version: new("v1.0.0"),
 				},
 				Nodepools: &[]ske.Nodepool{
 					{
-						Name: utils.Ptr("foo"),
+						Name: new("foo"),
 						Machine: &ske.Machine{
 							Image: &ske.Image{
-								Name:    utils.Ptr("foo"),
+								Name:    new("foo"),
 								Version: nil,
 							},
 						},
 					},
 				},
 			},
-			utils.Ptr("v1.0.0"),
+			new("v1.0.0"),
 			map[string]*ske.Image{
 				"foo": {
-					Name:    utils.Ptr("foo"),
+					Name:    new("foo"),
 					Version: nil,
 				},
 			},
@@ -2110,20 +2109,20 @@ func TestGetLatestSupportedKubernetesVersion(t *testing.T) {
 			description: "base",
 			listKubernetesVersion: []ske.KubernetesVersion{
 				{
-					State:   utils.Ptr("supported"),
-					Version: utils.Ptr("1.2.3"),
+					State:   new("supported"),
+					Version: new("1.2.3"),
 				},
 				{
-					State:   utils.Ptr("supported"),
-					Version: utils.Ptr("3.2.1"),
+					State:   new("supported"),
+					Version: new("3.2.1"),
 				},
 				{
-					State:   utils.Ptr("not-supported"),
-					Version: utils.Ptr("4.4.4"),
+					State:   new("not-supported"),
+					Version: new("4.4.4"),
 				},
 			},
 			isValid:         true,
-			expectedVersion: utils.Ptr("3.2.1"),
+			expectedVersion: new("3.2.1"),
 		},
 		{
 			description:           "no Kubernetes versions 1",
@@ -2139,8 +2138,8 @@ func TestGetLatestSupportedKubernetesVersion(t *testing.T) {
 			description: "no supported Kubernetes versions",
 			listKubernetesVersion: []ske.KubernetesVersion{
 				{
-					State:   utils.Ptr("not-supported"),
-					Version: utils.Ptr("1.2.3"),
+					State:   new("not-supported"),
+					Version: new("1.2.3"),
 				},
 			},
 			isValid: false,
@@ -2179,20 +2178,20 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 			description: "base",
 			listMachineVersion: []ske.MachineImageVersion{
 				{
-					State:   utils.Ptr("supported"),
-					Version: utils.Ptr("1.2.3"),
+					State:   new("supported"),
+					Version: new("1.2.3"),
 				},
 				{
-					State:   utils.Ptr("supported"),
-					Version: utils.Ptr("3.2.1"),
+					State:   new("supported"),
+					Version: new("3.2.1"),
 				},
 				{
-					State:   utils.Ptr("not-supported"),
-					Version: utils.Ptr("4.4.4"),
+					State:   new("not-supported"),
+					Version: new("4.4.4"),
 				},
 			},
 			isValid:         true,
-			expectedVersion: utils.Ptr("3.2.1"),
+			expectedVersion: new("3.2.1"),
 		},
 		{
 			description:        "no mchine versions 1",
@@ -2208,8 +2207,8 @@ func TestGetLatestSupportedMachineVersion(t *testing.T) {
 			description: "no supported machine versions",
 			listMachineVersion: []ske.MachineImageVersion{
 				{
-					State:   utils.Ptr("not-supported"),
-					Version: utils.Ptr("1.2.3"),
+					State:   new("not-supported"),
+					Version: new("1.2.3"),
 				},
 			},
 			isValid: false,
@@ -2257,9 +2256,9 @@ func TestToNetworkPayload(t *testing.T) {
 				}),
 			},
 			&ske.Network{
-				Id: utils.Ptr("nid"),
+				Id: new("nid"),
 				ControlPlane: &ske.V2ControlPlaneNetwork{
-					AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(utils.Ptr("SNA")),
+					AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(new("SNA")),
 				},
 			},
 			true,
@@ -2288,7 +2287,7 @@ func TestToNetworkPayload(t *testing.T) {
 				}),
 			},
 			&ske.Network{
-				Id:           utils.Ptr("nid"),
+				Id:           new("nid"),
 				ControlPlane: nil,
 			},
 			true,
@@ -2444,54 +2443,54 @@ func TestSortK8sVersion(t *testing.T) {
 		{
 			description: "slice with well formed elements",
 			versions: []ske.KubernetesVersion{
-				{Version: utils.Ptr("v1.2.3")},
-				{Version: utils.Ptr("v1.1.10")},
-				{Version: utils.Ptr("v1.2.1")},
-				{Version: utils.Ptr("v1.2.0")},
-				{Version: utils.Ptr("v1.1")},
-				{Version: utils.Ptr("v1.2.2")},
+				{Version: new("v1.2.3")},
+				{Version: new("v1.1.10")},
+				{Version: new("v1.2.1")},
+				{Version: new("v1.2.0")},
+				{Version: new("v1.1")},
+				{Version: new("v1.2.2")},
 			},
 			wantSorted: []ske.KubernetesVersion{
-				{Version: utils.Ptr("v1.2.3")},
-				{Version: utils.Ptr("v1.2.2")},
-				{Version: utils.Ptr("v1.2.1")},
-				{Version: utils.Ptr("v1.2.0")},
-				{Version: utils.Ptr("v1.1.10")},
-				{Version: utils.Ptr("v1.1")},
+				{Version: new("v1.2.3")},
+				{Version: new("v1.2.2")},
+				{Version: new("v1.2.1")},
+				{Version: new("v1.2.0")},
+				{Version: new("v1.1.10")},
+				{Version: new("v1.1")},
 			},
 		},
 		{
 			description: "slice with undefined elements",
 			versions: []ske.KubernetesVersion{
-				{Version: utils.Ptr("v1.2.3")},
-				{Version: utils.Ptr("v1.1.10")},
+				{Version: new("v1.2.3")},
+				{Version: new("v1.1.10")},
 				{},
-				{Version: utils.Ptr("v1.2.0")},
-				{Version: utils.Ptr("v1.1")},
-				{Version: utils.Ptr("v1.2.2")},
+				{Version: new("v1.2.0")},
+				{Version: new("v1.1")},
+				{Version: new("v1.2.2")},
 			},
 			wantSorted: []ske.KubernetesVersion{
-				{Version: utils.Ptr("v1.2.3")},
-				{Version: utils.Ptr("v1.2.2")},
-				{Version: utils.Ptr("v1.2.0")},
-				{Version: utils.Ptr("v1.1.10")},
-				{Version: utils.Ptr("v1.1")},
+				{Version: new("v1.2.3")},
+				{Version: new("v1.2.2")},
+				{Version: new("v1.2.0")},
+				{Version: new("v1.1.10")},
+				{Version: new("v1.1")},
 				{Version: nil},
 			},
 		},
 		{
 			description: "slice without prefix and minor version change",
 			versions: []ske.KubernetesVersion{
-				{Version: utils.Ptr("1.20.0")},
-				{Version: utils.Ptr("1.19.0")},
-				{Version: utils.Ptr("1.20.1")},
-				{Version: utils.Ptr("1.20.2")},
+				{Version: new("1.20.0")},
+				{Version: new("1.19.0")},
+				{Version: new("1.20.1")},
+				{Version: new("1.20.2")},
 			},
 			wantSorted: []ske.KubernetesVersion{
-				{Version: utils.Ptr("1.20.2")},
-				{Version: utils.Ptr("1.20.1")},
-				{Version: utils.Ptr("1.20.0")},
-				{Version: utils.Ptr("1.19.0")},
+				{Version: new("1.20.2")},
+				{Version: new("1.20.1")},
+				{Version: new("1.20.0")},
+				{Version: new("1.19.0")},
 			},
 		},
 		{

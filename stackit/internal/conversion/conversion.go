@@ -63,14 +63,14 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 }
 
 // ToStringInterfaceMap converts a basetypes.MapValue of Strings to a map[string]interface{}.
-func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]interface{}, error) {
+func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]any, error) {
 	labels := map[string]string{}
 	diags := m.ElementsAs(ctx, &labels, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
 
-	interfaceMap := make(map[string]interface{}, len(labels))
+	interfaceMap := make(map[string]any, len(labels))
 	for k, v := range labels {
 		interfaceMap[k] = v
 	}
@@ -184,7 +184,7 @@ func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
 // It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
 // and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys
 // This method is needed because in partial updates, e.g. if the key is not provided it is ignored and not removed
-func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]interface{}, error) {
+func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]any, error) {
 	currentMap, err := ToStringInterfaceMap(ctx, current)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -195,7 +195,7 @@ func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.M
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	mapPayload := map[string]interface{}{}
+	mapPayload := map[string]any{}
 	// Update and remove existing keys
 	for k := range currentMap {
 		if desiredValue, ok := desiredMap[k]; ok {

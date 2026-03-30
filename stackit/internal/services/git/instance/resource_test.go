@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 )
 
@@ -164,7 +163,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: git.CreateInstancePayload{
 				Name:   "my-instance",
-				Flavor: utils.Ptr("git-100"),
+				Flavor: new("git-100"),
 				Acl:    []string{"10.0.0.1", "10.0.0.2"},
 			},
 			expectError: false,
@@ -178,7 +177,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: git.CreateInstancePayload{
 				Name:   "my-instance",
-				Flavor: utils.Ptr("git-100"),
+				Flavor: new("git-100"),
 				Acl:    []string{},
 			},
 			expectError: false,

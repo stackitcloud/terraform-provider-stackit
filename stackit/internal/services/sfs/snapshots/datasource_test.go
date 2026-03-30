@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 )
 
@@ -50,20 +49,20 @@ func TestMapDatasourceFields(t *testing.T) {
 			"eu01",
 			&[]sfs.ResourcePoolSnapshot{
 				{
-					Comment:              sfs.NewNullableString(utils.Ptr("comment 1")),
-					CreatedAt:            utils.Ptr(testTime),
+					Comment:              sfs.NewNullableString(new("comment 1")),
+					CreatedAt:            new(testTime),
 					ResourcePoolId:       testResourcePoolId.ValueStringPointer(),
-					SnapshotName:         utils.Ptr("snapshot-1"),
-					SizeGigabytes:        utils.Ptr(int64(50)),
-					LogicalSizeGigabytes: utils.Ptr(int64(50)),
+					SnapshotName:         new("snapshot-1"),
+					SizeGigabytes:        new(int64(50)),
+					LogicalSizeGigabytes: new(int64(50)),
 				},
 				{
-					Comment:              sfs.NewNullableString(utils.Ptr("comment 2")),
-					CreatedAt:            utils.Ptr(testTime.Add(1 * time.Hour)),
+					Comment:              sfs.NewNullableString(new("comment 2")),
+					CreatedAt:            new(testTime.Add(1 * time.Hour)),
 					ResourcePoolId:       testResourcePoolId.ValueStringPointer(),
-					SnapshotName:         utils.Ptr("snapshot-2"),
-					SizeGigabytes:        utils.Ptr(int64(50)),
-					LogicalSizeGigabytes: utils.Ptr(int64(50)),
+					SnapshotName:         new("snapshot-2"),
+					SizeGigabytes:        new(int64(50)),
+					LogicalSizeGigabytes: new(int64(50)),
 				},
 			},
 			&dataSourceModel{

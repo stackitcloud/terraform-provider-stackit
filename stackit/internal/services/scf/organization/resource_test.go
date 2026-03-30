@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
 )
 
@@ -35,12 +34,12 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.Organization{
-				Guid:      utils.Ptr(testOrgId),
-				Name:      utils.Ptr("scf-org-min-instance"),
-				Region:    utils.Ptr(testRegion),
+				Guid:      new(testOrgId),
+				Name:      new("scf-org-min-instance"),
+				Region:    new(testRegion),
 				CreatedAt: &createdTime,
 				UpdatedAt: &createdTime,
-				ProjectId: utils.Ptr(testProjectId),
+				ProjectId: new(testProjectId),
 			},
 			expected: &Model{
 				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testOrgId)),
@@ -61,14 +60,14 @@ func TestMapFields(t *testing.T) {
 			description: "max_input",
 			input: &scf.Organization{
 				CreatedAt:  &createdTime,
-				Guid:       utils.Ptr(testOrgId),
-				Name:       utils.Ptr("scf-full-org"),
-				PlatformId: utils.Ptr(testPlatformId),
-				ProjectId:  utils.Ptr(testProjectId),
-				QuotaId:    utils.Ptr(testQuotaId),
-				Region:     utils.Ptr(testRegion),
+				Guid:       new(testOrgId),
+				Name:       new("scf-full-org"),
+				PlatformId: new(testPlatformId),
+				ProjectId:  new(testProjectId),
+				QuotaId:    new(testQuotaId),
+				Region:     new(testRegion),
 				Status:     nil,
-				Suspended:  utils.Ptr(true),
+				Suspended:  new(true),
 				UpdatedAt:  &createdTime,
 			},
 			expected: &Model{
@@ -101,7 +100,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "missing_id",
 			input: &scf.Organization{
-				Name: utils.Ptr("scf-missing-id"),
+				Name: new("scf-missing-id"),
 			},
 			expected: nil,
 			isValid:  false,
@@ -144,8 +143,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlatformId: types.StringValue(testPlatformId),
 			},
 			expected: scf.CreateOrganizationPayload{
-				Name:       utils.Ptr("example-org"),
-				PlatformId: utils.Ptr(testPlatformId),
+				Name:       new("example-org"),
+				PlatformId: new(testPlatformId),
 			},
 			expectError: false,
 		},
