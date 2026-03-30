@@ -151,10 +151,17 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 // It returns nil if the value is null or unknown.
 // Note: It sorts the resulting slice to ensure deterministic behavior.
 func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
+	result, err := StringSetToSlice(set)
+	return &result, err
+}
+
+// StringSetToSlice converts basetypes.SetValue to a slice of strings.
+// It returns nil if the value is null or unknown.
+// Note: It sorts the resulting slice to ensure deterministic behavior.
+func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
 	if set.IsNull() || set.IsUnknown() {
 		return nil, nil
 	}
-
 	elements := set.Elements()
 	result := make([]string, 0, len(elements))
 
@@ -170,7 +177,7 @@ func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
 	// prevent non-deterministic behavior in the provider logic or API calls.
 	sort.Strings(result)
 
-	return &result, nil
+	return result, nil
 }
 
 // ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
