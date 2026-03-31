@@ -49,7 +49,7 @@ resource "stackit_dns_zone" "zone" {
 				// create fails
 				PreConfig: func() {
 					s.Reset(testutil.MockResponse{
-						Handler: func(w http.ResponseWriter, r *http.Request) {
+						Handler: func(_ http.ResponseWriter, r *http.Request) {
 							ctx := r.Context()
 							select {
 							case <-ctx.Done():
