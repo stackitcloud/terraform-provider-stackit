@@ -220,7 +220,17 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
 	ctx = core.LogResponse(ctx)
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+		"project_id": projectId,
+		"region":     region,
+		"runner_id":  *runnerResp.Id,
+	})
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Wait for creation of intake runner
 	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
@@ -394,7 +404,7 @@ func (r *runnerResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": idParts[0],
 		"region":     idParts[1],
 		"runner_id":  idParts[2],
