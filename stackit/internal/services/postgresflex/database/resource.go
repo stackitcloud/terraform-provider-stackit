@@ -277,8 +277,8 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if (errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -334,8 +334,8 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing record set
 	err := r.client.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))

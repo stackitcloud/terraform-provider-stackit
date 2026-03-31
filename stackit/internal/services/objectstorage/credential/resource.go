@@ -1,6 +1,7 @@
 package objectstorage
 
 import (
+	"errors"
 	"context"
 	"fmt"
 	"net/http"
@@ -439,8 +440,8 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete existing credential
 	_, err := r.client.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
@@ -561,8 +562,8 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 
 	credentialsGroupResp, err := client.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return false, nil
 		}
 		return false, fmt.Errorf("getting credentials groups: %w", err)

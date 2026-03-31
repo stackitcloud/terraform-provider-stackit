@@ -335,8 +335,7 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 	networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -452,8 +451,8 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	// Delete network area region configuration
 	err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))

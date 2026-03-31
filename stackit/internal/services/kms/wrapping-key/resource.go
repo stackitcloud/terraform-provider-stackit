@@ -335,8 +335,7 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	wrappingKeyResponse, err := r.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
 			return
 		}
@@ -381,8 +380,8 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 
 	err := r.client.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting wrapping key", fmt.Sprintf("Calling API: %v", err))

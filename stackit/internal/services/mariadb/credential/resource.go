@@ -1,6 +1,7 @@
 package mariadb
 
 import (
+	"errors"
 	"context"
 	"fmt"
 	"net/http"
@@ -244,8 +245,8 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -298,8 +299,8 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete existing record set
 	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))

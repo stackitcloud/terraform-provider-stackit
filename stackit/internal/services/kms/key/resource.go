@@ -329,8 +329,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	keyResponse, err := r.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -375,8 +374,8 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	err := r.client.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key", fmt.Sprintf("Calling API: %v", err))
