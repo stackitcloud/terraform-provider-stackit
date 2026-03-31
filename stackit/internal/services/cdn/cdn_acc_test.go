@@ -101,7 +101,7 @@ func configVarsHttpUpdated() config.Variables {
 	return updatedConfig
 }
 
-func makeCertAndKey(organization string, domain string) (cert, key []byte) {
+func makeCertAndKey(organization, domain string) (cert, key []byte) {
 	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate key: %s", err.Error())
