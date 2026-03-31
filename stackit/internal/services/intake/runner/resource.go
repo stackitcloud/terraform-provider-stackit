@@ -329,6 +329,8 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Wait for update
 	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
