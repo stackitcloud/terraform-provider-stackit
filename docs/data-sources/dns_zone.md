@@ -29,6 +29,7 @@ data "stackit_dns_zone" "example" {
 ### Optional
 
 - `dns_name` (String) The zone name. E.g. `example.com` (must not end with a trailing dot).
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `zone_id` (String) The zone ID.
 
 ### Read-Only
@@ -52,3 +53,10 @@ data "stackit_dns_zone" "example" {
 - `state` (String) Zone state.
 - `type` (String) Zone type.
 - `visibility` (String) Visibility of the zone.
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
