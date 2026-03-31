@@ -346,6 +346,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 										"description": schema.StringAttribute{
 											Description: schemaDescriptions["config_redirects_rule_description"],
 											Optional:    true,
+											Computed:    true,
+											Default:     stringdefault.StaticString(""),
 										},
 										"enabled": schema.BoolAttribute{
 											Optional:    true,
@@ -971,7 +973,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 						return core.DiagsToError(diags)
 					}
 
-					tfValMatchCond := types.StringNull()
+					tfValMatchCond := types.StringValue("ANY")
 					if m.ValueMatchCondition != nil {
 						tfValMatchCond = types.StringValue(string(*m.ValueMatchCondition))
 					}
@@ -992,12 +994,12 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 				return core.DiagsToError(diags)
 			}
 
-			tfDesc := types.StringNull()
+			tfDesc := types.StringValue("")
 			if r.Description != nil {
 				tfDesc = types.StringValue(*r.Description)
 			}
 
-			tfEnabled := types.BoolNull()
+			tfEnabled := types.BoolValue(true)
 			if r.Enabled != nil {
 				tfEnabled = types.BoolValue(*r.Enabled)
 			}
@@ -1012,7 +1014,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 				tfStatusCode = types.Int32Value(int32(*r.StatusCode))
 			}
 
-			tfRuleMatchCond := types.StringNull()
+			tfRuleMatchCond := types.StringValue("ANY")
 			if r.RuleMatchCondition != nil {
 				tfRuleMatchCond = types.StringValue(string(*r.RuleMatchCondition))
 			}

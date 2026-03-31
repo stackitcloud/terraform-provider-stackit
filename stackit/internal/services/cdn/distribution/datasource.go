@@ -411,7 +411,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 
 			tfStatusCode := types.Int32Null()
 			if r.StatusCode != nil {
-				tfStatusCode = types.Int32Value(int32(*r.StatusCode))
+				tfStatusCode = types.Int32Value(int32(*r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
 			}
 
 			tfRuleMatchCond := types.StringNull()

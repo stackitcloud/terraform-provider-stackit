@@ -42,7 +42,11 @@ func TestToCreatePayload(t *testing.T) {
 		"enabled": types.BoolValue(true),
 	})
 
-	redirectsAttrTypes := configTypes["redirects"].(basetypes.ObjectType).AttrTypes
+	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
+	if !ok {
+		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
+	}
+	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
@@ -276,7 +280,11 @@ func TestConvertConfig(t *testing.T) {
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 
-	redirectsAttrTypes := configTypes["redirects"].(basetypes.ObjectType).AttrTypes
+	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
+	if !ok {
+		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
+	}
+	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
@@ -524,7 +532,11 @@ func TestMapFields(t *testing.T) {
 		"enabled": types.BoolValue(true),
 	})
 
-	redirectsAttrTypes := configTypes["redirects"].(basetypes.ObjectType).AttrTypes
+	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
+	if !ok {
+		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
+	}
+	redirectsAttrTypes := redirectsObjType.AttrTypes
 
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,

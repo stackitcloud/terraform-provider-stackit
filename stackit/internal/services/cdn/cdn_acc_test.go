@@ -92,12 +92,15 @@ var testConfigVarsHttp = config.Variables{
 	"origin_request_headers_value": config.StringVariable("x-custom-value"),
 	"certificate":                  config.StringVariable(string(cert)),
 	"private_key":                  config.StringVariable(string(key)),
+	"redirect_target_url":          config.StringVariable("https://example.com"),
+	"redirect_status_code":         config.IntegerVariable(301),
+	"redirect_matcher_value":       config.StringVariable("/shop/*"),
 }
 
 func configVarsHttpUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsHttp)
 	updatedConfig["regions"] = config.ListVariable(config.StringVariable("EU"), config.StringVariable("US"), config.StringVariable("ASIA"))
-
+	updatedConfig["redirect_target_url"] = config.StringVariable("https://example.com/updated")
 	return updatedConfig
 }
 
@@ -157,6 +160,11 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "domains.0.name"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.target_url", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_target_url"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.status_code", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_status_code"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values.0", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_value"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
@@ -277,6 +285,9 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.target_url", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_target_url"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.status_code", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_status_code"])),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
@@ -318,6 +329,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
 						"DE",
 					),
+
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.target_url", "https://example.com/updated"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.status_code", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_status_code"])),
 
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),

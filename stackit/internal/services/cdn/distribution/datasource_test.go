@@ -40,7 +40,12 @@ func TestMapDataSourceFields(t *testing.T) {
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
-	redirectsAttrTypes := configTypes["redirects"].(basetypes.ObjectType).AttrTypes
+	// Safely assert the type
+	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
+	if !ok {
+		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
+	}
+	redirectsAttrTypes := redirectsObjType.AttrTypes
 	config := types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
