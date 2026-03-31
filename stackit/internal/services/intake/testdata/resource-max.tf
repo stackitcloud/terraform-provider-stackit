@@ -2,14 +2,16 @@
 variable "project_id" {}
 variable "name" {}
 variable "region" {}
+variable "max_message_size_kib" {}
+variable "max_messages_per_hour" {}
 
 resource "stackit_intake_runner" "example" {
   project_id            = var.project_id
   name                  = var.name
   region                = var.region
   description           = "An example runner for Intake"
-  max_message_size_kib  = 1024
-  max_messages_per_hour = 1100
+  max_message_size_kib  = var.max_message_size_kib
+  max_messages_per_hour = var.max_messages_per_hour
   labels = {
     "created_by" = "terraform-provider-stackit"
     "env"        = "development"
