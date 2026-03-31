@@ -32,8 +32,8 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	return apiClient
 }
 
-func MapLabels(ctx context.Context, responseLabels *map[string]interface{}, currentLabels types.Map) (basetypes.MapValue, error) { //nolint:gocritic // Linter wants to have a non-pointer type for the map, but this would mean a nil check has to be done before every usage of this func.
-	labelsTF, diags := types.MapValueFrom(ctx, types.StringType, map[string]interface{}{})
+func MapLabels(ctx context.Context, responseLabels *map[string]any, currentLabels types.Map) (basetypes.MapValue, error) { //nolint:gocritic // Linter wants to have a non-pointer type for the map, but this would mean a nil check has to be done before every usage of this func.
+	labelsTF, diags := types.MapValueFrom(ctx, types.StringType, map[string]any{})
 	if diags.HasError() {
 		return labelsTF, fmt.Errorf("convert labels to StringValue map: %w", core.DiagsToError(diags))
 	}

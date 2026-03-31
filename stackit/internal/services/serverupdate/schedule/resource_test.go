@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
 )
 
@@ -21,7 +20,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&sdk.UpdateSchedule{
-				Id: utils.Ptr(int64(5)),
+				Id: new(int64(5)),
 			},
 			testRegion,
 			Model{
@@ -36,11 +35,11 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&sdk.UpdateSchedule{
-				Id:                utils.Ptr(int64(5)),
-				Enabled:           utils.Ptr(true),
-				Name:              utils.Ptr("update_schedule_name_1"),
-				Rrule:             utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-				MaintenanceWindow: utils.Ptr(int64(1)),
+				Id:                new(int64(5)),
+				Enabled:           new(true),
+				Name:              new("update_schedule_name_1"),
+				Rrule:             new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+				MaintenanceWindow: new(int64(1)),
 			},
 			testRegion,
 			Model{
@@ -116,10 +115,10 @@ func TestToCreatePayload(t *testing.T) {
 				MaintenanceWindow: types.Int64Value(1),
 			},
 			&sdk.CreateUpdateSchedulePayload{
-				Name:              utils.Ptr("name"),
-				Enabled:           utils.Ptr(true),
-				Rrule:             utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-				MaintenanceWindow: utils.Ptr(int64(1)),
+				Name:              new("name"),
+				Enabled:           new(true),
+				Rrule:             new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+				MaintenanceWindow: new(int64(1)),
 			},
 			true,
 		},
@@ -130,8 +129,8 @@ func TestToCreatePayload(t *testing.T) {
 				Rrule: types.StringValue(""),
 			},
 			&sdk.CreateUpdateSchedulePayload{
-				Name:  utils.Ptr(""),
-				Rrule: utils.Ptr(""),
+				Name:  new(""),
+				Rrule: new(""),
 			},
 			true,
 		},
@@ -183,10 +182,10 @@ func TestToUpdatePayload(t *testing.T) {
 				MaintenanceWindow: types.Int64Value(1),
 			},
 			&sdk.UpdateUpdateSchedulePayload{
-				Name:              utils.Ptr("name"),
-				Enabled:           utils.Ptr(true),
-				Rrule:             utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-				MaintenanceWindow: utils.Ptr(int64(1)),
+				Name:              new("name"),
+				Enabled:           new(true),
+				Rrule:             new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+				MaintenanceWindow: new(int64(1)),
 			},
 			true,
 		},
@@ -197,8 +196,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Rrule: types.StringValue(""),
 			},
 			&sdk.UpdateUpdateSchedulePayload{
-				Name:  utils.Ptr(""),
-				Rrule: utils.Ptr(""),
+				Name:  new(""),
+				Rrule: new(""),
 			},
 			true,
 		},

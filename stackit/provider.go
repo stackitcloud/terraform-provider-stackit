@@ -74,6 +74,7 @@ import (
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
 	objectStorageBucket "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/bucket"
+	compliancelock "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/compliance-lock"
 	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
 	alertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/alertgroup"
@@ -97,7 +98,9 @@ import (
 	scfPlatform "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/platform"
 	secretsManagerInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/instance"
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
+	serverBackupEnable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/enable"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
+	serverUpdateEnable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/enable"
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
 	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
 	serviceAccounts "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/accounts"
@@ -682,6 +685,9 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		share.NewShareDataSource,
 		exportpolicy.NewExportPolicyDataSource,
 		snapshots.NewResourcePoolSnapshotDataSource,
+		compliancelock.NewComplianceLockDataSource,
+		serverBackupEnable.NewServerBackupEnableDataSource,
+		serverUpdateEnable.NewServerUpdateEnableDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 
@@ -767,6 +773,9 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resourcepool.NewResourcePoolResource,
 		share.NewShareResource,
 		exportpolicy.NewExportPolicyResource,
+		compliancelock.NewComplianceLockResource,
+		serverBackupEnable.NewServerBackupEnableResource,
+		serverUpdateEnable.NewServerUpdateEnableResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

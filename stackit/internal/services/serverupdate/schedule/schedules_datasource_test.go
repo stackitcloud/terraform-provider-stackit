@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
 )
 
@@ -39,11 +38,11 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 			&sdk.GetUpdateSchedulesResponse{
 				Items: &[]sdk.UpdateSchedule{
 					{
-						Id:                utils.Ptr(int64(5)),
-						Enabled:           utils.Ptr(true),
-						Name:              utils.Ptr("update_schedule_name_1"),
-						Rrule:             utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-						MaintenanceWindow: utils.Ptr(int64(1)),
+						Id:                new(int64(5)),
+						Enabled:           new(true),
+						Name:              new("update_schedule_name_1"),
+						Rrule:             new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+						MaintenanceWindow: new(int64(1)),
 					},
 				},
 			},

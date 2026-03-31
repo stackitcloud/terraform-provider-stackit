@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -100,7 +101,7 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:    true,
 				ElementType: types.StringType,
 			},
-			"ttl": schema.Int64Attribute{
+			"ttl": schema.Int32Attribute{
 				Description: "Time to live. E.g. 3600",
 				Computed:    true,
 			},
@@ -145,7 +146,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
-	recordSetResp, err := d.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
+	recordSetResp, err := d.client.DefaultAPI.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -163,7 +164,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	ctx = core.LogResponse(ctx)
 
-	if recordSetResp != nil && recordSetResp.Rrset.State != nil && *recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
+	if recordSetResp != nil && recordSetResp.Rrset.State == wait.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", "Record set was deleted successfully")
 		return

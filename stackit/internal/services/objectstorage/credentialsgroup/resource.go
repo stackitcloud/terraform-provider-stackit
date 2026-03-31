@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
 )
 
@@ -188,7 +187,7 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "region", region)
 
 	createCredentialsGroupPayload := objectstorage.CreateCredentialsGroupPayload{
-		DisplayName: sdkUtils.Ptr(credentialsGroupName),
+		DisplayName: new(credentialsGroupName),
 	}
 
 	// Handle project init

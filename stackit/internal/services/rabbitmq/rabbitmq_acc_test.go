@@ -39,16 +39,17 @@ func parametersConfig(params map[string]string) string {
 		"syslog",
 		"tls_ciphers",
 	}
-	parameters := "parameters = {"
+	var parameters strings.Builder
+	parameters.WriteString("parameters = {")
 	for k, v := range params {
 		if utils.Contains(nonStringParams, k) {
-			parameters += fmt.Sprintf("%s = %s\n", k, v)
+			parameters.WriteString(fmt.Sprintf("%s = %s\n", k, v))
 		} else {
-			parameters += fmt.Sprintf("%s = %q\n", k, v)
+			parameters.WriteString(fmt.Sprintf("%s = %q\n", k, v))
 		}
 	}
-	parameters += "\n}"
-	return parameters
+	parameters.WriteString("\n}")
+	return parameters.String()
 }
 
 func resourceConfig(params map[string]string) string {

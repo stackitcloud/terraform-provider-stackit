@@ -29,6 +29,9 @@ var testConfigVarsMin = config.Variables{
 	"objectstorage_bucket_name":            config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
 	"objectstorage_credentials_group_name": config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
 	"expiration_timestamp":                 config.StringVariable(fmt.Sprintf("%d-01-02T03:04:05Z", time.Now().Year()+1)),
+
+	"objectstorage_bucket_name_with_lock": config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
+	"object_lock":                         config.BoolVariable(true),
 }
 
 func TestAccObjectStorageResourceMin(t *testing.T) {
@@ -46,6 +49,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "name", testutil.ConvertConfigVariable(testConfigVarsMin["objectstorage_bucket_name"])),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_path_style"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style"),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "object_lock", "false"),
 
 					// Credentials group data
 					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -81,6 +85,17 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "name"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "access_key"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "secret_access_key"),
+
+					// compliance lock
+					resource.TestCheckResourceAttr("stackit_objectstorage_compliance_lock.compliance_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_compliance_lock.compliance_lock", "max_retention_days"),
+
+					// object storage with object lock enabled
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "name", testutil.ConvertConfigVariable(testConfigVarsMin["objectstorage_bucket_name_with_lock"])),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket_object_lock", "url_path_style"),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style"),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "object_lock", testutil.ConvertConfigVariable(testConfigVarsMin["object_lock"])),
 				),
 			},
 			// Data source
@@ -109,6 +124,13 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								project_id  = stackit_objectstorage_credential.credential_time.project_id
 								credentials_group_id = stackit_objectstorage_credential.credential_time.credentials_group_id
 								credential_id  = stackit_objectstorage_credential.credential_time.credential_id
+							}
+							data "stackit_objectstorage_compliance_lock" "compliance_lock" {
+								project_id = stackit_objectstorage_compliance_lock.compliance_lock.project_id
+							}
+							data "stackit_objectstorage_bucket" "bucket_object_lock" {
+								project_id  = stackit_objectstorage_bucket.bucket_object_lock.project_id
+								name = stackit_objectstorage_bucket.bucket_object_lock.name
 							}`,
 					testutil.ObjectStorageProviderConfig()+resourceMinConfig,
 				),
@@ -126,6 +148,10 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
 						"data.stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket", "object_lock",
+						"data.stackit_objectstorage_bucket.bucket", "object_lock",
 					),
 
 					// Credentials group data
@@ -185,6 +211,29 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_credential.credential_time", "expiration_timestamp",
 						"data.stackit_objectstorage_credential.credential_time", "expiration_timestamp",
+					),
+
+					// Compliance lock
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_compliance_lock.compliance_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_objectstorage_compliance_lock.compliance_lock", "max_retention_days"),
+
+					// Bucket data with object lock
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_bucket.bucket_object_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "name",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "url_path_style",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "url_path_style",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "object_lock",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "object_lock",
 					),
 				),
 			},

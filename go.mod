@@ -1,6 +1,6 @@
 module github.com/stackitcloud/terraform-provider-stackit
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/google/go-cmp v0.7.0
@@ -12,43 +12,43 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.23.0
-	github.com/stackitcloud/stackit-sdk-go/services/alb v0.9.3
-	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.10.0
+	github.com/stackitcloud/stackit-sdk-go/services/alb v0.12.1
+	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
-	github.com/stackitcloud/stackit-sdk-go/services/edge v0.4.3
-	github.com/stackitcloud/stackit-sdk-go/services/git v0.10.3
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.8.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.25.6
-	github.com/stackitcloud/stackit-sdk-go/services/logs v0.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.25.6
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.27.1
+	github.com/stackitcloud/stackit-sdk-go/services/logs v0.7.1
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.4.5
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.24.6
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.6
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0
-	github.com/stackitcloud/stackit-sdk-go/services/scf v0.4.3
+	github.com/stackitcloud/stackit-sdk-go/services/scf v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.12.0
-	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.2.7
-	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.4.1
+	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.6.1
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.6.1
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.33.0
+	golang.org/x/mod v0.34.0
 )
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260109210033-bd525da824e2 // indirect
+	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
 )
 
 require (
@@ -90,12 +90,12 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.17.0 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.1 // indirect

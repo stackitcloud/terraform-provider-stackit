@@ -174,6 +174,8 @@ func TestAccEdgeCloudMax(t *testing.T) {
 					// check plans data source
 					resource.TestCheckResourceAttr("data.stackit_edgecloud_plans.this", "id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_edgecloud_plans.this", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttrSet("data.stackit_edgecloud_plans.this", "plans.0.min_edge_hosts"),
+					resource.TestCheckResourceAttrSet("data.stackit_edgecloud_plans.this", "plans.0.max_edge_hosts"),
 				),
 			},
 			// Kubeconfig

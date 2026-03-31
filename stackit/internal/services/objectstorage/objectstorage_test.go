@@ -42,7 +42,7 @@ resource "stackit_objectstorage_bucket" "instance" {
 						testutil.MockResponse{
 							Description: "project enable",
 							ToJsonBody: objectstorage.ProjectStatus{
-								Project: utils.Ptr(projectId),
+								Project: new(projectId),
 								Scope:   utils.Ptr(objectstorage.PROJECTSCOPE_PUBLIC),
 							},
 						},

@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 )
 
@@ -35,9 +34,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "default_sort_descending",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
-				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
-				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
+				{Email: new(emailA), Id: new(idA)},
+				{Email: new(emailC), Id: new(idC)},
+				{Email: new(emailB), Id: new(idB)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:     types.StringValue(projectId),
@@ -58,9 +57,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "sort_ascending",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
-				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
-				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
+				{Email: new(emailC), Id: new(idC)},
+				{Email: new(emailA), Id: new(idA)},
+				{Email: new(emailB), Id: new(idB)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:     types.StringValue(projectId),
@@ -81,9 +80,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "regex_filter_match",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
-				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
-				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
+				{Email: new(emailA), Id: new(idA)},
+				{Email: new(emailB), Id: new(idB)},
+				{Email: new(emailC), Id: new(idC)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:     types.StringValue(projectId),
@@ -105,9 +104,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "suffix_filter_match",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
-				{Email: utils.Ptr(emailB), Id: utils.Ptr(idB)},
-				{Email: utils.Ptr(emailC), Id: utils.Ptr(idC)},
+				{Email: new(emailA), Id: new(idA)},
+				{Email: new(emailB), Id: new(idB)},
+				{Email: new(emailC), Id: new(idC)},
 			},
 			initialModel: ServiceAccountsModel{
 				ProjectId:   types.StringValue(projectId),
@@ -126,7 +125,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "skip_nil_email",
 			apiItems: []serviceaccount.ServiceAccount{
-				{Email: utils.Ptr(emailA), Id: utils.Ptr(idA)},
+				{Email: new(emailA), Id: new(idA)},
 				{Email: nil}, // Should be skipped
 			},
 			initialModel: ServiceAccountsModel{

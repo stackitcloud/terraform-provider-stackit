@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -29,8 +28,8 @@ func TestMapFields(t *testing.T) {
 				NetworkAreaId:  types.StringValue("aid"),
 			},
 			&iaas.RoutingTable{
-				Id:   utils.Ptr("rtid"),
-				Name: utils.Ptr("default_values"),
+				Id:   new("rtid"),
+				Name: new("default_values"),
 			},
 			Model{
 				Id:             types.StringValue(id),
@@ -50,10 +49,10 @@ func TestMapFields(t *testing.T) {
 				NetworkAreaId:  types.StringValue("aid"),
 			},
 			&iaas.RoutingTable{
-				Id:          utils.Ptr("rtid"),
-				Name:        utils.Ptr("values_ok"),
-				Description: utils.Ptr("Description"),
-				Labels: &map[string]interface{}{
+				Id:          new("rtid"),
+				Name:        new("values_ok"),
+				Description: new("Description"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
 			},
@@ -136,13 +135,13 @@ func TestToCreatePayload(t *testing.T) {
 				DynamicRoutes: types.BoolValue(true),
 			},
 			expected: &iaas.AddRoutingTableToAreaPayload{
-				Description: utils.Ptr("Description"),
-				Name:        utils.Ptr("default_ok"),
-				Labels: &map[string]interface{}{
+				Description: new("Description"),
+				Name:        new("default_ok"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
-				SystemRoutes:  utils.Ptr(true),
-				DynamicRoutes: utils.Ptr(true),
+				SystemRoutes:  new(true),
+				DynamicRoutes: new(true),
 			},
 			isValid: true,
 		},
@@ -186,14 +185,14 @@ func TestToUpdatePayload(t *testing.T) {
 				SystemRoutes:  types.BoolValue(false),
 			},
 			&iaas.UpdateRoutingTableOfAreaPayload{
-				Description: utils.Ptr("Description"),
-				Name:        utils.Ptr("default_ok"),
-				Labels: &map[string]interface{}{
+				Description: new("Description"),
+				Name:        new("default_ok"),
+				Labels: &map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},
-				DynamicRoutes: utils.Ptr(false),
-				SystemRoutes:  utils.Ptr(false),
+				DynamicRoutes: new(false),
+				SystemRoutes:  new(false),
 			},
 			true,
 		},

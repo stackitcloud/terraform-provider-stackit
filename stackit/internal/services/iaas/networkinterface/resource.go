@@ -594,7 +594,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNicPayload,
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var labelPayload *map[string]interface{}
+	var labelPayload *map[string]any
 
 	modelSecurityGroups := []string{}
 	if !(model.SecurityGroupIds.IsNull() || model.SecurityGroupIds.IsUnknown()) {
@@ -649,7 +649,7 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var labelPayload *map[string]interface{}
+	var labelPayload *map[string]any
 
 	modelSecurityGroups := []string{}
 	for _, ns := range model.SecurityGroupIds.Elements() {

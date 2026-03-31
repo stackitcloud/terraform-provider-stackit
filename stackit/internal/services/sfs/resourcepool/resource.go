@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -27,7 +26,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	coreutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -81,7 +79,7 @@ func (r *resourcePoolResource) ModifyPlan(ctx context.Context, req resource.Modi
 		return
 	}
 
-	coreutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	utils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -245,7 +243,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":       projectId,
 		"region":           region,
 		"resource_pool_id": *resourcePool.ResourcePool.Id,
@@ -467,10 +465,11 @@ func (r *resourcePoolResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_pool_id"), idParts[2])...)
-
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":       idParts[0],
+		"region":           idParts[1],
+		"resource_pool_id": idParts[2],
+	})
 	tflog.Info(ctx, "SFS resource pool imported")
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -123,11 +124,11 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Description: "A contact e-mail for the zone.",
 				Computed:    true,
 			},
-			"default_ttl": schema.Int64Attribute{
+			"default_ttl": schema.Int32Attribute{
 				Description: "Default time to live.",
 				Computed:    true,
 			},
-			"expire_time": schema.Int64Attribute{
+			"expire_time": schema.Int32Attribute{
 				Description: "Expire time.",
 				Computed:    true,
 			},
@@ -135,7 +136,7 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Description: "Specifies, if the zone is a reverse zone or not.",
 				Computed:    true,
 			},
-			"negative_cache": schema.Int64Attribute{
+			"negative_cache": schema.Int32Attribute{
 				Description: "Negative caching.",
 				Computed:    true,
 			},
@@ -152,15 +153,15 @@ func (d *zoneDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Description: "Record count how many records are in the zone.",
 				Computed:    true,
 			},
-			"refresh_time": schema.Int64Attribute{
+			"refresh_time": schema.Int32Attribute{
 				Description: "Refresh time.",
 				Computed:    true,
 			},
-			"retry_time": schema.Int64Attribute{
+			"retry_time": schema.Int32Attribute{
 				Description: "Retry time.",
 				Computed:    true,
 			},
-			"serial_number": schema.Int64Attribute{
+			"serial_number": schema.Int32Attribute{
 				Description: "Serial number.",
 				Computed:    true,
 			},
@@ -202,7 +203,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	var err error
 
 	if zoneId != "" {
-		zoneResp, err = d.client.GetZone(ctx, projectId, zoneId).Execute()
+		zoneResp, err = d.client.DefaultAPI.GetZone(ctx, projectId, zoneId).Execute()
 		if err != nil {
 			utils.LogError(
 				ctx,
@@ -220,7 +221,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 		ctx = core.LogResponse(ctx)
 	} else {
-		listZoneResp, err := d.client.ListZones(ctx, projectId).
+		listZoneResp, err := d.client.DefaultAPI.ListZones(ctx, projectId).
 			DnsNameEq(dnsName).
 			ActiveEq(true).
 			Execute()
@@ -241,7 +242,7 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 		ctx = core.LogResponse(ctx)
 
-		if *listZoneResp.TotalItems != 1 {
+		if listZoneResp.TotalItems != 1 {
 			utils.LogError(
 				ctx,
 				&resp.Diagnostics,
@@ -253,11 +254,11 @@ func (d *zoneDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		zones := *listZoneResp.Zones
+		zones := listZoneResp.Zones
 		zoneResp = dns.NewZoneResponse(zones[0])
 	}
 
-	if zoneResp != nil && zoneResp.Zone.State != nil && *zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
+	if zoneResp != nil && zoneResp.Zone.State == wait.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading zone", "Zone was deleted successfully")
 		return

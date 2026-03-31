@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -890,7 +889,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
 
 		// Generate API request body from model
-		payload, err := toTargetPoolUpdatePayload(ctx, sdkUtils.Ptr(targetPoolModel))
+		payload, err := toTargetPoolUpdatePayload(ctx, new(targetPoolModel))
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload for target pool: %v", err))
 			return
@@ -985,7 +984,7 @@ func (r *loadBalancerResource) ImportState(ctx context.Context, req resource.Imp
 		return
 	}
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": idParts[0],
 		"region":     idParts[1],
 		"name":       idParts[2],

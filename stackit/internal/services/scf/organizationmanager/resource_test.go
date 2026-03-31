@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
 )
 
@@ -35,10 +34,10 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.OrgManager{
-				Guid:      utils.Ptr(testUserId),
-				OrgId:     utils.Ptr(testOrgId),
-				ProjectId: utils.Ptr(testProjectId),
-				Region:    utils.Ptr(testRegion),
+				Guid:      new(testUserId),
+				OrgId:     new(testOrgId),
+				ProjectId: new(testProjectId),
+				Region:    new(testRegion),
 				CreatedAt: &createdTime,
 				UpdatedAt: &createdTime,
 			},
@@ -58,14 +57,14 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "max_input",
 			input: &scf.OrgManager{
-				Guid:       utils.Ptr(testUserId),
-				OrgId:      utils.Ptr(testOrgId),
-				ProjectId:  utils.Ptr(testProjectId),
-				PlatformId: utils.Ptr(testPlatformId),
-				Region:     utils.Ptr(testRegion),
+				Guid:       new(testUserId),
+				OrgId:      new(testOrgId),
+				ProjectId:  new(testProjectId),
+				PlatformId: new(testPlatformId),
+				Region:     new(testRegion),
 				CreatedAt:  &createdTime,
 				UpdatedAt:  &createdTime,
-				Username:   utils.Ptr("test-user"),
+				Username:   new("test-user"),
 			},
 			expected: &Model{
 				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", testProjectId, testRegion, testOrgId, testUserId)),
@@ -96,7 +95,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "missing_id",
 			input: &scf.OrgManager{
-				Username: utils.Ptr("scf-missing-id"),
+				Username: new("scf-missing-id"),
 			},
 			expected: nil,
 			isValid:  false,
@@ -140,10 +139,10 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.OrgManagerResponse{
-				Guid:      utils.Ptr(testUserId),
-				OrgId:     utils.Ptr(testOrgId),
-				ProjectId: utils.Ptr(testProjectId),
-				Region:    utils.Ptr(testRegion),
+				Guid:      new(testUserId),
+				OrgId:     new(testOrgId),
+				ProjectId: new(testProjectId),
+				Region:    new(testRegion),
 				CreatedAt: &createdTime,
 				UpdatedAt: &createdTime,
 			},
@@ -164,15 +163,15 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			description: "max_input",
 			input: &scf.OrgManagerResponse{
-				Guid:       utils.Ptr(testUserId),
-				OrgId:      utils.Ptr(testOrgId),
-				ProjectId:  utils.Ptr(testProjectId),
-				PlatformId: utils.Ptr(testPlatformId),
-				Region:     utils.Ptr(testRegion),
+				Guid:       new(testUserId),
+				OrgId:      new(testOrgId),
+				ProjectId:  new(testProjectId),
+				PlatformId: new(testPlatformId),
+				Region:     new(testRegion),
 				CreatedAt:  &createdTime,
 				UpdatedAt:  &createdTime,
-				Username:   utils.Ptr("test-user"),
-				Password:   utils.Ptr("test-password"),
+				Username:   new("test-user"),
+				Password:   new("test-password"),
 			},
 			expected: &Model{
 				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", testProjectId, testRegion, testOrgId, testUserId)),
@@ -203,7 +202,7 @@ func TestMapFieldsCreate(t *testing.T) {
 		{
 			description: "missing_id",
 			input: &scf.OrgManagerResponse{
-				Username: utils.Ptr("scf-missing-id"),
+				Username: new("scf-missing-id"),
 			},
 			expected: nil,
 			isValid:  false,

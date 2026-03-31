@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 )
 
@@ -454,7 +453,7 @@ func toCreatePayload(model *Model) (*ske.CreateKubeconfigPayload, error) {
 	expiration := conversion.Int64ValueToPointer(model.Expiration)
 	var expirationStringPtr *string
 	if expiration != nil {
-		expirationStringPtr = sdkUtils.Ptr(strconv.FormatInt(*expiration, 10))
+		expirationStringPtr = new(strconv.FormatInt(*expiration, 10))
 	}
 
 	return &ske.CreateKubeconfigPayload{

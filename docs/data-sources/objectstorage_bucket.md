@@ -34,5 +34,6 @@ data "stackit_objectstorage_bucket" "example" {
 ### Read-Only
 
 - `id` (String) Terraform's internal data source identifier. It is structured as "`project_id`,`region`,`name`".
+- `object_lock` (Boolean) Enable Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.
 - `url_path_style` (String)
 - `url_virtual_hosted_style` (String)

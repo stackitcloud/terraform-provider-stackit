@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-type attributeGetterFunc func(ctx context.Context, attributePath path.Path, target interface{}) diag.Diagnostics
+type attributeGetterFunc func(ctx context.Context, attributePath path.Path, target any) diag.Diagnostics
 
-func (a attributeGetterFunc) GetAttribute(ctx context.Context, attributePath path.Path, target interface{}) diag.Diagnostics {
+func (a attributeGetterFunc) GetAttribute(ctx context.Context, attributePath path.Path, target any) diag.Diagnostics {
 	return a(ctx, attributePath, target)
 }
 
@@ -41,7 +41,7 @@ func TestGetTimeFromString(t *testing.T) {
 			name: "simple string",
 			args: args{
 				path: path.Root("foo"),
-				source: func(_ context.Context, _ path.Path, target interface{}) diag.Diagnostics {
+				source: func(_ context.Context, _ path.Path, target any) diag.Diagnostics {
 					t, ok := target.(*types.String)
 					if !ok {
 						log.Panicf("wrong type %T", target)
@@ -57,7 +57,7 @@ func TestGetTimeFromString(t *testing.T) {
 			name: "invalid type",
 			args: args{
 				path: path.Root("foo"),
-				source: func(_ context.Context, p path.Path, _ interface{}) (diags diag.Diagnostics) {
+				source: func(_ context.Context, p path.Path, _ any) (diags diag.Diagnostics) {
 					diags.AddAttributeError(p, "kapow", "kapow")
 					return diags
 				},

@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 )
 
@@ -35,9 +34,9 @@ func TestToCreatePayload(t *testing.T) {
 				Password:    types.StringValue("password"),
 			},
 			&loadbalancer.CreateCredentialsPayload{
-				DisplayName: utils.Ptr("display_name"),
-				Username:    utils.Ptr("username"),
-				Password:    utils.Ptr("password"),
+				DisplayName: new("display_name"),
+				Username:    new("username"),
+				Password:    new("password"),
 			},
 			true,
 		},
@@ -80,8 +79,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values_ok",
 			&loadbalancer.CredentialsResponse{
-				CredentialsRef: utils.Ptr("credentials_ref"),
-				Username:       utils.Ptr("username"),
+				CredentialsRef: new("credentials_ref"),
+				Username:       new("username"),
 			},
 			testRegion,
 			&Model{
@@ -97,9 +96,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_ok",
 			&loadbalancer.CredentialsResponse{
-				CredentialsRef: utils.Ptr("credentials_ref"),
-				DisplayName:    utils.Ptr("display_name"),
-				Username:       utils.Ptr("username"),
+				CredentialsRef: new("credentials_ref"),
+				DisplayName:    new("display_name"),
+				Username:       new("username"),
 			},
 			testRegion,
 			&Model{
@@ -122,8 +121,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_username",
 			&loadbalancer.CredentialsResponse{
-				CredentialsRef: utils.Ptr("credentials_ref"),
-				DisplayName:    utils.Ptr("display_name"),
+				CredentialsRef: new("credentials_ref"),
+				DisplayName:    new("display_name"),
 			},
 			testRegion,
 			&Model{},
@@ -132,8 +131,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_credentials_ref",
 			&loadbalancer.CredentialsResponse{
-				DisplayName: utils.Ptr("display_name"),
-				Username:    utils.Ptr("username"),
+				DisplayName: new("display_name"),
+				Username:    new("username"),
 			},
 			testRegion,
 			&Model{},

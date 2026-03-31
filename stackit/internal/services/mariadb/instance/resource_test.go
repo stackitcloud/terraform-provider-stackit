@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
 )
 
@@ -38,13 +37,13 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 })
 
 var fixtureInstanceParameters = mariadb.InstanceParameters{
-	SgwAcl:               utils.Ptr("acl"),
-	EnableMonitoring:     utils.Ptr(true),
-	Graphite:             utils.Ptr("graphite"),
-	MaxDiskThreshold:     utils.Ptr(int64(10)),
-	MetricsFrequency:     utils.Ptr(int64(10)),
-	MetricsPrefix:        utils.Ptr("prefix"),
-	MonitoringInstanceId: utils.Ptr("mid"),
+	SgwAcl:               new("acl"),
+	EnableMonitoring:     new(true),
+	Graphite:             new("graphite"),
+	MaxDiskThreshold:     new(int64(10)),
+	MetricsFrequency:     new(int64(10)),
+	MetricsPrefix:        new("prefix"),
+	MonitoringInstanceId: new("mid"),
 	Syslog:               &[]string{"syslog", "syslog2"},
 }
 
@@ -76,15 +75,15 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&mariadb.Instance{
-				PlanId:             utils.Ptr("plan"),
-				CfGuid:             utils.Ptr("cf"),
-				CfSpaceGuid:        utils.Ptr("space"),
-				DashboardUrl:       utils.Ptr("dashboard"),
-				ImageUrl:           utils.Ptr("image"),
-				InstanceId:         utils.Ptr("iid"),
-				Name:               utils.Ptr("name"),
-				CfOrganizationGuid: utils.Ptr("org"),
-				Parameters: &map[string]interface{}{
+				PlanId:             new("plan"),
+				CfGuid:             new("cf"),
+				CfSpaceGuid:        new("space"),
+				DashboardUrl:       new("dashboard"),
+				ImageUrl:           new("image"),
+				InstanceId:         new("iid"),
+				Name:               new("name"),
+				CfOrganizationGuid: new("org"),
+				Parameters: &map[string]any{
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
@@ -125,7 +124,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&mariadb.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -135,7 +134,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&mariadb.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": 1,
 				},
 			},
@@ -187,9 +186,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&mariadb.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
+				InstanceName: new("name"),
 				Parameters:   &fixtureInstanceParameters,
-				PlanId:       utils.Ptr("plan"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -201,9 +200,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureNullModelParameters,
 			},
 			&mariadb.CreateInstancePayload{
-				InstanceName: utils.Ptr(""),
+				InstanceName: new(""),
 				Parameters:   &mariadb.InstanceParameters{},
-				PlanId:       utils.Ptr(""),
+				PlanId:       new(""),
 			},
 			true,
 		},
@@ -220,8 +219,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&mariadb.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: new("name"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -276,7 +275,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr("plan"),
+				PlanId:     new("plan"),
 			},
 			true,
 		},
@@ -288,7 +287,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &mariadb.InstanceParameters{},
-				PlanId:     utils.Ptr(""),
+				PlanId:     new(""),
 			},
 			true,
 		},
@@ -304,7 +303,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&mariadb.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId: new("plan"),
 			},
 			true,
 		},

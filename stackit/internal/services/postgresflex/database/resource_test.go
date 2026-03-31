@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
 
@@ -21,7 +20,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&postgresflex.InstanceDatabase{
-				Id: utils.Ptr("uid"),
+				Id: new("uid"),
 			},
 			testRegion,
 			Model{
@@ -38,9 +37,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&postgresflex.InstanceDatabase{
-				Id:   utils.Ptr("uid"),
-				Name: utils.Ptr("dbname"),
-				Options: &map[string]interface{}{
+				Id:   new("uid"),
+				Name: new("dbname"),
+				Options: &map[string]any{
 					"owner": "username",
 				},
 			},
@@ -59,9 +58,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&postgresflex.InstanceDatabase{
-				Id:   utils.Ptr("uid"),
-				Name: utils.Ptr(""),
-				Options: &map[string]interface{}{
+				Id:   new("uid"),
+				Name: new(""),
+				Options: &map[string]any{
 					"owner": "",
 				},
 			},
@@ -94,9 +93,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_resource_id",
 			&postgresflex.InstanceDatabase{
-				Id:   utils.Ptr(""),
-				Name: utils.Ptr("dbname"),
-				Options: &map[string]interface{}{
+				Id:   new(""),
+				Name: new("dbname"),
+				Options: &map[string]any{
 					"owner": "username",
 				},
 			},
@@ -142,7 +141,7 @@ func TestToCreatePayload(t *testing.T) {
 				Owner: types.StringValue("username"),
 			},
 			&postgresflex.CreateDatabasePayload{
-				Name: utils.Ptr("dbname"),
+				Name: new("dbname"),
 				Options: &map[string]string{
 					"owner": "username",
 				},

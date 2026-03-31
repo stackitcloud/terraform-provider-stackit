@@ -39,7 +39,7 @@ func TestMapFields(t *testing.T) {
 					ProjectId: types.StringValue(projectId),
 				},
 				input: &kms.Key{
-					Id:          utils.Ptr(keyId),
+					Id:          new(keyId),
 					Protection:  utils.Ptr(kms.PROTECTION_SOFTWARE),
 					Algorithm:   utils.Ptr(kms.ALGORITHM_ECDSA_P256_SHA256),
 					Purpose:     utils.Ptr(kms.PURPOSE_ASYMMETRIC_SIGN_VERIFY),
@@ -71,10 +71,10 @@ func TestMapFields(t *testing.T) {
 					ProjectId: types.StringValue(projectId),
 				},
 				input: &kms.Key{
-					Id:          utils.Ptr(keyId),
-					Description: utils.Ptr("descr"),
-					DisplayName: utils.Ptr("name"),
-					ImportOnly:  utils.Ptr(true),
+					Id:          new(keyId),
+					Description: new("descr"),
+					DisplayName: new("name"),
+					ImportOnly:  new(true),
 					Protection:  utils.Ptr(kms.PROTECTION_SOFTWARE),
 					Algorithm:   utils.Ptr(kms.ALGORITHM_AES_256_GCM),
 					Purpose:     utils.Ptr(kms.PURPOSE_MESSAGE_AUTHENTICATION_CODE),
@@ -173,7 +173,7 @@ func TestToCreatePayload(t *testing.T) {
 				DisplayName: types.StringValue("name"),
 			},
 			expected: &kms.CreateKeyPayload{
-				DisplayName: utils.Ptr("name"),
+				DisplayName: new("name"),
 			},
 			isValid: true,
 		},
@@ -184,8 +184,8 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue(""),
 			},
 			expected: &kms.CreateKeyPayload{
-				DisplayName: utils.Ptr(""),
-				Description: utils.Ptr(""),
+				DisplayName: new(""),
+				Description: new(""),
 			},
 			isValid: true,
 		},
