@@ -160,7 +160,6 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -169,7 +168,6 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: descriptions["labels"],
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
 				},
