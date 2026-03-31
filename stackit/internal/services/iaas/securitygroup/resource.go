@@ -2,6 +2,7 @@ package securitygroup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -272,8 +273,8 @@ func (r *securityGroupResource) Read(ctx context.Context, req resource.ReadReque
 
 	securityGroupResp, err := r.client.GetSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -376,6 +377,11 @@ func (r *securityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	// Delete existing security group
 	err := r.client.DeleteSecurityGroup(ctx, projectId, region, securityGroupId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

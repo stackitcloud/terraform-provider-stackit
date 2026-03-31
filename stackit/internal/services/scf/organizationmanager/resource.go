@@ -287,8 +287,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	scfOrgManager, err := s.client.GetOrgManagerExecute(ctx, projectId, region, orgId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			core.LogAndAddWarning(ctx, &response.Diagnostics, "SCF Organization manager not found", "SCF Organization manager not found, remove from state")
 			response.State.RemoveResource(ctx)
 			return
@@ -338,8 +337,7 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	_, err := s.client.DeleteOrgManagerExecute(ctx, projectId, region, orgId)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusGone {
+		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusGone || oapiErr.StatusCode == http.StatusNotFound) {
 			tflog.Info(ctx, "Scf organization manager was already deleted")
 			return
 		}

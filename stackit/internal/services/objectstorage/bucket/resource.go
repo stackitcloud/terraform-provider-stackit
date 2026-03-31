@@ -255,8 +255,8 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	bucketResp, err := r.client.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -312,6 +312,10 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				resp.State.RemoveResource(ctx)
+				return
+			}
 			if oapiErr.StatusCode == http.StatusUnprocessableEntity {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", "Bucket isn't empty and cannot be deleted")
 				return

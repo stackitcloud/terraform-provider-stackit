@@ -2,7 +2,9 @@ package account
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -20,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -199,6 +202,11 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	// Fetch the list of service accounts from the API.
 	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error calling API: %v", err))
 		return
 	}
@@ -256,6 +264,11 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	// Call API to delete the existing service account.
 	err := r.client.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

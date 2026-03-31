@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -404,8 +405,8 @@ func (r *scrapeConfigResource) Read(ctx context.Context, req resource.ReadReques
 
 	scResp, err := r.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -528,6 +529,11 @@ func (r *scrapeConfigResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Delete existing ScrapeConfig
 	_, err := r.client.DeleteScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting scrape config", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

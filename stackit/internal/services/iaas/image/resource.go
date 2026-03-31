@@ -3,6 +3,7 @@ package image
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -523,8 +524,8 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	imageResp, err := r.client.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -627,6 +628,11 @@ func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// Delete existing image
 	err := r.client.DeleteImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting image", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

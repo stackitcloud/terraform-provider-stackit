@@ -2,6 +2,7 @@ package serviceaccountattach
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -222,8 +223,8 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 
 	serviceAccounts, err := r.client.ListServerServiceAccounts(ctx, projectId, region, serverId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -290,6 +291,11 @@ func (r *serviceAccountAttachResource) Delete(ctx context.Context, req resource.
 	// Remove service_account from server
 	_, err := r.client.RemoveServiceAccountFromServer(ctx, projectId, region, serverId, service_accountId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing service account from server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

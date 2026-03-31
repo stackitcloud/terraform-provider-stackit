@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -268,8 +269,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	projectResp, err := r.client.DefaultAPI.GetProject(ctx, containerId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusForbidden {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -363,6 +364,11 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	// Delete existing project
 	err := r.client.DefaultAPI.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
