@@ -1,6 +1,7 @@
 # This file contains all available configuration options
 # with their default values.
 
+version: "2"
 # options for analysis running
 run:
   # default concurrency is a available CPU number
@@ -8,93 +9,103 @@ run:
 
   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
-linters-settings:
-  goimports:
-    # put imports beginning with prefix after 3rd-party packages;
-    # it's a comma-separated list of prefixes
-    local-prefixes: github.com/freiheit-com/nmww
-  depguard:
-    rules:
-      main:
-        list-mode: lax # Everything is allowed unless it is denied
-        deny:
-          - pkg: "github.com/stretchr/testify"
-            desc: Do not use a testing framework
-  misspell:
-    # Correct spellings using locale preferences for US or UK.
-    # Default is to use a neutral variety of English.
-    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
-    locale: US
-  golint:
-    min-confidence: 0.8
-  gosec:
-    excludes:
-    # Suppressions: (see https://github.com/securego/gosec#available-rules for details)
-      - G104 # "Audit errors not checked" -> which we don't need and is a badly implemented version of errcheck
-      - G102 # "Bind to all interfaces" -> since this is normal in k8s
-      - G304 # "File path provided as taint input" -> too many false positives
-      - G307 # "Deferring unsafe method "Close" on type "io.ReadCloser" -> false positive when calling defer resp.Body.Close()
-  nakedret:
-    max-func-lines: 0
-  revive:
-    ignore-generated-header: true
-    severity: error
-    # https://github.com/mgechev/revive
-    rules:
-      - name: errorf
-      - name: context-as-argument
-      - name: error-return
-      - name: increment-decrement
-      - name: indent-error-flow
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: atomic
-      - name: empty-lines
-      - name: early-return
-  gocritic:
-    enabled-tags:
-      - performance
-      - style
-      - experimental
-    disabled-checks:
-      - wrapperFunc
-      - typeDefFirst
-      - ifElseChain
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
 linters:
   enable:
-    # https://golangci-lint.run/usage/linters/
-    # default linters
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    # additional linters
+    - bodyclose
+    - depguard
     - errorlint
+    - forcetypeassert
     - gochecknoinits
     - gocritic
-    - gofmt
-    - goimports
     - gosec
     - misspell
     - nakedret
     - revive
-    - depguard
-    - bodyclose
     - sqlclosecheck
     - wastedassign
-    - forcetypeassert
-    - errcheck
   disable:
     - noctx # false positive: finds errors with http.NewRequest that dont make sense
     - unparam # false positives
-issues:
-  exclude-use-default: false
-  # disable deprecation errors while we switch over to the SDK structure with multi API version support
-  exclude-rules:
-    - linters:
-        - staticcheck
-      text: "SA1019:"
+  settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax # Everything is allowed unless it is denied
+          deny:
+            - pkg: github.com/stretchr/testify
+              desc: Do not use a testing framework
+    gocritic:
+      disabled-checks:
+        - wrapperFunc
+        - typeDefFirst
+        - ifElseChain
+        - dupImport # https://github.com/go-critic/go-critic/issues/845
+      enabled-tags:
+        - performance
+        - style
+        - experimental
+    gosec:
+      excludes:
+        # Suppressions: (see https://github.com/securego/gosec#available-rules for details)
+        - G101 # "Look for hardcoded credentials" -> a lot of false positives in descriptions for resources like mariadb/credential
+        - G104 # "Audit errors not checked" -> which we don't need and is a badly implemented version of errcheck
+        - G102 # "Bind to all interfaces" -> since this is normal in k8s
+        - G304 # "File path provided as taint input" -> too many false positives
+        - G307 # "Deferring unsafe method "Close" on type "io.ReadCloser" -> false positive when calling defer resp.Body.Close()
+    misspell:
+      # Correct spellings using locale preferences for US or UK.
+      # Default is to use a neutral variety of English.
+      # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+      locale: US
+    nakedret:
+      max-func-lines: 0
+    revive:
+      severity: error
+      # https://github.com/mgechev/revive
+      rules:
+        - name: errorf
+        - name: context-as-argument
+        - name: error-return
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: atomic
+        - name: empty-lines
+        - name: early-return
+    staticcheck:
+      checks:
+        # default from https://golangci-lint.run/docs/linters/configuration/#staticcheck
+        - all
+        - "-ST1000"
+        - "-ST1003"
+        - "-ST1016"
+        - "-ST1020"
+        - "-ST1021"
+        - "-ST1022"
+        # customizations
+        - "-SA1019" # disable deprecation errors while we switch over to the SDK structure with multi API version support
+        - "-QF1001" # disable 'could apply De Morgan's law': readability of boolean expressions is subjective and should be decided on a case-by-case basis
+        - "-QF1012" # disable 'use fmt.Fprintf instead' Fprintf returns bytes written and an error, which we'd have to handle/ignore to appease some other linter
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - gocritic
+        text: 'dupOption'
+        path: _acc_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

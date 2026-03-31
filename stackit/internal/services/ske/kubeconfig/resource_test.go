@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 )
 
@@ -22,8 +21,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&ske.Kubeconfig{
-				ExpirationTimestamp: utils.Ptr(time.Date(2024, 2, 7, 16, 42, 12, 0, time.UTC)),
-				Kubeconfig:          utils.Ptr("kubeconfig"),
+				ExpirationTimestamp: new(time.Date(2024, 2, 7, 16, 42, 12, 0, time.UTC)),
+				Kubeconfig:          new("kubeconfig"),
 			},
 			Model{
 				ClusterName:   types.StringValue("name"),
@@ -53,7 +52,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_kubeconfig_field",
 			&ske.Kubeconfig{
-				ExpirationTimestamp: utils.Ptr(time.Date(2024, 2, 7, 16, 42, 12, 0, time.UTC)),
+				ExpirationTimestamp: new(time.Date(2024, 2, 7, 16, 42, 12, 0, time.UTC)),
 			},
 			Model{},
 			false,
@@ -102,7 +101,7 @@ func TestToCreatePayload(t *testing.T) {
 				Expiration: types.Int64Value(3600),
 			},
 			&ske.CreateKubeconfigPayload{
-				ExpirationSeconds: utils.Ptr("3600"),
+				ExpirationSeconds: new("3600"),
 			},
 			true,
 		},
@@ -219,7 +218,7 @@ func TestCheckCredentialsRotation(t *testing.T) {
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
 					CredentialsRotation: &ske.CredentialsRotationState{
-						LastCompletionTime: utils.Ptr(time.Now().Add(-1 * time.Hour)), // one hour ago
+						LastCompletionTime: new(time.Now().Add(-1 * time.Hour)), // one hour ago
 					},
 				},
 			},
@@ -234,7 +233,7 @@ func TestCheckCredentialsRotation(t *testing.T) {
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
 					CredentialsRotation: &ske.CredentialsRotationState{
-						LastCompletionTime: utils.Ptr(time.Now().Add(1 * time.Hour)),
+						LastCompletionTime: new(time.Now().Add(1 * time.Hour)),
 					},
 				},
 			},
@@ -286,7 +285,7 @@ func TestCheckClusterRecreation(t *testing.T) {
 			description: "cluster creation time after kubeconfig creation time",
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
-					CreationTime: utils.Ptr(time.Now().Add(-1 * time.Hour)),
+					CreationTime: new(time.Now().Add(-1 * time.Hour)),
 				},
 			},
 			inputModel: &Model{
@@ -299,7 +298,7 @@ func TestCheckClusterRecreation(t *testing.T) {
 			description: "cluster creation time before kubeconfig creation time",
 			inputCluster: &ske.Cluster{
 				Status: &ske.ClusterStatus{
-					CreationTime: utils.Ptr(time.Now().Add(1 * time.Hour)),
+					CreationTime: new(time.Now().Add(1 * time.Hour)),
 				},
 			},
 			inputModel: &Model{

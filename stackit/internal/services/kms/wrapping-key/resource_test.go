@@ -39,7 +39,7 @@ func TestMapFields(t *testing.T) {
 					WrappingKeyId: types.StringValue(wrappingKeyId),
 				},
 				input: &kms.WrappingKey{
-					Id:          utils.Ptr("wid"),
+					Id:          new("wid"),
 					AccessScope: utils.Ptr(kms.ACCESSSCOPE_PUBLIC),
 					Algorithm:   utils.Ptr(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256),
 					Purpose:     utils.Ptr(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY),
@@ -71,9 +71,9 @@ func TestMapFields(t *testing.T) {
 					WrappingKeyId: types.StringValue(wrappingKeyId),
 				},
 				input: &kms.WrappingKey{
-					Description: utils.Ptr("descr"),
-					DisplayName: utils.Ptr("name"),
-					Id:          utils.Ptr(wrappingKeyId),
+					Description: new("descr"),
+					DisplayName: new("name"),
+					Id:          new(wrappingKeyId),
 					AccessScope: utils.Ptr(kms.ACCESSSCOPE_PUBLIC),
 					Algorithm:   utils.Ptr(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256),
 					Purpose:     utils.Ptr(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY),
@@ -138,8 +138,8 @@ func TestMapFields(t *testing.T) {
 					WrappingKeyId: types.StringValue(wrappingKeyId),
 				},
 				input: &kms.WrappingKey{
-					Description: utils.Ptr(""),
-					Id:          utils.Ptr(wrappingKeyId),
+					Description: new(""),
+					Id:          new(wrappingKeyId),
 					AccessScope: utils.Ptr(kms.ACCESSSCOPE_PUBLIC),
 					Algorithm:   utils.Ptr(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256),
 					Purpose:     utils.Ptr(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY),
@@ -201,7 +201,7 @@ func TestToCreatePayload(t *testing.T) {
 				DisplayName: types.StringValue("name"),
 			},
 			&kms.CreateWrappingKeyPayload{
-				DisplayName: utils.Ptr("name"),
+				DisplayName: new("name"),
 			},
 			true,
 		},
@@ -212,8 +212,8 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue(""),
 			},
 			&kms.CreateWrappingKeyPayload{
-				DisplayName: utils.Ptr(""),
-				Description: utils.Ptr(""),
+				DisplayName: new(""),
+				Description: new(""),
 			},
 			true,
 		},

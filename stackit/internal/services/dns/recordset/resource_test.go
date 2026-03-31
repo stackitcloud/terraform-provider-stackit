@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 )
@@ -60,9 +59,9 @@ func TestMapFields(t *testing.T) {
 			&dns.RecordSetResponse{
 				Rrset: dns.RecordSet{
 					Id:      "rid",
-					Active:  utils.Ptr(true),
-					Comment: utils.Ptr("comment"),
-					Error:   utils.Ptr("error"),
+					Active:  new(true),
+					Comment: new("comment"),
+					Error:   new("error"),
 					Name:    "name",
 					Records: []dns.Record{
 						{Content: "record_1"},
@@ -106,9 +105,9 @@ func TestMapFields(t *testing.T) {
 			&dns.RecordSetResponse{
 				Rrset: dns.RecordSet{
 					Id:      "rid",
-					Active:  utils.Ptr(true),
-					Comment: utils.Ptr("comment"),
-					Error:   utils.Ptr("error"),
+					Active:  new(true),
+					Comment: new("comment"),
+					Error:   new("error"),
 					Name:    "name",
 					Records: []dns.Record{
 						{Content: "record_1"},
@@ -244,13 +243,13 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringValue("A"),
 			},
 			&dns.CreateRecordSetPayload{
-				Comment: utils.Ptr("comment"),
+				Comment: new("comment"),
 				Name:    "name",
 				Records: []dns.RecordPayload{
 					{Content: "record_1"},
 					{Content: "record_2"},
 				},
-				Ttl:  utils.Ptr(int32(1)),
+				Ttl:  new(int32(1)),
 				Type: "A",
 			},
 			true,
@@ -268,7 +267,7 @@ func TestToCreatePayload(t *testing.T) {
 				Comment: nil,
 				Name:    "",
 				Records: []dns.RecordPayload{},
-				Ttl:     utils.Ptr(int32(2123456789)),
+				Ttl:     new(int32(2123456789)),
 				Type:    "A",
 			},
 			true,
@@ -326,13 +325,13 @@ func TestToUpdatePayload(t *testing.T) {
 				TTL: types.Int32Value(1),
 			},
 			&dns.PartialUpdateRecordSetPayload{
-				Comment: utils.Ptr("comment"),
-				Name:    utils.Ptr("name"),
+				Comment: new("comment"),
+				Name:    new("name"),
 				Records: []dns.RecordPayload{
 					{Content: "record_1"},
 					{Content: "record_2"},
 				},
-				Ttl: utils.Ptr(int32(1)),
+				Ttl: new(int32(1)),
 			},
 			true,
 		},
@@ -346,9 +345,9 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&dns.PartialUpdateRecordSetPayload{
 				Comment: nil,
-				Name:    utils.Ptr(""),
+				Name:    new(""),
 				Records: []dns.RecordPayload{},
-				Ttl:     utils.Ptr(int32(2123456789)),
+				Ttl:     new(int32(2123456789)),
 			},
 			true,
 		},

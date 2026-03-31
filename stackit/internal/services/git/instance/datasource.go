@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/git"
+	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -139,7 +139,7 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	instanceId := model.InstanceId.ValueString()
 
 	// Read the current git instance via id
-	gitInstanceResp, err := g.client.GetInstance(ctx, projectId, instanceId).Execute()
+	gitInstanceResp, err := g.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

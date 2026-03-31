@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 )
 
@@ -124,34 +123,34 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&loadbalancer.CreateLoadBalancerPayload{
-				ExternalAddress: utils.Ptr("external_address"),
+				ExternalAddress: new("external_address"),
 				Listeners: &[]loadbalancer.Listener{
 					{
-						DisplayName: utils.Ptr("display_name"),
-						Port:        utils.Ptr(int64(80)),
+						DisplayName: new("display_name"),
+						Port:        new(int64(80)),
 						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
-								Name: utils.Ptr("domain.com"),
+								Name: new("domain.com"),
 							},
 						},
-						TargetPool: utils.Ptr("target_pool"),
+						TargetPool: new("target_pool"),
 						Tcp: &loadbalancer.OptionsTCP{
-							IdleTimeout: utils.Ptr("50s"),
+							IdleTimeout: new("50s"),
 						},
 						Udp: &loadbalancer.OptionsUDP{
-							IdleTimeout: utils.Ptr("50s"),
+							IdleTimeout: new("50s"),
 						},
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				Networks: &[]loadbalancer.Network{
 					{
-						NetworkId: utils.Ptr("network_id"),
+						NetworkId: new("network_id"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
-						NetworkId: utils.Ptr("network_id_2"),
+						NetworkId: new("network_id_2"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				},
@@ -159,37 +158,37 @@ func TestToCreatePayload(t *testing.T) {
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
 						AllowedSourceRanges: &[]string{"cidr"},
 					},
-					PrivateNetworkOnly: utils.Ptr(true),
+					PrivateNetworkOnly: new(true),
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
 						Logs: &loadbalancer.LoadbalancerOptionLogs{
-							CredentialsRef: utils.Ptr("logs-credentials_ref"),
-							PushUrl:        utils.Ptr("logs-push_url"),
+							CredentialsRef: new("logs-credentials_ref"),
+							PushUrl:        new("logs-push_url"),
 						},
 						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
-							CredentialsRef: utils.Ptr("metrics-credentials_ref"),
-							PushUrl:        utils.Ptr("metrics-push_url"),
+							CredentialsRef: new("metrics-credentials_ref"),
+							PushUrl:        new("metrics-push_url"),
 						},
 					},
 				},
 				TargetPools: &[]loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   utils.Ptr(int64(1)),
-							Interval:           utils.Ptr("2s"),
-							IntervalJitter:     utils.Ptr("3s"),
-							Timeout:            utils.Ptr("4s"),
-							UnhealthyThreshold: utils.Ptr(int64(5)),
+							HealthyThreshold:   new(int64(1)),
+							Interval:           new("2s"),
+							IntervalJitter:     new("3s"),
+							Timeout:            new("4s"),
+							UnhealthyThreshold: new(int64(5)),
 						},
-						Name:       utils.Ptr("name"),
-						TargetPort: utils.Ptr(int64(80)),
+						Name:       new("name"),
+						TargetPort: new(int64(80)),
 						Targets: &[]loadbalancer.Target{
 							{
-								DisplayName: utils.Ptr("display_name"),
-								Ip:          utils.Ptr("ip"),
+								DisplayName: new("display_name"),
+								Ip:          new("ip"),
 							},
 						},
 						SessionPersistence: &loadbalancer.SessionPersistence{
-							UseSourceIpAddress: utils.Ptr(true),
+							UseSourceIpAddress: new(true),
 						},
 					},
 				},
@@ -274,29 +273,29 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&loadbalancer.CreateLoadBalancerPayload{
-				PlanId:          utils.Ptr("p10"),
-				ExternalAddress: utils.Ptr("external_address"),
+				PlanId:          new("p10"),
+				ExternalAddress: new("external_address"),
 				Listeners: &[]loadbalancer.Listener{
 					{
-						DisplayName: utils.Ptr("display_name"),
-						Port:        utils.Ptr(int64(80)),
+						DisplayName: new("display_name"),
+						Port:        new(int64(80)),
 						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
-								Name: utils.Ptr("domain.com"),
+								Name: new("domain.com"),
 							},
 						},
-						TargetPool: utils.Ptr("target_pool"),
+						TargetPool: new("target_pool"),
 					},
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				Networks: &[]loadbalancer.Network{
 					{
-						NetworkId: utils.Ptr("network_id"),
+						NetworkId: new("network_id"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
-						NetworkId: utils.Ptr("network_id_2"),
+						NetworkId: new("network_id_2"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				},
@@ -304,37 +303,37 @@ func TestToCreatePayload(t *testing.T) {
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
 						AllowedSourceRanges: &[]string{"cidr"},
 					},
-					PrivateNetworkOnly: utils.Ptr(true),
+					PrivateNetworkOnly: new(true),
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
 						Logs: &loadbalancer.LoadbalancerOptionLogs{
-							CredentialsRef: utils.Ptr("logs-credentials_ref"),
-							PushUrl:        utils.Ptr("logs-push_url"),
+							CredentialsRef: new("logs-credentials_ref"),
+							PushUrl:        new("logs-push_url"),
 						},
 						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
-							CredentialsRef: utils.Ptr("metrics-credentials_ref"),
-							PushUrl:        utils.Ptr("metrics-push_url"),
+							CredentialsRef: new("metrics-credentials_ref"),
+							PushUrl:        new("metrics-push_url"),
 						},
 					},
 				},
 				TargetPools: &[]loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   utils.Ptr(int64(1)),
-							Interval:           utils.Ptr("2s"),
-							IntervalJitter:     utils.Ptr("3s"),
-							Timeout:            utils.Ptr("4s"),
-							UnhealthyThreshold: utils.Ptr(int64(5)),
+							HealthyThreshold:   new(int64(1)),
+							Interval:           new("2s"),
+							IntervalJitter:     new("3s"),
+							Timeout:            new("4s"),
+							UnhealthyThreshold: new(int64(5)),
 						},
-						Name:       utils.Ptr("name"),
-						TargetPort: utils.Ptr(int64(80)),
+						Name:       new("name"),
+						TargetPort: new(int64(80)),
 						Targets: &[]loadbalancer.Target{
 							{
-								DisplayName: utils.Ptr("display_name"),
-								Ip:          utils.Ptr("ip"),
+								DisplayName: new("display_name"),
+								Ip:          new("ip"),
 							},
 						},
 						SessionPersistence: &loadbalancer.SessionPersistence{
-							UseSourceIpAddress: utils.Ptr(true),
+							UseSourceIpAddress: new(true),
 						},
 					},
 				},
@@ -404,22 +403,22 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 			},
 			&loadbalancer.UpdateTargetPoolPayload{
 				ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
-					HealthyThreshold:   utils.Ptr(int64(1)),
-					Interval:           utils.Ptr("2s"),
-					IntervalJitter:     utils.Ptr("3s"),
-					Timeout:            utils.Ptr("4s"),
-					UnhealthyThreshold: utils.Ptr(int64(5)),
+					HealthyThreshold:   new(int64(1)),
+					Interval:           new("2s"),
+					IntervalJitter:     new("3s"),
+					Timeout:            new("4s"),
+					UnhealthyThreshold: new(int64(5)),
 				},
-				Name:       utils.Ptr("name"),
-				TargetPort: utils.Ptr(int64(80)),
+				Name:       new("name"),
+				TargetPort: new(int64(80)),
 				Targets: &[]loadbalancer.Target{
 					{
-						DisplayName: utils.Ptr("display_name"),
-						Ip:          utils.Ptr("ip"),
+						DisplayName: new("display_name"),
+						Ip:          new("ip"),
 					},
 				},
 				SessionPersistence: &loadbalancer.SessionPersistence{
-					UseSourceIpAddress: utils.Ptr(false),
+					UseSourceIpAddress: new(false),
 				},
 			},
 			true,
@@ -466,7 +465,7 @@ func TestMapFields(t *testing.T) {
 			&loadbalancer.LoadBalancer{
 				ExternalAddress: nil,
 				Listeners:       nil,
-				Name:            utils.Ptr("name"),
+				Name:            new("name"),
 				Networks:        nil,
 				Options: &loadbalancer.LoadBalancerOptions{
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
@@ -513,73 +512,73 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_ok",
 			&loadbalancer.LoadBalancer{
-				ExternalAddress: utils.Ptr("external_address"),
-				Listeners: utils.Ptr([]loadbalancer.Listener{
+				ExternalAddress: new("external_address"),
+				Listeners: new([]loadbalancer.Listener{
 					{
-						DisplayName: utils.Ptr("display_name"),
-						Port:        utils.Ptr(int64(80)),
+						DisplayName: new("display_name"),
+						Port:        new(int64(80)),
 						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
-								Name: utils.Ptr("domain.com"),
+								Name: new("domain.com"),
 							},
 						},
-						TargetPool: utils.Ptr("target_pool"),
+						TargetPool: new("target_pool"),
 						Tcp: &loadbalancer.OptionsTCP{
-							IdleTimeout: utils.Ptr("50s"),
+							IdleTimeout: new("50s"),
 						},
 						Udp: &loadbalancer.OptionsUDP{
-							IdleTimeout: utils.Ptr("50s"),
+							IdleTimeout: new("50s"),
 						},
 					},
 				}),
-				Name: utils.Ptr("name"),
-				Networks: utils.Ptr([]loadbalancer.Network{
+				Name: new("name"),
+				Networks: new([]loadbalancer.Network{
 					{
-						NetworkId: utils.Ptr("network_id"),
+						NetworkId: new("network_id"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
-						NetworkId: utils.Ptr("network_id_2"),
+						NetworkId: new("network_id_2"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				}),
-				Options: utils.Ptr(loadbalancer.LoadBalancerOptions{
-					PrivateNetworkOnly: utils.Ptr(true),
+				Options: new(loadbalancer.LoadBalancerOptions{
+					PrivateNetworkOnly: new(true),
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
 						Logs: &loadbalancer.LoadbalancerOptionLogs{
-							CredentialsRef: utils.Ptr("logs_credentials_ref"),
-							PushUrl:        utils.Ptr("logs_push_url"),
+							CredentialsRef: new("logs_credentials_ref"),
+							PushUrl:        new("logs_push_url"),
 						},
 						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
-							CredentialsRef: utils.Ptr("metrics_credentials_ref"),
-							PushUrl:        utils.Ptr("metrics_push_url"),
+							CredentialsRef: new("metrics_credentials_ref"),
+							PushUrl:        new("metrics_push_url"),
 						},
 					},
 				}),
 				TargetSecurityGroup: loadbalancer.LoadBalancerGetTargetSecurityGroupAttributeType(&loadbalancer.SecurityGroup{
-					Id:   utils.Ptr("sg-id-12345"),
-					Name: utils.Ptr("sg-name-abcde"),
+					Id:   new("sg-id-12345"),
+					Name: new("sg-name-abcde"),
 				}),
-				TargetPools: utils.Ptr([]loadbalancer.TargetPool{
+				TargetPools: new([]loadbalancer.TargetPool{
 					{
-						ActiveHealthCheck: utils.Ptr(loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   utils.Ptr(int64(1)),
-							Interval:           utils.Ptr("2s"),
-							IntervalJitter:     utils.Ptr("3s"),
-							Timeout:            utils.Ptr("4s"),
-							UnhealthyThreshold: utils.Ptr(int64(5)),
+						ActiveHealthCheck: new(loadbalancer.ActiveHealthCheck{
+							HealthyThreshold:   new(int64(1)),
+							Interval:           new("2s"),
+							IntervalJitter:     new("3s"),
+							Timeout:            new("4s"),
+							UnhealthyThreshold: new(int64(5)),
 						}),
-						Name:       utils.Ptr("name"),
-						TargetPort: utils.Ptr(int64(80)),
-						Targets: utils.Ptr([]loadbalancer.Target{
+						Name:       new("name"),
+						TargetPort: new(int64(80)),
+						Targets: new([]loadbalancer.Target{
 							{
-								DisplayName: utils.Ptr("display_name"),
-								Ip:          utils.Ptr("ip"),
+								DisplayName: new("display_name"),
+								Ip:          new("ip"),
 							},
 						}),
-						SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
-							UseSourceIpAddress: utils.Ptr(true),
+						SessionPersistence: new(loadbalancer.SessionPersistence{
+							UseSourceIpAddress: new(true),
 						}),
 					},
 				}),
@@ -671,71 +670,71 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values_ok_with_null_private_network_only_response",
 			&loadbalancer.LoadBalancer{
-				ExternalAddress: utils.Ptr("external_address"),
-				Listeners: utils.Ptr([]loadbalancer.Listener{
+				ExternalAddress: new("external_address"),
+				Listeners: new([]loadbalancer.Listener{
 					{
-						DisplayName: utils.Ptr("display_name"),
-						Port:        utils.Ptr(int64(80)),
+						DisplayName: new("display_name"),
+						Port:        new(int64(80)),
 						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
 						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
 							{
-								Name: utils.Ptr("domain.com"),
+								Name: new("domain.com"),
 							},
 						},
-						TargetPool: utils.Ptr("target_pool"),
+						TargetPool: new("target_pool"),
 					},
 				}),
-				Name: utils.Ptr("name"),
-				Networks: utils.Ptr([]loadbalancer.Network{
+				Name: new("name"),
+				Networks: new([]loadbalancer.Network{
 					{
-						NetworkId: utils.Ptr("network_id"),
+						NetworkId: new("network_id"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 					{
-						NetworkId: utils.Ptr("network_id_2"),
+						NetworkId: new("network_id_2"),
 						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
 					},
 				}),
-				Options: utils.Ptr(loadbalancer.LoadBalancerOptions{
+				Options: new(loadbalancer.LoadBalancerOptions{
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
-						AllowedSourceRanges: utils.Ptr([]string{"cidr"}),
+						AllowedSourceRanges: new([]string{"cidr"}),
 					},
 					PrivateNetworkOnly: nil, // API sets this to nil if it's false in the request
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
 						Logs: &loadbalancer.LoadbalancerOptionLogs{
-							CredentialsRef: utils.Ptr("logs_credentials_ref"),
-							PushUrl:        utils.Ptr("logs_push_url"),
+							CredentialsRef: new("logs_credentials_ref"),
+							PushUrl:        new("logs_push_url"),
 						},
 						Metrics: &loadbalancer.LoadbalancerOptionMetrics{
-							CredentialsRef: utils.Ptr("metrics_credentials_ref"),
-							PushUrl:        utils.Ptr("metrics_push_url"),
+							CredentialsRef: new("metrics_credentials_ref"),
+							PushUrl:        new("metrics_push_url"),
 						},
 					},
 				}),
-				TargetPools: utils.Ptr([]loadbalancer.TargetPool{
+				TargetPools: new([]loadbalancer.TargetPool{
 					{
-						ActiveHealthCheck: utils.Ptr(loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   utils.Ptr(int64(1)),
-							Interval:           utils.Ptr("2s"),
-							IntervalJitter:     utils.Ptr("3s"),
-							Timeout:            utils.Ptr("4s"),
-							UnhealthyThreshold: utils.Ptr(int64(5)),
+						ActiveHealthCheck: new(loadbalancer.ActiveHealthCheck{
+							HealthyThreshold:   new(int64(1)),
+							Interval:           new("2s"),
+							IntervalJitter:     new("3s"),
+							Timeout:            new("4s"),
+							UnhealthyThreshold: new(int64(5)),
 						}),
-						Name:       utils.Ptr("name"),
-						TargetPort: utils.Ptr(int64(80)),
-						Targets: utils.Ptr([]loadbalancer.Target{
+						Name:       new("name"),
+						TargetPort: new(int64(80)),
+						Targets: new([]loadbalancer.Target{
 							{
-								DisplayName: utils.Ptr("display_name"),
-								Ip:          utils.Ptr("ip"),
+								DisplayName: new("display_name"),
+								Ip:          new("ip"),
 							},
 						}),
-						SessionPersistence: utils.Ptr(loadbalancer.SessionPersistence{
-							UseSourceIpAddress: utils.Ptr(true),
+						SessionPersistence: new(loadbalancer.SessionPersistence{
+							UseSourceIpAddress: new(true),
 						}),
 					},
 				}),
 			},
-			utils.Ptr(false),
+			new(false),
 			testRegion,
 			&Model{
 				Id:              types.StringValue(id),
@@ -884,7 +883,7 @@ func Test_validateConfig(t *testing.T) {
 		{
 			name: "happy case 1: private_network_only is not set and external_address is set",
 			args: args{
-				ExternalAddress:    utils.Ptr(testExternalAddress),
+				ExternalAddress:    new(testExternalAddress),
 				PrivateNetworkOnly: nil,
 			},
 			wantErr: false,
@@ -892,8 +891,8 @@ func Test_validateConfig(t *testing.T) {
 		{
 			name: "happy case 2: private_network_only is set to false and external_address is set",
 			args: args{
-				ExternalAddress:    utils.Ptr(testExternalAddress),
-				PrivateNetworkOnly: utils.Ptr(false),
+				ExternalAddress:    new(testExternalAddress),
+				PrivateNetworkOnly: new(false),
 			},
 			wantErr: false,
 		},
@@ -901,15 +900,15 @@ func Test_validateConfig(t *testing.T) {
 			name: "happy case 3: private_network_only is set to true and external_address is not set",
 			args: args{
 				ExternalAddress:    nil,
-				PrivateNetworkOnly: utils.Ptr(true),
+				PrivateNetworkOnly: new(true),
 			},
 			wantErr: false,
 		},
 		{
 			name: "error case 1: private_network_only and external_address are set",
 			args: args{
-				ExternalAddress:    utils.Ptr(testExternalAddress),
-				PrivateNetworkOnly: utils.Ptr(true),
+				ExternalAddress:    new(testExternalAddress),
+				PrivateNetworkOnly: new(true),
 			},
 			wantErr: true,
 		},
@@ -925,7 +924,7 @@ func Test_validateConfig(t *testing.T) {
 			name: "error case 3: private_network_only is set to false and external_address is not set",
 			args: args{
 				ExternalAddress:    nil,
-				PrivateNetworkOnly: utils.Ptr(false),
+				PrivateNetworkOnly: new(false),
 			},
 			wantErr: true,
 		},

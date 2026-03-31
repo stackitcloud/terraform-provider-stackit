@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 const (
@@ -49,14 +48,14 @@ func TestMapDataFields(t *testing.T) {
 			&iaas.RoutingTableListResponse{
 				Items: &[]iaas.RoutingTable{
 					{
-						Id:            utils.Ptr(routingTableId.String()),
-						Name:          utils.Ptr("test"),
-						Description:   utils.Ptr("description"),
-						Default:       utils.Ptr(true),
+						Id:            new(routingTableId.String()),
+						Name:          new("test"),
+						Description:   new("description"),
+						Default:       new(true),
 						CreatedAt:     &createdAt,
 						UpdatedAt:     &updatedAt,
-						SystemRoutes:  utils.Ptr(false),
-						DynamicRoutes: utils.Ptr(false),
+						SystemRoutes:  new(false),
+						DynamicRoutes: new(false),
 					},
 				},
 			},
@@ -91,24 +90,24 @@ func TestMapDataFields(t *testing.T) {
 			&iaas.RoutingTableListResponse{
 				Items: &[]iaas.RoutingTable{
 					{
-						Id:            utils.Ptr(routingTableId.String()),
-						Name:          utils.Ptr("test"),
-						Description:   utils.Ptr("description"),
-						Default:       utils.Ptr(true),
+						Id:            new(routingTableId.String()),
+						Name:          new("test"),
+						Description:   new("description"),
+						Default:       new(true),
 						CreatedAt:     &createdAt,
 						UpdatedAt:     &updatedAt,
-						SystemRoutes:  utils.Ptr(false),
-						DynamicRoutes: utils.Ptr(false),
+						SystemRoutes:  new(false),
+						DynamicRoutes: new(false),
 					},
 					{
-						Id:            utils.Ptr(secondRoutingTableId.String()),
-						Name:          utils.Ptr("test2"),
-						Description:   utils.Ptr("description2"),
-						Default:       utils.Ptr(false),
+						Id:            new(secondRoutingTableId.String()),
+						Name:          new("test2"),
+						Description:   new("description2"),
+						Default:       new(false),
 						CreatedAt:     &createdAt,
 						UpdatedAt:     &updatedAt,
-						SystemRoutes:  utils.Ptr(false),
-						DynamicRoutes: utils.Ptr(false),
+						SystemRoutes:  new(false),
+						DynamicRoutes: new(false),
 					},
 				},
 			},

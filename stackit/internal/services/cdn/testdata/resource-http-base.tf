@@ -23,6 +23,7 @@ resource "stackit_dns_zone" "dns_zone" {
   type          = "primary"
   default_ttl   = 3600
 }
+
 resource "stackit_dns_record_set" "dns_record" {
   project_id = var.project_id
   zone_id    = stackit_dns_zone.dns_zone.zone_id
@@ -48,7 +49,6 @@ resource "stackit_cdn_distribution" "distribution" {
         (var.backend_origin_url) = var.geofencing_list
       }
     }
-    regions           = var.regions
     blocked_countries = var.blocked_countries
   }
 }
@@ -56,22 +56,4 @@ resource "stackit_cdn_distribution" "distribution" {
 data "stackit_cdn_distribution" "distribution" {
   project_id      = var.project_id
   distribution_id = stackit_cdn_distribution.distribution.distribution_id
-}
-
-# custom domain
-resource "stackit_cdn_custom_domain" "custom_domain" {
-  project_id      = var.project_id
-  distribution_id = stackit_cdn_distribution.distribution.distribution_id
-  name            = "${stackit_dns_record_set.dns_record.name}.${stackit_dns_zone.dns_zone.dns_name}"
-  certificate = {
-    certificate = var.certificate
-    private_key = var.private_key
-  }
-}
-
-data "stackit_cdn_custom_domain" "custom_domain" {
-  project_id      = var.project_id
-  distribution_id = stackit_cdn_distribution.distribution.distribution_id
-  name            = "${stackit_dns_record_set.dns_record.name}.${stackit_dns_zone.dns_zone.dns_name}"
-  depends_on      = [stackit_cdn_custom_domain.custom_domain]
 }

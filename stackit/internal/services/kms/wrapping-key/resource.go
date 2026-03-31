@@ -280,7 +280,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 	wrappingKeyId := *createWrappingKeyResp.Id
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      projectId,
 		"region":          region,
 		"keyring_id":      keyRingId,

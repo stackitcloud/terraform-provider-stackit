@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,7 +30,7 @@ func TestMapDatasourceFields(t *testing.T) {
 					VolumeId:  types.StringValue("nid"),
 				},
 				input: &iaas.Volume{
-					Id:                   utils.Ptr("nid"),
+					Id:                   new("nid"),
 					EncryptionParameters: nil,
 				},
 				region: "eu01",
@@ -61,25 +60,25 @@ func TestMapDatasourceFields(t *testing.T) {
 					Region:    types.StringValue("eu01"),
 				},
 				input: &iaas.Volume{
-					Id:               utils.Ptr("nid"),
-					Name:             utils.Ptr("name"),
-					AvailabilityZone: utils.Ptr("zone"),
-					Labels: &map[string]interface{}{
+					Id:               new("nid"),
+					Name:             new("name"),
+					AvailabilityZone: new("zone"),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					Description:      utils.Ptr("desc"),
-					PerformanceClass: utils.Ptr("class"),
-					ServerId:         utils.Ptr("sid"),
-					Size:             utils.Ptr(int64(1)),
+					Description:      new("desc"),
+					PerformanceClass: new("class"),
+					ServerId:         new("sid"),
+					Size:             new(int64(1)),
 					Source:           &iaas.VolumeSource{},
-					Encrypted:        utils.Ptr(true),
+					Encrypted:        new(true),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{
-						KekKeyId:       utils.Ptr("kek-key-id"),
-						KekKeyVersion:  utils.Ptr(int64(1)),
-						KekKeyringId:   utils.Ptr("kek-keyring-id"),
-						KekProjectId:   utils.Ptr("kek-project-id"),
+						KekKeyId:       new("kek-key-id"),
+						KekKeyVersion:  new(int64(1)),
+						KekKeyringId:   new("kek-keyring-id"),
+						KekProjectId:   new("kek-project-id"),
 						KeyPayload:     nil,
-						ServiceAccount: utils.Ptr("test-sa@sa.stackit.cloud"),
+						ServiceAccount: new("test-sa@sa.stackit.cloud"),
 					},
 				},
 				region: "eu02",
@@ -115,7 +114,7 @@ func TestMapDatasourceFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Volume{
-					Id:                   utils.Ptr("nid"),
+					Id:                   new("nid"),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{},
 				},
 				region: "eu01",

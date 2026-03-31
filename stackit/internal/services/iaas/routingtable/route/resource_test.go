@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 const (
@@ -84,10 +83,10 @@ func Test_mapFieldsFromList(t *testing.T) {
 				routeResp: &iaas.RouteListResponse{
 					Items: &[]iaas.Route{
 						{
-							Id: utils.Ptr(uuid.NewString()),
+							Id: new(uuid.NewString()),
 						},
 						{
-							Id: utils.Ptr(uuid.NewString()),
+							Id: new(uuid.NewString()),
 						},
 					},
 				},
@@ -108,14 +107,14 @@ func Test_mapFieldsFromList(t *testing.T) {
 				routeResp: &iaas.RouteListResponse{
 					Items: &[]iaas.Route{
 						{
-							Id: utils.Ptr(routeId.String()),
-							Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+							Id: new(routeId.String()),
+							Destination: new(iaas.DestinationCIDRv4AsRouteDestination(
 								iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 							)),
-							Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+							Nexthop: new(iaas.NexthopIPv4AsRouteNexthop(
 								iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
 							)),
-							Labels: &map[string]interface{}{
+							Labels: &map[string]any{
 								"foo": "bar",
 							},
 							CreatedAt: nil,
@@ -202,7 +201,7 @@ func Test_toUpdatePayload(t *testing.T) {
 				}),
 			},
 			want: &iaas.UpdateRouteOfRoutingTablePayload{
-				Labels: &map[string]interface{}{
+				Labels: &map[string]any{
 					"foo1": "bar1",
 					"foo2": "bar2",
 					"foo3": nil,
@@ -254,7 +253,7 @@ func Test_toNextHopPayload(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			want: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+			want: new(iaas.NexthopIPv4AsRouteNexthop(
 				iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
 			)),
 		},
@@ -269,7 +268,7 @@ func Test_toNextHopPayload(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			want: utils.Ptr(iaas.NexthopIPv6AsRouteNexthop(
+			want: new(iaas.NexthopIPv6AsRouteNexthop(
 				iaas.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
 			)),
 		},
@@ -284,7 +283,7 @@ func Test_toNextHopPayload(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			want: utils.Ptr(iaas.NexthopInternetAsRouteNexthop(
+			want: new(iaas.NexthopInternetAsRouteNexthop(
 				iaas.NewNexthopInternet("internet"),
 			)),
 		},
@@ -299,7 +298,7 @@ func Test_toNextHopPayload(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			want: utils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(
+			want: new(iaas.NexthopBlackholeAsRouteNexthop(
 				iaas.NewNexthopBlackhole("blackhole"),
 			)),
 		},
@@ -347,7 +346,7 @@ func Test_toDestinationPayload(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			want: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+			want: new(iaas.DestinationCIDRv4AsRouteDestination(
 				iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 			)),
 		},
@@ -362,7 +361,7 @@ func Test_toDestinationPayload(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			want: utils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(
+			want: new(iaas.DestinationCIDRv6AsRouteDestination(
 				iaas.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
 			)),
 		},
@@ -420,14 +419,14 @@ func Test_toCreatePayload(t *testing.T) {
 			want: &iaas.AddRoutesToRoutingTablePayload{
 				Items: &[]iaas.Route{
 					{
-						Labels: &map[string]interface{}{
+						Labels: &map[string]any{
 							"foo1": "bar1",
 							"foo2": "bar2",
 						},
-						Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+						Nexthop: new(iaas.NexthopIPv4AsRouteNexthop(
 							iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
 						)),
-						Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+						Destination: new(iaas.DestinationCIDRv4AsRouteDestination(
 							iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 						)),
 					},

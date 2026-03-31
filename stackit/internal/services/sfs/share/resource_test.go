@@ -42,9 +42,9 @@ func TestMapFields(t *testing.T) {
 			"eu01",
 			&sfs.GetShareResponseShare{
 				Id:   testShareId.ValueStringPointer(),
-				Name: utils.Ptr("testname"),
+				Name: new("testname"),
 				ExportPolicy: sfs.NewNullableShareExportPolicy(&sfs.ShareExportPolicy{
-					Name: utils.Ptr("test-policy"),
+					Name: new("test-policy"),
 				}),
 				SpaceHardLimitGigabytes: utils.Ptr[int64](42),
 			},
@@ -71,12 +71,12 @@ func TestMapFields(t *testing.T) {
 			input: &sfs.GetShareResponseShare{
 				CreatedAt:               &testTime,
 				Id:                      testShareId.ValueStringPointer(),
-				MountPath:               utils.Ptr("mountpoint"),
-				Name:                    utils.Ptr("testname"),
+				MountPath:               new("mountpoint"),
+				Name:                    new("testname"),
 				SpaceHardLimitGigabytes: sfs.PtrInt64(42),
-				State:                   utils.Ptr("state"),
+				State:                   new("state"),
 				ExportPolicy: sfs.NewNullableShareExportPolicy(&sfs.ShareExportPolicy{
-					Name: utils.Ptr("test-policy"),
+					Name: new("test-policy"),
 				}),
 			},
 			expected: &Model{
@@ -127,8 +127,8 @@ func TestToCreatePayload(t *testing.T) {
 				SpaceHardLimitGigabytes: types.Int64Value(42),
 			},
 			sfs.CreateSharePayload{
-				ExportPolicyName:        sfs.NewNullableString(utils.Ptr("test-policy")),
-				Name:                    sfs.PtrString("testname"),
+				ExportPolicyName:        sfs.NewNullableString(new("test-policy")),
+				Name:                    new("testname"),
 				SpaceHardLimitGigabytes: sfs.PtrInt64(42),
 			},
 			false,

@@ -13,7 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb"
+	legacyAlb "github.com/stackitcloud/stackit-sdk-go/services/alb"
+	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -57,9 +58,9 @@ func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 
 // Schema defines the schema for the resource.
 func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
-	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
-	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypesEnumValues)
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedLoadBalancerErrorTypesEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
@@ -201,7 +202,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 							Description: descriptions["listeners.name"],
 							Computed:    true,
 						},
-						"port": schema.Int64Attribute{
+						"port": schema.Int32Attribute{
 							Description: descriptions["port"],
 							Computed:    true,
 						},
@@ -433,7 +434,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 							Description: descriptions["active_health_check"],
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
-								"healthy_threshold": schema.Int64Attribute{
+								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Computed:    true,
 								},
@@ -449,7 +450,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 									Description: descriptions["timeout"],
 									Computed:    true,
 								},
-								"unhealthy_threshold": schema.Int64Attribute{
+								"unhealthy_threshold": schema.Int32Attribute{
 									Description: descriptions["unhealthy_threshold"],
 									Computed:    true,
 								},
@@ -474,7 +475,7 @@ func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 							Description: descriptions["target_pools.name"],
 							Computed:    true,
 						},
-						"target_port": schema.Int64Attribute{
+						"target_port": schema.Int32Attribute{
 							Description: descriptions["target_port"],
 							Computed:    true,
 						},
@@ -555,7 +556,7 @@ func (r *albDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	albResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	albResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

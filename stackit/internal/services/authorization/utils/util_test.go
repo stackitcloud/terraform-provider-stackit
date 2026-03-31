@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	testUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -107,22 +106,22 @@ func TestTypeConverter(t *testing.T) {
 			input: authorization.MembersResponse{
 				Members: &[]authorization.Member{
 					{
-						Role:    testUtils.Ptr("editor"),
-						Subject: testUtils.Ptr("foo.bar@stackit.cloud"),
+						Role:    new("editor"),
+						Subject: new("foo.bar@stackit.cloud"),
 					},
 				},
-				ResourceId:   testUtils.Ptr("project-123"),
-				ResourceType: testUtils.Ptr("project"),
+				ResourceId:   new("project-123"),
+				ResourceType: new("project"),
 			},
 			expected: &authorization.ListMembersResponse{
 				Members: &[]authorization.Member{
 					{
-						Role:    testUtils.Ptr("editor"),
-						Subject: testUtils.Ptr("foo.bar@stackit.cloud"),
+						Role:    new("editor"),
+						Subject: new("foo.bar@stackit.cloud"),
 					},
 				},
-				ResourceId:   testUtils.Ptr("project-123"),
-				ResourceType: testUtils.Ptr("project"),
+				ResourceId:   new("project-123"),
+				ResourceType: new("project"),
 			},
 			expectError: false,
 		},
@@ -158,9 +157,7 @@ func TestLockAssignment(t *testing.T) {
 		var wg sync.WaitGroup
 
 		// Goroutine 1
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			unlock := LockAssignment(key)
 			defer unlock()
 
@@ -169,15 +166,12 @@ func TestLockAssignment(t *testing.T) {
 			// Sleep to simulate API work and give G2 a chance to interrupt if the lock is broken
 			time.Sleep(100 * time.Millisecond)
 			criticalSectionActive = false
-		}()
+		})
 
 		// Goroutine 2
 		// Wait a tiny bit to ensure G1 has started and acquired the lock
 		time.Sleep(10 * time.Millisecond)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			// This should block until G1 releases the lock
 			unlock := LockAssignment(key)
 			defer unlock()
@@ -186,7 +180,7 @@ func TestLockAssignment(t *testing.T) {
 			if criticalSectionActive {
 				t.Error("LockAssignment failed: entered critical section while another goroutine held the lock")
 			}
-		}()
+		})
 
 		wg.Wait()
 	})

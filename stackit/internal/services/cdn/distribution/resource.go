@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -745,7 +746,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	configPatchBackend := &cdn.ConfigPatchBackend{}
 
-	if configModel.Backend.Type == "http" {
+	switch configModel.Backend.Type {
+	case "http":
 		geofencingPatch := map[string][]string{}
 		if configModel.Backend.Geofencing != nil {
 			gf := make(map[string][]string)
@@ -766,12 +768,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		configPatchBackend.HttpBackendPatch = &cdn.HttpBackendPatch{
 			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
 			OriginUrl:            configModel.Backend.OriginURL,
-			Type:                 cdn.PtrString("http"),
+			Type:                 new("http"),
 			Geofencing:           &geofencingPatch,
 		}
-	} else if configModel.Backend.Type == "bucket" {
+	case "bucket":
 		configPatchBackend.BucketBackendPatch = &cdn.BucketBackendPatch{
-			Type:      cdn.PtrString("bucket"),
+			Type:      new("bucket"),
 			BucketUrl: configModel.Backend.BucketURL,
 			Region:    configModel.Backend.Region,
 		}
@@ -808,7 +810,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
 		Config:   configPatch,
-		IntentId: cdn.PtrString(uuid.NewString()),
+		IntentId: new(uuid.NewString()),
 	}).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Patch distribution: %v", err))
@@ -873,7 +875,7 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing CDN distribution", fmt.Sprintf("Expected import identifier on the format: [project_id]%q[distribution_id], got %q", core.Separator, req.ID))
 	}
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      idParts[0],
 		"distribution_id": idParts[1],
 	})
@@ -889,7 +891,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	}
 
 	if distribution.ProjectId == nil {
-		return fmt.Errorf("Project ID not present")
+		return fmt.Errorf("'Project ID' not present")
 	}
 
 	if distribution.Id == nil {
@@ -897,15 +899,15 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	}
 
 	if distribution.CreatedAt == nil {
-		return fmt.Errorf("CreatedAt missing in response")
+		return fmt.Errorf("'CreatedAt' missing in response")
 	}
 
 	if distribution.UpdatedAt == nil {
-		return fmt.Errorf("UpdatedAt missing in response")
+		return fmt.Errorf("'UpdatedAt' missing in response")
 	}
 
 	if distribution.Status == nil {
-		return fmt.Errorf("Status missing in response")
+		return fmt.Errorf("'Status' missing in response")
 	}
 
 	model.ID = utils.BuildInternalTerraformId(*distribution.ProjectId, *distribution.Id)
@@ -1247,7 +1249,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 				OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
 				OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
 				Geofencing:           cfg.Backend.HttpBackend.Geofencing,
-				Type:                 cdn.PtrString("http"),
+				Type:                 new("http"),
 			},
 		}
 	} else if cfg.Backend.BucketBackend != nil {
@@ -1268,7 +1270,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 		}
 		backend = &cdn.CreateDistributionPayloadBackend{
 			BucketBackendCreate: &cdn.BucketBackendCreate{
-				Type:      cdn.PtrString("bucket"),
+				Type:      new("bucket"),
 				BucketUrl: cfg.Backend.BucketBackend.BucketUrl,
 				Region:    cfg.Backend.BucketBackend.Region,
 				Credentials: &cdn.BucketCredentials{
@@ -1280,7 +1282,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	}
 
 	payload := &cdn.CreateDistributionPayload{
-		IntentId:         cdn.PtrString(uuid.NewString()),
+		IntentId:         new(uuid.NewString()),
 		Regions:          cfg.Regions,
 		Backend:          backend,
 		BlockedCountries: cfg.BlockedCountries,
@@ -1403,22 +1405,21 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		Redirects:        redirectsConfig,
 	}
 
-	if configModel.Backend.Type == "http" {
+	switch configModel.Backend.Type {
+	case "http":
 		originRequestHeaders := map[string]string{}
 		if configModel.Backend.OriginRequestHeaders != nil {
-			for k, v := range *configModel.Backend.OriginRequestHeaders {
-				originRequestHeaders[k] = v
-			}
+			maps.Copy(originRequestHeaders, *configModel.Backend.OriginRequestHeaders)
 		}
 		cdnConfig.Backend.HttpBackend = &cdn.HttpBackend{
 			OriginRequestHeaders: &originRequestHeaders,
 			OriginUrl:            configModel.Backend.OriginURL,
-			Type:                 cdn.PtrString("http"),
+			Type:                 new("http"),
 			Geofencing:           &geofencing,
 		}
-	} else if configModel.Backend.Type == "bucket" {
+	case "bucket":
 		cdnConfig.Backend.BucketBackend = &cdn.BucketBackend{
-			Type:      cdn.PtrString("bucket"),
+			Type:      new("bucket"),
 			BucketUrl: configModel.Backend.BucketURL,
 			Region:    configModel.Backend.Region,
 		}

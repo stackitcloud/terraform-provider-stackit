@@ -399,7 +399,7 @@ func (r *recordSetResource) ImportState(ctx context.Context, req resource.Import
 		return
 	}
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    idParts[0],
 		"zone_id":       idParts[1],
 		"record_set_id": idParts[2],

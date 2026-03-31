@@ -62,7 +62,7 @@ resource "stackit_rabbitmq_instance" "instance" {
 						testutil.MockResponse{
 							Description: "create",
 							ToJsonBody: rabbitmq.CreateInstanceResponse{
-								InstanceId: utils.Ptr(instanceId),
+								InstanceId: new(instanceId),
 							},
 						},
 						testutil.MockResponse{
@@ -128,7 +128,7 @@ resource "stackit_rabbitmq_credential" "credential" {
 						// initial post response
 						testutil.MockResponse{
 							ToJsonBody: rabbitmq.CredentialsResponse{
-								Id: utils.Ptr(credentialId),
+								Id: new(credentialId),
 							},
 						},
 						// failing waiter

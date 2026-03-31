@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 )
 
@@ -55,12 +54,12 @@ func TestMapDataSourceFields(t *testing.T) {
 			description: "max values",
 			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
 				accessToken.Permissions = []string{"write"}
-				accessToken.AccessToken = utils.Ptr("")
-				accessToken.Description = utils.Ptr("description")
+				accessToken.AccessToken = new("")
+				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"
 				accessToken.Creator = "testUser"
 				accessToken.Expires = false
-				accessToken.ValidUntil = utils.Ptr(testTime)
+				accessToken.ValidUntil = new(testTime)
 			}),
 			expected: fixtureDataSourceModel(func(model *DataSourceModel) {
 				model.Permissions = types.ListValueMust(types.StringType, []attr.Value{

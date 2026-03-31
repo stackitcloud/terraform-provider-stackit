@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
 )
 
@@ -26,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&rabbitmq.CredentialsResponse{
-				Id:  utils.Ptr("cid"),
+				Id:  new("cid"),
 				Raw: &rabbitmq.RawCredentials{},
 			},
 			Model{
@@ -54,28 +53,28 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&rabbitmq.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &rabbitmq.RawCredentials{
 					Credentials: &rabbitmq.Credentials{
-						Host: utils.Ptr("host"),
+						Host: new("host"),
 						Hosts: &[]string{
 							"host_1",
 							"",
 						},
-						HttpApiUri: utils.Ptr("http"),
+						HttpApiUri: new("http"),
 						HttpApiUris: &[]string{
 							"http_api_uri_1",
 							"",
 						},
-						Management: utils.Ptr("management"),
-						Password:   utils.Ptr("password"),
-						Port:       utils.Ptr(int64(1234)),
-						Uri:        utils.Ptr("uri"),
+						Management: new("management"),
+						Password:   new("password"),
+						Port:       new(int64(1234)),
+						Uri:        new("uri"),
 						Uris: &[]string{
 							"uri_1",
 							"",
 						},
-						Username: utils.Ptr("username"),
+						Username: new("username"),
 					},
 				},
 			},
@@ -128,31 +127,31 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			&rabbitmq.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &rabbitmq.RawCredentials{
 					Credentials: &rabbitmq.Credentials{
-						Host: utils.Ptr("host"),
+						Host: new("host"),
 						Hosts: &[]string{
 							"",
 							"host_1",
 							"host_2",
 						},
-						HttpApiUri: utils.Ptr("http"),
+						HttpApiUri: new("http"),
 						HttpApiUris: &[]string{
 							"",
 							"http_api_uri_1",
 							"http_api_uri_2",
 						},
-						Management: utils.Ptr("management"),
-						Password:   utils.Ptr("password"),
-						Port:       utils.Ptr(int64(1234)),
-						Uri:        utils.Ptr("uri"),
+						Management: new("management"),
+						Password:   new("password"),
+						Port:       new(int64(1234)),
+						Uri:        new("uri"),
 						Uris: &[]string{
 							"",
 							"uri_1",
 							"uri_2",
 						},
-						Username: utils.Ptr("username"),
+						Username: new("username"),
 					},
 				},
 			},
@@ -193,19 +192,19 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&rabbitmq.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &rabbitmq.RawCredentials{
 					Credentials: &rabbitmq.Credentials{
-						Host:        utils.Ptr(""),
+						Host:        new(""),
 						Hosts:       &[]string{},
 						HttpApiUri:  nil,
 						HttpApiUris: &[]string{},
 						Management:  nil,
-						Password:    utils.Ptr(""),
-						Port:        utils.Ptr(int64(2123456789)),
+						Password:    new(""),
+						Port:        new(int64(2123456789)),
 						Uri:         nil,
 						Uris:        &[]string{},
-						Username:    utils.Ptr(""),
+						Username:    new(""),
 					},
 				},
 			},
@@ -254,7 +253,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&rabbitmq.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 			},
 			Model{},
 			false,

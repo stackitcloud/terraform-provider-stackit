@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -1033,7 +1032,7 @@ func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId stri
 			payload := iaas.CreateNetworkAreaRangePayload{
 				Ipv4: &[]iaas.NetworkRange{
 					{
-						Prefix: sdkUtils.Ptr(prefix),
+						Prefix: new(prefix),
 					},
 				},
 			}

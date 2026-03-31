@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,12 +30,12 @@ func TestMapDataSourceFields(t *testing.T) {
 					ProjectId: types.StringValue("pid"),
 				},
 				input: &iaas.MachineType{
-					Name:        utils.Ptr("s1.2"),
-					Description: utils.Ptr("general-purpose small"),
-					Disk:        utils.Ptr(int64(20)),
-					Ram:         utils.Ptr(int64(2048)),
-					Vcpus:       utils.Ptr(int64(2)),
-					ExtraSpecs: &map[string]interface{}{
+					Name:        new("s1.2"),
+					Description: new("general-purpose small"),
+					Disk:        new(int64(20)),
+					Ram:         new(int64(2048)),
+					Vcpus:       new(int64(2)),
+					ExtraSpecs: &map[string]any{
 						"cpu":         "amd-epycrome-7702",
 						"overcommit":  "1",
 						"environment": "general",
@@ -68,7 +67,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					ProjectId: types.StringValue("pid-456"),
 				},
 				input: &iaas.MachineType{
-					Description: utils.Ptr("gp-medium"),
+					Description: new("gp-medium"),
 				},
 			},
 			expected:    DataSourceModel{},
@@ -90,12 +89,12 @@ func TestMapDataSourceFields(t *testing.T) {
 					ProjectId: types.StringValue("pid-789"),
 				},
 				input: &iaas.MachineType{
-					Name:        utils.Ptr("m1.noextras"),
-					Description: utils.Ptr("no extras"),
-					Disk:        utils.Ptr(int64(10)),
-					Ram:         utils.Ptr(int64(1024)),
-					Vcpus:       utils.Ptr(int64(1)),
-					ExtraSpecs:  &map[string]interface{}{},
+					Name:        new("m1.noextras"),
+					Description: new("no extras"),
+					Disk:        new(int64(10)),
+					Ram:         new(int64(1024)),
+					Vcpus:       new(int64(1)),
+					ExtraSpecs:  &map[string]any{},
 				},
 				region: "eu01",
 			},
@@ -119,11 +118,11 @@ func TestMapDataSourceFields(t *testing.T) {
 					ProjectId: types.StringValue("pid-987"),
 				},
 				input: &iaas.MachineType{
-					Name:        utils.Ptr("g1.nil"),
-					Description: utils.Ptr("missing extras"),
-					Disk:        utils.Ptr(int64(40)),
-					Ram:         utils.Ptr(int64(8096)),
-					Vcpus:       utils.Ptr(int64(4)),
+					Name:        new("g1.nil"),
+					Description: new("missing extras"),
+					Disk:        new(int64(40)),
+					Ram:         new(int64(8096)),
+					Vcpus:       new(int64(4)),
 					ExtraSpecs:  nil,
 				},
 				region: "eu01",
@@ -148,12 +147,12 @@ func TestMapDataSourceFields(t *testing.T) {
 					ProjectId: types.StringValue("test-err"),
 				},
 				input: &iaas.MachineType{
-					Name:        utils.Ptr("invalid"),
-					Description: utils.Ptr("bad map"),
-					Disk:        utils.Ptr(int64(10)),
-					Ram:         utils.Ptr(int64(4096)),
-					Vcpus:       utils.Ptr(int64(2)),
-					ExtraSpecs: &map[string]interface{}{
+					Name:        new("invalid"),
+					Description: new("bad map"),
+					Disk:        new(int64(10)),
+					Ram:         new(int64(4096)),
+					Vcpus:       new(int64(2)),
+					ExtraSpecs: &map[string]any{
 						"cpu":   "intel",
 						"burst": true, // not a string
 						"gen":   8,    // not a string
@@ -202,19 +201,19 @@ func TestSortMachineTypeByName(t *testing.T) {
 	}{
 		{
 			name:      "ascending order",
-			input:     []*iaas.MachineType{{Name: utils.Ptr("zeta")}, {Name: utils.Ptr("alpha")}, {Name: utils.Ptr("gamma")}},
+			input:     []*iaas.MachineType{{Name: new("zeta")}, {Name: new("alpha")}, {Name: new("gamma")}},
 			ascending: true,
 			expected:  []string{"alpha", "gamma", "zeta"},
 		},
 		{
 			name:      "descending order",
-			input:     []*iaas.MachineType{{Name: utils.Ptr("zeta")}, {Name: utils.Ptr("alpha")}, {Name: utils.Ptr("gamma")}},
+			input:     []*iaas.MachineType{{Name: new("zeta")}, {Name: new("alpha")}, {Name: new("gamma")}},
 			ascending: false,
 			expected:  []string{"zeta", "gamma", "alpha"},
 		},
 		{
 			name:      "handles nil names",
-			input:     []*iaas.MachineType{{Name: utils.Ptr("beta")}, nil, {Name: nil}, {Name: utils.Ptr("alpha")}},
+			input:     []*iaas.MachineType{{Name: new("beta")}, nil, {Name: nil}, {Name: new("alpha")}},
 			ascending: true,
 			expected:  []string{"alpha", "beta"},
 		},

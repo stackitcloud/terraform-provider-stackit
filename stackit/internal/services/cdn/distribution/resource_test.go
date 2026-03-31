@@ -100,8 +100,8 @@ func TestToCreatePayload(t *testing.T) {
 					HttpBackendCreate: &cdn.HttpBackendCreate{
 						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
 						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
-						OriginUrl:            cdn.PtrString("https://www.mycoolapp.com"),
-						Type:                 cdn.PtrString("http"),
+						OriginUrl:            new("https://www.mycoolapp.com"),
+						Type:                 new("http"),
 					},
 				},
 			},
@@ -125,8 +125,8 @@ func TestToCreatePayload(t *testing.T) {
 					HttpBackendCreate: &cdn.HttpBackendCreate{
 						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
 						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
-						OriginUrl:            cdn.PtrString("https://www.mycoolapp.com"),
-						Type:                 cdn.PtrString("http"),
+						OriginUrl:            new("https://www.mycoolapp.com"),
+						Type:                 new("http"),
 					},
 				},
 			},
@@ -199,12 +199,12 @@ func TestToCreatePayload(t *testing.T) {
 			Expected: &cdn.CreateDistributionPayload{
 				Backend: &cdn.CreateDistributionPayloadBackend{
 					BucketBackendCreate: &cdn.BucketBackendCreate{
-						Type:      cdn.PtrString("bucket"),
-						BucketUrl: cdn.PtrString("https://s3.example.com"),
-						Region:    cdn.PtrString("eu01"),
+						Type:      new("bucket"),
+						BucketUrl: new("https://s3.example.com"),
+						Region:    new("eu01"),
 						Credentials: &cdn.BucketCredentials{
-							AccessKeyId:     cdn.PtrString("my-access"),
-							SecretAccessKey: cdn.PtrString("my-secret"),
+							AccessKeyId:     new("my-access"),
+							SecretAccessKey: new("my-secret"),
 						},
 					},
 				},
@@ -335,8 +335,8 @@ func TestConvertConfig(t *testing.T) {
 							"testHeader0": "testHeaderValue0",
 							"testHeader1": "testHeaderValue1",
 						},
-						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-						Type:      cdn.PtrString("http"),
+						OriginUrl: new("https://www.mycoolapp.com"),
+						Type:      new("http"),
 						Geofencing: &map[string][]string{
 							"https://de.mycoolapp.com": {"DE", "FR"},
 						},
@@ -364,8 +364,8 @@ func TestConvertConfig(t *testing.T) {
 							"testHeader0": "testHeaderValue0",
 							"testHeader1": "testHeaderValue1",
 						},
-						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-						Type:      cdn.PtrString("http"),
+						OriginUrl: new("https://www.mycoolapp.com"),
+						Type:      new("http"),
 						Geofencing: &map[string][]string{
 							"https://de.mycoolapp.com": {"DE", "FR"},
 						},
@@ -449,9 +449,11 @@ func TestConvertConfig(t *testing.T) {
 			Expected: &cdn.Config{
 				Backend: &cdn.ConfigBackend{
 					BucketBackend: &cdn.BucketBackend{
-						Type:      cdn.PtrString("bucket"),
-						BucketUrl: cdn.PtrString("https://s3.example.com"),
-						Region:    cdn.PtrString("eu01"),
+						Type:      new("bucket"),
+						BucketUrl: new("https://s3.example.com"),
+						Region:    new("eu01"),
+						// Note: config does not return credentials
+
 					},
 				},
 				Regions:          &[]cdn.Region{"EU", "US"},
@@ -607,8 +609,8 @@ func TestMapFields(t *testing.T) {
 							"testHeader0": "testHeaderValue0",
 							"testHeader1": "testHeaderValue1",
 						},
-						OriginUrl: cdn.PtrString("https://www.mycoolapp.com"),
-						Type:      cdn.PtrString("http"),
+						OriginUrl: new("https://www.mycoolapp.com"),
+						Type:      new("http"),
 					},
 				},
 				Regions:          &[]cdn.Region{"EU", "US"},
@@ -618,13 +620,13 @@ func TestMapFields(t *testing.T) {
 			CreatedAt: &createdAt,
 			Domains: &[]cdn.Domain{
 				{
-					Name:   cdn.PtrString("test.stackit-cdn.com"),
+					Name:   new("test.stackit-cdn.com"),
 					Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
 					Type:   cdn.DOMAINTYPE_MANAGED.Ptr(),
 				},
 			},
-			Id:        cdn.PtrString("test-distribution-id"),
-			ProjectId: cdn.PtrString("test-project-id"),
+			Id:        new("test-distribution-id"),
+			ProjectId: new("test-project-id"),
 			Status:    cdn.DISTRIBUTIONSTATUS_ACTIVE.Ptr(),
 			UpdatedAt: &updatedAt,
 		}
@@ -677,7 +679,7 @@ func TestMapFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdn.Distribution) {
 				d.Config.Optimizer = &cdn.Optimizer{
-					Enabled: cdn.PtrBool(true),
+					Enabled: new(true),
 				}
 			}),
 			IsValid: true,
@@ -750,12 +752,12 @@ func TestMapFields(t *testing.T) {
 			Input: distributionFixture(func(d *cdn.Distribution) {
 				d.Domains = &[]cdn.Domain{
 					{
-						Name:   cdn.PtrString("test.stackit-cdn.com"),
+						Name:   new("test.stackit-cdn.com"),
 						Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
 						Type:   cdn.DOMAINTYPE_MANAGED.Ptr(),
 					},
 					{
-						Name:   cdn.PtrString("mycoolapp.info"),
+						Name:   new("mycoolapp.info"),
 						Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
 						Type:   cdn.DOMAINTYPE_CUSTOM.Ptr(),
 					},
@@ -767,9 +769,9 @@ func TestMapFields(t *testing.T) {
 			Input: distributionFixture(func(d *cdn.Distribution) {
 				d.Config.Backend = &cdn.ConfigBackend{
 					BucketBackend: &cdn.BucketBackend{
-						Type:      cdn.PtrString("bucket"),
-						BucketUrl: cdn.PtrString("https://s3.example.com"),
-						Region:    cdn.PtrString("eu01"),
+						Type:      new("bucket"),
+						BucketUrl: new("https://s3.example.com"),
+						Region:    new("eu01"),
 					},
 				}
 			}),
