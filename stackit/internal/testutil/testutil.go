@@ -152,7 +152,7 @@ type ConfigBuilder struct {
 	serviceAccountToken string
 }
 
-// NewConfigBuilder creates a new ConfigBuilder with enabled beta resources and region eu01 as default.
+// NewConfigBuilder creates a new ConfigBuilder with region eu01 as default.
 // All custom endpoints defined in TF_ACC_*_CUSTOM_ENDPOINT env vars are also set.
 func NewConfigBuilder() *ConfigBuilder {
 	b := &ConfigBuilder{
