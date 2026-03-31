@@ -18,7 +18,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
-	github.com/stackitcloud/stackit-sdk-go/services/kms v1.3.2
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.7.1
@@ -98,7 +98,7 @@ require (
 	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/grpc v1.79.1 // indirect
+	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
