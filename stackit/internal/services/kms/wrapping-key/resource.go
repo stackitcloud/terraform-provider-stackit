@@ -442,7 +442,7 @@ func toCreatePayload(model *Model) (*kms.CreateWrappingKeyPayload, error) {
 	}
 
 	var accessScope *kms.AccessScope
-	if !model.AccessScope.IsUnknown() && !model.AccessScope.IsNull() {
+	if !utils.IsUndefined(model.AccessScope) {
 		accessScope = new(kms.AccessScope(model.AccessScope.ValueString()))
 	}
 
