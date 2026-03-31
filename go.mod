@@ -7,11 +7,12 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/terraform-plugin-framework v1.18.0
+	github.com/hashicorp/terraform-plugin-framework-timeouts v0.7.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.30.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.23.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
