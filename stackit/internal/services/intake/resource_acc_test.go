@@ -31,7 +31,6 @@ const intakeRunnerResource = "stackit_intake_runner.example"
 var testIntakeRunnerConfigVarsMin = config.Variables{
 	"project_id":            config.StringVariable(testutil.ProjectId),
 	"name":                  config.StringVariable("intake-min-runner"),
-	"region":                config.StringVariable(testutil.Region),
 	"max_message_size_kib":  config.IntegerVariable(1024),
 	"max_messages_per_hour": config.IntegerVariable(1000),
 }
