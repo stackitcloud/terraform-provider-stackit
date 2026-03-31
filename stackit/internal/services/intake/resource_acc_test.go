@@ -82,11 +82,12 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 				ConfigVariables: testIntakeRunnerConfigVarsMin,
 				Config: fmt.Sprintf(`
 				%s
+				%s
 				data "stackit_intake_runner" "example" {
 					project_id = %s.project_id
 					runner_id  = %s.runner_id
 					region     = %s.region
-				}`, testutil.IntakeProviderConfig()+"\n"+resourceIntakeRunnerMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
+				}`, testutil.IntakeProviderConfig(), resourceIntakeRunnerMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Make sure it's correctly found resource by comparing runner_id attribute
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
@@ -158,10 +159,11 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 				ConfigVariables: testIntakeRunnerConfigVarsMax,
 				Config: fmt.Sprintf(`
 				%s
+				%s
 				data "stackit_intake_runner" "example" {
 					project_id = %s.project_id
 					runner_id  = %s.runner_id
-				}`, testutil.IntakeProviderConfig()+"\n"+resourceIntakeRunnerMax, intakeRunnerResource, intakeRunnerResource),
+				}`, testutil.IntakeProviderConfig(), resourceIntakeRunnerMax, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "runner_id", "data.stackit_intake_runner.example", "runner_id"),
