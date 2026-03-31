@@ -1,8 +1,8 @@
 package networkinterface
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"

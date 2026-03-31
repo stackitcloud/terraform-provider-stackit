@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"errors"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
