@@ -379,7 +379,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "kubernetes_version_min", "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
+					stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "kubernetes_version_min", "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
 				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
@@ -462,7 +462,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "os_version_min", "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+								stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "os_version_min", "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
 							},
 						},
 						"volume_type": schema.StringAttribute{

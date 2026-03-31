@@ -29,6 +29,9 @@ var (
 
 	//go:embed testdata/resource-max.tf
 	resourceMaxConfig string
+
+	//go:embed testdata/datasource.tf
+	datasourceConfig string
 )
 
 var testConfigVarsMin = config.Variables{
@@ -108,11 +111,15 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// data source
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig + "\n" + datasourceConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -129,6 +136,10 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("data.stackit_server_update_enable.enable_test", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server_update_enable.enable_test", "enabled", "true"),
 				),
 			},
 			// Import
@@ -169,6 +180,10 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -207,11 +222,15 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// data source
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig + "\n" + datasourceConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -228,6 +247,10 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("data.stackit_server_update_enable.enable_test", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server_update_enable.enable_test", "enabled", "true"),
 				),
 			},
 			// Import
@@ -268,6 +291,10 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// Deletion is done by the framework implicitly

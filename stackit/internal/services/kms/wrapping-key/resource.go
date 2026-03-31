@@ -11,7 +11,7 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/kms/v1api/wait"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -264,7 +264,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	createWrappingKeyResp, err := r.client.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
+	createWrappingKeyResp, err := r.client.DefaultAPI.CreateWrappingKey(ctx, projectId, region, keyRingId).CreateWrappingKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -272,12 +272,12 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 
 	ctx = core.LogResponse(ctx)
 
-	if createWrappingKeyResp == nil || createWrappingKeyResp.Id == nil {
+	if createWrappingKeyResp == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating wrapping key", "API returned empty response")
 		return
 	}
 
-	wrappingKeyId := *createWrappingKeyResp.Id
+	wrappingKeyId := createWrappingKeyResp.Id
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
@@ -287,7 +287,7 @@ func (r *wrappingKeyResource) Create(ctx context.Context, req resource.CreateReq
 		"wrapping_key_id": wrappingKeyId,
 	})
 
-	wrappingKey, err := wait.CreateWrappingKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, wrappingKeyId).WaitWithContext(ctx)
+	wrappingKey, err := wait.CreateWrappingKeyWaitHandler(ctx, r.client.DefaultAPI, projectId, region, keyRingId, wrappingKeyId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for wrapping key creation", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -327,7 +327,7 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "wrapping_key_id", wrappingKeyId)
 
-	wrappingKeyResponse, err := r.client.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	wrappingKeyResponse, err := r.client.DefaultAPI.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -374,7 +374,7 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	wrappingKeyId := model.WrappingKeyId.ValueString()
 
-	err := r.client.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
+	err := r.client.DefaultAPI.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting wrapping key", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -416,38 +416,22 @@ func mapFields(wrappingKey *kms.WrappingKey, model *Model, region string) error 
 	var wrappingKeyId string
 	if model.WrappingKeyId.ValueString() != "" {
 		wrappingKeyId = model.WrappingKeyId.ValueString()
-	} else if wrappingKey.Id != nil {
-		wrappingKeyId = *wrappingKey.Id
 	} else {
-		return fmt.Errorf("key id not present")
+		wrappingKeyId = wrappingKey.Id
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.KeyRingId.ValueString(), wrappingKeyId)
 	model.Region = types.StringValue(region)
 	model.WrappingKeyId = types.StringValue(wrappingKeyId)
-	model.DisplayName = types.StringPointerValue(wrappingKey.DisplayName)
+	model.DisplayName = types.StringValue(wrappingKey.DisplayName)
 	model.PublicKey = types.StringPointerValue(wrappingKey.PublicKey)
 	model.AccessScope = types.StringValue(string(wrappingKey.GetAccessScope()))
 	model.Algorithm = types.StringValue(string(wrappingKey.GetAlgorithm()))
 	model.Purpose = types.StringValue(string(wrappingKey.GetPurpose()))
 	model.Protection = types.StringValue(string(wrappingKey.GetProtection()))
-
-	model.CreatedAt = types.StringNull()
-	if wrappingKey.CreatedAt != nil {
-		model.CreatedAt = types.StringValue(wrappingKey.CreatedAt.Format(time.RFC3339))
-	}
-
-	model.ExpiresAt = types.StringNull()
-	if wrappingKey.ExpiresAt != nil {
-		model.ExpiresAt = types.StringValue(wrappingKey.ExpiresAt.Format(time.RFC3339))
-	}
-
-	// TODO: workaround - remove once STACKITKMS-377 is resolved (just write the return value from the API to the state then)
-	if !(model.Description.IsNull() && wrappingKey.Description != nil && *wrappingKey.Description == "") {
-		model.Description = types.StringPointerValue(wrappingKey.Description)
-	} else {
-		model.Description = types.StringNull()
-	}
+	model.CreatedAt = types.StringValue(wrappingKey.CreatedAt.Format(time.RFC3339))
+	model.ExpiresAt = types.StringValue(wrappingKey.ExpiresAt.Format(time.RFC3339))
+	model.Description = types.StringPointerValue(wrappingKey.Description)
 
 	return nil
 }
@@ -456,12 +440,18 @@ func toCreatePayload(model *Model) (*kms.CreateWrappingKeyPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
+	var accessScope *kms.AccessScope
+	if !utils.IsUndefined(model.AccessScope) {
+		accessScope = new(kms.AccessScope(model.AccessScope.ValueString()))
+	}
+
 	return &kms.CreateWrappingKeyPayload{
-		AccessScope: kms.CreateKeyPayloadGetAccessScopeAttributeType(conversion.StringValueToPointer(model.AccessScope)),
-		Algorithm:   kms.CreateWrappingKeyPayloadGetAlgorithmAttributeType(conversion.StringValueToPointer(model.Algorithm)),
+		AccessScope: accessScope,
+		Algorithm:   kms.WrappingAlgorithm(model.Algorithm.ValueString()),
 		Description: conversion.StringValueToPointer(model.Description),
-		DisplayName: conversion.StringValueToPointer(model.DisplayName),
-		Protection:  kms.CreateKeyPayloadGetProtectionAttributeType(conversion.StringValueToPointer(model.Protection)),
-		Purpose:     kms.CreateWrappingKeyPayloadGetPurposeAttributeType(conversion.StringValueToPointer(model.Purpose)),
+		DisplayName: model.DisplayName.ValueString(),
+		Protection:  kms.Protection(model.Protection.ValueString()),
+		Purpose:     kms.WrappingPurpose(model.Purpose.ValueString()),
 	}, nil
 }

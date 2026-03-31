@@ -8,8 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -42,15 +41,15 @@ resource "stackit_objectstorage_bucket" "instance" {
 						testutil.MockResponse{
 							Description: "project enable",
 							ToJsonBody: objectstorage.ProjectStatus{
-								Project: new(projectId),
-								Scope:   utils.Ptr(objectstorage.PROJECTSCOPE_PUBLIC),
+								Project: projectId,
+								Scope:   objectstorage.PROJECTSCOPE_PUBLIC,
 							},
 						},
 						testutil.MockResponse{
 							Description: "create bucket",
-							ToJsonBody: objectstorage.Bucket{
-								Name:   utils.Ptr(name),
-								Region: utils.Ptr(region),
+							ToJsonBody: objectstorage.CreateBucketResponse{
+								Bucket:  name,
+								Project: projectId,
 							},
 						},
 						testutil.MockResponse{

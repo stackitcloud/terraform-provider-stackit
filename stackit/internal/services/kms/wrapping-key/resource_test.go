@@ -3,13 +3,13 @@ package kms
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 )
 
 var (
@@ -19,6 +19,9 @@ var (
 )
 
 func TestMapFields(t *testing.T) {
+	createdAt := time.Now()
+	expiresAt := time.Now().Add(time.Hour)
+
 	type args struct {
 		state  *Model
 		input  *kms.WrappingKey
@@ -39,26 +42,33 @@ func TestMapFields(t *testing.T) {
 					WrappingKeyId: types.StringValue(wrappingKeyId),
 				},
 				input: &kms.WrappingKey{
-					Id:          new("wid"),
-					AccessScope: utils.Ptr(kms.ACCESSSCOPE_PUBLIC),
-					Algorithm:   utils.Ptr(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256),
-					Purpose:     utils.Ptr(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY),
-					Protection:  utils.Ptr(kms.PROTECTION_SOFTWARE),
+					Id:          "wid",
+					DisplayName: "display-name",
+					AccessScope: kms.ACCESSSCOPE_PUBLIC,
+					Algorithm:   kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256,
+					Purpose:     kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY,
+					Protection:  kms.PROTECTION_SOFTWARE,
+					PublicKey:   new("public-key"),
+					ExpiresAt:   expiresAt,
+					CreatedAt:   createdAt,
 				},
 				region: "eu01",
 			},
 			expected: &Model{
 				Description:   types.StringNull(),
-				DisplayName:   types.StringNull(),
+				DisplayName:   types.StringValue("display-name"),
 				KeyRingId:     types.StringValue(keyRingId),
 				Id:            types.StringValue(fmt.Sprintf("%s,eu01,%s,%s", projectId, keyRingId, wrappingKeyId)),
 				ProjectId:     types.StringValue(projectId),
 				Region:        types.StringValue("eu01"),
 				WrappingKeyId: types.StringValue(wrappingKeyId),
 				AccessScope:   types.StringValue(string(kms.ACCESSSCOPE_PUBLIC)),
-				Algorithm:     types.StringValue(string(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256)),
-				Purpose:       types.StringValue(string(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY)),
+				Algorithm:     types.StringValue(string(kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256)),
+				Purpose:       types.StringValue(string(kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY)),
 				Protection:    types.StringValue(string(kms.PROTECTION_SOFTWARE)),
+				PublicKey:     types.StringValue("public-key"),
+				ExpiresAt:     types.StringValue(expiresAt.Format(time.RFC3339)),
+				CreatedAt:     types.StringValue(createdAt.Format(time.RFC3339)),
 			},
 			isValid: true,
 		},
@@ -72,12 +82,15 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &kms.WrappingKey{
 					Description: new("descr"),
-					DisplayName: new("name"),
-					Id:          new(wrappingKeyId),
-					AccessScope: utils.Ptr(kms.ACCESSSCOPE_PUBLIC),
-					Algorithm:   utils.Ptr(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256),
-					Purpose:     utils.Ptr(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY),
-					Protection:  utils.Ptr(kms.PROTECTION_SOFTWARE),
+					DisplayName: "name",
+					Id:          wrappingKeyId,
+					AccessScope: kms.ACCESSSCOPE_PUBLIC,
+					Algorithm:   kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256,
+					Purpose:     kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY,
+					Protection:  kms.PROTECTION_SOFTWARE,
+					PublicKey:   new("public-key"),
+					ExpiresAt:   expiresAt,
+					CreatedAt:   createdAt,
 				},
 				region: "eu02",
 			},
@@ -90,22 +103,14 @@ func TestMapFields(t *testing.T) {
 				Region:        types.StringValue("eu02"),
 				WrappingKeyId: types.StringValue(wrappingKeyId),
 				AccessScope:   types.StringValue(string(kms.ACCESSSCOPE_PUBLIC)),
-				Algorithm:     types.StringValue(string(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256)),
-				Purpose:       types.StringValue(string(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY)),
+				Algorithm:     types.StringValue(string(kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256)),
+				Purpose:       types.StringValue(string(kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY)),
 				Protection:    types.StringValue(string(kms.PROTECTION_SOFTWARE)),
+				PublicKey:     types.StringValue("public-key"),
+				ExpiresAt:     types.StringValue(expiresAt.Format(time.RFC3339)),
+				CreatedAt:     types.StringValue(createdAt.Format(time.RFC3339)),
 			},
 			isValid: true,
-		},
-		{
-			description: "nil_response_field",
-			args: args{
-				state: &Model{},
-				input: &kms.WrappingKey{
-					Id: nil,
-				},
-			},
-			expected: &Model{},
-			isValid:  false,
 		},
 		{
 			description: "nil_response",
@@ -115,51 +120,6 @@ func TestMapFields(t *testing.T) {
 			},
 			expected: &Model{},
 			isValid:  false,
-		},
-		{
-			description: "no_resource_id",
-			args: args{
-				state: &Model{
-					Region:    types.StringValue("eu01"),
-					ProjectId: types.StringValue("pid"),
-				},
-				input: &kms.WrappingKey{},
-			},
-			expected: &Model{},
-			isValid:  false,
-		},
-		{
-			// TODO: test for workaround - remove once STACKITKMS-377 is resolved
-			description: "empty description string",
-			args: args{
-				state: &Model{
-					KeyRingId:     types.StringValue(keyRingId),
-					ProjectId:     types.StringValue(projectId),
-					WrappingKeyId: types.StringValue(wrappingKeyId),
-				},
-				input: &kms.WrappingKey{
-					Description: new(""),
-					Id:          new(wrappingKeyId),
-					AccessScope: utils.Ptr(kms.ACCESSSCOPE_PUBLIC),
-					Algorithm:   utils.Ptr(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256),
-					Purpose:     utils.Ptr(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY),
-					Protection:  utils.Ptr(kms.PROTECTION_SOFTWARE),
-				},
-				region: "eu02",
-			},
-			expected: &Model{
-				Description:   types.StringNull(),
-				KeyRingId:     types.StringValue(keyRingId),
-				Id:            types.StringValue(fmt.Sprintf("%s,eu02,%s,%s", projectId, keyRingId, wrappingKeyId)),
-				ProjectId:     types.StringValue(projectId),
-				Region:        types.StringValue("eu02"),
-				WrappingKeyId: types.StringValue(wrappingKeyId),
-				AccessScope:   types.StringValue(string(kms.ACCESSSCOPE_PUBLIC)),
-				Algorithm:     types.StringValue(string(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256)),
-				Purpose:       types.StringValue(string(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY)),
-				Protection:    types.StringValue(string(kms.PROTECTION_SOFTWARE)),
-			},
-			isValid: true,
 		},
 	}
 	for _, tt := range tests {
@@ -201,7 +161,7 @@ func TestToCreatePayload(t *testing.T) {
 				DisplayName: types.StringValue("name"),
 			},
 			&kms.CreateWrappingKeyPayload{
-				DisplayName: new("name"),
+				DisplayName: "name",
 			},
 			true,
 		},
@@ -212,7 +172,7 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue(""),
 			},
 			&kms.CreateWrappingKeyPayload{
-				DisplayName: new(""),
+				DisplayName: "",
 				Description: new(""),
 			},
 			true,

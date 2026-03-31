@@ -533,7 +533,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days", "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
+					int64planmodifier.UseStateForUnknownIf(int64planmodifier.Int64Changed, "metrics_retention_days", "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
 				},
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
@@ -541,7 +541,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days_5m_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
+					int64planmodifier.UseStateForUnknownIf(int64planmodifier.Int64Changed, "metrics_retention_days_5m_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
 				},
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
@@ -549,7 +549,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days_1h_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
+					int64planmodifier.UseStateForUnknownIf(int64planmodifier.Int64Changed, "metrics_retention_days_1h_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
 				},
 			},
 			"metrics_url": schema.StringAttribute{

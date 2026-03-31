@@ -1,4 +1,4 @@
-package compliancelock
+package enable
 
 import (
 	"fmt"
@@ -6,40 +6,42 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
 )
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
-	id := fmt.Sprintf("%s,%s", "pid", testRegion)
-	retentionDays := int32(30)
+	id := fmt.Sprintf("%s,%s,%s", "pid", "sid", testRegion)
 	tests := []struct {
 		description string
-		input       *objectstorage.ComplianceLockResponse
+		input       *serverupdate.GetUpdateServiceResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&objectstorage.ComplianceLockResponse{},
+			&serverupdate.GetUpdateServiceResponse{},
 			Model{
-				Id:               types.StringValue(id),
-				ProjectId:        types.StringValue("pid"),
-				Region:           types.StringValue("eu01"),
-				MaxRetentionDays: types.Int32Value(0),
+				Id:        types.StringValue(id),
+				ProjectId: types.StringValue("pid"),
+				ServerId:  types.StringValue("sid"),
+				Region:    types.StringValue("eu01"),
 			},
 			true,
 		},
 		{
 			"simple_values",
-			&objectstorage.ComplianceLockResponse{
-				MaxRetentionDays: retentionDays,
+			&serverupdate.GetUpdateServiceResponse{
+				Enabled: utils.Ptr(true),
 			},
 			Model{
-				Id:               types.StringValue(id),
-				ProjectId:        types.StringValue("pid"),
-				Region:           types.StringValue("eu01"),
-				MaxRetentionDays: types.Int32Value(retentionDays),
+				Id:        types.StringValue(id),
+				ProjectId: types.StringValue("pid"),
+				ServerId:  types.StringValue("sid"),
+				Region:    types.StringValue("eu01"),
+				Enabled:   types.BoolValue(true),
 			},
 			true,
 		},
@@ -54,6 +56,7 @@ func TestMapFields(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			model := &Model{
 				ProjectId: tt.expected.ProjectId,
+				ServerId:  tt.expected.ServerId,
 			}
 			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {

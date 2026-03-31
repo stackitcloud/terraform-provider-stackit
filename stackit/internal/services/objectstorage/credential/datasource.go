@@ -16,7 +16,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -132,7 +132,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	credentialsGroupResp, err := r.client.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := r.client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -187,20 +187,18 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 	var credentialId string
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
-	} else if credentialResp.KeyId != nil {
-		credentialId = *credentialResp.KeyId
 	} else {
-		return fmt.Errorf("credential id not present")
+		credentialId = credentialResp.KeyId
 	}
 
-	if credentialResp.Expires == nil {
+	if credentialResp.Expires == "" {
 		model.ExpirationTimestamp = types.StringNull()
 	} else {
 		// Harmonize the timestamp format
-		// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
-		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires)
+		// E.g. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+		expirationTimestamp, err := time.Parse(time.RFC3339, credentialResp.Expires)
 		if err != nil {
-			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
+			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", credentialResp.Expires, err)
 		}
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
@@ -209,15 +207,15 @@ func mapDataSourceFields(credentialResp *objectstorage.AccessKey, model *DataSou
 		model.ProjectId.ValueString(), region, model.CredentialsGroupId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
-	model.Name = types.StringPointerValue(credentialResp.DisplayName)
+	model.Name = types.StringValue(credentialResp.DisplayName)
 	model.Region = types.StringValue(region)
 	return nil
 }
 
 // Returns the access key if found otherwise nil
 func findCredential(credentialsGroupResp objectstorage.ListAccessKeysResponse, credentialId string) *objectstorage.AccessKey {
-	for _, credential := range *credentialsGroupResp.AccessKeys {
-		if credential.KeyId == nil || *credential.KeyId != credentialId {
+	for _, credential := range credentialsGroupResp.AccessKeys {
+		if credential.KeyId != credentialId {
 			continue
 		}
 		return &credential

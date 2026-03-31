@@ -31,7 +31,7 @@ var testConfigVarsMin = config.Variables{
 	"name":               config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"flavor_cpu":         config.IntegerVariable(4),
 	"flavor_ram":         config.IntegerVariable(16),
-	"flavor_description": config.StringVariable("SQLServer-Flex-4.16-Standard-EU01"),
+	"flavor_description": config.StringVariable("SQLServer-Flex-4.16-Single-Standard-EU01"),
 	"replicas":           config.IntegerVariable(1),
 	"flavor_id":          config.StringVariable("4.16-Single"),
 	"username":           config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),

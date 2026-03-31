@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
@@ -125,17 +125,17 @@ var testConfigWrappingKeyVarsMin = config.Variables{
 	"project_id":           config.StringVariable(testutil.ProjectId),
 	"keyring_display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"display_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"algorithm":            config.StringVariable(string(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256)),
+	"algorithm":            config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256)),
 	"protection":           config.StringVariable(string(kms.PROTECTION_SOFTWARE)),
-	"purpose":              config.StringVariable(string(kms.WRAPPINGPURPOSE_SYMMETRIC_KEY)),
+	"purpose":              config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_SYMMETRIC_KEY)),
 }
 
 var testConfigWrappingKeyVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigWrappingKeyVarsMin)
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
-	updatedConfig["algorithm"] = config.StringVariable(string(kms.WRAPPINGALGORITHM__4096_OAEP_SHA256_AES_256_KEY_WRAP))
-	updatedConfig["purpose"] = config.StringVariable(string(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY))
+	updatedConfig["algorithm"] = config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_4096_OAEP_SHA256_AES_256_KEY_WRAP))
+	updatedConfig["purpose"] = config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY))
 	return updatedConfig
 }
 
@@ -145,9 +145,9 @@ var testConfigWrappingKeyVarsMax = config.Variables{
 	"project_id":           config.StringVariable(testutil.ProjectId),
 	"keyring_display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"display_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"algorithm":            config.StringVariable(string(kms.WRAPPINGALGORITHM__2048_OAEP_SHA256)),
+	"algorithm":            config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256)),
 	"protection":           config.StringVariable(string(kms.PROTECTION_SOFTWARE)),
-	"purpose":              config.StringVariable(string(kms.WRAPPINGPURPOSE_SYMMETRIC_KEY)),
+	"purpose":              config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_SYMMETRIC_KEY)),
 	"description":          config.StringVariable("kms-wrapping-key-description"),
 	"access_scope":         config.StringVariable(string(kms.ACCESSSCOPE_PUBLIC)),
 }
@@ -156,8 +156,8 @@ var testConfigWrappingKeyVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigWrappingKeyVarsMax)
 	updatedConfig["display_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["display_name"])))
-	updatedConfig["algorithm"] = config.StringVariable(string(kms.WRAPPINGALGORITHM__4096_OAEP_SHA256_AES_256_KEY_WRAP))
-	updatedConfig["purpose"] = config.StringVariable(string(kms.WRAPPINGPURPOSE_ASYMMETRIC_KEY))
+	updatedConfig["algorithm"] = config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_4096_OAEP_SHA256_AES_256_KEY_WRAP))
+	updatedConfig["purpose"] = config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_ASYMMETRIC_KEY))
 	updatedConfig["description"] = config.StringVariable("kms-wrapping-key-description-updated")
 	return updatedConfig
 }
@@ -929,7 +929,7 @@ func testAccCheckKeyRingDestroy(s *terraform.State) error {
 			continue
 		}
 		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
-		err := client.DeleteKeyRingExecute(ctx, testutil.ProjectId, testutil.Region, keyRingId)
+		err := client.DefaultAPI.DeleteKeyRing(ctx, testutil.ProjectId, testutil.Region, keyRingId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -975,7 +975,7 @@ func testAccCheckKeyDestroy(s *terraform.State) error {
 		}
 		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		keyId := strings.Split(rs.Primary.ID, core.Separator)[3]
-		err := client.DeleteKeyExecute(ctx, testutil.ProjectId, testutil.Region, keyRingId, keyId)
+		err := client.DefaultAPI.DeleteKey(ctx, testutil.ProjectId, testutil.Region, keyRingId, keyId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -1019,7 +1019,7 @@ func testAccCheckWrappingKeyDestroy(s *terraform.State) error {
 		}
 		keyRingId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		wrappingKeyId := strings.Split(rs.Primary.ID, core.Separator)[3]
-		err := client.DeleteWrappingKeyExecute(ctx, testutil.ProjectId, testutil.Region, keyRingId, wrappingKeyId)
+		err := client.DefaultAPI.DeleteWrappingKey(ctx, testutil.ProjectId, testutil.Region, keyRingId, wrappingKeyId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
