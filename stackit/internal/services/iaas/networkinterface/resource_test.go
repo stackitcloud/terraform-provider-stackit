@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -32,7 +31,7 @@ func TestMapFields(t *testing.T) {
 					NetworkInterfaceId: types.StringValue("nicid"),
 				},
 				input: &iaas.NIC{
-					Id: utils.Ptr("nicid"),
+					Id: new("nicid"),
 				},
 				region: "eu01",
 			},
@@ -64,25 +63,25 @@ func TestMapFields(t *testing.T) {
 					Region:             types.StringValue("eu01"),
 				},
 				input: &iaas.NIC{
-					Id:   utils.Ptr("nicid"),
-					Name: utils.Ptr("name"),
+					Id:   new("nicid"),
+					Name: new("name"),
 					AllowedAddresses: &[]iaas.AllowedAddressesInner{
 						{
-							String: utils.Ptr("aa1"),
+							String: new("aa1"),
 						},
 					},
 					SecurityGroups: &[]string{
 						"prefix1",
 						"prefix2",
 					},
-					Ipv4:        utils.Ptr("ipv4"),
-					Ipv6:        utils.Ptr("ipv6"),
-					NicSecurity: utils.Ptr(true),
-					Device:      utils.Ptr("device"),
-					Mac:         utils.Ptr("mac"),
-					Status:      utils.Ptr("status"),
-					Type:        utils.Ptr("type"),
-					Labels: &map[string]interface{}{
+					Ipv4:        new("ipv4"),
+					Ipv6:        new("ipv6"),
+					NicSecurity: new(true),
+					Device:      new("device"),
+					Mac:         new("mac"),
+					Status:      new("status"),
+					Type:        new("type"),
+					Labels: &map[string]any{
 						"label1": "ref1",
 					},
 				},
@@ -123,10 +122,10 @@ func TestMapFields(t *testing.T) {
 					}),
 				},
 				input: &iaas.NIC{
-					Id: utils.Ptr("nicid"),
+					Id: new("nicid"),
 					AllowedAddresses: &[]iaas.AllowedAddressesInner{
 						{
-							String: utils.Ptr("aa2"),
+							String: new("aa2"),
 						},
 					},
 				},
@@ -157,7 +156,7 @@ func TestMapFields(t *testing.T) {
 					AllowedAddresses:   types.ListValueMust(types.StringType, []attr.Value{}),
 				},
 				input: &iaas.NIC{
-					Id:               utils.Ptr("nicid"),
+					Id:               new("nicid"),
 					AllowedAddresses: nil,
 				},
 				region: "eu01",
@@ -236,17 +235,17 @@ func TestToCreatePayload(t *testing.T) {
 				Security: types.BoolValue(true),
 			},
 			&iaas.CreateNicPayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				SecurityGroups: &[]string{
 					"sg1",
 					"sg2",
 				},
 				AllowedAddresses: &[]iaas.AllowedAddressesInner{
 					{
-						String: utils.Ptr("aa1"),
+						String: new("aa1"),
 					},
 				},
-				NicSecurity: utils.Ptr(true),
+				NicSecurity: new(true),
 			},
 			true,
 		},
@@ -262,7 +261,7 @@ func TestToCreatePayload(t *testing.T) {
 				AllowedAddresses: types.ListNull(types.StringType),
 			},
 			&iaas.CreateNicPayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				SecurityGroups: &[]string{
 					"sg1",
 					"sg2",
@@ -312,17 +311,17 @@ func TestToUpdatePayload(t *testing.T) {
 				Security: types.BoolValue(true),
 			},
 			&iaas.UpdateNicPayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				SecurityGroups: &[]string{
 					"sg1",
 					"sg2",
 				},
 				AllowedAddresses: &[]iaas.AllowedAddressesInner{
 					{
-						String: utils.Ptr("aa1"),
+						String: new("aa1"),
 					},
 				},
-				NicSecurity: utils.Ptr(true),
+				NicSecurity: new(true),
 			},
 			true,
 		},
@@ -338,12 +337,12 @@ func TestToUpdatePayload(t *testing.T) {
 				AllowedAddresses: types.ListNull(types.StringType),
 			},
 			&iaas.UpdateNicPayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				SecurityGroups: &[]string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: utils.Ptr([]iaas.AllowedAddressesInner{}),
+				AllowedAddresses: new([]iaas.AllowedAddressesInner{}),
 			},
 			true,
 		},

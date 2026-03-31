@@ -310,7 +310,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    idParts[0],
 		"instance_id":   idParts[1],
 		"credential_id": idParts[2],

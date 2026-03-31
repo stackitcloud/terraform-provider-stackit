@@ -9,7 +9,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
@@ -298,12 +297,12 @@ func TestToUpdatePayload(t *testing.T) {
 				"label2": "2",
 			},
 			&resourcemanager.PartialUpdateFolderPayload{
-				ContainerParentId: utils.Ptr("pid"),
+				ContainerParentId: new("pid"),
 				Labels: &map[string]string{
 					"label1": "1",
 					"label2": "2",
 				},
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			true,
 		},

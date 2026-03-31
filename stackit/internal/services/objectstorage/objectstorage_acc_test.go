@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/wait"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -299,23 +299,20 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}
 
-	bucketsResp, err := client.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
+	bucketsResp, err := client.DefaultAPI.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
 
-	buckets := *bucketsResp.Buckets
+	buckets := bucketsResp.Buckets
 	for _, bucket := range buckets {
-		if bucket.Name == nil {
-			continue
-		}
-		bucketName := *bucket.Name
+		bucketName := bucket.Name
 		if utils.Contains(bucketsToDestroy, bucketName) {
-			_, err := client.DeleteBucketExecute(ctx, testutil.ProjectId, testutil.Region, bucketName)
+			_, err := client.DefaultAPI.DeleteBucket(ctx, testutil.ProjectId, testutil.Region, bucketName).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
-			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
+			_, err = wait.DeleteBucketWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
 			}
@@ -332,19 +329,16 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
 	}
 
-	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
+	credentialsGroupsResp, err := client.DefaultAPI.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
 
-	groups := *credentialsGroupsResp.CredentialsGroups
+	groups := credentialsGroupsResp.CredentialsGroups
 	for _, group := range groups {
-		if group.CredentialsGroupId == nil {
-			continue
-		}
-		groupId := *group.CredentialsGroupId
+		groupId := group.CredentialsGroupId
 		if utils.Contains(credentialsGroupsToDestroy, groupId) {
-			_, err := client.DeleteCredentialsGroupExecute(ctx, testutil.ProjectId, testutil.Region, groupId)
+			_, err := client.DefaultAPI.DeleteCredentialsGroup(ctx, testutil.ProjectId, testutil.Region, groupId).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying credentials group %s during CheckDestroy: %w", groupId, err)
 			}

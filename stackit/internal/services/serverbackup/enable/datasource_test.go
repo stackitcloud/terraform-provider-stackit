@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
 
@@ -33,7 +32,7 @@ func TestDataMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&serverbackup.GetBackupServiceResponse{
-				Enabled: utils.Ptr(true),
+				Enabled: new(true),
 			},
 			DataModel{
 				Id:        types.StringValue(id),

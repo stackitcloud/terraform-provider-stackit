@@ -657,8 +657,8 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 		orgRoleAssignmentsToDestroy = append(
 			orgRoleAssignmentsToDestroy,
 			authorization.Member{
-				Role:    utils.Ptr(terraformId[1]),
-				Subject: utils.Ptr(terraformId[2]),
+				Role:    new(terraformId[1]),
+				Subject: new(terraformId[2]),
 			},
 		)
 	}
@@ -669,7 +669,7 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	containerParentId := testutil.OrganizationId
 
 	payload := authorization.RemoveMembersPayload{
-		ResourceType: utils.Ptr("organization"),
+		ResourceType: new("organization"),
 		Members:      &orgRoleAssignmentsToDestroy,
 	}
 
@@ -697,11 +697,11 @@ func testAccCheckServiceAccountRoleAssignmentDestroy(s *terraform.State) error {
 
 		resourceId := terraformId[0]
 		payload := authorization.RemoveMembersPayload{
-			ResourceType: utils.Ptr("service-account"),
+			ResourceType: new("service-account"),
 			Members: &[]authorization.Member{
 				{
-					Role:    utils.Ptr(terraformId[1]),
-					Subject: utils.Ptr(terraformId[2]),
+					Role:    new(terraformId[1]),
+					Subject: new(terraformId[2]),
 				},
 			},
 		}

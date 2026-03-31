@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 const (
@@ -105,28 +104,28 @@ func Test_mapDataSourceRoutingTableRoutes(t *testing.T) {
 				routes: &iaas.RouteListResponse{
 					Items: &[]iaas.Route{
 						{
-							Id: utils.Ptr(testRouteId1),
-							Destination: utils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(
+							Id: new(testRouteId1),
+							Destination: new(iaas.DestinationCIDRv4AsRouteDestination(
 								iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
 							)),
-							Nexthop: utils.Ptr(iaas.NexthopIPv4AsRouteNexthop(
+							Nexthop: new(iaas.NexthopIPv4AsRouteNexthop(
 								iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
 							)),
-							Labels: &map[string]interface{}{
+							Labels: &map[string]any{
 								"foo": "bar",
 							},
 							CreatedAt: nil,
 							UpdatedAt: nil,
 						},
 						{
-							Id: utils.Ptr(testRouteId2),
-							Destination: utils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(
+							Id: new(testRouteId2),
+							Destination: new(iaas.DestinationCIDRv6AsRouteDestination(
 								iaas.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
 							)),
-							Nexthop: utils.Ptr(iaas.NexthopIPv6AsRouteNexthop(
+							Nexthop: new(iaas.NexthopIPv6AsRouteNexthop(
 								iaas.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
 							)),
-							Labels: &map[string]interface{}{
+							Labels: &map[string]any{
 								"key": "value",
 							},
 							CreatedAt: nil,

@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -33,7 +33,7 @@ type Model struct {
 	Id               types.String `tfsdk:"id"` // needed by TF
 	ProjectId        types.String `tfsdk:"project_id"`
 	Region           types.String `tfsdk:"region"`
-	MaxRetentionDays types.Int64  `tfsdk:"max_retention_days"`
+	MaxRetentionDays types.Int32  `tfsdk:"max_retention_days"`
 }
 
 // NewComplianceLockResource is a helper function to simplify the provider implementation.
@@ -129,7 +129,7 @@ func (r *compliancelockResource) Schema(_ context.Context, _ resource.SchemaRequ
 					validate.NoSeparator(),
 				},
 			},
-			"max_retention_days": schema.Int64Attribute{
+			"max_retention_days": schema.Int32Attribute{
 				Description: descriptions["max_retention_days"],
 				Computed:    true,
 			},
@@ -163,7 +163,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := r.client.CreateComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := r.client.DefaultAPI.CreateComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -174,7 +174,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 		}
 
 		tflog.Info(ctx, "Compliance lock is already enabled for this project. Please check duplicate resources.")
-		complianceResp, err = r.client.GetComplianceLock(ctx, projectId, region).Execute()
+		complianceResp, err = r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -212,7 +212,7 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := r.client.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -264,7 +264,7 @@ func (r *compliancelockResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := r.client.DeleteComplianceLock(ctx, projectId, region).Execute()
+	_, err := r.client.DefaultAPI.DeleteComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting compliance lock", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -285,6 +285,6 @@ func mapFields(complianceResp *objectstorage.ComplianceLockResponse, model *Mode
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region)
 	model.Region = types.StringValue(region)
-	model.MaxRetentionDays = types.Int64PointerValue(complianceResp.MaxRetentionDays)
+	model.MaxRetentionDays = types.Int32Value(complianceResp.MaxRetentionDays)
 	return nil
 }

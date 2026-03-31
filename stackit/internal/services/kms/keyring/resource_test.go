@@ -1,13 +1,11 @@
 package kms
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 )
 
 const testRegion = "eu01"
@@ -27,11 +25,12 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 			},
 			&kms.KeyRing{
-				Id: utils.Ptr("krid"),
+				Id:          "krid",
+				DisplayName: "display-name",
 			},
 			Model{
 				Description: types.StringNull(),
-				DisplayName: types.StringNull(),
+				DisplayName: types.StringValue("display-name"),
 				KeyRingId:   types.StringValue("krid"),
 				Id:          types.StringValue("pid,eu01,krid"),
 				ProjectId:   types.StringValue("pid"),
@@ -46,9 +45,9 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue("pid"),
 			},
 			&kms.KeyRing{
-				Description: utils.Ptr("descr"),
-				DisplayName: utils.Ptr("name"),
-				Id:          utils.Ptr("krid"),
+				Description: new("descr"),
+				DisplayName: "name",
+				Id:          "krid",
 			},
 			Model{
 				Description: types.StringValue("descr"),
@@ -61,28 +60,9 @@ func TestMapFields(t *testing.T) {
 			true,
 		},
 		{
-			"nil_response_field",
-			Model{},
-			&kms.KeyRing{
-				Id: nil,
-			},
-			Model{},
-			false,
-		},
-		{
 			"nil_response",
 			Model{},
 			nil,
-			Model{},
-			false,
-		},
-		{
-			"no_resource_id",
-			Model{
-				Region:    types.StringValue(testRegion),
-				ProjectId: types.StringValue("pid"),
-			},
-			&kms.KeyRing{},
 			Model{},
 			false,
 		},
@@ -103,8 +83,7 @@ func TestMapFields(t *testing.T) {
 			if tt.isValid {
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
-					fmt.Println("state: ", state, " expected: ", tt.expected)
-					t.Fatalf("Data does not match")
+					t.Fatalf("Data does not match: %s", diff)
 				}
 			}
 		})
@@ -130,7 +109,7 @@ func TestToCreatePayload(t *testing.T) {
 				DisplayName: types.StringValue("name"),
 			},
 			&kms.CreateKeyRingPayload{
-				DisplayName: utils.Ptr("name"),
+				DisplayName: "name",
 			},
 			true,
 		},
@@ -141,8 +120,8 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue(""),
 			},
 			&kms.CreateKeyRingPayload{
-				DisplayName: utils.Ptr(""),
-				Description: utils.Ptr(""),
+				DisplayName: "",
+				Description: new(""),
 			},
 			true,
 		},

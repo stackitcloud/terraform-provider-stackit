@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 )
 
@@ -73,13 +72,13 @@ func TestMapFields(t *testing.T) {
 			description: "max values",
 			input: fixtureInstance(func(instance *logs.LogsInstance) {
 				instance.Acl = []string{"acl-entry-1", "acl-entry-2"}
-				instance.DatasourceUrl = utils.Ptr("datasource-url")
-				instance.Description = utils.Ptr("description")
+				instance.DatasourceUrl = new("datasource-url")
+				instance.Description = new("description")
 				instance.DisplayName = "display-name"
-				instance.IngestOtlpUrl = utils.Ptr("ingest-otlp-url")
-				instance.IngestUrl = utils.Ptr("ingest-url")
-				instance.QueryRangeUrl = utils.Ptr("query-range-url")
-				instance.QueryUrl = utils.Ptr("query-url")
+				instance.IngestOtlpUrl = new("ingest-otlp-url")
+				instance.IngestUrl = new("ingest-url")
+				instance.QueryRangeUrl = new("query-range-url")
+				instance.QueryUrl = new("query-url")
 				instance.RetentionDays = int32(7)
 			}),
 			expected: fixtureModel(func(model *Model) {
@@ -151,7 +150,7 @@ func TestToCreatePayload(t *testing.T) {
 			}),
 			expected: &logs.CreateLogsInstancePayload{
 				Acl:           []string{"acl-entry-1", "acl-entry-2"},
-				Description:   utils.Ptr("description"),
+				Description:   new("description"),
 				DisplayName:   "display-name",
 				RetentionDays: int32(7),
 			},
@@ -203,9 +202,9 @@ func TestToUpdatePayload(t *testing.T) {
 			}),
 			expected: &logs.UpdateLogsInstancePayload{
 				Acl:           []string{"acl-entry-1", "acl-entry-2"},
-				Description:   utils.Ptr("description"),
-				DisplayName:   utils.Ptr("display-name"),
-				RetentionDays: utils.Ptr(int32(7)),
+				Description:   new("description"),
+				DisplayName:   new("display-name"),
+				RetentionDays: new(int32(7)),
 			},
 		},
 		{

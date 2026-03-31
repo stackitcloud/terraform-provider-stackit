@@ -7,8 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 func TestMapDatasourceFields(t *testing.T) {
@@ -24,14 +23,16 @@ func TestMapDatasourceFields(t *testing.T) {
 	}{
 		{
 			"default_values",
-			&objectstorage.AccessKey{},
+			&objectstorage.AccessKey{
+				Expires: now.Format(time.RFC3339Nano),
+			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
-				Name:                types.StringNull(),
-				ExpirationTimestamp: types.StringNull(),
+				Name:                types.StringValue(""),
+				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
 			},
 			true,
@@ -39,8 +40,8 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"simple_values",
 			&objectstorage.AccessKey{
-				DisplayName: utils.Ptr("name"),
-				Expires:     utils.Ptr(now.Format(time.RFC3339)),
+				DisplayName: "name",
+				Expires:     now.Format(time.RFC3339),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -56,7 +57,8 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"empty_strings",
 			&objectstorage.AccessKey{
-				DisplayName: utils.Ptr(""),
+				DisplayName: "",
+				Expires:     now.Format(time.RFC3339),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
@@ -64,7 +66,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
 				Name:                types.StringValue(""),
-				ExpirationTimestamp: types.StringNull(),
+				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
 			},
 			true,
@@ -72,14 +74,14 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"expiration_timestamp_with_fractional_seconds",
 			&objectstorage.AccessKey{
-				Expires: utils.Ptr(now.Format(time.RFC3339Nano)),
+				Expires: now.Format(time.RFC3339Nano),
 			},
 			DataSourceModel{
 				Id:                  types.StringValue(id),
 				ProjectId:           types.StringValue("pid"),
 				CredentialsGroupId:  types.StringValue("cgid"),
 				CredentialId:        types.StringValue("cid"),
-				Name:                types.StringNull(),
+				Name:                types.StringValue(""),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
 			},
@@ -94,7 +96,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		{
 			"bad_time",
 			&objectstorage.AccessKey{
-				Expires: utils.Ptr("foo-bar"),
+				Expires: "foo-bar",
 			},
 			DataSourceModel{},
 			false,

@@ -338,62 +338,62 @@ func fixtureUpdatePayload(lb *albSdk.LoadBalancer) *albSdk.UpdateLoadBalancerPay
 func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.LoadBalancer)) *albSdk.LoadBalancer {
 	resp := &albSdk.LoadBalancer{
 		DisableTargetSecurityGroupAssignment: explicitBool,
-		ExternalAddress:                      utils.Ptr(externalAddress),
+		ExternalAddress:                      new(externalAddress),
 		Errors: []albSdk.LoadBalancerError{
 			{
-				Description: utils.Ptr("quota test error"),
-				Type:        utils.Ptr(string(legacyAlb.LOADBALANCERERRORTYPE_QUOTA_SECGROUP_EXCEEDED)),
+				Description: new("quota test error"),
+				Type:        new(string(legacyAlb.LOADBALANCERERRORTYPE_QUOTA_SECGROUP_EXCEEDED)),
 			},
 			{
-				Description: utils.Ptr("fip test error"),
-				Type:        utils.Ptr(string(legacyAlb.LOADBALANCERERRORTYPE_FIP_NOT_CONFIGURED)),
+				Description: new("fip test error"),
+				Type:        new(string(legacyAlb.LOADBALANCERERRORTYPE_FIP_NOT_CONFIGURED)),
 			},
 		},
-		Name:           utils.Ptr(lbName),
-		PlanId:         utils.Ptr("p10"),
-		PrivateAddress: utils.Ptr("10.1.11.0"),
-		Region:         utils.Ptr(region),
-		Status:         utils.Ptr("STATUS_READY"),
-		Version:        utils.Ptr(lbVersion),
+		Name:           new(lbName),
+		PlanId:         new("p10"),
+		PrivateAddress: new("10.1.11.0"),
+		Region:         new(region),
+		Status:         new("STATUS_READY"),
+		Version:        new(lbVersion),
 		Labels: &map[string]string{
 			"key":  "value",
 			"key2": "value2",
 		},
 		Networks: []albSdk.Network{
 			{
-				NetworkId: utils.Ptr("c7c92cc1-a6bd-4e15-a129-b6e2b9899bbc"),
+				NetworkId: new("c7c92cc1-a6bd-4e15-a129-b6e2b9899bbc"),
 				Role:      utils.Ptr("ROLE_LISTENERS"),
 			},
 			{
-				NetworkId: utils.Ptr("ed3f1822-ca1c-4969-bea6-74c6b3e9aa40"),
+				NetworkId: new("ed3f1822-ca1c-4969-bea6-74c6b3e9aa40"),
 				Role:      utils.Ptr("ROLE_TARGETS"),
 			},
 		},
 		Listeners: []albSdk.Listener{
 			{
-				Name:     utils.Ptr("http-80"),
-				Port:     utils.Ptr(int32(80)),
+				Name:     new("http-80"),
+				Port:     new(int32(80)),
 				Protocol: utils.Ptr("PROTOCOL_HTTP"),
 				Http: &albSdk.ProtocolOptionsHTTP{
 					Hosts: []albSdk.HostConfig{
 						{
-							Host: utils.Ptr("*"),
+							Host: new("*"),
 							Rules: []albSdk.Rule{
 								{
-									TargetPool: utils.Ptr(targetPoolName),
+									TargetPool: new(targetPoolName),
 									WebSocket:  explicitBool,
 									Path: &albSdk.Path{
-										Prefix: utils.Ptr("/"),
+										Prefix: new("/"),
 									},
 									Headers: []albSdk.HttpHeader{
-										{Name: utils.Ptr("a-header"), ExactMatch: utils.Ptr("value")},
+										{Name: new("a-header"), ExactMatch: new("value")},
 									},
 									QueryParameters: []albSdk.QueryParameter{
-										{Name: utils.Ptr("a_query_parameter"), ExactMatch: utils.Ptr("value")},
+										{Name: new("a_query_parameter"), ExactMatch: new("value")},
 									},
 									CookiePersistence: &albSdk.CookiePersistence{
-										Name: utils.Ptr("cookie_name"),
-										Ttl:  utils.Ptr("3s"),
+										Name: new("cookie_name"),
+										Ttl:  new("3s"),
 									},
 								},
 							},
@@ -401,54 +401,54 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 					},
 				},
 				Https: &albSdk.ProtocolOptionsHTTPS{
-					CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
+					CertificateConfig: new(albSdk.CertificateConfig{
 						CertificateIds: []string{
 							credentialsRef,
 						},
 					}),
 				},
-				WafConfigName: utils.Ptr("my-waf-config"),
+				WafConfigName: new("my-waf-config"),
 			},
 		},
 		TargetPools: []albSdk.TargetPool{
 			{
-				Name:       utils.Ptr(targetPoolName),
-				TargetPort: utils.Ptr(int32(80)),
+				Name:       new(targetPoolName),
+				TargetPort: new(int32(80)),
 				Targets: []albSdk.Target{
 					{
-						DisplayName: utils.Ptr("test-backend-server"),
-						Ip:          utils.Ptr("192.168.0.218"),
+						DisplayName: new("test-backend-server"),
+						Ip:          new("192.168.0.218"),
 					},
 				},
 				TlsConfig: &albSdk.TlsConfig{
 					Enabled:                   explicitBool,
 					SkipCertificateValidation: explicitBool,
-					CustomCa:                  utils.Ptr("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURDekNDQWZPZ0F3SUJBZ0lVVHlQc1RXQzlseTdvK3dORlltMHV1MStQOElFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF3d0tUWGxEZFhOMGIyMURRVEFlRncweU5UQXlNVGt4T1RJME1qQmFGdzB5TmpBeQpNVGt4T1RJME1qQmFNQlV4RXpBUkJnTlZCQU1NQ2sxNVEzVnpkRzl0UTBFd2dnRWlNQTBHQ1NxR1NJYjNEUUVCCkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDUU1FWUtiaU54VTM3ZkV3Qk94a3ZDc2hCUiswTXd4d0xXOE1pMy9wdm8KbjNodXhqY203RWFLVzlyN2tJYW9IWGJUUzF0bk82ckhBSEtCRHh6dW9ZRDdDMlNNU2lMeGRkcXVOUnZwa0xhUAo4cUFYbmVRWTJWUDdMenNBZ3NDMDRQS0cwWUMxTmdGNXNKR3NpV0lSR0ltK2NzWUxuUE1ud2FBR3g0SXZZNm1ICkFtTTY0YjZRUkNnMzZMSytQNk45S1R2U1FMdnZtRmRrQTJzRFRvQ21OL0FtcDZ4TkRGcSthUUdMd2RRUXFIRFAKVGFVcVBtRXlpRkhLdkZVYUZNTlFWazhCMU9tOEFTbzY5bThVM0VhdDRaT1ZXMXRpdEUzOTNRa09kQTZaeXBNQwpySkpwZU5OTExKcTNtSU9XT2Q3R0V5QXZqVWZtSndHaHFFRlM3bE1HNjdobkFnTUJBQUdqVXpCUk1CMEdBMVVkCkRnUVdCQlNrL0lNNWphT0FKTDMvS255cTNjVnZhMDRZWkRBZkJnTlZIU01FR0RBV2dCU2svSU01amFPQUpMMy8KS255cTNjVnZhMDRZWkRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCZQpaL21FOHJOSWJOYkhRZXAvVnBwc2hhWlV6Z2R5NG5zbWgwd3Z4TXVISVFQMEtIcnhMQ2toT243QTlmdTRtWS9QClErOFFxbG5qVHNNNGNxaXVGY2Q1VjFOazlWRi9lNVgzSFhDREhoL2pCRncrTzVUR1ZBUi83REJ3MzFsWXYvTHQKSGFra2pRQ2Rhd3V2SDNvc08vVWtFbE0vaTJLQytpWUJhdlRlbm05N0FSN1dHZ1cxNS9NSXF4TmFZRStuSnRoLwpkY1ZEMGI1cVN1WVFhRW1aM0N6TVVpMTg4UitnbzVvekNmMmNPYWErMy9MRVlBYUkzdktpU0U4S1Rzc2h5b0ttCk82WVpxclZ4UUNXQ0RUT3NkMjhrN2xIdDh3SitqelljakN1NjBEVXBnMVpwWStabm1yRTh2UFBEYi96WGhCbjYKL2xsWFRXT1VqbXVUS25Hc0lEUDUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="),
+					CustomCa:                  new("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURDekNDQWZPZ0F3SUJBZ0lVVHlQc1RXQzlseTdvK3dORlltMHV1MStQOElFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF3d0tUWGxEZFhOMGIyMURRVEFlRncweU5UQXlNVGt4T1RJME1qQmFGdzB5TmpBeQpNVGt4T1RJME1qQmFNQlV4RXpBUkJnTlZCQU1NQ2sxNVEzVnpkRzl0UTBFd2dnRWlNQTBHQ1NxR1NJYjNEUUVCCkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDUU1FWUtiaU54VTM3ZkV3Qk94a3ZDc2hCUiswTXd4d0xXOE1pMy9wdm8KbjNodXhqY203RWFLVzlyN2tJYW9IWGJUUzF0bk82ckhBSEtCRHh6dW9ZRDdDMlNNU2lMeGRkcXVOUnZwa0xhUAo4cUFYbmVRWTJWUDdMenNBZ3NDMDRQS0cwWUMxTmdGNXNKR3NpV0lSR0ltK2NzWUxuUE1ud2FBR3g0SXZZNm1ICkFtTTY0YjZRUkNnMzZMSytQNk45S1R2U1FMdnZtRmRrQTJzRFRvQ21OL0FtcDZ4TkRGcSthUUdMd2RRUXFIRFAKVGFVcVBtRXlpRkhLdkZVYUZNTlFWazhCMU9tOEFTbzY5bThVM0VhdDRaT1ZXMXRpdEUzOTNRa09kQTZaeXBNQwpySkpwZU5OTExKcTNtSU9XT2Q3R0V5QXZqVWZtSndHaHFFRlM3bE1HNjdobkFnTUJBQUdqVXpCUk1CMEdBMVVkCkRnUVdCQlNrL0lNNWphT0FKTDMvS255cTNjVnZhMDRZWkRBZkJnTlZIU01FR0RBV2dCU2svSU01amFPQUpMMy8KS255cTNjVnZhMDRZWkRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCZQpaL21FOHJOSWJOYkhRZXAvVnBwc2hhWlV6Z2R5NG5zbWgwd3Z4TXVISVFQMEtIcnhMQ2toT243QTlmdTRtWS9QClErOFFxbG5qVHNNNGNxaXVGY2Q1VjFOazlWRi9lNVgzSFhDREhoL2pCRncrTzVUR1ZBUi83REJ3MzFsWXYvTHQKSGFra2pRQ2Rhd3V2SDNvc08vVWtFbE0vaTJLQytpWUJhdlRlbm05N0FSN1dHZ1cxNS9NSXF4TmFZRStuSnRoLwpkY1ZEMGI1cVN1WVFhRW1aM0N6TVVpMTg4UitnbzVvekNmMmNPYWErMy9MRVlBYUkzdktpU0U4S1Rzc2h5b0ttCk82WVpxclZ4UUNXQ0RUT3NkMjhrN2xIdDh3SitqelljakN1NjBEVXBnMVpwWStabm1yRTh2UFBEYi96WGhCbjYKL2xsWFRXT1VqbXVUS25Hc0lEUDUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="),
 				},
 				ActiveHealthCheck: &albSdk.ActiveHealthCheck{
-					HealthyThreshold:   utils.Ptr(int32(1)),
-					UnhealthyThreshold: utils.Ptr(int32(5)),
-					Interval:           utils.Ptr("2s"),
-					IntervalJitter:     utils.Ptr("3s"),
-					Timeout:            utils.Ptr("4s"),
+					HealthyThreshold:   new(int32(1)),
+					UnhealthyThreshold: new(int32(5)),
+					Interval:           new("2s"),
+					IntervalJitter:     new("3s"),
+					Timeout:            new("4s"),
 					HttpHealthChecks: &albSdk.HttpHealthChecks{
-						Path:       utils.Ptr("/health"),
+						Path:       new("/health"),
 						OkStatuses: []string{"200", "201"},
 					},
 				},
 			},
 		},
-		Options: utils.Ptr(albSdk.LoadBalancerOptions{
+		Options: new(albSdk.LoadBalancerOptions{
 			EphemeralAddress:   explicitBool,
 			PrivateNetworkOnly: explicitBool,
 			Observability: &albSdk.LoadbalancerOptionObservability{
 				Logs: &albSdk.LoadbalancerOptionLogs{
-					CredentialsRef: utils.Ptr(credentialsRef),
-					PushUrl:        utils.Ptr("http://www.example.org/push"),
+					CredentialsRef: new(credentialsRef),
+					PushUrl:        new("http://www.example.org/push"),
 				},
 				Metrics: &albSdk.LoadbalancerOptionMetrics{
-					CredentialsRef: utils.Ptr(credentialsRef),
-					PushUrl:        utils.Ptr("http://www.example.org/pull"),
+					CredentialsRef: new(credentialsRef),
+					PushUrl:        new("http://www.example.org/pull"),
 				},
 			},
 			AccessControl: &albSdk.LoadbalancerOptionAccessControl{
@@ -456,12 +456,12 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 			},
 		}),
 		LoadBalancerSecurityGroup: &albSdk.SecurityGroup{
-			Id:   utils.Ptr(sgLBID),
-			Name: utils.Ptr("loadbalancer/" + lbName + "/backend-port"),
+			Id:   new(sgLBID),
+			Name: new("loadbalancer/" + lbName + "/backend-port"),
 		},
 		TargetSecurityGroup: &albSdk.SecurityGroup{
-			Id:   utils.Ptr(sgTargetID),
-			Name: utils.Ptr("loadbalancer/" + lbName + "/backend"),
+			Id:   new(sgTargetID),
+			Name: new("loadbalancer/" + lbName + "/backend"),
 		},
 	}
 	for _, mod := range mods {
@@ -578,7 +578,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region:   testRegion,
-			expected: fixtureModel(utils.Ptr(false)),
+			expected: fixtureModel(new(false)),
 			isValid:  true,
 		},
 		{
@@ -620,43 +620,43 @@ func TestMapFields(t *testing.T) {
 				Name:      types.StringValue(lbName),
 			},
 			region:   testRegion,
-			expected: fixtureModel(utils.Ptr(false)),
+			expected: fixtureModel(new(false)),
 			isValid:  true,
 		},
 		{
 			description: "false - explicitly set",
-			input:       fixtureApplicationLoadBalancer(utils.Ptr(false)),
+			input:       fixtureApplicationLoadBalancer(new(false)),
 			output: &Model{
 				ProjectId: types.StringValue(projectID),
 			},
 			region:   testRegion,
-			expected: fixtureModel(utils.Ptr(false)),
+			expected: fixtureModel(new(false)),
 			isValid:  true,
 		},
 		{
 			description: "true - explicitly set",
-			input:       fixtureApplicationLoadBalancer(utils.Ptr(true)),
+			input:       fixtureApplicationLoadBalancer(new(true)),
 			output: &Model{
 				ProjectId: types.StringValue(projectID),
 			},
 			region:   testRegion,
-			expected: fixtureModel(utils.Ptr(true)),
+			expected: fixtureModel(new(true)),
 			isValid:  true,
 		},
 		{
 			description: "false - only in model set",
 			input:       fixtureApplicationLoadBalancer(nil),
-			output:      fixtureModel(utils.Ptr(false)),
+			output:      fixtureModel(new(false)),
 			region:      testRegion,
-			expected:    fixtureModel(utils.Ptr(false)),
+			expected:    fixtureModel(new(false)),
 			isValid:     true,
 		},
 		{
 			description: "true - only in model set",
 			input:       fixtureApplicationLoadBalancer(nil),
-			output:      fixtureModel(utils.Ptr(true)),
+			output:      fixtureModel(new(true)),
 			region:      testRegion,
-			expected:    fixtureModel(utils.Ptr(false)),
+			expected:    fixtureModel(new(false)),
 			isValid:     true,
 		},
 		{
@@ -693,7 +693,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.TargetPools = types.ListValueMust(
 					types.ObjectType{AttrTypes: targetPoolTypes},
 					[]attr.Value{
@@ -717,20 +717,20 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.TargetPools = []albSdk.TargetPool{
 					{
-						Name:       utils.Ptr(targetPoolName),
-						TargetPort: utils.Ptr(int32(80)),
+						Name:       new(targetPoolName),
+						TargetPort: new(int32(80)),
 						Targets: []albSdk.Target{
 							{
-								DisplayName: utils.Ptr("test-backend-server"),
-								Ip:          utils.Ptr("192.168.0.218"),
+								DisplayName: new("test-backend-server"),
+								Ip:          new("192.168.0.218"),
 							},
 						},
 						ActiveHealthCheck: &albSdk.ActiveHealthCheck{
-							HealthyThreshold:   utils.Ptr(int32(1)),
-							UnhealthyThreshold: utils.Ptr(int32(5)),
-							Interval:           utils.Ptr("2s"),
-							IntervalJitter:     utils.Ptr("3s"),
-							Timeout:            utils.Ptr("4s"),
+							HealthyThreshold:   new(int32(1)),
+							UnhealthyThreshold: new(int32(5)),
+							Interval:           new("2s"),
+							IntervalJitter:     new("3s"),
+							Timeout:            new("4s"),
 						},
 					},
 				}
@@ -739,7 +739,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.TargetPools = types.ListValueMust(
 					types.ObjectType{AttrTypes: targetPoolTypes},
 					[]attr.Value{
@@ -793,7 +793,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Options = types.ObjectNull(optionsTypes)
 			}),
 			isValid: true,
@@ -803,29 +803,29 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = []albSdk.Listener{
 					{
-						Name:     utils.Ptr("http-80"),
-						Port:     utils.Ptr(int32(80)),
+						Name:     new("http-80"),
+						Port:     new(int32(80)),
 						Protocol: utils.Ptr("PROTOCOL_HTTP"),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
-									Host: utils.Ptr("*"),
+									Host: new("*"),
 									Rules: []albSdk.Rule{
 										{
-											TargetPool: utils.Ptr(targetPoolName),
+											TargetPool: new(targetPoolName),
 											WebSocket:  nil,
 											Path: &albSdk.Path{
-												Prefix: utils.Ptr("/"),
+												Prefix: new("/"),
 											},
 											Headers: []albSdk.HttpHeader{
-												{Name: utils.Ptr("a-header"), ExactMatch: utils.Ptr("value")},
+												{Name: new("a-header"), ExactMatch: new("value")},
 											},
 											QueryParameters: []albSdk.QueryParameter{
-												{Name: utils.Ptr("a_query_parameter"), ExactMatch: utils.Ptr("value")},
+												{Name: new("a_query_parameter"), ExactMatch: new("value")},
 											},
 											CookiePersistence: &albSdk.CookiePersistence{
-												Name: utils.Ptr("cookie_name"),
-												Ttl:  utils.Ptr("3s"),
+												Name: new("cookie_name"),
+												Ttl:  new("3s"),
 											},
 										},
 									},
@@ -835,7 +835,7 @@ func TestMapFields(t *testing.T) {
 						Https: &albSdk.ProtocolOptionsHTTPS{
 							CertificateConfig: nil,
 						},
-						WafConfigName: utils.Ptr("my-waf-config"),
+						WafConfigName: new("my-waf-config"),
 					},
 				}
 			}),
@@ -843,7 +843,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -929,29 +929,29 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = []albSdk.Listener{
 					{
-						Name:     utils.Ptr("http-80"),
-						Port:     utils.Ptr(int32(80)),
+						Name:     new("http-80"),
+						Port:     new(int32(80)),
 						Protocol: utils.Ptr("PROTOCOL_HTTP"),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
-									Host: utils.Ptr("*"),
+									Host: new("*"),
 									Rules: []albSdk.Rule{
 										{
-											TargetPool: utils.Ptr(targetPoolName),
+											TargetPool: new(targetPoolName),
 											WebSocket:  nil,
 											Path: &albSdk.Path{
-												Prefix: utils.Ptr("/"),
+												Prefix: new("/"),
 											},
 											Headers: []albSdk.HttpHeader{
-												{Name: utils.Ptr("a-header"), ExactMatch: utils.Ptr("value")},
+												{Name: new("a-header"), ExactMatch: new("value")},
 											},
 											QueryParameters: []albSdk.QueryParameter{
-												{Name: utils.Ptr("a_query_parameter"), ExactMatch: utils.Ptr("value")},
+												{Name: new("a_query_parameter"), ExactMatch: new("value")},
 											},
 											CookiePersistence: &albSdk.CookiePersistence{
-												Name: utils.Ptr("cookie_name"),
-												Ttl:  utils.Ptr("3s"),
+												Name: new("cookie_name"),
+												Ttl:  new("3s"),
 											},
 										},
 									},
@@ -959,7 +959,7 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						Https:         nil,
-						WafConfigName: utils.Ptr("my-waf-config"),
+						WafConfigName: new("my-waf-config"),
 					},
 				}
 			}),
@@ -967,7 +967,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1048,16 +1048,16 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = []albSdk.Listener{
 					{
-						Name:     utils.Ptr("http-80"),
-						Port:     utils.Ptr(int32(80)),
+						Name:     new("http-80"),
+						Port:     new(int32(80)),
 						Protocol: utils.Ptr("PROTOCOL_HTTP"),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
-									Host: utils.Ptr("*"),
+									Host: new("*"),
 									Rules: []albSdk.Rule{
 										{
-											TargetPool:        utils.Ptr(targetPoolName),
+											TargetPool:        new(targetPoolName),
 											WebSocket:         nil,
 											Path:              nil,
 											Headers:           nil,
@@ -1069,13 +1069,13 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
+							CertificateConfig: new(albSdk.CertificateConfig{
 								CertificateIds: []string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: utils.Ptr("my-waf-config"),
+						WafConfigName: new("my-waf-config"),
 					},
 				}
 			}),
@@ -1083,7 +1083,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1150,25 +1150,25 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = []albSdk.Listener{
 					{
-						Name:     utils.Ptr("http-80"),
-						Port:     utils.Ptr(int32(80)),
+						Name:     new("http-80"),
+						Port:     new(int32(80)),
 						Protocol: utils.Ptr("PROTOCOL_HTTP"),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
-									Host:  utils.Ptr("*"),
+									Host:  new("*"),
 									Rules: nil,
 								},
 							},
 						},
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
+							CertificateConfig: new(albSdk.CertificateConfig{
 								CertificateIds: []string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: utils.Ptr("my-waf-config"),
+						WafConfigName: new("my-waf-config"),
 					},
 				}
 			}),
@@ -1176,7 +1176,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1230,20 +1230,20 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = []albSdk.Listener{
 					{
-						Name:     utils.Ptr("http-80"),
-						Port:     utils.Ptr(int32(80)),
+						Name:     new("http-80"),
+						Port:     new(int32(80)),
 						Protocol: utils.Ptr("PROTOCOL_HTTP"),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: nil,
 						},
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
+							CertificateConfig: new(albSdk.CertificateConfig{
 								CertificateIds: []string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: utils.Ptr("my-waf-config"),
+						WafConfigName: new("my-waf-config"),
 					},
 				}
 			}),
@@ -1251,7 +1251,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1296,18 +1296,18 @@ func TestMapFields(t *testing.T) {
 			input: fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
 				m.Listeners = []albSdk.Listener{
 					{
-						Name:     utils.Ptr("http-80"),
-						Port:     utils.Ptr(int32(80)),
+						Name:     new("http-80"),
+						Port:     new(int32(80)),
 						Protocol: utils.Ptr("PROTOCOL_HTTP"),
 						Http:     nil,
 						Https: &albSdk.ProtocolOptionsHTTPS{
-							CertificateConfig: utils.Ptr(albSdk.CertificateConfig{
+							CertificateConfig: new(albSdk.CertificateConfig{
 								CertificateIds: []string{
 									credentialsRef,
 								},
 							}),
 						},
-						WafConfigName: utils.Ptr("my-waf-config"),
+						WafConfigName: new("my-waf-config"),
 					},
 				}
 			}),
@@ -1315,7 +1315,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(projectID),
 			},
 			region: testRegion,
-			expected: fixtureModel(utils.Ptr(false), func(m *Model) {
+			expected: fixtureModel(new(false), func(m *Model) {
 				m.Listeners = types.ListValueMust(
 					types.ObjectType{AttrTypes: listenerTypes},
 					[]attr.Value{
@@ -1382,7 +1382,7 @@ func Test_toExternalAddress(t *testing.T) {
 			input: &Model{
 				ExternalAddress: types.StringValue(externalAddress),
 			},
-			expected: utils.Ptr(externalAddress),
+			expected: new(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1397,7 +1397,7 @@ func Test_toExternalAddress(t *testing.T) {
 						"ephemeral_address":    types.BoolNull(),
 					}),
 			},
-			expected: utils.Ptr(externalAddress),
+			expected: new(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1427,7 +1427,7 @@ func Test_toExternalAddress(t *testing.T) {
 						"ephemeral_address":    types.BoolValue(false),
 					}),
 			},
-			expected: utils.Ptr(externalAddress),
+			expected: new(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1472,7 +1472,7 @@ func Test_toExternalAddress(t *testing.T) {
 						"ephemeral_address":    types.BoolValue(false),
 					}),
 			},
-			expected: utils.Ptr(externalAddress),
+			expected: new(externalAddress),
 			isValid:  true,
 		},
 		{
@@ -1487,7 +1487,7 @@ func Test_toExternalAddress(t *testing.T) {
 						"ephemeral_address":    types.BoolNull(),
 					}),
 			},
-			expected: utils.Ptr(externalAddress),
+			expected: new(externalAddress),
 			isValid:  true,
 		},
 	}
@@ -1528,7 +1528,7 @@ func Test_toPathPayload(t *testing.T) {
 			},
 			expected: &albSdk.Path{
 				ExactMatch: nil,
-				Prefix:     utils.Ptr("/"),
+				Prefix:     new("/"),
 			},
 			isValid: true,
 		},
@@ -1542,7 +1542,7 @@ func Test_toPathPayload(t *testing.T) {
 					}),
 			},
 			expected: &albSdk.Path{
-				ExactMatch: utils.Ptr("exact-match"),
+				ExactMatch: new("exact-match"),
 				Prefix:     nil,
 			},
 			isValid: true,

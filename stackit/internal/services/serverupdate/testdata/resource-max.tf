@@ -37,6 +37,11 @@ resource "stackit_server" "server" {
   ]
 }
 
+resource "stackit_server_update_enable" "enable" {
+  project_id = var.project_id
+  server_id  = stackit_server.server.server_id
+}
+
 resource "stackit_server_update_schedule" "test_schedule" {
   project_id         = var.project_id
   server_id          = stackit_server.server.server_id
@@ -45,15 +50,7 @@ resource "stackit_server_update_schedule" "test_schedule" {
   enabled            = var.enabled
   maintenance_window = var.maintenance_window
   region             = var.region
-}
-
-data "stackit_server_update_schedule" "test_schedule" {
-  project_id         = var.project_id
-  server_id          = stackit_server.server.server_id
-  update_schedule_id = stackit_server_update_schedule.test_schedule.update_schedule_id
-}
-
-data "stackit_server_update_schedules" "schedules_data_test" {
-  project_id = var.project_id
-  server_id  = stackit_server.server.server_id
+  depends_on = [
+    stackit_server_update_enable.enable
+  ]
 }

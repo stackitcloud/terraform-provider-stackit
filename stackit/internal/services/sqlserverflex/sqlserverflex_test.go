@@ -49,7 +49,7 @@ resource "stackit_sqlserverflex_instance" "instance" {
 					Cpu:         utils.Ptr(int64(flavorCpu)),
 					Memory:      utils.Ptr(int64(flavorRam)),
 					Id:          utils.Ptr(flavorId),
-					Description: utils.Ptr("test-flavor-id"),
+					Description: new("test-flavor-id"),
 				},
 			},
 		},
@@ -65,7 +65,7 @@ resource "stackit_sqlserverflex_instance" "instance" {
 						testutil.MockResponse{
 							Description: "create",
 							ToJsonBody: sqlserverflex.CreateInstanceResponse{
-								Id: utils.Ptr(instanceId),
+								Id: new(instanceId),
 							},
 						},
 						testutil.MockResponse{

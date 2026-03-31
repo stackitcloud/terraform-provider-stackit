@@ -100,6 +100,7 @@ import (
 	secretsManagerUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/user"
 	serverBackupEnable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/enable"
 	serverBackupSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/schedule"
+	serverUpdateEnable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/enable"
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
 	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
 	serviceAccounts "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/accounts"
@@ -686,6 +687,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		snapshots.NewResourcePoolSnapshotDataSource,
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
+		serverUpdateEnable.NewServerUpdateEnableDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 
@@ -773,6 +775,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		exportpolicy.NewExportPolicyResource,
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
+		serverUpdateEnable.NewServerUpdateEnableResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
 )
 
@@ -26,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&mariadb.CredentialsResponse{
-				Id:  utils.Ptr("cid"),
+				Id:  new("cid"),
 				Raw: &mariadb.RawCredentials{},
 			},
 			Model{
@@ -51,19 +50,19 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&mariadb.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &mariadb.RawCredentials{
 					Credentials: &mariadb.Credentials{
-						Host: utils.Ptr("host"),
+						Host: new("host"),
 						Hosts: &[]string{
 							"host_1",
 							"",
 						},
-						Name:     utils.Ptr("name"),
-						Password: utils.Ptr("password"),
-						Port:     utils.Ptr(int64(1234)),
-						Uri:      utils.Ptr("uri"),
-						Username: utils.Ptr("username"),
+						Name:     new("name"),
+						Password: new("password"),
+						Port:     new(int64(1234)),
+						Uri:      new("uri"),
+						Username: new("username"),
 					},
 				},
 			},
@@ -97,20 +96,20 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			&mariadb.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &mariadb.RawCredentials{
 					Credentials: &mariadb.Credentials{
-						Host: utils.Ptr("host"),
+						Host: new("host"),
 						Hosts: &[]string{
 							"",
 							"host_1",
 							"host_2",
 						},
-						Name:     utils.Ptr("name"),
-						Password: utils.Ptr("password"),
-						Port:     utils.Ptr(int64(1234)),
-						Uri:      utils.Ptr("uri"),
-						Username: utils.Ptr("username"),
+						Name:     new("name"),
+						Password: new("password"),
+						Port:     new(int64(1234)),
+						Uri:      new("uri"),
+						Username: new("username"),
 					},
 				},
 			},
@@ -140,16 +139,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&mariadb.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &mariadb.RawCredentials{
 					Credentials: &mariadb.Credentials{
-						Host:     utils.Ptr(""),
+						Host:     new(""),
 						Hosts:    &[]string{},
 						Name:     nil,
-						Password: utils.Ptr(""),
-						Port:     utils.Ptr(int64(2123456789)),
+						Password: new(""),
+						Port:     new(int64(2123456789)),
 						Uri:      nil,
-						Username: utils.Ptr(""),
+						Username: new(""),
 					},
 				},
 			},
@@ -195,7 +194,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&mariadb.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 			},
 			Model{},
 			false,

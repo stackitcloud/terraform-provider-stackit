@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf"
 )
 
@@ -27,8 +26,8 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.Platforms{
-				Guid:   utils.Ptr(testPlatformId),
-				Region: utils.Ptr(testRegion),
+				Guid:   new(testPlatformId),
+				Region: new(testRegion),
 			},
 			expected: &Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testPlatformId)),
@@ -45,12 +44,12 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "max_input",
 			input: &scf.Platforms{
-				Guid:        utils.Ptr(testPlatformId),
-				SystemId:    utils.Ptr("eu01.01"),
-				DisplayName: utils.Ptr("scf-full-org"),
-				Region:      utils.Ptr(testRegion),
-				ApiUrl:      utils.Ptr("https://example.scf.stackit.cloud"),
-				ConsoleUrl:  utils.Ptr("https://example.console.scf.stackit.cloud"),
+				Guid:        new(testPlatformId),
+				SystemId:    new("eu01.01"),
+				DisplayName: new("scf-full-org"),
+				Region:      new(testRegion),
+				ApiUrl:      new("https://example.scf.stackit.cloud"),
+				ConsoleUrl:  new("https://example.console.scf.stackit.cloud"),
 			},
 			expected: &Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testPlatformId)),
@@ -79,7 +78,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "missing_id",
 			input: &scf.Platforms{
-				DisplayName: utils.Ptr("scf-missing-id"),
+				DisplayName: new("scf-missing-id"),
 			},
 			expected: nil,
 			isValid:  false,

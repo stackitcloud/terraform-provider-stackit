@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -653,13 +651,13 @@ func toNextHopPayload(model *ModelV1) (*iaas.RouteNexthop, error) {
 
 	switch model.NextHop.Type.ValueString() {
 	case "blackhole":
-		return sdkUtils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
+		return new(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
 	case "internet":
-		return sdkUtils.Ptr(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
+		return new(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
 	case "ipv4":
-		return sdkUtils.Ptr(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", model.NextHop.Value.ValueString()))), nil
+		return new(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", model.NextHop.Value.ValueString()))), nil
 	case "ipv6":
-		return sdkUtils.Ptr(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", model.NextHop.Value.ValueString()))), nil
+		return new(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", model.NextHop.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown nexthop type: %s", model.NextHop.Type.ValueString())
 }
@@ -673,9 +671,9 @@ func toDestinationPayload(model *ModelV1) (*iaas.RouteDestination, error) {
 
 	switch model.Destination.Type.ValueString() {
 	case "cidrv4":
-		return sdkUtils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", model.Destination.Value.ValueString()))), nil
+		return new(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", model.Destination.Value.ValueString()))), nil
 	case "cidrv6":
-		return sdkUtils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", model.Destination.Value.ValueString()))), nil
+		return new(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", model.Destination.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown destination type: %s", model.Destination.Type.ValueString())
 }
