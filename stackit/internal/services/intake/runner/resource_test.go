@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/intake"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
 
@@ -26,12 +26,12 @@ func TestMapFields(t *testing.T) {
 		{
 			"success",
 			&intake.IntakeRunnerResponse{
-				Id:                 utils.Ptr(runnerId),
-				DisplayName:        utils.Ptr("name"),
+				Id:                 runnerId,
+				DisplayName:        "name",
 				Description:        utils.Ptr("description"),
-				Labels:             &map[string]string{"key": "value"},
-				MaxMessageSizeKiB:  utils.Ptr(int64(1024)),
-				MaxMessagesPerHour: utils.Ptr(int64(100)),
+				Labels:             map[string]string{"key": "value"},
+				MaxMessageSizeKiB:  int32(1024),
+				MaxMessagesPerHour: int32(100),
 			},
 			&Model{
 				ProjectId: types.StringValue("pid"),
@@ -45,8 +45,8 @@ func TestMapFields(t *testing.T) {
 				Name:               types.StringValue("name"),
 				Description:        types.StringValue("description"),
 				Labels:             types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				MaxMessageSizeKiB:  types.Int64Value(1024),
-				MaxMessagesPerHour: types.Int64Value(100),
+				MaxMessageSizeKiB:  types.Int32Value(1024),
+				MaxMessagesPerHour: types.Int32Value(100),
 			},
 			false,
 		},
@@ -69,8 +69,8 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty response",
 			&intake.IntakeRunnerResponse{
-				Id:     utils.Ptr(""),
-				Labels: &map[string]string{},
+				Id:     "",
+				Labels: map[string]string{},
 			},
 			&Model{
 				ProjectId: types.StringValue("pid"),
@@ -84,8 +84,8 @@ func TestMapFields(t *testing.T) {
 				Name:               types.StringNull(),
 				Description:        types.StringNull(),
 				Labels:             types.MapValueMust(types.StringType, map[string]attr.Value{}),
-				MaxMessageSizeKiB:  types.Int64Null(),
-				MaxMessagesPerHour: types.Int64Null(),
+				MaxMessageSizeKiB:  types.Int32Null(),
+				MaxMessagesPerHour: types.Int32Null(),
 			},
 			false,
 		},
@@ -119,15 +119,15 @@ func TestToCreatePayload(t *testing.T) {
 				Name:               types.StringValue("name"),
 				Description:        types.StringValue("description"),
 				Labels:             types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				MaxMessageSizeKiB:  types.Int64Value(1024),
-				MaxMessagesPerHour: types.Int64Value(100),
+				MaxMessageSizeKiB:  types.Int32Value(1024),
+				MaxMessagesPerHour: types.Int32Value(100),
 			},
 			&intake.CreateIntakeRunnerPayload{
-				DisplayName:        utils.Ptr("name"),
+				DisplayName:        "name",
 				Description:        utils.Ptr("description"),
-				Labels:             utils.Ptr(map[string]string{"key": "value"}),
-				MaxMessageSizeKiB:  utils.Ptr(int64(1024)),
-				MaxMessagesPerHour: utils.Ptr(int64(100)),
+				Labels:             map[string]string{"key": "value"},
+				MaxMessageSizeKiB:  int32(1024),
+				MaxMessagesPerHour: int32(100),
 			},
 			false,
 		},
@@ -141,11 +141,11 @@ func TestToCreatePayload(t *testing.T) {
 			"empty model",
 			&Model{},
 			&intake.CreateIntakeRunnerPayload{
-				DisplayName:        nil,
+				DisplayName:        "",
 				Description:        nil,
 				Labels:             nil,
-				MaxMessageSizeKiB:  nil,
-				MaxMessagesPerHour: nil,
+				MaxMessageSizeKiB:  0,
+				MaxMessagesPerHour: 0,
 			},
 			false,
 		},
@@ -180,16 +180,16 @@ func TestToUpdatePayload(t *testing.T) {
 				Name:               types.StringValue("name"),
 				Description:        types.StringValue("description"),
 				Labels:             types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				MaxMessageSizeKiB:  types.Int64Value(1024),
-				MaxMessagesPerHour: types.Int64Value(100),
+				MaxMessageSizeKiB:  types.Int32Value(1024),
+				MaxMessagesPerHour: types.Int32Value(100),
 			},
 			&Model{},
 			&intake.UpdateIntakeRunnerPayload{
 				DisplayName:        conversion.StringValueToPointer(types.StringValue("name")),
 				Description:        conversion.StringValueToPointer(types.StringValue("description")),
-				Labels:             utils.Ptr(map[string]string{"key": "value"}),
-				MaxMessageSizeKiB:  conversion.Int64ValueToPointer(types.Int64Value(1024)),
-				MaxMessagesPerHour: conversion.Int64ValueToPointer(types.Int64Value(100)),
+				Labels:             map[string]string{"key": "value"},
+				MaxMessageSizeKiB:  utils.Ptr(int32(1024)),
+				MaxMessagesPerHour: utils.Ptr(int32(100)),
 			},
 			false,
 		},
@@ -220,8 +220,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Name:               types.StringUnknown(),
 				Description:        types.StringUnknown(),
 				Labels:             types.MapUnknown(types.StringType),
-				MaxMessageSizeKiB:  types.Int64Unknown(),
-				MaxMessagesPerHour: types.Int64Unknown(),
+				MaxMessageSizeKiB:  types.Int32Unknown(),
+				MaxMessagesPerHour: types.Int32Unknown(),
 			},
 			&Model{},
 			&intake.UpdateIntakeRunnerPayload{},
