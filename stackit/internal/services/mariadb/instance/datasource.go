@@ -17,7 +17,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -131,11 +131,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["graphite"],
 						Computed:    true,
 					},
-					"max_disk_threshold": schema.Int64Attribute{
+					"max_disk_threshold": schema.Int32Attribute{
 						Description: parametersDescriptions["max_disk_threshold"],
 						Computed:    true,
 					},
-					"metrics_frequency": schema.Int64Attribute{
+					"metrics_frequency": schema.Int32Attribute{
 						Description: parametersDescriptions["metrics_frequency"],
 						Computed:    true,
 					},
@@ -190,7 +190,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

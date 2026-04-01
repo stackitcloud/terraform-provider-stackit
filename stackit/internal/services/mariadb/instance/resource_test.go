@@ -9,15 +9,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
 )
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
 	"sgw_acl":                types.StringValue("acl"),
 	"enable_monitoring":      types.BoolValue(true),
 	"graphite":               types.StringValue("graphite"),
-	"max_disk_threshold":     types.Int64Value(10),
-	"metrics_frequency":      types.Int64Value(10),
+	"max_disk_threshold":     types.Int32Value(10),
+	"metrics_frequency":      types.Int32Value(10),
 	"metrics_prefix":         types.StringValue("prefix"),
 	"monitoring_instance_id": types.StringValue("mid"),
 	"syslog": types.ListValueMust(types.StringType, []attr.Value{
@@ -30,8 +30,8 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 	"sgw_acl":                types.StringNull(),
 	"enable_monitoring":      types.BoolNull(),
 	"graphite":               types.StringNull(),
-	"max_disk_threshold":     types.Int64Null(),
-	"metrics_frequency":      types.Int64Null(),
+	"max_disk_threshold":     types.Int32Null(),
+	"metrics_frequency":      types.Int32Null(),
 	"metrics_prefix":         types.StringNull(),
 	"monitoring_instance_id": types.StringNull(),
 	"syslog":                 types.ListNull(types.StringType),
@@ -41,11 +41,11 @@ var fixtureInstanceParameters = mariadb.InstanceParameters{
 	SgwAcl:               utils.Ptr("acl"),
 	EnableMonitoring:     utils.Ptr(true),
 	Graphite:             utils.Ptr("graphite"),
-	MaxDiskThreshold:     utils.Ptr(int64(10)),
-	MetricsFrequency:     utils.Ptr(int64(10)),
+	MaxDiskThreshold:     utils.Ptr(int32(10)),
+	MetricsFrequency:     utils.Ptr(int32(10)),
 	MetricsPrefix:        utils.Ptr("prefix"),
 	MonitoringInstanceId: utils.Ptr("mid"),
-	Syslog:               &[]string{"syslog", "syslog2"},
+	Syslog:               []string{"syslog", "syslog2"},
 }
 
 func TestMapFields(t *testing.T) {
@@ -62,13 +62,13 @@ func TestMapFields(t *testing.T) {
 				Id:                 types.StringValue("pid,iid"),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
-				PlanId:             types.StringNull(),
-				Name:               types.StringNull(),
-				CfGuid:             types.StringNull(),
-				CfSpaceGuid:        types.StringNull(),
-				DashboardUrl:       types.StringNull(),
-				ImageUrl:           types.StringNull(),
-				CfOrganizationGuid: types.StringNull(),
+				PlanId:             types.StringValue(""),
+				Name:               types.StringValue(""),
+				CfGuid:             types.StringValue(""),
+				CfSpaceGuid:        types.StringValue(""),
+				DashboardUrl:       types.StringValue(""),
+				ImageUrl:           types.StringValue(""),
+				CfOrganizationGuid: types.StringValue(""),
 				Parameters:         types.ObjectNull(parametersTypes),
 			},
 			true,
@@ -76,20 +76,20 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&mariadb.Instance{
-				PlanId:             utils.Ptr("plan"),
-				CfGuid:             utils.Ptr("cf"),
-				CfSpaceGuid:        utils.Ptr("space"),
-				DashboardUrl:       utils.Ptr("dashboard"),
-				ImageUrl:           utils.Ptr("image"),
+				PlanId:             "plan",
+				CfGuid:             "cf",
+				CfSpaceGuid:        "space",
+				DashboardUrl:       "dashboard",
+				ImageUrl:           "image",
 				InstanceId:         utils.Ptr("iid"),
-				Name:               utils.Ptr("name"),
-				CfOrganizationGuid: utils.Ptr("org"),
-				Parameters: &map[string]interface{}{
+				Name:               "name",
+				CfOrganizationGuid: "org",
+				Parameters: map[string]interface{}{
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
-					"max_disk_threshold":     int64(10),
-					"metrics_frequency":      int64(10),
+					"max_disk_threshold":     int32(10),
+					"metrics_frequency":      int32(10),
 					"metrics_prefix":         "prefix",
 					"monitoring_instance_id": "mid",
 					"syslog":                 []string{"syslog", "syslog2"},
@@ -125,7 +125,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&mariadb.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: map[string]interface{}{
 					"sgw_acl": true,
 				},
 			},
@@ -135,7 +135,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&mariadb.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: map[string]interface{}{
 					"sgw_acl": 1,
 				},
 			},
@@ -187,9 +187,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&mariadb.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
+				InstanceName: "name",
 				Parameters:   &fixtureInstanceParameters,
-				PlanId:       utils.Ptr("plan"),
+				PlanId:       "plan",
 			},
 			true,
 		},
@@ -201,9 +201,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureNullModelParameters,
 			},
 			&mariadb.CreateInstancePayload{
-				InstanceName: utils.Ptr(""),
+				InstanceName: "",
 				Parameters:   &mariadb.InstanceParameters{},
-				PlanId:       utils.Ptr(""),
+				PlanId:       "",
 			},
 			true,
 		},
@@ -220,8 +220,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&mariadb.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: "name",
+				PlanId:       "plan",
 			},
 			true,
 		},
