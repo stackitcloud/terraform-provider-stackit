@@ -132,6 +132,9 @@ func BoolValueToPointer(s basetypes.BoolValue) *bool {
 // It returns nil if the value is null or unknown.
 func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 	result, err := StringListToSlice(list)
+	if result == nil {
+		return nil, err
+	}
 	return &result, err
 }
 
