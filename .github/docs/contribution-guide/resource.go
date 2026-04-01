@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -16,6 +17,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	fooUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/foo/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/foo"      // Import service "foo" from the STACKIT SDK for Go
 	"github.com/stackitcloud/stackit-sdk-go/services/foo/wait" // Import service "foo" waiters from the STACKIT SDK for Go (in case the service API has asynchronous endpoints)
@@ -32,13 +34,14 @@ var (
 
 // Model is the internal model of the terraform resource
 type Model struct {
-	Id              types.String `tfsdk:"id"` // needed by TF
-	ProjectId       types.String `tfsdk:"project_id"`
-	BarId           types.String `tfsdk:"bar_id"`
-	Region          types.String `tfsdk:"region"`
-	MyRequiredField types.String `tfsdk:"my_required_field"`
-	MyOptionalField types.String `tfsdk:"my_optional_field"`
-	MyReadOnlyField types.String `tfsdk:"my_read_only_field"`
+	Id              types.String   `tfsdk:"id"` // needed by TF
+	ProjectId       types.String   `tfsdk:"project_id"`
+	BarId           types.String   `tfsdk:"bar_id"`
+	Region          types.String   `tfsdk:"region"`
+	MyRequiredField types.String   `tfsdk:"my_required_field"`
+	MyOptionalField types.String   `tfsdk:"my_optional_field"`
+	MyReadOnlyField types.String   `tfsdk:"my_read_only_field"`
+	Timeouts        timeouts.Value `tfsdk:"timeouts"`
 }
 
 // NewBarResource is a helper function to simplify the provider implementation.
@@ -104,7 +107,7 @@ func (r *barResource) Configure(ctx context.Context, req resource.ConfigureReque
 }
 
 // Schema defines the schema for the resource.
-func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *barResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":               "Foo bar resource schema.",
 		"id":                 "Terraform's internal resource identifier. It is structured as \"`project_id`,`bar_id`\".",
@@ -173,6 +176,7 @@ func (r *barResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Description: descriptions["my_read_only_field"],
 				Computed:    true,
 			},
+			"timeouts": timeouts.AttributesAll(ctx),
 		},
 	}
 }
@@ -184,6 +188,15 @@ func (r *barResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	waiterTimeout := wait.CreateBarWaitHandler(ctx, r.client, projectId, region, resp.BarId).GetTimeout()
+	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -250,6 +263,14 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
+	readTimeout, diags := model.Timeouts.Create(ctx, core.DefaultOperationTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -295,6 +316,15 @@ func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	waiterTimeout := wait.DeleteBarWaitHandler(ctx, r.client, projectId, region, barId).GetTimeout()
+	deleteTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
