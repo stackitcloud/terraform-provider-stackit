@@ -37,8 +37,8 @@ var planTypes = map[string]attr.Type{
 	"id":             types.StringType,
 	"name":           types.StringType,
 	"description":    types.StringType,
-	"min_edge_hosts": types.Int64Type,
-	"max_edge_hosts": types.Int64Type,
+	"min_edge_hosts": types.Int32Type,
+	"max_edge_hosts": types.Int32Type,
 }
 
 // NewPlansDataSource creates a new plan data source.
@@ -109,11 +109,11 @@ func (d *plansDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 							Description: "Description of the plan.",
 							Computed:    true,
 						},
-						"min_edge_hosts": schema.Int64Attribute{
+						"min_edge_hosts": schema.Int32Attribute{
 							Description: "Minimum number of Edge Cloud hosts charged.",
 							Computed:    true,
 						},
-						"max_edge_hosts": schema.Int64Attribute{
+						"max_edge_hosts": schema.Int32Attribute{
 							Description: "Maximum number of Edge Cloud hosts that can be used.",
 							Computed:    true,
 						},
