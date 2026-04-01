@@ -201,7 +201,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	payload := cdn.PutCustomDomainPayload{
-		IntentId:    cdn.PtrString(uuid.NewString()),
+		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
 	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
@@ -317,7 +317,7 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	payload := cdn.PutCustomDomainPayload{
-		IntentId:    cdn.PtrString(uuid.NewString()),
+		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
 	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
@@ -390,7 +390,7 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing CDN custom domain", fmt.Sprintf("Expected import identifier on the format: [project_id]%q[distribution_id]%q[custom_domain_name], got %q", core.Separator, core.Separator, req.ID))
 	}
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      idParts[0],
 		"distribution_id": idParts[1],
 		"name":            idParts[2],

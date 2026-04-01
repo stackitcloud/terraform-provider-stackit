@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
 )
 
@@ -72,25 +71,25 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 })
 
 var fixtureInstanceParameters = logme.InstanceParameters{
-	SgwAcl:                 utils.Ptr("acl"),
-	EnableMonitoring:       utils.Ptr(true),
-	FluentdTcp:             utils.Ptr(int64(10)),
-	FluentdTls:             utils.Ptr(int64(10)),
-	FluentdTlsCiphers:      utils.Ptr("ciphers"),
-	FluentdTlsMaxVersion:   utils.Ptr("max_version"),
-	FluentdTlsMinVersion:   utils.Ptr("min_version"),
-	FluentdTlsVersion:      utils.Ptr("version"),
-	FluentdUdp:             utils.Ptr(int64(10)),
-	Graphite:               utils.Ptr("graphite"),
-	IsmDeletionAfter:       utils.Ptr("deletion_after"),
-	IsmJitter:              utils.Ptr(10.1),
-	IsmJobInterval:         utils.Ptr(int64(10)),
-	JavaHeapspace:          utils.Ptr(int64(10)),
-	JavaMaxmetaspace:       utils.Ptr(int64(10)),
-	MaxDiskThreshold:       utils.Ptr(int64(10)),
-	MetricsFrequency:       utils.Ptr(int64(10)),
-	MetricsPrefix:          utils.Ptr("prefix"),
-	MonitoringInstanceId:   utils.Ptr("mid"),
+	SgwAcl:                 new("acl"),
+	EnableMonitoring:       new(true),
+	FluentdTcp:             new(int64(10)),
+	FluentdTls:             new(int64(10)),
+	FluentdTlsCiphers:      new("ciphers"),
+	FluentdTlsMaxVersion:   new("max_version"),
+	FluentdTlsMinVersion:   new("min_version"),
+	FluentdTlsVersion:      new("version"),
+	FluentdUdp:             new(int64(10)),
+	Graphite:               new("graphite"),
+	IsmDeletionAfter:       new("deletion_after"),
+	IsmJitter:              new(10.1),
+	IsmJobInterval:         new(int64(10)),
+	JavaHeapspace:          new(int64(10)),
+	JavaMaxmetaspace:       new(int64(10)),
+	MaxDiskThreshold:       new(int64(10)),
+	MetricsFrequency:       new(int64(10)),
+	MetricsPrefix:          new("prefix"),
+	MonitoringInstanceId:   new("mid"),
 	OpensearchTlsCiphers:   &[]string{"ciphers", "ciphers2"},
 	OpensearchTlsProtocols: &[]string{"protocols", "protocols2"},
 	Syslog:                 &[]string{"syslog", "syslog2"},
@@ -124,15 +123,15 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&logme.Instance{
-				PlanId:             utils.Ptr("plan"),
-				CfGuid:             utils.Ptr("cf"),
-				CfSpaceGuid:        utils.Ptr("space"),
-				DashboardUrl:       utils.Ptr("dashboard"),
-				ImageUrl:           utils.Ptr("image"),
-				InstanceId:         utils.Ptr("iid"),
-				Name:               utils.Ptr("name"),
-				CfOrganizationGuid: utils.Ptr("org"),
-				Parameters: &map[string]interface{}{
+				PlanId:             new("plan"),
+				CfGuid:             new("cf"),
+				CfSpaceGuid:        new("space"),
+				DashboardUrl:       new("dashboard"),
+				ImageUrl:           new("image"),
+				InstanceId:         new("iid"),
+				Name:               new("name"),
+				CfOrganizationGuid: new("org"),
+				Parameters: &map[string]any{
 					// Using "-" on purpose on some fields because that is the API response
 					"sgw_acl":                  "acl",
 					"enable_monitoring":        true,
@@ -188,7 +187,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&logme.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -198,7 +197,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&logme.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: &map[string]any{
 					"sgw_acl": 1,
 				},
 			},
@@ -250,8 +249,8 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&logme.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: new("name"),
+				PlanId:       new("plan"),
 				Parameters:   &fixtureInstanceParameters,
 			},
 			true,
@@ -264,8 +263,8 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureNullModelParameters,
 			},
 			&logme.CreateInstancePayload{
-				InstanceName: utils.Ptr(""),
-				PlanId:       utils.Ptr(""),
+				InstanceName: new(""),
+				PlanId:       new(""),
 				Parameters:   &logme.InstanceParameters{},
 			},
 			true,
@@ -283,8 +282,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&logme.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: new("name"),
+				PlanId:       new("plan"),
 			},
 			true,
 		},
@@ -339,7 +338,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&logme.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr("plan"),
+				PlanId:     new("plan"),
 			},
 			true,
 		},
@@ -351,7 +350,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&logme.PartialUpdateInstancePayload{
 				Parameters: &logme.InstanceParameters{},
-				PlanId:     utils.Ptr(""),
+				PlanId:     new(""),
 			},
 			true,
 		},
@@ -367,7 +366,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&logme.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId: new("plan"),
 			},
 			true,
 		},

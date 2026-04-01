@@ -28,6 +28,9 @@ var (
 
 	//go:embed testdata/resource-max.tf
 	resourceMaxConfig string
+
+	//go:embed testdata/datasource.tf
+	datasourceConfig string
 )
 
 var testConfigVarsMin = config.Variables{
@@ -110,11 +113,15 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_backup_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_backup_enable.enable", "enabled", "true"),
 				),
 			},
 			// data source
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMinConfig + "\n" + datasourceConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
@@ -130,6 +137,10 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("data.stackit_server_backup_enable.enable_test", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_enable.enable_test", "enabled", "true"),
 				),
 			},
 			// Import
@@ -171,6 +182,10 @@ func TestAccServerBackupScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_backup_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_backup_enable.enable", "enabled", "true"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -208,11 +223,15 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_backup_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_backup_enable.enable", "enabled", "true"),
 				),
 			},
 			// data source
 			{
-				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.ServerBackupProviderConfig() + "\n" + resourceMaxConfig + "\n" + datasourceConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server backup schedule data
@@ -228,6 +247,10 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_server_backup_schedules.schedules_data_test", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_server_backup_schedules.schedules_data_test", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("data.stackit_server_backup_enable.enable_test", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server_backup_enable.enable_test", "enabled", "true"),
 				),
 			},
 			// Import
@@ -269,6 +292,10 @@ func TestAccServerBackupScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_backup_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_backup_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_backup_enable.enable", "enabled", "true"),
 				),
 			},
 			// Deletion is done by the framework implicitly

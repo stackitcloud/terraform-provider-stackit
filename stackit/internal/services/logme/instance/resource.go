@@ -624,7 +624,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 		return
 	}
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
 		"instance_id": idParts[1],
 	})
@@ -670,10 +670,10 @@ func mapFields(instance *logme.Instance, model *Model) error {
 	return nil
 }
 
-func mapParameters(params map[string]interface{}) (types.Object, error) {
+func mapParameters(params map[string]any) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
-		var valueInterface interface{}
+		var valueInterface any
 		var ok bool
 
 		// This replacement is necessary because Terraform does not allow hyphens in attribute names
@@ -774,7 +774,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 					for _, x := range temp {
 						valueList = append(valueList, types.StringValue(x))
 					}
-				case []interface{}:
+				case []any:
 					for _, x := range temp {
 						xString, ok := x.(string)
 						if !ok {

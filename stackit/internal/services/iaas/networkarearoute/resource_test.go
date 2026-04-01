@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -66,18 +64,18 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.Route{
 					Destination: &iaas.RouteDestination{
 						DestinationCIDRv4: &iaas.DestinationCIDRv4{
-							Type:  utils.Ptr("cidrv4"),
-							Value: utils.Ptr("prefix"),
+							Type:  new("cidrv4"),
+							Value: new("prefix"),
 						},
 						DestinationCIDRv6: nil,
 					},
 					Nexthop: &iaas.RouteNexthop{
 						NexthopIPv4: &iaas.NexthopIPv4{
-							Type:  utils.Ptr("ipv4"),
-							Value: utils.Ptr("hop"),
+							Type:  new("ipv4"),
+							Value: new("hop"),
 						},
 					},
-					Labels: &map[string]interface{}{
+					Labels: &map[string]any{
 						"key": "value",
 					},
 				},
@@ -172,18 +170,18 @@ func TestToCreatePayload(t *testing.T) {
 					{
 						Destination: &iaas.RouteDestination{
 							DestinationCIDRv4: &iaas.DestinationCIDRv4{
-								Type:  utils.Ptr("cidrv4"),
-								Value: utils.Ptr("prefix"),
+								Type:  new("cidrv4"),
+								Value: new("prefix"),
 							},
 							DestinationCIDRv6: nil,
 						},
 						Nexthop: &iaas.RouteNexthop{
 							NexthopIPv4: &iaas.NexthopIPv4{
-								Type:  utils.Ptr("ipv4"),
-								Value: utils.Ptr("hop"),
+								Type:  new("ipv4"),
+								Value: new("hop"),
 							},
 						},
-						Labels: &map[string]interface{}{
+						Labels: &map[string]any{
 							"key": "value",
 						},
 					},
@@ -227,7 +225,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdateNetworkAreaRoutePayload{
-				Labels: &map[string]interface{}{
+				Labels: &map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},
@@ -276,8 +274,8 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopIPv4: &iaas.NexthopIPv4{
-					Type:  utils.Ptr("ipv4"),
-					Value: utils.Ptr("10.20.30.40"),
+					Type:  new("ipv4"),
+					Value: new("10.20.30.40"),
 				},
 			},
 			wantErr: false,
@@ -294,8 +292,8 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopIPv6: &iaas.NexthopIPv6{
-					Type:  utils.Ptr("ipv6"),
-					Value: utils.Ptr("2001:db8:85a3:0:0:8a2e:370:7334"),
+					Type:  new("ipv6"),
+					Value: new("2001:db8:85a3:0:0:8a2e:370:7334"),
 				},
 			},
 			wantErr: false,
@@ -311,7 +309,7 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopInternet: &iaas.NexthopInternet{
-					Type: utils.Ptr("internet"),
+					Type: new("internet"),
 				},
 			},
 			wantErr: false,
@@ -327,7 +325,7 @@ func TestToNextHopPayload(t *testing.T) {
 			},
 			want: &iaas.RouteNexthop{
 				NexthopBlackhole: &iaas.NexthopBlackhole{
-					Type: utils.Ptr("blackhole"),
+					Type: new("blackhole"),
 				},
 			},
 			wantErr: false,
@@ -396,8 +394,8 @@ func TestToDestinationPayload(t *testing.T) {
 			},
 			want: &iaas.RouteDestination{
 				DestinationCIDRv4: &iaas.DestinationCIDRv4{
-					Type:  utils.Ptr("cidrv4"),
-					Value: utils.Ptr("192.168.1.0/24"),
+					Type:  new("cidrv4"),
+					Value: new("192.168.1.0/24"),
 				},
 			},
 			wantErr: false,
@@ -414,8 +412,8 @@ func TestToDestinationPayload(t *testing.T) {
 			},
 			want: &iaas.RouteDestination{
 				DestinationCIDRv6: &iaas.DestinationCIDRv6{
-					Type:  utils.Ptr("cidrv6"),
-					Value: utils.Ptr("2001:db8:1234::/48"),
+					Type:  new("cidrv6"),
+					Value: new("2001:db8:1234::/48"),
 				},
 			},
 			wantErr: false,
@@ -478,8 +476,8 @@ func TestMapRouteNextHop(t *testing.T) {
 				routeResp: &iaas.Route{
 					Nexthop: &iaas.RouteNexthop{
 						NexthopIPv4: &iaas.NexthopIPv4{
-							Type:  utils.Ptr("ipv4"),
-							Value: utils.Ptr("192.168.1.0/24"),
+							Type:  new("ipv4"),
+							Value: new("192.168.1.0/24"),
 						},
 					},
 				},
@@ -495,8 +493,8 @@ func TestMapRouteNextHop(t *testing.T) {
 				routeResp: &iaas.Route{
 					Nexthop: &iaas.RouteNexthop{
 						NexthopIPv4: &iaas.NexthopIPv4{
-							Type:  utils.Ptr("ipv6"),
-							Value: utils.Ptr("2001:db8:85a3:0:0:8a2e:370:7334"),
+							Type:  new("ipv6"),
+							Value: new("2001:db8:85a3:0:0:8a2e:370:7334"),
 						},
 					},
 				},
@@ -512,7 +510,7 @@ func TestMapRouteNextHop(t *testing.T) {
 				routeResp: &iaas.Route{
 					Nexthop: &iaas.RouteNexthop{
 						NexthopBlackhole: &iaas.NexthopBlackhole{
-							Type: utils.Ptr("blackhole"),
+							Type: new("blackhole"),
 						},
 					},
 				},
@@ -527,7 +525,7 @@ func TestMapRouteNextHop(t *testing.T) {
 				routeResp: &iaas.Route{
 					Nexthop: &iaas.RouteNexthop{
 						NexthopInternet: &iaas.NexthopInternet{
-							Type: utils.Ptr("internet"),
+							Type: new("internet"),
 						},
 					},
 				},
@@ -567,8 +565,8 @@ func TestMapRouteDestination(t *testing.T) {
 				routeResp: &iaas.Route{
 					Destination: &iaas.RouteDestination{
 						DestinationCIDRv4: &iaas.DestinationCIDRv4{
-							Type:  utils.Ptr("cidrv4"),
-							Value: utils.Ptr("192.168.1.0/24"),
+							Type:  new("cidrv4"),
+							Value: new("192.168.1.0/24"),
 						},
 					},
 				},
@@ -584,8 +582,8 @@ func TestMapRouteDestination(t *testing.T) {
 				routeResp: &iaas.Route{
 					Destination: &iaas.RouteDestination{
 						DestinationCIDRv4: &iaas.DestinationCIDRv4{
-							Type:  utils.Ptr("cidrv6"),
-							Value: utils.Ptr("2001:db8:1234::/48"),
+							Type:  new("cidrv6"),
+							Value: new("2001:db8:1234::/48"),
 						},
 					},
 				},

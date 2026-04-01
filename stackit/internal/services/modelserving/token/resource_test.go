@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 )
 
@@ -54,14 +53,14 @@ func TestMapGetTokenFields(t *testing.T) {
 			},
 			input: &modelserving.GetTokenResponse{
 				Token: &modelserving.Token{
-					Id: utils.Ptr("tid"),
-					ValidUntil: utils.Ptr(
+					Id: new("tid"),
+					ValidUntil: new(
 						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					),
 					State:       modelserving.TOKENSTATE_ACTIVE.Ptr(),
-					Name:        utils.Ptr("name"),
-					Description: utils.Ptr("desc"),
-					Region:      utils.Ptr("eu01"),
+					Name:        new("name"),
+					Description: new("desc"),
+					Region:      new("eu01"),
 				},
 			},
 			expected: Model{
@@ -149,15 +148,15 @@ func TestMapCreateTokenFields(t *testing.T) {
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
 				Token: &modelserving.TokenCreated{
-					Id: utils.Ptr("tid"),
-					ValidUntil: utils.Ptr(
+					Id: new("tid"),
+					ValidUntil: new(
 						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					),
 					State:       modelserving.TOKENCREATEDSTATE_ACTIVE.Ptr(),
-					Name:        utils.Ptr("name"),
-					Description: utils.Ptr("desc"),
-					Region:      utils.Ptr("eu01"),
-					Content:     utils.Ptr("content"),
+					Name:        new("name"),
+					Description: new("desc"),
+					Region:      new("eu01"),
+					Content:     new("content"),
 				},
 			},
 			inputGetTokenResponse: nil,
@@ -174,15 +173,15 @@ func TestMapCreateTokenFields(t *testing.T) {
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
 				Token: &modelserving.TokenCreated{
-					Id: utils.Ptr("tid"),
-					ValidUntil: utils.Ptr(
+					Id: new("tid"),
+					ValidUntil: new(
 						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					),
 					State:       modelserving.TOKENCREATEDSTATE_ACTIVE.Ptr(),
-					Name:        utils.Ptr("name"),
-					Description: utils.Ptr("desc"),
-					Region:      utils.Ptr("eu01"),
-					Content:     utils.Ptr("content"),
+					Name:        new("name"),
+					Description: new("desc"),
+					Region:      new("eu01"),
+					Content:     new("content"),
 				},
 			},
 			inputGetTokenResponse: &modelserving.GetTokenResponse{
@@ -257,9 +256,9 @@ func TestToCreatePayload(t *testing.T) {
 				TTLDuration: types.StringValue("1h"),
 			},
 			expected: &modelserving.CreateTokenPayload{
-				Name:        utils.Ptr("name"),
-				Description: utils.Ptr("desc"),
-				TtlDuration: utils.Ptr("1h"),
+				Name:        new("name"),
+				Description: new("desc"),
+				TtlDuration: new("1h"),
 			},
 			isValid: true,
 		},
@@ -310,8 +309,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			expected: &modelserving.PartialUpdateTokenPayload{
-				Name:        utils.Ptr("name"),
-				Description: utils.Ptr("desc"),
+				Name:        new("name"),
+				Description: new("desc"),
 			},
 			isValid: true,
 		},

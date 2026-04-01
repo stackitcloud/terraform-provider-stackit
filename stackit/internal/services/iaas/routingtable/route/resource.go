@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -535,13 +534,13 @@ func toNextHopPayload(ctx context.Context, model *shared.RouteReadModel) (*iaas.
 
 	switch nexthopModel.Type.ValueString() {
 	case "blackhole":
-		return sdkUtils.Ptr(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
+		return new(iaas.NexthopBlackholeAsRouteNexthop(iaas.NewNexthopBlackhole("blackhole"))), nil
 	case "internet":
-		return sdkUtils.Ptr(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
+		return new(iaas.NexthopInternetAsRouteNexthop(iaas.NewNexthopInternet("internet"))), nil
 	case "ipv4":
-		return sdkUtils.Ptr(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", nexthopModel.Value.ValueString()))), nil
+		return new(iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", nexthopModel.Value.ValueString()))), nil
 	case "ipv6":
-		return sdkUtils.Ptr(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
+		return new(iaas.NexthopIPv6AsRouteNexthop(iaas.NewNexthopIPv6("ipv6", nexthopModel.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown nexthop type: %s", nexthopModel.Type.ValueString())
 }
@@ -562,9 +561,9 @@ func toDestinationPayload(ctx context.Context, model *shared.RouteReadModel) (*i
 
 	switch destinationModel.Type.ValueString() {
 	case "cidrv4":
-		return sdkUtils.Ptr(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", destinationModel.Value.ValueString()))), nil
+		return new(iaas.DestinationCIDRv4AsRouteDestination(iaas.NewDestinationCIDRv4("cidrv4", destinationModel.Value.ValueString()))), nil
 	case "cidrv6":
-		return sdkUtils.Ptr(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", destinationModel.Value.ValueString()))), nil
+		return new(iaas.DestinationCIDRv6AsRouteDestination(iaas.NewDestinationCIDRv6("cidrv6", destinationModel.Value.ValueString()))), nil
 	}
 	return nil, fmt.Errorf("unknown destination type: %s", destinationModel.Type.ValueString())
 }

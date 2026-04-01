@@ -16,7 +16,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
@@ -63,18 +62,18 @@ func Test_mapFields(t *testing.T) {
 							"nameserver1",
 							"nameserver2",
 						},
-						TransferNetwork:  utils.Ptr("network"),
-						DefaultPrefixLen: utils.Ptr(int64(20)),
-						MaxPrefixLen:     utils.Ptr(int64(22)),
-						MinPrefixLen:     utils.Ptr(int64(18)),
+						TransferNetwork:  new("network"),
+						DefaultPrefixLen: new(int64(20)),
+						MaxPrefixLen:     new(int64(22)),
+						MinPrefixLen:     new(int64(18)),
 						NetworkRanges: &[]iaas.NetworkRange{
 							{
-								Id:     utils.Ptr(networkRangeId1),
-								Prefix: utils.Ptr("prefix-1"),
+								Id:     new(networkRangeId1),
+								Prefix: new("prefix-1"),
 							},
 							{
-								Id:     utils.Ptr(networkRangeId2),
-								Prefix: utils.Ptr("prefix-2"),
+								Id:     new(networkRangeId2),
+								Prefix: new("prefix-2"),
 							},
 						},
 					},
@@ -218,16 +217,16 @@ func Test_toCreatePayload(t *testing.T) {
 					},
 					NetworkRanges: &[]iaas.NetworkRange{
 						{
-							Prefix: utils.Ptr("pr-1"),
+							Prefix: new("pr-1"),
 						},
 						{
-							Prefix: utils.Ptr("pr-2"),
+							Prefix: new("pr-2"),
 						},
 					},
-					TransferNetwork:  utils.Ptr("network"),
-					DefaultPrefixLen: utils.Ptr(int64(20)),
-					MaxPrefixLen:     utils.Ptr(int64(22)),
-					MinPrefixLen:     utils.Ptr(int64(18)),
+					TransferNetwork:  new("network"),
+					DefaultPrefixLen: new(int64(20)),
+					MaxPrefixLen:     new(int64(22)),
+					MinPrefixLen:     new(int64(18)),
 				},
 			},
 		},
@@ -286,9 +285,9 @@ func Test_toUpdatePayload(t *testing.T) {
 						"ns1",
 						"ns2",
 					},
-					DefaultPrefixLen: utils.Ptr(int64(22)),
-					MaxPrefixLen:     utils.Ptr(int64(24)),
-					MinPrefixLen:     utils.Ptr(int64(20)),
+					DefaultPrefixLen: new(int64(22)),
+					MaxPrefixLen:     new(int64(24)),
+					MinPrefixLen:     new(int64(20)),
 				},
 			},
 		},
@@ -349,16 +348,16 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 				},
 				networkAreaRangesList: &[]iaas.NetworkRange{
 					{
-						Id:     utils.Ptr(networkRangeId2),
-						Prefix: utils.Ptr("prefix-2"),
+						Id:     new(networkRangeId2),
+						Prefix: new("prefix-2"),
 					},
 					{
-						Id:     utils.Ptr(networkRangeId3),
-						Prefix: utils.Ptr("prefix-3"),
+						Id:     new(networkRangeId3),
+						Prefix: new("prefix-3"),
 					},
 					{
-						Id:     utils.Ptr(networkRangeId1),
-						Prefix: utils.Ptr("prefix-1"),
+						Id:     new(networkRangeId1),
+						Prefix: new("prefix-1"),
 					},
 				},
 			},
@@ -407,12 +406,12 @@ func Test_mapIpv4NetworkRanges(t *testing.T) {
 				},
 				networkAreaRangesList: &[]iaas.NetworkRange{
 					{
-						Id:     utils.Ptr(networkRangeId2),
-						Prefix: utils.Ptr("prefix-2"),
+						Id:     new(networkRangeId2),
+						Prefix: new("prefix-2"),
 					},
 					{
-						Id:     utils.Ptr(networkRangeId3),
-						Prefix: utils.Ptr("prefix-3"),
+						Id:     new(networkRangeId3),
+						Prefix: new("prefix-3"),
 					},
 				},
 			},
@@ -453,20 +452,20 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 	getAllNetworkRangesResp := iaas.NetworkRangeListResponse{
 		Items: &[]iaas.NetworkRange{
 			{
-				Prefix: utils.Ptr("pr-1"),
-				Id:     utils.Ptr(networkRangeId1),
+				Prefix: new("pr-1"),
+				Id:     new(networkRangeId1),
 			},
 			{
-				Prefix: utils.Ptr("pr-2"),
-				Id:     utils.Ptr(networkRangeId2),
+				Prefix: new("pr-2"),
+				Id:     new(networkRangeId2),
 			},
 			{
-				Prefix: utils.Ptr("pr-3"),
-				Id:     utils.Ptr(networkRangeId3),
+				Prefix: new("pr-3"),
+				Id:     new(networkRangeId3),
 			},
 			{
-				Prefix: utils.Ptr("pr-2"),
-				Id:     utils.Ptr(networkRangeId2Repeated),
+				Prefix: new("pr-2"),
+				Id:     new(networkRangeId2Repeated),
 			},
 		},
 	}
@@ -845,8 +844,8 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 					}
 
 					resp := iaas.NetworkRange{
-						Prefix: utils.Ptr("prefix"),
-						Id:     utils.Ptr("id-range"),
+						Prefix: new("prefix"),
+						Id:     new("id-range"),
 					}
 					respBytes, err := json.Marshal(resp)
 					if err != nil {
@@ -906,9 +905,10 @@ func Test_updateIpv4NetworkRanges(t *testing.T) {
 			// Setup server and client
 			router := mux.NewRouter()
 			router.HandleFunc("/v2/organizations/{organizationId}/network-areas/{areaId}/regions/{region}/network-ranges", func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == "GET" {
+				switch r.Method {
+				case http.MethodGet:
 					getAllNetworkRangesHandler(w, r)
-				} else if r.Method == "POST" {
+				case http.MethodPost:
 					createNetworkRangeHandler(w, r)
 				}
 			})
@@ -1020,10 +1020,10 @@ func Test_toNetworkRangesPayload(t *testing.T) {
 			},
 			want: &[]iaas.NetworkRange{
 				{
-					Prefix: utils.Ptr("prefix-1"),
+					Prefix: new("prefix-1"),
 				},
 				{
-					Prefix: utils.Ptr("prefix-2"),
+					Prefix: new("prefix-2"),
 				},
 			},
 		},

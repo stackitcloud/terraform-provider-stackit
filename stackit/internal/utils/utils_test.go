@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 func TestReconcileStrLists(t *testing.T) {
@@ -152,12 +151,12 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		},
 		{
 			description: "slice with valid pointers",
-			input:       []*string{utils.Ptr("apple"), utils.Ptr("banana"), utils.Ptr("cherry")},
+			input:       []*string{new("apple"), new("banana"), new("cherry")},
 			expected:    []string{"apple", "banana", "cherry"},
 		},
 		{
 			description: "slice with some nil pointers",
-			input:       []*string{utils.Ptr("apple"), nil, utils.Ptr("cherry"), nil},
+			input:       []*string{new("apple"), nil, new("cherry"), nil},
 			expected:    []string{"apple", "cherry"},
 		},
 		{
@@ -167,7 +166,7 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 		},
 		{
 			description: "slice with a pointer to an empty string",
-			input:       []*string{utils.Ptr("apple"), utils.Ptr(""), utils.Ptr("cherry")},
+			input:       []*string{new("apple"), new(""), new("cherry")},
 			expected:    []string{"apple", "", "cherry"},
 		},
 	}
@@ -178,78 +177,6 @@ func TestConvertPointerSliceToStringSlice(t *testing.T) {
 			diff := cmp.Diff(output, tt.expected)
 			if diff != "" {
 				t.Fatalf("Data does not match: %s", diff)
-			}
-		})
-	}
-}
-
-func TestSimplifyBackupSchedule(t *testing.T) {
-	tests := []struct {
-		description string
-		input       string
-		expected    string
-	}{
-		{
-			"simple schedule",
-			"0 0 * * *",
-			"0 0 * * *",
-		},
-		{
-			"schedule with leading zeros",
-			"00 00 * * *",
-			"0 0 * * *",
-		},
-		{
-			"schedule with leading zeros 2",
-			"00 001 * * *",
-			"0 1 * * *",
-		},
-		{
-			"schedule with leading zeros 3",
-			"00 0010 * * *",
-			"0 10 * * *",
-		},
-		{
-			"simple schedule with slash",
-			"0 0/6 * * *",
-			"0 0/6 * * *",
-		},
-		{
-			"schedule with leading zeros and slash",
-			"00 00/6 * * *",
-			"0 0/6 * * *",
-		},
-		{
-			"schedule with leading zeros and slash 2",
-			"00 001/06 * * *",
-			"0 1/6 * * *",
-		},
-		{
-			"simple schedule with comma",
-			"0 10,15 * * *",
-			"0 10,15 * * *",
-		},
-		{
-			"schedule with leading zeros and comma",
-			"0 010,0015 * * *",
-			"0 10,15 * * *",
-		},
-		{
-			"simple schedule with comma and slash",
-			"0 0-11/10 * * *",
-			"0 0-11/10 * * *",
-		},
-		{
-			"schedule with leading zeros, comma, and slash",
-			"00 000-011/010 * * *",
-			"0 0-11/10 * * *",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			output := SimplifyBackupSchedule(tt.input)
-			if output != tt.expected {
-				t.Fatalf("Data does not match: %s", output)
 			}
 		})
 	}
@@ -535,7 +462,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 	type args struct {
 		diags  *diag.Diagnostics
 		state  *tfsdk.State
-		values map[string]interface{}
+		values map[string]any
 	}
 	type want struct {
 		hasError bool
@@ -551,7 +478,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 			args: args{
 				diags:  &diag.Diagnostics{},
 				state:  &tfsdk.State{},
-				values: map[string]interface{}{},
+				values: map[string]any{},
 			},
 			want: want{
 				hasError: false,
@@ -573,7 +500,7 @@ func TestSetAndLogStateFields(t *testing.T) {
 					}
 					return &state
 				}(),
-				values: map[string]interface{}{
+				values: map[string]any{
 					"project_id":  "a414f971-3f7a-4e9a-8671-51a8acb7bcc8",
 					"instance_id": "97073250-8cad-46c3-8424-6258ac0b3731",
 				},

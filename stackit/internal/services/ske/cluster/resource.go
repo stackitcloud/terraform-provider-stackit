@@ -379,7 +379,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "kubernetes_version_min", "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
+					stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "kubernetes_version_min", "sets `UseStateForUnknown` only if `kubernetes_min_version` has not changed"),
 				},
 			},
 			"egress_address_ranges": schema.ListAttribute{
@@ -462,7 +462,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifierUtils.UseStateForUnknownIf(utils.StringChanged, "os_version_min", "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+								stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "os_version_min", "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
 							},
 						},
 						"volume_type": schema.StringAttribute{
@@ -1358,7 +1358,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
-		timeWindowStart = sdkUtils.Ptr(tempTime)
+		timeWindowStart = new(tempTime)
 	}
 
 	var timeWindowEnd *time.Time
@@ -1367,7 +1367,7 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
-		timeWindowEnd = sdkUtils.Ptr(tempTime)
+		timeWindowEnd = new(tempTime)
 	}
 
 	return &ske.Maintenance{
@@ -1858,10 +1858,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
-	disabledExtensions := false
-	if aclDisabled && observabilityDisabled && dnsDisabled {
-		disabledExtensions = true
-	}
+	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled
 
 	emptyExtensions := &ske.Extension{}
 	if *cl.Extensions == *emptyExtensions && (disabledExtensions || m.Extensions.IsNull()) {

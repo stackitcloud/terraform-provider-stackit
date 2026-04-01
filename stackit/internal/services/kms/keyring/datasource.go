@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -111,7 +111,7 @@ func (k *keyRingDataSource) Read(ctx context.Context, request datasource.ReadReq
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	keyRingResponse, err := k.client.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
+	keyRingResponse, err := k.client.DefaultAPI.GetKeyRing(ctx, projectId, region, keyRingId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

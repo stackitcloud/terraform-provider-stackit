@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -32,8 +32,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb"
-	"github.com/stackitcloud/stackit-sdk-go/services/alb/wait"
+	legacyAlb "github.com/stackitcloud/stackit-sdk-go/services/alb"
+	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/alb/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	albUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/utils"
@@ -87,7 +88,7 @@ var targetSecurityGroupType = map[string]attr.Type{
 // Struct corresponding to Model.Listeners[i]
 type listener struct {
 	Name          types.String `tfsdk:"name"`
-	Port          types.Int64  `tfsdk:"port"`
+	Port          types.Int32  `tfsdk:"port"`
 	Protocol      types.String `tfsdk:"protocol"`
 	Http          types.Object `tfsdk:"http"`
 	Https         types.Object `tfsdk:"https"`
@@ -97,7 +98,7 @@ type listener struct {
 // Types corresponding to listener
 var listenerTypes = map[string]attr.Type{
 	"name":            types.StringType,
-	"port":            types.Int64Type,
+	"port":            types.Int32Type,
 	"protocol":        types.StringType,
 	"http":            types.ObjectType{AttrTypes: httpTypes},
 	"https":           types.ObjectType{AttrTypes: httpsTypes},
@@ -256,7 +257,7 @@ var observabilityOptionTypes = map[string]attr.Type{
 type targetPool struct {
 	ActiveHealthCheck types.Object `tfsdk:"active_health_check"`
 	Name              types.String `tfsdk:"name"`
-	TargetPort        types.Int64  `tfsdk:"target_port"`
+	TargetPort        types.Int32  `tfsdk:"target_port"`
 	Targets           types.Set    `tfsdk:"targets"`
 	TLSConfig         types.Object `tfsdk:"tls_config"`
 }
@@ -265,29 +266,29 @@ type targetPool struct {
 var targetPoolTypes = map[string]attr.Type{
 	"active_health_check": types.ObjectType{AttrTypes: activeHealthCheckTypes},
 	"name":                types.StringType,
-	"target_port":         types.Int64Type,
+	"target_port":         types.Int32Type,
 	"targets":             types.SetType{ElemType: types.ObjectType{AttrTypes: targetTypes}},
 	"tls_config":          types.ObjectType{AttrTypes: tlsConfigTypes},
 }
 
 // Struct corresponding to targetPool.ActiveHealthCheck
 type activeHealthCheck struct {
-	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
+	HealthyThreshold   types.Int32  `tfsdk:"healthy_threshold"`
 	HttpHealthChecks   types.Object `tfsdk:"http_health_checks"`
 	Interval           types.String `tfsdk:"interval"`
 	IntervalJitter     types.String `tfsdk:"interval_jitter"`
 	Timeout            types.String `tfsdk:"timeout"`
-	UnhealthyThreshold types.Int64  `tfsdk:"unhealthy_threshold"`
+	UnhealthyThreshold types.Int32  `tfsdk:"unhealthy_threshold"`
 }
 
 // Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
-	"healthy_threshold":   types.Int64Type,
+	"healthy_threshold":   types.Int32Type,
 	"http_health_checks":  types.ObjectType{AttrTypes: httpHealthChecksTypes},
 	"interval":            types.StringType,
 	"interval_jitter":     types.StringType,
 	"timeout":             types.StringType,
-	"unhealthy_threshold": types.Int64Type,
+	"unhealthy_threshold": types.Int32Type,
 }
 
 type httpHealthChecks struct {
@@ -388,9 +389,9 @@ func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req res
 
 // Schema defines the schema for the resource.
 func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
-	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
-	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypesEnumValues)
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedLoadBalancerErrorTypesEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
@@ -588,11 +589,11 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 								),
 							},
 						},
-						"port": schema.Int64Attribute{
+						"port": schema.Int32Attribute{
 							Description: descriptions["port"],
 							Required:    true,
-							Validators: []validator.Int64{
-								int64validator.Between(1, 65535),
+							Validators: []validator.Int32{
+								int32validator.Between(1, 65535),
 							},
 						},
 						"protocol": schema.StringAttribute{
@@ -965,11 +966,11 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["active_health_check"],
 							Optional:    true,
 							Attributes: map[string]schema.Attribute{
-								"healthy_threshold": schema.Int64Attribute{
+								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Required:    true,
-									Validators: []validator.Int64{
-										int64validator.Between(1, 999),
+									Validators: []validator.Int32{
+										int32validator.Between(1, 999),
 									},
 								},
 								"interval": schema.StringAttribute{
@@ -1002,11 +1003,11 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 										),
 									},
 								},
-								"unhealthy_threshold": schema.Int64Attribute{
+								"unhealthy_threshold": schema.Int32Attribute{
 									Description: descriptions["unhealthy_threshold"],
 									Required:    true,
-									Validators: []validator.Int64{
-										int64validator.Between(1, 999),
+									Validators: []validator.Int32{
+										int32validator.Between(1, 999),
 									},
 								},
 								"http_health_checks": schema.SingleNestedAttribute{
@@ -1048,10 +1049,10 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 								),
 							},
 						},
-						"target_port": schema.Int64Attribute{
+						"target_port": schema.Int32Attribute{
 							Description: descriptions["target_port"],
 							Required:    true,
-							Validators:  []validator.Int64{int64validator.Between(1, 65535)},
+							Validators:  []validator.Int32{int32validator.Between(1, 65535)},
 						},
 						"targets": schema.SetNestedAttribute{
 							Description: descriptions["targets"],
@@ -1164,7 +1165,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 	}
 
 	// Create a new Application Load Balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
@@ -1173,7 +1174,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 		"name":       *createResp.Name,
@@ -1182,7 +1183,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Application Load Balancer creation waiting: %v", err))
 		return
@@ -1221,7 +1222,7 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -1289,7 +1290,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 	}
 
 	// Update target pool
-	updateResp, err := r.client.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
+	updateResp, err := r.client.DefaultAPI.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for update: %v", errStr))
@@ -1298,7 +1299,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Application Load Balancer update waiting: %v", err))
 		return
@@ -1340,7 +1341,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete Application Load Balancer
-	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
+	_, err := r.client.DefaultAPI.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Calling API for delete: %v", errStr))
@@ -1349,7 +1350,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
+	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Application Load Balancer deleting waiting: %v", err))
 		return
@@ -1417,7 +1418,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albSdk.CreateLoadBalan
 	}, nil
 }
 
-func toLabelPayload(ctx context.Context, model *Model) (albSdk.CreateLoadBalancerPayloadGetLabelsAttributeType, error) { //nolint:gocritic //This needs to be a pointer of a pointe anyway due to how the SDK works
+func toLabelPayload(ctx context.Context, model *Model) (*map[string]string, error) { //nolint:gocritic //This needs to be a pointer of a pointe anyway due to how the SDK works
 	if utils.IsUndefined(model.Labels) {
 		return nil, nil
 	}
@@ -1430,7 +1431,7 @@ func toLabelPayload(ctx context.Context, model *Model) (albSdk.CreateLoadBalance
 	return &payload, nil
 }
 
-func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, error) {
+func toListenersPayload(ctx context.Context, model *Model) ([]albSdk.Listener, error) {
 	if utils.IsUndefined(model.Listeners) {
 		return nil, nil
 	}
@@ -1456,13 +1457,13 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]albSdk.Listener, 
 			Http:          httpPayload,
 			Https:         httpsPayload,
 			Name:          conversion.StringValueToPointer(listenerModel.Name),
-			Port:          conversion.Int64ValueToPointer(listenerModel.Port),
-			Protocol:      albSdk.ListenerGetProtocolAttributeType(conversion.StringValueToPointer(listenerModel.Protocol)),
+			Port:          conversion.Int32ValueToPointer(listenerModel.Port),
+			Protocol:      conversion.StringValueToPointer(listenerModel.Protocol),
 			WafConfigName: conversion.StringValueToPointer(listenerModel.WafConfigName),
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 func toHttpPayload(ctx context.Context, listenerModel *listener) (*albSdk.ProtocolOptionsHTTP, error) {
@@ -1487,7 +1488,7 @@ func toHttpPayload(ctx context.Context, listenerModel *listener) (*albSdk.Protoc
 	return &payload, nil
 }
 
-func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOptionsHTTPGetHostsAttributeType, error) {
+func toHostsPayload(ctx context.Context, httpModel *httpALB) ([]albSdk.HostConfig, error) {
 	if utils.IsUndefined(httpModel.Hosts) {
 		return nil, nil
 	}
@@ -1498,7 +1499,7 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOpt
 		return nil, fmt.Errorf("converting hosts: %w", core.DiagsToError(diags))
 	}
 
-	payload := albSdk.ProtocolOptionsHTTPGetHostsArgType{}
+	var payload []albSdk.HostConfig
 	for i := range hostsModel {
 		hostModel := hostsModel[i]
 		if utils.IsUndefined(hostModel.Host) {
@@ -1513,10 +1514,10 @@ func toHostsPayload(ctx context.Context, httpModel *httpALB) (albSdk.ProtocolOpt
 			Rules: rulesPayload,
 		})
 	}
-	return &payload, nil
+	return payload, nil
 }
 
-func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) (albSdk.HostConfigGetRulesAttributeType, error) {
+func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) ([]albSdk.Rule, error) {
 	if utils.IsUndefined(hostConfigModel.Rules) {
 		return nil, nil
 	}
@@ -1555,10 +1556,10 @@ func toRulesPayload(ctx context.Context, hostConfigModel *hostConfig) (albSdk.Ho
 			WebSocket:         conversion.BoolValueToPointer(ruleModel.WebSocket),
 		})
 	}
-	return &payload, nil
+	return payload, nil
 }
 
-func toQueryParametersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetQueryParametersAttributeType, error) {
+func toQueryParametersPayload(ctx context.Context, ruleModel *rule) ([]albSdk.QueryParameter, error) {
 	if utils.IsUndefined(ruleModel.QueryParameters) {
 		return nil, nil
 	}
@@ -1569,7 +1570,7 @@ func toQueryParametersPayload(ctx context.Context, ruleModel *rule) (albSdk.Rule
 		return nil, fmt.Errorf("converting query parameter payload: %w", core.DiagsToError(diags))
 	}
 
-	payload := albSdk.RuleGetQueryParametersArgType{}
+	payload := make([]albSdk.QueryParameter, 0, len(queryParametersModel))
 	for i := range queryParametersModel {
 		queryParameterModel := queryParametersModel[i]
 		payload = append(payload, albSdk.QueryParameter{
@@ -1578,10 +1579,10 @@ func toQueryParametersPayload(ctx context.Context, ruleModel *rule) (albSdk.Rule
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
-func toPathPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetPathAttributeType, error) {
+func toPathPayload(ctx context.Context, ruleModel *rule) (*albSdk.Path, error) {
 	if utils.IsUndefined(ruleModel.Path) {
 		return nil, nil
 	}
@@ -1599,14 +1600,14 @@ func toPathPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetPathAttr
 		return nil, fmt.Errorf("path prefix and exact match are specified at the same time")
 	}
 
-	payload := albSdk.RuleGetPathArgType{
+	payload := albSdk.Path{
 		ExactMatch: conversion.StringValueToPointer(pathModel.Exact),
 		Prefix:     conversion.StringValueToPointer(pathModel.Prefix),
 	}
 	return &payload, nil
 }
 
-func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetCookiePersistenceAttributeType, error) {
+func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (*albSdk.CookiePersistence, error) {
 	if utils.IsUndefined(ruleModel.CookiePersistence) {
 		return nil, nil
 	}
@@ -1617,7 +1618,7 @@ func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (albSdk.Ru
 		return nil, fmt.Errorf("converting cookie persistence config: %w", core.DiagsToError(diags))
 	}
 
-	payload := albSdk.RuleGetCookiePersistenceArgType{
+	payload := albSdk.CookiePersistence{
 		Name: conversion.StringValueToPointer(cookieModel.Name),
 		Ttl:  conversion.StringValueToPointer(cookieModel.Ttl),
 	}
@@ -1625,7 +1626,7 @@ func toCookiePersistencePayload(ctx context.Context, ruleModel *rule) (albSdk.Ru
 	return &payload, nil
 }
 
-func toHeadersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetHeadersAttributeType, error) {
+func toHeadersPayload(ctx context.Context, ruleModel *rule) ([]albSdk.HttpHeader, error) {
 	if utils.IsUndefined(ruleModel.Headers) {
 		return nil, nil
 	}
@@ -1636,7 +1637,7 @@ func toHeadersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetHeade
 		return nil, fmt.Errorf("converting headers: %w", core.DiagsToError(diags))
 	}
 
-	payload := albSdk.RuleGetHeadersArgType{}
+	payload := make([]albSdk.HttpHeader, 0, len(headersModel))
 	for i := range headersModel {
 		header := headersModel[i]
 		payload = append(payload, albSdk.HttpHeader{
@@ -1644,10 +1645,10 @@ func toHeadersPayload(ctx context.Context, ruleModel *rule) (albSdk.RuleGetHeade
 			Name:       conversion.StringValueToPointer(header.Name),
 		})
 	}
-	return &payload, nil
+	return payload, nil
 }
 
-func toHttpsPayload(ctx context.Context, listenerModel *listener) (albSdk.ListenerGetHttpsAttributeType, error) {
+func toHttpsPayload(ctx context.Context, listenerModel *listener) (*albSdk.ProtocolOptionsHTTPS, error) {
 	if utils.IsUndefined(listenerModel.Https) {
 		return nil, nil
 	}
@@ -1663,7 +1664,7 @@ func toHttpsPayload(ctx context.Context, listenerModel *listener) (albSdk.Listen
 		return nil, fmt.Errorf("converting certificate config: %w", err)
 	}
 
-	payload := albSdk.ListenerGetHttpsArgType{
+	payload := albSdk.ProtocolOptionsHTTPS{
 		CertificateConfig: certificateConfigPayload,
 	}
 
@@ -1684,7 +1685,7 @@ func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.Cert
 		return nil, fmt.Errorf("converting certificate config: no certificate config found")
 	}
 
-	certificateConfigSet, err := conversion.StringSetToPointer(certificateConfigModel.CertificateConfigIDs)
+	certificateConfigSet, err := conversion.StringSetToSlice(certificateConfigModel.CertificateConfigIDs)
 	if err != nil {
 		return nil, fmt.Errorf("converting certificate config list: %w", err)
 	}
@@ -1695,7 +1696,7 @@ func toCertificateConfigPayload(ctx context.Context, https *https) (*albSdk.Cert
 	return &payload, nil
 }
 
-func toNetworksPayload(ctx context.Context, model *Model) (*[]albSdk.Network, error) {
+func toNetworksPayload(ctx context.Context, model *Model) ([]albSdk.Network, error) {
 	if utils.IsUndefined(model.Networks) {
 		return nil, nil
 	}
@@ -1711,11 +1712,11 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]albSdk.Network, er
 		networkModel := networksModel[i]
 		payload = append(payload, albSdk.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
-			Role:      albSdk.NetworkGetRoleAttributeType(conversion.StringValueToPointer(networkModel.Role)),
+			Role:      conversion.StringValueToPointer(networkModel.Role),
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOptions, error) {
@@ -1741,7 +1742,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting allowed source ranges: %w", core.DiagsToError(diags))
 		}
-		accessControlPayload.AllowedSourceRanges = &allowedSourceRangesModel
+		accessControlPayload.AllowedSourceRanges = allowedSourceRangesModel
 	}
 
 	observabilityPayload := &albSdk.LoadbalancerOptionObservability{}
@@ -1785,7 +1786,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 	return &payload, nil
 }
 
-func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]albSdk.TargetPool, error) {
+func toTargetPoolsPayload(ctx context.Context, model *Model) ([]albSdk.TargetPool, error) {
 	if utils.IsUndefined(model.TargetPools) {
 		return nil, nil
 	}
@@ -1816,16 +1817,16 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]albSdk.TargetPo
 		payload = append(payload, albSdk.TargetPool{
 			ActiveHealthCheck: activeHealthCheckPayload,
 			Name:              conversion.StringValueToPointer(targetPoolModel.Name),
-			TargetPort:        conversion.Int64ValueToPointer(targetPoolModel.TargetPort),
+			TargetPort:        conversion.Int32ValueToPointer(targetPoolModel.TargetPort),
 			Targets:           targetsPayload,
 			TlsConfig:         tlsConfigPayload,
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
-func toTlsConfigPayload(ctx context.Context, tp *targetPool) (albSdk.TargetPoolGetTlsConfigAttributeType, error) {
+func toTlsConfigPayload(ctx context.Context, tp *targetPool) (*albSdk.TlsConfig, error) {
 	if utils.IsUndefined(tp.TLSConfig) {
 		return nil, nil
 	}
@@ -1836,7 +1837,7 @@ func toTlsConfigPayload(ctx context.Context, tp *targetPool) (albSdk.TargetPoolG
 		return nil, fmt.Errorf("converting target pool TLS config: %w", core.DiagsToError(diags))
 	}
 
-	payload := albSdk.TargetPoolGetTlsConfigArgType{
+	payload := albSdk.TlsConfig{
 		Enabled:                   conversion.BoolValueToPointer(tlsConfigModel.Enabled),
 		SkipCertificateValidation: conversion.BoolValueToPointer(tlsConfigModel.SkipCertValidation),
 	}
@@ -1895,7 +1896,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albSdk.UpdateLoadBalan
 
 // toExternalAddress needs to exist because during UPDATE the model will always have it, but
 // we do not send it if ephemeral_address or private_network_only options are set.
-func toExternalAddress(ctx context.Context, m *Model) (albSdk.UpdateLoadBalancerPayloadGetExternalAddressAttributeType, error) {
+func toExternalAddress(ctx context.Context, m *Model) (*string, error) {
 	if utils.IsUndefined(m.Options) {
 		// no ephemeral or private option are set
 		return conversion.StringValueToPointer(m.ExternalAddress), nil
@@ -1942,16 +1943,16 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*albSdk.Ac
 	}
 
 	return &albSdk.ActiveHealthCheck{
-		HealthyThreshold:   conversion.Int64ValueToPointer(activeHealthCheckModel.HealthyThreshold),
+		HealthyThreshold:   conversion.Int32ValueToPointer(activeHealthCheckModel.HealthyThreshold),
 		Interval:           conversion.StringValueToPointer(activeHealthCheckModel.Interval),
 		IntervalJitter:     conversion.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
 		Timeout:            conversion.StringValueToPointer(activeHealthCheckModel.Timeout),
-		UnhealthyThreshold: conversion.Int64ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
+		UnhealthyThreshold: conversion.Int32ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
 		HttpHealthChecks:   httpHealthChecksPayload,
 	}, nil
 }
 
-func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (albSdk.ActiveHealthCheckGetHttpHealthChecksAttributeType, error) {
+func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (*albSdk.HttpHealthChecks, error) {
 	if utils.IsUndefined(check.HttpHealthChecks) {
 		return nil, nil
 	}
@@ -1962,7 +1963,7 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (a
 		return nil, fmt.Errorf("converting active health check: %w", core.DiagsToError(diags))
 	}
 
-	okStatus, err := conversion.StringSetToPointer(httpHealthChecksModel.OkStatus)
+	okStatus, err := conversion.StringSetToSlice(httpHealthChecksModel.OkStatus)
 	if err != nil {
 		return nil, fmt.Errorf("converting active health check ok status: %w", err)
 	}
@@ -1974,7 +1975,7 @@ func toHttpHealthChecksPayload(ctx context.Context, check *activeHealthCheck) (a
 	return &payload, nil
 }
 
-func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]albSdk.Target, error) {
+func toTargetsPayload(ctx context.Context, tp *targetPool) ([]albSdk.Target, error) {
 	if utils.IsUndefined(tp.Targets) {
 		return nil, nil
 	}
@@ -1994,7 +1995,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]albSdk.Target, er
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 // mapFields and all other map functions in this file translate an API resource into a Terraform model.
@@ -2075,7 +2076,7 @@ func mapErrors(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) error
 	}
 
 	var errorsSet []attr.Value
-	for i, errorsResp := range *applicationLoadBalancerResp.Errors {
+	for i, errorsResp := range applicationLoadBalancerResp.Errors {
 		errorMap := map[string]attr.Value{
 			"description": types.StringPointerValue(errorsResp.Description),
 			"type":        types.StringPointerValue((*string)(errorsResp.Type)),
@@ -2179,7 +2180,7 @@ func mapListeners(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadB
 	}
 
 	var listenersSet []attr.Value
-	for i, listenerResp := range *applicationLoadBalancerResp.Listeners {
+	for i, listenerResp := range applicationLoadBalancerResp.Listeners {
 		var configMatch *listener
 		for j := range configListeners {
 			if !configListeners[j].Name.IsNull() && configListeners[j].Name.ValueString() == *listenerResp.Name {
@@ -2194,7 +2195,7 @@ func mapListeners(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadB
 
 		listenerMap := map[string]attr.Value{
 			"name":            types.StringPointerValue(listenerResp.Name),
-			"port":            types.Int64PointerValue(listenerResp.Port),
+			"port":            types.Int32PointerValue(listenerResp.Port),
 			"protocol":        types.StringValue(string(listenerResp.GetProtocol())),
 			"waf_config_name": types.StringPointerValue(listenerResp.WafConfigName),
 		}
@@ -2229,7 +2230,7 @@ func mapListeners(ctx context.Context, applicationLoadBalancerResp *albSdk.LoadB
 	return nil
 }
 
-func mapHttp(ctx context.Context, httpResp albSdk.ListenerGetHttpAttributeType, l map[string]attr.Value, httpModel basetypes.ObjectValue) error {
+func mapHttp(ctx context.Context, httpResp *albSdk.ProtocolOptionsHTTP, l map[string]attr.Value, httpModel basetypes.ObjectValue) error {
 	if httpResp == nil {
 		l["http"] = types.ObjectNull(httpTypes)
 		return nil
@@ -2260,7 +2261,7 @@ func mapHttp(ctx context.Context, httpResp albSdk.ListenerGetHttpAttributeType, 
 	return nil
 }
 
-func mapHosts(ctx context.Context, hostsResp albSdk.ProtocolOptionsHTTPGetHostsAttributeType, h map[string]attr.Value, hostsModel types.List) error {
+func mapHosts(ctx context.Context, hostsResp []albSdk.HostConfig, h map[string]attr.Value, hostsModel types.List) error {
 	if hostsResp == nil {
 		h["hosts"] = types.ListNull(types.ObjectType{AttrTypes: hostConfigTypes})
 		return nil
@@ -2273,7 +2274,7 @@ func mapHosts(ctx context.Context, hostsResp albSdk.ProtocolOptionsHTTPGetHostsA
 	}
 
 	var hostsSet []attr.Value
-	for i, hostResp := range *hostsResp {
+	for i, hostResp := range hostsResp {
 		var configMatch *hostConfig
 		for _, ch := range configHosts {
 			if !ch.Host.IsNull() && ch.Host.ValueString() == *hostResp.Host {
@@ -2315,7 +2316,7 @@ func mapHosts(ctx context.Context, hostsResp albSdk.ProtocolOptionsHTTPGetHostsA
 	return nil
 }
 
-func mapRules(ctx context.Context, rulesResp albSdk.HostConfigGetRulesAttributeType, h map[string]attr.Value, rulesModel types.List) error {
+func mapRules(ctx context.Context, rulesResp []albSdk.Rule, h map[string]attr.Value, rulesModel types.List) error {
 	if rulesResp == nil {
 		h["rules"] = types.ListNull(types.ObjectType{AttrTypes: ruleTypes})
 		return nil
@@ -2328,7 +2329,7 @@ func mapRules(ctx context.Context, rulesResp albSdk.HostConfigGetRulesAttributeT
 	}
 
 	var rulesList []attr.Value
-	for i, ruleResp := range *rulesResp {
+	for i, ruleResp := range rulesResp {
 		webSocket := types.BoolValue(false)
 		// If the webSocket is nil in the response we set it to false in the TF state to
 		// prevent an inconsistent result after apply error
@@ -2381,7 +2382,7 @@ func mapRules(ctx context.Context, rulesResp albSdk.HostConfigGetRulesAttributeT
 	return nil
 }
 
-func mapPath(pathResp albSdk.RuleGetPathAttributeType, r map[string]attr.Value) error {
+func mapPath(pathResp *albSdk.Path, r map[string]attr.Value) error {
 	if pathResp == nil {
 		r["path"] = types.ObjectNull(pathTypes)
 		return nil
@@ -2401,14 +2402,14 @@ func mapPath(pathResp albSdk.RuleGetPathAttributeType, r map[string]attr.Value) 
 	return nil
 }
 
-func mapQueryParameters(queryParamsResp albSdk.RuleGetQueryParametersAttributeType, r map[string]attr.Value) error {
+func mapQueryParameters(queryParamsResp []albSdk.QueryParameter, r map[string]attr.Value) error {
 	if queryParamsResp == nil {
 		r["query_parameters"] = types.SetNull(types.ObjectType{AttrTypes: queryParameterTypes})
 		return nil
 	}
 
 	var queryParamsSet []attr.Value
-	for i, queryParamResp := range *queryParamsResp {
+	for i, queryParamResp := range queryParamsResp {
 		queryParamMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(queryParamResp.Name),
 			"exact_match": types.StringPointerValue(queryParamResp.ExactMatch),
@@ -2434,14 +2435,14 @@ func mapQueryParameters(queryParamsResp albSdk.RuleGetQueryParametersAttributeTy
 	return nil
 }
 
-func mapHeaders(headersResp albSdk.RuleGetHeadersAttributeType, r map[string]attr.Value) error {
+func mapHeaders(headersResp []albSdk.HttpHeader, r map[string]attr.Value) error {
 	if headersResp == nil {
 		r["headers"] = types.SetNull(types.ObjectType{AttrTypes: headersTypes})
 		return nil
 	}
 
 	var headersSet []attr.Value
-	for i, headerResp := range *headersResp {
+	for i, headerResp := range headersResp {
 		headerMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(headerResp.Name),
 			"exact_match": types.StringPointerValue(headerResp.ExactMatch),
@@ -2467,7 +2468,7 @@ func mapHeaders(headersResp albSdk.RuleGetHeadersAttributeType, r map[string]att
 	return nil
 }
 
-func mapCookiePersistence(cookiePersistResp albSdk.RuleGetCookiePersistenceAttributeType, r map[string]attr.Value) error {
+func mapCookiePersistence(cookiePersistResp *albSdk.CookiePersistence, r map[string]attr.Value) error {
 	if cookiePersistResp == nil {
 		r["cookie_persistence"] = types.ObjectNull(cookiePersistenceTypes)
 		return nil
@@ -2487,7 +2488,7 @@ func mapCookiePersistence(cookiePersistResp albSdk.RuleGetCookiePersistenceAttri
 	return nil
 }
 
-func mapHttps(ctx context.Context, httpsResp albSdk.ListenerGetHttpsAttributeType, l map[string]attr.Value) error {
+func mapHttps(ctx context.Context, httpsResp *albSdk.ProtocolOptionsHTTPS, l map[string]attr.Value) error {
 	if httpsResp == nil {
 		l["https"] = types.ObjectNull(httpsTypes)
 		return nil
@@ -2509,7 +2510,7 @@ func mapHttps(ctx context.Context, httpsResp albSdk.ListenerGetHttpsAttributeTyp
 	return nil
 }
 
-func mapCertificates(ctx context.Context, certResp albSdk.ProtocolOptionsHTTPSGetCertificateConfigAttributeType, h map[string]attr.Value) error {
+func mapCertificates(ctx context.Context, certResp *albSdk.CertificateConfig, h map[string]attr.Value) error {
 	if certResp == nil {
 		h["certificate_config"] = types.ObjectNull(certificateConfigTypes)
 		return nil
@@ -2539,7 +2540,7 @@ func mapNetworks(applicationLoadBalancerResp *albSdk.LoadBalancer, m *Model) err
 	}
 
 	var networksSet []attr.Value
-	for i, networkResp := range *applicationLoadBalancerResp.Networks {
+	for i, networkResp := range applicationLoadBalancerResp.Networks {
 		networkMap := map[string]attr.Value{
 			"network_id": types.StringPointerValue(networkResp.NetworkId),
 			"role":       types.StringValue(string(networkResp.GetRole())),
@@ -2669,7 +2670,7 @@ func mapAccessControl(accessControlResp *albSdk.LoadbalancerOptionAccessControl,
 	}
 	if accessControlResp.HasAllowedSourceRanges() {
 		var allowedSourceRangesSet []attr.Value
-		for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
+		for _, rangeResp := range accessControlResp.AllowedSourceRanges {
 			rangeTF := types.StringValue(rangeResp)
 			allowedSourceRangesSet = append(allowedSourceRangesSet, rangeTF)
 		}
@@ -2705,7 +2706,7 @@ func mapTargetPools(ctx context.Context, applicationLoadBalancerResp *albSdk.Loa
 	}
 
 	var targetPoolsSet []attr.Value
-	for i, targetPoolResp := range *applicationLoadBalancerResp.TargetPools {
+	for i, targetPoolResp := range applicationLoadBalancerResp.TargetPools {
 		var configMatch *targetPool
 		for j := range configTargetPools {
 			if !configTargetPools[j].Name.IsNull() && configTargetPools[j].Name.ValueString() == *targetPoolResp.Name {
@@ -2720,7 +2721,7 @@ func mapTargetPools(ctx context.Context, applicationLoadBalancerResp *albSdk.Loa
 
 		targetPoolMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(targetPoolResp.Name),
-			"target_port": types.Int64PointerValue(targetPoolResp.TargetPort),
+			"target_port": types.Int32PointerValue(targetPoolResp.TargetPort),
 		}
 
 		err := mapActiveHealthCheck(ctx, targetPoolResp.ActiveHealthCheck, targetPoolMap)
@@ -2764,11 +2765,11 @@ func mapActiveHealthCheck(ctx context.Context, activeHealthCheckResp *albSdk.Act
 	}
 
 	activeHealthCheckMap := map[string]attr.Value{
-		"healthy_threshold":   types.Int64PointerValue(activeHealthCheckResp.HealthyThreshold),
+		"healthy_threshold":   types.Int32PointerValue(activeHealthCheckResp.HealthyThreshold),
 		"interval":            types.StringPointerValue(activeHealthCheckResp.Interval),
 		"interval_jitter":     types.StringPointerValue(activeHealthCheckResp.IntervalJitter),
 		"timeout":             types.StringPointerValue(activeHealthCheckResp.Timeout),
-		"unhealthy_threshold": types.Int64PointerValue(activeHealthCheckResp.UnhealthyThreshold),
+		"unhealthy_threshold": types.Int32PointerValue(activeHealthCheckResp.UnhealthyThreshold),
 	}
 
 	err := mapHttpHealthChecks(ctx, activeHealthCheckResp.HttpHealthChecks, activeHealthCheckMap)
@@ -2809,7 +2810,7 @@ func mapHttpHealthChecks(ctx context.Context, httpHealthChecksResp *albSdk.HttpH
 	return nil
 }
 
-func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TargetPoolTlsConfig, tp map[string]attr.Value, tlsModel basetypes.ObjectValue) error {
+func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TlsConfig, tp map[string]attr.Value, tlsModel basetypes.ObjectValue) error {
 	if targetPoolTLSConfigResp == nil {
 		tp["tls_config"] = types.ObjectNull(tlsConfigTypes)
 		return nil
@@ -2857,14 +2858,14 @@ func mapTLSConfig(ctx context.Context, targetPoolTLSConfigResp *albSdk.TargetPoo
 	return nil
 }
 
-func mapTargets(targetsResp *[]albSdk.Target, tp map[string]attr.Value) error {
-	if targetsResp == nil || *targetsResp == nil {
+func mapTargets(targetsResp []albSdk.Target, tp map[string]attr.Value) error {
+	if targetsResp == nil {
 		tp["targets"] = types.SetNull(types.ObjectType{AttrTypes: targetTypes})
 		return nil
 	}
 
 	var targetsSet []attr.Value
-	for i, targetResp := range *targetsResp {
+	for i, targetResp := range targetsResp {
 		targetMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(targetResp.DisplayName),
 			"ip":           types.StringPointerValue(targetResp.Ip),

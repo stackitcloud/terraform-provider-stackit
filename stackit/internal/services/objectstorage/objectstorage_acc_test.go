@@ -15,8 +15,8 @@ import (
 
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/wait"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -29,6 +29,9 @@ var testConfigVarsMin = config.Variables{
 	"objectstorage_bucket_name":            config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
 	"objectstorage_credentials_group_name": config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
 	"expiration_timestamp":                 config.StringVariable(fmt.Sprintf("%d-01-02T03:04:05Z", time.Now().Year()+1)),
+
+	"objectstorage_bucket_name_with_lock": config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
+	"object_lock":                         config.BoolVariable(true),
 }
 
 func TestAccObjectStorageResourceMin(t *testing.T) {
@@ -46,6 +49,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "name", testutil.ConvertConfigVariable(testConfigVarsMin["objectstorage_bucket_name"])),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_path_style"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style"),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "object_lock", "false"),
 
 					// Credentials group data
 					resource.TestCheckResourceAttr("stackit_objectstorage_credentials_group.credentials_group", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -81,6 +85,17 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "name"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "access_key"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_credential.credential_time", "secret_access_key"),
+
+					// compliance lock
+					resource.TestCheckResourceAttr("stackit_objectstorage_compliance_lock.compliance_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_compliance_lock.compliance_lock", "max_retention_days"),
+
+					// object storage with object lock enabled
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "name", testutil.ConvertConfigVariable(testConfigVarsMin["objectstorage_bucket_name_with_lock"])),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket_object_lock", "url_path_style"),
+					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style"),
+					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "object_lock", testutil.ConvertConfigVariable(testConfigVarsMin["object_lock"])),
 				),
 			},
 			// Data source
@@ -109,6 +124,13 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								project_id  = stackit_objectstorage_credential.credential_time.project_id
 								credentials_group_id = stackit_objectstorage_credential.credential_time.credentials_group_id
 								credential_id  = stackit_objectstorage_credential.credential_time.credential_id
+							}
+							data "stackit_objectstorage_compliance_lock" "compliance_lock" {
+								project_id = stackit_objectstorage_compliance_lock.compliance_lock.project_id
+							}
+							data "stackit_objectstorage_bucket" "bucket_object_lock" {
+								project_id  = stackit_objectstorage_bucket.bucket_object_lock.project_id
+								name = stackit_objectstorage_bucket.bucket_object_lock.name
 							}`,
 					testutil.ObjectStorageProviderConfig()+resourceMinConfig,
 				),
@@ -126,6 +148,10 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
 						"data.stackit_objectstorage_bucket.bucket", "url_virtual_hosted_style",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket", "object_lock",
+						"data.stackit_objectstorage_bucket.bucket", "object_lock",
 					),
 
 					// Credentials group data
@@ -186,6 +212,29 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 						"stackit_objectstorage_credential.credential_time", "expiration_timestamp",
 						"data.stackit_objectstorage_credential.credential_time", "expiration_timestamp",
 					),
+
+					// Compliance lock
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_compliance_lock.compliance_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrSet("data.stackit_objectstorage_compliance_lock.compliance_lock", "max_retention_days"),
+
+					// Bucket data with object lock
+					resource.TestCheckResourceAttr("data.stackit_objectstorage_bucket.bucket_object_lock", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "name",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "url_path_style",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "url_path_style",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_bucket.bucket_object_lock", "object_lock",
+						"data.stackit_objectstorage_bucket.bucket_object_lock", "object_lock",
+					),
 				),
 			},
 			// Import
@@ -239,9 +288,7 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	var client *objectstorage.APIClient
 	var err error
 	if testutil.ObjectStorageCustomEndpoint == "" {
-		client, err = objectstorage.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
+		client, err = objectstorage.NewAPIClient()
 	} else {
 		client, err = objectstorage.NewAPIClient(
 			stackitSdkConfig.WithEndpoint(testutil.ObjectStorageCustomEndpoint),
@@ -261,23 +308,20 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}
 
-	bucketsResp, err := client.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
+	bucketsResp, err := client.DefaultAPI.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
 
-	buckets := *bucketsResp.Buckets
+	buckets := bucketsResp.Buckets
 	for _, bucket := range buckets {
-		if bucket.Name == nil {
-			continue
-		}
-		bucketName := *bucket.Name
+		bucketName := bucket.Name
 		if utils.Contains(bucketsToDestroy, bucketName) {
-			_, err := client.DeleteBucketExecute(ctx, testutil.ProjectId, testutil.Region, bucketName)
+			_, err := client.DefaultAPI.DeleteBucket(ctx, testutil.ProjectId, testutil.Region, bucketName).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
 			}
-			_, err = wait.DeleteBucketWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
+			_, err = wait.DeleteBucketWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
 			}
@@ -294,19 +338,16 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
 	}
 
-	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
+	credentialsGroupsResp, err := client.DefaultAPI.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting bucketsResp: %w", err)
 	}
 
-	groups := *credentialsGroupsResp.CredentialsGroups
+	groups := credentialsGroupsResp.CredentialsGroups
 	for _, group := range groups {
-		if group.CredentialsGroupId == nil {
-			continue
-		}
-		groupId := *group.CredentialsGroupId
+		groupId := group.CredentialsGroupId
 		if utils.Contains(credentialsGroupsToDestroy, groupId) {
-			_, err := client.DeleteCredentialsGroupExecute(ctx, testutil.ProjectId, testutil.Region, groupId)
+			_, err := client.DefaultAPI.DeleteCredentialsGroup(ctx, testutil.ProjectId, testutil.Region, groupId).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying credentials group %s during CheckDestroy: %w", groupId, err)
 			}

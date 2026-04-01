@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -25,7 +24,7 @@ func TestMapFields(t *testing.T) {
 				Name: types.StringValue("name"),
 			},
 			&iaas.Keypair{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			Model{
 				Id:          types.StringValue("name"),
@@ -42,10 +41,10 @@ func TestMapFields(t *testing.T) {
 				Name: types.StringValue("name"),
 			},
 			&iaas.Keypair{
-				Name:        utils.Ptr("name"),
-				PublicKey:   utils.Ptr("public_key"),
-				Fingerprint: utils.Ptr("fingerprint"),
-				Labels: &map[string]interface{}{
+				Name:        new("name"),
+				PublicKey:   new("public_key"),
+				Fingerprint: new("fingerprint"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
 			},
@@ -66,10 +65,10 @@ func TestMapFields(t *testing.T) {
 				Name: types.StringValue("name"),
 			},
 			&iaas.Keypair{
-				Name:        utils.Ptr("name"),
-				PublicKey:   utils.Ptr("public_key"),
-				Fingerprint: utils.Ptr("fingerprint"),
-				Labels:      &map[string]interface{}{},
+				Name:        new("name"),
+				PublicKey:   new("public_key"),
+				Fingerprint: new("fingerprint"),
+				Labels:      &map[string]any{},
 			},
 			Model{
 				Id:          types.StringValue("name"),
@@ -91,9 +90,9 @@ func TestMapFields(t *testing.T) {
 			"no_resource_id",
 			Model{},
 			&iaas.Keypair{
-				PublicKey:   utils.Ptr("public_key"),
-				Fingerprint: utils.Ptr("fingerprint"),
-				Labels:      &map[string]interface{}{},
+				PublicKey:   new("public_key"),
+				Fingerprint: new("fingerprint"),
+				Labels:      &map[string]any{},
 			},
 			Model{},
 			false,
@@ -136,9 +135,9 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.CreateKeyPairPayload{
-				Name:      utils.Ptr("name"),
-				PublicKey: utils.Ptr("public_key"),
-				Labels: &map[string]interface{}{
+				Name:      new("name"),
+				PublicKey: new("public_key"),
+				Labels: &map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},
@@ -183,7 +182,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdateKeyPairPayload{
-				Labels: &map[string]interface{}{
+				Labels: &map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},

@@ -224,7 +224,13 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Deprecation warning for enableUpdateService.
+	resp.Diagnostics.AddWarning("Deprecation warning",
+		"This resource is using a built in function to enable the update service which will be removed on 28.09.2026. "+
+			"Use the new `server_update_enable` resource instead to prevent unexpected behavior.")
+
 	// Enable updates if not already enabled
+	// Deprecated: This function will be removed on 26.09.2026. Use `server_update_enable` resource instead.
 	err := enableUpdatesService(ctx, &model, r.client, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Enabling server update project before creation: %v", err))
@@ -443,6 +449,8 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region strin
 }
 
 // If already enabled, just continues
+
+// Deprecated: This function will be removed on 26.09.2026. Use `server_update_enable` resource instead.
 func enableUpdatesService(ctx context.Context, model *Model, client *serverupdate.APIClient, region string) error {
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()

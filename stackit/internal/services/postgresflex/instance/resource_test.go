@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 )
 
@@ -27,6 +26,37 @@ func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _, _ st
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
+	fixtureModel := func(mods ...func(*Model)) Model {
+		m := Model{
+			Id:             types.StringValue("pid,region,iid"),
+			InstanceId:     types.StringValue("iid"),
+			ProjectId:      types.StringValue("pid"),
+			Name:           types.StringNull(),
+			ACL:            types.ListNull(types.StringType),
+			BackupSchedule: types.StringNull(),
+			Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
+				"id":          types.StringNull(),
+				"description": types.StringNull(),
+				"cpu":         types.Int64Null(),
+				"ram":         types.Int64Null(),
+			}),
+			Replicas: types.Int64Null(),
+			Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+				"class": types.StringNull(),
+				"size":  types.Int64Null(),
+			}),
+			Version: types.StringNull(),
+			Region:  types.StringValue(testRegion),
+		}
+
+		for _, mod := range mods {
+			mod(&m)
+		}
+
+		return m
+	}
+
 	tests := []struct {
 		description string
 		state       Model
@@ -49,27 +79,7 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			testRegion,
-			Model{
-				Id:             types.StringValue("pid,region,iid"),
-				InstanceId:     types.StringValue("iid"),
-				ProjectId:      types.StringValue("pid"),
-				Name:           types.StringNull(),
-				ACL:            types.ListNull(types.StringType),
-				BackupSchedule: types.StringNull(),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringNull(),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
-				}),
-				Replicas: types.Int64Null(),
-				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
-					"class": types.StringNull(),
-					"size":  types.Int64Null(),
-				}),
-				Version: types.StringNull(),
-				Region:  types.StringValue(testRegion),
-			},
+			fixtureModel(),
 			true,
 		},
 		{
@@ -87,22 +97,22 @@ func TestMapFields(t *testing.T) {
 							"",
 						},
 					},
-					BackupSchedule: utils.Ptr("schedule"),
+					BackupSchedule: new("schedule"),
 					Flavor: &postgresflex.Flavor{
-						Cpu:         utils.Ptr(int64(12)),
-						Description: utils.Ptr("description"),
-						Id:          utils.Ptr("flavor_id"),
-						Memory:      utils.Ptr(int64(34)),
+						Cpu:         new(int64(12)),
+						Description: new("description"),
+						Id:          new("flavor_id"),
+						Memory:      new(int64(34)),
 					},
-					Id:       utils.Ptr("iid"),
-					Name:     utils.Ptr("name"),
-					Replicas: utils.Ptr(int64(56)),
-					Status:   utils.Ptr("status"),
+					Id:       new("iid"),
+					Name:     new("name"),
+					Replicas: new(int64(56)),
+					Status:   new("status"),
 					Storage: &postgresflex.Storage{
-						Class: utils.Ptr("class"),
-						Size:  utils.Ptr(int64(78)),
+						Class: new("class"),
+						Size:  new(int64(78)),
 					},
-					Version: utils.Ptr("version"),
+					Version: new("version"),
 				},
 			},
 			&flavorModel{},
@@ -150,14 +160,14 @@ func TestMapFields(t *testing.T) {
 							"",
 						},
 					},
-					BackupSchedule: utils.Ptr("schedule"),
+					BackupSchedule: new("schedule"),
 					Flavor:         nil,
-					Id:             utils.Ptr("iid"),
-					Name:           utils.Ptr("name"),
-					Replicas:       utils.Ptr(int64(56)),
-					Status:         utils.Ptr("status"),
+					Id:             new("iid"),
+					Name:           new("name"),
+					Replicas:       new(int64(56)),
+					Status:         new("status"),
 					Storage:        nil,
-					Version:        utils.Ptr("version"),
+					Version:        new("version"),
 				},
 			},
 			&flavorModel{
@@ -216,14 +226,14 @@ func TestMapFields(t *testing.T) {
 							"ip2",
 						},
 					},
-					BackupSchedule: utils.Ptr("schedule"),
+					BackupSchedule: new("schedule"),
 					Flavor:         nil,
-					Id:             utils.Ptr("iid"),
-					Name:           utils.Ptr("name"),
-					Replicas:       utils.Ptr(int64(56)),
-					Status:         utils.Ptr("status"),
+					Id:             new("iid"),
+					Name:           new("name"),
+					Replicas:       new(int64(56)),
+					Status:         new("status"),
 					Storage:        nil,
-					Version:        utils.Ptr("version"),
+					Version:        new("version"),
 				},
 			},
 			&flavorModel{
@@ -261,6 +271,42 @@ func TestMapFields(t *testing.T) {
 				Region:  types.StringValue(testRegion),
 			},
 			true,
+		},
+		{
+			description: "backup schedule - keep state value when API strips leading zeros",
+			state: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("00 00 * * *")
+			}),
+			input: &postgresflex.InstanceResponse{
+				Item: &postgresflex.Instance{
+					BackupSchedule: new("0 0 * * *"),
+				},
+			},
+			flavor:  &flavorModel{},
+			storage: &storageModel{},
+			region:  testRegion,
+			expected: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("00 00 * * *")
+			}),
+			isValid: true,
+		},
+		{
+			description: "backup schedule - use updated value from API if cron actually changed",
+			state: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("00 01 * * *")
+			}),
+			input: &postgresflex.InstanceResponse{
+				Item: &postgresflex.Instance{
+					BackupSchedule: new("0 2 * * *"),
+				},
+			},
+			flavor:  &flavorModel{},
+			storage: &storageModel{},
+			region:  testRegion,
+			expected: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("0 2 * * *")
+			}),
+			isValid: true,
 		},
 		{
 			"nil_response",
@@ -358,15 +404,15 @@ func TestToCreatePayload(t *testing.T) {
 						"ip_2",
 					},
 				},
-				BackupSchedule: utils.Ptr("schedule"),
-				FlavorId:       utils.Ptr("flavor_id"),
-				Name:           utils.Ptr("name"),
-				Replicas:       utils.Ptr(int64(12)),
+				BackupSchedule: new("schedule"),
+				FlavorId:       new("flavor_id"),
+				Name:           new("name"),
+				Replicas:       new(int64(12)),
 				Storage: &postgresflex.Storage{
-					Class: utils.Ptr("class"),
-					Size:  utils.Ptr(int64(34)),
+					Class: new("class"),
+					Size:  new(int64(34)),
 				},
-				Version: utils.Ptr("version"),
+				Version: new("version"),
 			},
 			true,
 		},
@@ -397,7 +443,7 @@ func TestToCreatePayload(t *testing.T) {
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       utils.Ptr(int64(2123456789)),
+				Replicas:       new(int64(2123456789)),
 				Storage: &postgresflex.Storage{
 					Class: nil,
 					Size:  nil,
@@ -511,11 +557,11 @@ func TestToUpdatePayload(t *testing.T) {
 						"ip_2",
 					},
 				},
-				BackupSchedule: utils.Ptr("schedule"),
-				FlavorId:       utils.Ptr("flavor_id"),
-				Name:           utils.Ptr("name"),
-				Replicas:       utils.Ptr(int64(12)),
-				Version:        utils.Ptr("version"),
+				BackupSchedule: new("schedule"),
+				FlavorId:       new("flavor_id"),
+				Name:           new("name"),
+				Replicas:       new(int64(12)),
+				Version:        new("version"),
 			},
 			true,
 		},
@@ -546,7 +592,7 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       utils.Ptr(int64(2123456789)),
+				Replicas:       new(int64(2123456789)),
 				Version:        nil,
 			},
 			true,
@@ -625,10 +671,10 @@ func TestLoadFlavorId(t *testing.T) {
 			&postgresflex.ListFlavorsResponse{
 				Flavors: &[]postgresflex.Flavor{
 					{
-						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int64(2)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int64(8)),
+						Id:          new("fid-1"),
+						Cpu:         new(int64(2)),
+						Description: new("description"),
+						Memory:      new(int64(8)),
 					},
 				},
 			},
@@ -650,16 +696,16 @@ func TestLoadFlavorId(t *testing.T) {
 			&postgresflex.ListFlavorsResponse{
 				Flavors: &[]postgresflex.Flavor{
 					{
-						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int64(2)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int64(8)),
+						Id:          new("fid-1"),
+						Cpu:         new(int64(2)),
+						Description: new("description"),
+						Memory:      new(int64(8)),
 					},
 					{
-						Id:          utils.Ptr("fid-2"),
-						Cpu:         utils.Ptr(int64(1)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int64(4)),
+						Id:          new("fid-2"),
+						Cpu:         new(int64(1)),
+						Description: new("description"),
+						Memory:      new(int64(4)),
 					},
 				},
 			},
@@ -681,16 +727,16 @@ func TestLoadFlavorId(t *testing.T) {
 			&postgresflex.ListFlavorsResponse{
 				Flavors: &[]postgresflex.Flavor{
 					{
-						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int64(1)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int64(8)),
+						Id:          new("fid-1"),
+						Cpu:         new(int64(1)),
+						Description: new("description"),
+						Memory:      new(int64(8)),
 					},
 					{
-						Id:          utils.Ptr("fid-2"),
-						Cpu:         utils.Ptr(int64(1)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int64(4)),
+						Id:          new("fid-2"),
+						Cpu:         new(int64(1)),
+						Description: new("description"),
+						Memory:      new(int64(4)),
 					},
 				},
 			},
