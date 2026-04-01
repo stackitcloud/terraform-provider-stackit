@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
@@ -38,7 +37,7 @@ func inputTokenConfig(name, description string) string {
 			ttl_duration = "%s"
 		}
 		`,
-		testutil.ModelServingProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		tokenResource["project_id"],
 		tokenResource["region"],
 		name,
@@ -93,17 +92,7 @@ func TestAccModelServingTokenResource(t *testing.T) {
 
 func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *modelserving.APIClient
-	var err error
-
-	if testutil.ModelServingCustomEndpoint == "" {
-		client, err = modelserving.NewAPIClient()
-	} else {
-		client, err = modelserving.NewAPIClient(
-			config.WithEndpoint(testutil.ModelServingCustomEndpoint),
-		)
-	}
-
+	client, err := modelserving.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ModelServingCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

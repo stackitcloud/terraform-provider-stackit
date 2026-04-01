@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme/wait"
@@ -101,7 +100,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 
 			// Creation
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -126,7 +125,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 			},
 			// Data source
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -159,7 +158,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 			},
 			// Import
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				ResourceName:    "stackit_logme_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -200,7 +199,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -224,7 +223,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 			// Creation
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -276,7 +275,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 			},
 			// Data source
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -336,7 +335,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 			},
 			// Import
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				ResourceName:    "stackit_logme_instance.instance",
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -377,7 +376,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.LogMeProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -422,17 +421,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *logme.APIClient
-	var err error
-	if testutil.LogMeCustomEndpoint == "" {
-		client, err = logme.NewAPIClient(
-			core_config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = logme.NewAPIClient(
-			core_config.WithEndpoint(testutil.LogMeCustomEndpoint),
-		)
-	}
+	client, err := logme.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

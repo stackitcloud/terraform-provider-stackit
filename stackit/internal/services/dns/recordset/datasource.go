@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
@@ -24,6 +25,11 @@ import (
 var (
 	_ datasource.DataSource = &recordSetDataSource{}
 )
+
+type DataSourceModel struct {
+	Model
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
+}
 
 // NewRecordSetDataSource NewZoneDataSource is a helper function to simplify the provider implementation.
 func NewRecordSetDataSource() datasource.DataSource {
@@ -56,7 +62,7 @@ func (d *recordSetDataSource) Configure(ctx context.Context, req datasource.Conf
 }
 
 // Schema defines the schema for the data source.
-func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *recordSetDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "DNS Record Set Resource schema.",
 		Attributes: map[string]schema.Attribute{
@@ -125,18 +131,27 @@ func (d *recordSetDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Description: "Record set state.",
 				Computed:    true,
 			},
+			"timeouts": timeouts.Attributes(ctx),
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -170,7 +185,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapFields(ctx, recordSetResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Processing API payload: %v", err))
 		return

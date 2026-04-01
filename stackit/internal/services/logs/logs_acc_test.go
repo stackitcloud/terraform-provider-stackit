@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -116,7 +115,7 @@ func TestAccLogsInstanceMin(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.LogsProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
@@ -136,7 +135,7 @@ func TestAccLogsInstanceMin(t *testing.T) {
 			// Datasource
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config: testutil.LogsProviderConfig() + resourceMin + `
+				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin + `
 data "stackit_logs_instance" "logs" {
   project_id   = stackit_logs_instance.logs.project_id
   region       = stackit_logs_instance.logs.region
@@ -216,7 +215,7 @@ data "stackit_logs_instance" "logs" {
 			// Update
 			{
 				ConfigVariables: testConfigVarsMinUpdated(),
-				Config:          testutil.LogsProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "project_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "region", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["region"])),
@@ -246,7 +245,7 @@ func TestAccLogsInstanceMax(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.LogsProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
@@ -268,7 +267,7 @@ func TestAccLogsInstanceMax(t *testing.T) {
 			// Datasource
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config: testutil.LogsProviderConfig() + resourceMax + `
+				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax + `
 data "stackit_logs_instance" "logs" {
   project_id   = stackit_logs_instance.logs.project_id
   region       = stackit_logs_instance.logs.region
@@ -356,7 +355,7 @@ data "stackit_logs_instance" "logs" {
 			// Update
 			{
 				ConfigVariables: testConfigVarsMaxUpdated(),
-				Config:          testutil.LogsProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "project_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "region", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["region"])),
@@ -388,7 +387,7 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigAccessTokenVarsMin,
-				Config:          testutil.LogsProviderConfig() + "\n" + accessTokenMinConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + accessTokenMinConfig,
 				Check: resource.ComposeTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMin["project_id"])),
@@ -418,7 +417,7 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 			// Datasource
 			{
 				ConfigVariables: testConfigAccessTokenVarsMin,
-				Config: testutil.LogsProviderConfig() + "\n" + accessTokenMinConfig + `
+				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + accessTokenMinConfig + `
 					data "stackit_logs_access_token" "accessToken" {
 					  project_id   = stackit_logs_access_token.accessToken.project_id
 					  region       = stackit_logs_access_token.accessToken.region
@@ -468,7 +467,7 @@ func TestAccLogsAccessTokenMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigAccessTokenVarsMinUpdated(),
-				Config:          testutil.LogsProviderConfig() + "\n" + accessTokenMinConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + accessTokenMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "region", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMinUpdated()["region"])),
@@ -499,7 +498,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 			// Create
 			{
 				ConfigVariables: testConfigAccessTokenVarsMax,
-				Config:          testutil.LogsProviderConfig() + "\n" + accessTokenMaxConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + accessTokenMaxConfig,
 				Check: resource.ComposeTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_logs_instance.logs", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["project_id"])),
@@ -542,7 +541,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 			// Datasource
 			{
 				ConfigVariables: testConfigAccessTokenVarsMax,
-				Config: testutil.LogsProviderConfig() + "\n" + accessTokenMaxConfig + `
+				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + accessTokenMaxConfig + `
 					data "stackit_logs_access_token" "accessToken" {
 					  project_id   = stackit_logs_access_token.accessToken.project_id
 					  region       = stackit_logs_access_token.accessToken.region
@@ -594,7 +593,7 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigAccessTokenVarsMaxUpdated(),
-				Config:          testutil.LogsProviderConfig() + "\n" + accessTokenMaxConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + accessTokenMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "project_id", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "region", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMaxUpdated()["region"])),
@@ -644,15 +643,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *logs.APIClient
-	var err error
-	if testutil.LogsCustomEndpoint == "" {
-		client, err = logs.NewAPIClient()
-	} else {
-		client, err = logs.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.LogsCustomEndpoint),
-		)
-	}
+	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -685,15 +676,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 
 func testAccCheckLogsAccessTokenDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *logs.APIClient
-	var err error
-	if testutil.LogsCustomEndpoint == "" {
-		client, err = logs.NewAPIClient()
-	} else {
-		client, err = logs.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.LogsCustomEndpoint),
-		)
-	}
+	client, err := logs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

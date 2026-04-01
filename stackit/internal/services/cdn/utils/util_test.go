@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -34,7 +34,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *cdn.APIClient
+		expected *cdnSdk.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -43,8 +43,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *cdn.APIClient {
-				apiClient, err := cdn.NewAPIClient(
+			expected: func() *cdnSdk.APIClient {
+				apiClient, err := cdnSdk.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
@@ -62,8 +62,8 @@ func TestConfigureClient(t *testing.T) {
 					CdnCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *cdn.APIClient {
-				apiClient, err := cdn.NewAPIClient(
+			expected: func() *cdnSdk.APIClient {
+				apiClient, err := cdnSdk.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)

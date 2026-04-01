@@ -29,6 +29,10 @@ data "stackit_dns_record_set" "example" {
 - `record_set_id` (String) The rr set id.
 - `zone_id` (String) The zone ID to which is dns record set is associated.
 
+### Optional
+
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
+
 ### Read-Only
 
 - `active` (Boolean) Specifies if the record set is active or not.
@@ -41,3 +45,10 @@ data "stackit_dns_record_set" "example" {
 - `state` (String) Record set state.
 - `ttl` (Number) Time to live. E.g. 3600
 - `type` (String) The record set type. E.g. `A` or `CNAME`
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).

@@ -31,7 +31,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -211,7 +212,7 @@ var domainTypes = map[string]attr.Type{
 }
 
 type distributionResource struct {
-	client       *cdn.APIClient
+	client       *cdnSdk.APIClient
 	providerData core.ProviderData
 }
 
@@ -559,7 +560,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	createResp, err := r.client.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -567,7 +568,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Distribution.Id == nil {
+	if createResp.Distribution.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", "Got empty cdn distribution id")
 		return
 	}
@@ -575,19 +576,19 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":      projectId,
-		"distribution_id": *createResp.Distribution.Id,
+		"distribution_id": createResp.Distribution.Id,
 	})
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, *createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client.DefaultAPI, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, waitResp.Distribution, &model)
+	err = mapFields(ctx, &waitResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -616,7 +617,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	cdnResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
+	cdnResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -632,7 +633,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, cdnResp.Distribution, &model)
+	err = mapFields(ctx, &cdnResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN ditribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -671,9 +672,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	regions := []cdn.Region{}
+	regions := []cdnSdk.Region{}
 	for _, r := range *configModel.Regions {
-		regionEnum, err := cdn.NewRegionFromValue(r)
+		regionEnum, err := cdnSdk.NewRegionFromValue(r)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Map regions: %v", err))
 			return
@@ -702,35 +703,35 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// redirects
-	var redirectsConfig *cdn.RedirectConfig
+	var redirectsConfig *cdnSdk.RedirectConfig
 	if configModel.Redirects != nil {
-		sdkRules := []cdn.RedirectRule{}
+		sdkRules := []cdnSdk.RedirectRule{}
 		if len(configModel.Redirects.Rules) > 0 {
 			for _, rule := range configModel.Redirects.Rules {
-				matchers := []cdn.Matcher{}
+				matchers := []cdnSdk.Matcher{}
 				for _, matcher := range rule.Matchers {
-					var matchCond *cdn.MatchCondition
+					var matchCond *cdnSdk.MatchCondition
 					if matcher.ValueMatchCondition != nil {
-						cond := cdn.MatchCondition(*matcher.ValueMatchCondition)
+						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
 						matchCond = &cond
 					}
 
-					matchers = append(matchers, cdn.Matcher{
+					matchers = append(matchers, cdnSdk.Matcher{
 						Values:              &matcher.Values,
 						ValueMatchCondition: matchCond,
 					})
 				}
 
-				var ruleMatchCond *cdn.MatchCondition
+				var ruleMatchCond *cdnSdk.MatchCondition
 				if rule.RuleMatchCondition != nil {
-					cond := cdn.MatchCondition(*rule.RuleMatchCondition)
+					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
 					ruleMatchCond = &cond
 				}
 
-				statusCode := cdn.RedirectRuleStatusCode(rule.StatusCode)
+				statusCode := cdnSdk.RedirectRuleStatusCode(rule.StatusCode)
 				targetUrl := rule.TargetUrl
 
-				sdkConfigRule := cdn.RedirectRule{
+				sdkConfigRule := cdnSdk.RedirectRule{
 					Description:        rule.Description,
 					Enabled:            rule.Enabled,
 					Matchers:           &matchers,
@@ -741,12 +742,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 				sdkRules = append(sdkRules, sdkConfigRule)
 			}
 		}
-		redirectsConfig = &cdn.RedirectConfig{
+		redirectsConfig = &cdnSdk.RedirectConfig{
 			Rules: &sdkRules,
 		}
 	}
 
-	configPatchBackend := &cdn.ConfigPatchBackend{}
+	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
 	switch configModel.Backend.Type {
 	case "http":
@@ -767,27 +768,27 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			geofencingPatch = gf
 		}
 
-		configPatchBackend.HttpBackendPatch = &cdn.HttpBackendPatch{
+		configPatchBackend.HttpBackendPatch = &cdnSdk.HttpBackendPatch{
 			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
 			OriginUrl:            configModel.Backend.OriginURL,
-			Type:                 new("http"),
+			Type:                 "http",
 			Geofencing:           &geofencingPatch,
 		}
 	case "bucket":
-		configPatchBackend.BucketBackendPatch = &cdn.BucketBackendPatch{
-			Type:      new("bucket"),
+		configPatchBackend.BucketBackendPatch = &cdnSdk.BucketBackendPatch{
+			Type:      "bucket",
 			BucketUrl: configModel.Backend.BucketURL,
 			Region:    configModel.Backend.Region,
 		}
 		if configModel.Backend.Credentials != nil {
-			configPatchBackend.BucketBackendPatch.Credentials = &cdn.BucketCredentials{
-				AccessKeyId:     configModel.Backend.Credentials.AccessKey,
-				SecretAccessKey: configModel.Backend.Credentials.SecretKey,
+			configPatchBackend.BucketBackendPatch.Credentials = &cdnSdk.BucketCredentials{
+				AccessKeyId:     *configModel.Backend.Credentials.AccessKey,
+				SecretAccessKey: *configModel.Backend.Credentials.SecretKey,
 			}
 		}
 	}
 
-	configPatch := &cdn.ConfigPatch{
+	configPatch := &cdnSdk.ConfigPatch{
 		Backend:          configPatchBackend,
 		Regions:          &regions,
 		BlockedCountries: blockedCountries,
@@ -803,14 +804,14 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			return
 		}
 
-		optimizer := cdn.NewOptimizerPatch()
+		optimizer := cdnSdk.NewOptimizerPatch()
 		if !utils.IsUndefined(optimizerModel.Enabled) {
 			optimizer.SetEnabled(optimizerModel.Enabled.ValueBool())
 		}
 		configPatch.Optimizer = optimizer
 	}
 
-	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdn.PatchDistributionPayload{
+	_, err := r.client.DefaultAPI.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdnSdk.PatchDistributionPayload{
 		Config:   configPatch,
 		IntentId: new(uuid.NewString()),
 	}).Execute()
@@ -821,13 +822,13 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Waiting for update: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, waitResp.Distribution, &model)
+	err = mapFields(ctx, &waitResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -856,14 +857,14 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	_, err := r.client.DeleteDistribution(ctx, projectId, distributionId).Execute()
+	_, err := r.client.DefaultAPI.DeleteDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Delete distribution: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
+	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Waiting for deletion: %v", err))
 		return
@@ -884,7 +885,7 @@ func (r *distributionResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN distribution state imported")
 }
 
-func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model) error {
+func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Model) error {
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -892,29 +893,21 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		return fmt.Errorf("model input is nil")
 	}
 
-	if distribution.ProjectId == nil {
+	if distribution.ProjectId == "" {
 		return fmt.Errorf("'Project ID' not present")
 	}
 
-	if distribution.Id == nil {
+	if distribution.Id == "" {
 		return fmt.Errorf("CDN distribution ID not present")
 	}
 
-	if distribution.CreatedAt == nil {
-		return fmt.Errorf("'CreatedAt' missing in response")
-	}
-
-	if distribution.UpdatedAt == nil {
-		return fmt.Errorf("'UpdatedAt' missing in response")
-	}
-
-	if distribution.Status == nil {
+	if distribution.Status == "" {
 		return fmt.Errorf("'Status' missing in response")
 	}
 
-	model.ID = utils.BuildInternalTerraformId(*distribution.ProjectId, *distribution.Id)
-	model.DistributionId = types.StringValue(*distribution.Id)
-	model.ProjectId = types.StringValue(*distribution.ProjectId)
+	model.ID = utils.BuildInternalTerraformId(distribution.ProjectId, distribution.Id)
+	model.DistributionId = types.StringValue(distribution.Id)
+	model.ProjectId = types.StringValue(distribution.ProjectId)
 	model.Status = types.StringValue(string(distribution.GetStatus()))
 	model.CreatedAt = types.StringValue(distribution.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(distribution.UpdatedAt.String())
@@ -922,8 +915,8 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	// distributionErrors
 	distributionErrors := []attr.Value{}
 	if distribution.Errors != nil {
-		for _, e := range *distribution.Errors {
-			distributionErrors = append(distributionErrors, types.StringValue(*e.En))
+		for _, e := range distribution.Errors {
+			distributionErrors = append(distributionErrors, types.StringValue(e.En))
 		}
 	}
 	modelErrors, diags := types.ListValue(types.StringType, distributionErrors)
@@ -934,7 +927,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	// regions
 	regions := []attr.Value{}
-	for _, r := range *distribution.Config.Regions {
+	for _, r := range distribution.Config.Regions {
 		regions = append(regions, types.StringValue(string(r)))
 	}
 	modelRegions, diags := types.ListValue(types.StringType, regions)
@@ -1049,8 +1042,8 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	// blockedCountries
 	var blockedCountries []attr.Value
-	if distribution.Config != nil && distribution.Config.BlockedCountries != nil {
-		for _, c := range *distribution.Config.BlockedCountries {
+	if distribution.Config.BlockedCountries != nil {
+		for _, c := range distribution.Config.BlockedCountries {
 			blockedCountries = append(blockedCountries, types.StringValue(string(c)))
 		}
 	}
@@ -1063,9 +1056,9 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	// originRequestHeaders
 	originRequestHeaders := types.MapNull(types.StringType)
 	if distribution.Config.Backend.HttpBackend != nil {
-		if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; origHeaders != nil && len(*origHeaders) > 0 {
+		if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; len(origHeaders) > 0 {
 			headers := map[string]attr.Value{}
-			for k, v := range *origHeaders {
+			for k, v := range origHeaders {
 				headers[k] = types.StringValue(v)
 			}
 			mappedHeaders, diags := types.MapValue(types.StringType, headers)
@@ -1084,8 +1077,8 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	reconciledGeofencingData := make(map[string][]string)
 	if distribution.Config.Backend.HttpBackend != nil {
-		if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
-			newGeofencingMap := *geofencingAPI
+		if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; len(geofencingAPI) > 0 {
+			newGeofencingMap := geofencingAPI
 			for url, newCountries := range newGeofencingMap {
 				oldCountriesPtrs := oldGeofencingMap[url]
 
@@ -1121,7 +1114,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	if distribution.Config.Backend.HttpBackend != nil {
 		backendValues = map[string]attr.Value{
 			"type":                   types.StringValue("http"),
-			"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
+			"origin_url":             types.StringValue(distribution.Config.Backend.HttpBackend.OriginUrl),
 			"origin_request_headers": originRequestHeaders,
 			"geofencing":             geofencingVal,
 			// bucket fields must be null when using HTTP
@@ -1150,8 +1143,8 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 		backendValues = map[string]attr.Value{
 			"type":        types.StringValue("bucket"),
-			"bucket_url":  types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
-			"region":      types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
+			"bucket_url":  types.StringValue(distribution.Config.Backend.BucketBackend.BucketUrl),
+			"region":      types.StringValue(distribution.Config.Backend.BucketBackend.Region),
 			"credentials": credentialsObj,
 			// HTTP field must be null when using Bucket
 			"origin_url":             types.StringNull(),
@@ -1172,7 +1165,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 		if ok {
 			var diags diag.Diagnostics
 			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
-				"enabled": types.BoolValue(optimizerEnabled),
+				"enabled": types.BoolPointerValue(optimizerEnabled),
 			})
 			if diags.HasError() {
 				return core.DiagsToError(diags)
@@ -1193,27 +1186,27 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 
 	domains := []attr.Value{}
 	if distribution.Domains != nil {
-		for _, d := range *distribution.Domains {
+		for _, d := range distribution.Domains {
 			domainErrors := []attr.Value{}
 			if d.Errors != nil {
-				for _, e := range *d.Errors {
-					if e.En == nil {
+				for _, e := range d.Errors {
+					if e.En == "" {
 						return fmt.Errorf("error description missing")
 					}
-					domainErrors = append(domainErrors, types.StringValue(*e.En))
+					domainErrors = append(domainErrors, types.StringValue(e.En))
 				}
 			}
 			modelDomainErrors, diags := types.ListValue(types.StringType, domainErrors)
 			if diags.HasError() {
 				return core.DiagsToError(diags)
 			}
-			if d.Name == nil || d.Status == nil || d.Type == nil {
+			if d.Name == "" || d.Status == "" || d.Type == "" {
 				return fmt.Errorf("domain entry incomplete")
 			}
 			modelDomain, diags := types.ObjectValue(domainTypes, map[string]attr.Value{
-				"name":   types.StringValue(*d.Name),
-				"status": types.StringValue(string(*d.Status)),
-				"type":   types.StringValue(string(*d.Type)),
+				"name":   types.StringValue(d.Name),
+				"status": types.StringValue(string(d.Status)),
+				"type":   types.StringValue(string(d.Type)),
 				"errors": modelDomainErrors,
 			})
 			if diags.HasError() {
@@ -1232,7 +1225,7 @@ func mapFields(ctx context.Context, distribution *cdn.Distribution, model *Model
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistributionPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistributionPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
 	}
@@ -1240,18 +1233,18 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	if err != nil {
 		return nil, err
 	}
-	var optimizer *cdn.Optimizer
+	var optimizer *cdnSdk.Optimizer
 	if cfg.Optimizer != nil {
-		optimizer = cdn.NewOptimizer(cfg.Optimizer.GetEnabled())
+		optimizer = cdnSdk.NewOptimizer(cfg.Optimizer.GetEnabled())
 	}
-	var backend *cdn.CreateDistributionPayloadBackend
+	var backend *cdnSdk.CreateDistributionPayloadBackend
 	if cfg.Backend.HttpBackend != nil {
-		backend = &cdn.CreateDistributionPayloadBackend{
-			HttpBackendCreate: &cdn.HttpBackendCreate{
+		backend = &cdnSdk.CreateDistributionPayloadBackend{
+			HttpBackendCreate: &cdnSdk.HttpBackendCreate{
 				OriginUrl:            cfg.Backend.HttpBackend.OriginUrl,
-				OriginRequestHeaders: cfg.Backend.HttpBackend.OriginRequestHeaders,
-				Geofencing:           cfg.Backend.HttpBackend.Geofencing,
-				Type:                 new("http"),
+				OriginRequestHeaders: &cfg.Backend.HttpBackend.OriginRequestHeaders,
+				Geofencing:           &cfg.Backend.HttpBackend.Geofencing,
+				Type:                 "http",
 			},
 		}
 	} else if cfg.Backend.BucketBackend != nil {
@@ -1270,23 +1263,23 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 			accessKey = rawConfig.Backend.Credentials.AccessKey
 			secretKey = rawConfig.Backend.Credentials.SecretKey
 		}
-		backend = &cdn.CreateDistributionPayloadBackend{
-			BucketBackendCreate: &cdn.BucketBackendCreate{
-				Type:      new("bucket"),
+		backend = &cdnSdk.CreateDistributionPayloadBackend{
+			BucketBackendCreate: &cdnSdk.BucketBackendCreate{
+				Type:      "bucket",
 				BucketUrl: cfg.Backend.BucketBackend.BucketUrl,
 				Region:    cfg.Backend.BucketBackend.Region,
-				Credentials: &cdn.BucketCredentials{
-					AccessKeyId:     accessKey,
-					SecretAccessKey: secretKey,
+				Credentials: cdnSdk.BucketCredentials{
+					AccessKeyId:     *accessKey,
+					SecretAccessKey: *secretKey,
 				},
 			},
 		}
 	}
-
-	payload := &cdn.CreateDistributionPayload{
-		IntentId:         new(uuid.NewString()),
+	intendId := uuid.NewString()
+	payload := &cdnSdk.CreateDistributionPayload{
+		IntentId:         new(intendId),
 		Regions:          cfg.Regions,
-		Backend:          backend,
+		Backend:          *backend,
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
 		Redirects:        cfg.Redirects,
@@ -1295,7 +1288,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdn.CreateDistribution
 	return payload, nil
 }
 
-func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
+func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	if model == nil {
 		return nil, errors.New("model cannot be nil")
 	}
@@ -1313,9 +1306,9 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	}
 
 	// regions
-	regions := []cdn.Region{}
+	regions := []cdnSdk.Region{}
 	for _, r := range *configModel.Regions {
-		regionEnum, err := cdn.NewRegionFromValue(r)
+		regionEnum, err := cdnSdk.NewRegionFromValue(r)
 		if err != nil {
 			return nil, err
 		}
@@ -1335,10 +1328,10 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 	}
 
 	// redirects
-	var redirectsConfig *cdn.RedirectConfig
+	var redirectsConfig *cdnSdk.RedirectConfig
 
 	if configModel.Redirects != nil {
-		sdkRules := []cdn.RedirectRule{}
+		sdkRules := []cdnSdk.RedirectRule{}
 
 		if len(configModel.Redirects.Rules) > 0 {
 			for _, rule := range configModel.Redirects.Rules {
@@ -1376,7 +1369,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 				sdkRules = append(sdkRules, sdkConfigRule)
 			}
 		}
-		redirectsConfig = &cdn.RedirectConfig{
+		redirectsConfig = &cdnSdk.RedirectConfig{
 			Rules: &sdkRules,
 		}
 	}
@@ -1400,10 +1393,10 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 	}
 
-	cdnConfig := &cdn.Config{
-		Backend:          &cdn.ConfigBackend{},
-		Regions:          &regions,
-		BlockedCountries: &blockedCountries,
+	cdnConfig := &cdnSdk.Config{
+		Backend:          cdnSdk.ConfigBackend{},
+		Regions:          regions,
+		BlockedCountries: blockedCountries,
 		Redirects:        redirectsConfig,
 	}
 
@@ -1413,17 +1406,17 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		if configModel.Backend.OriginRequestHeaders != nil {
 			maps.Copy(originRequestHeaders, *configModel.Backend.OriginRequestHeaders)
 		}
-		cdnConfig.Backend.HttpBackend = &cdn.HttpBackend{
-			OriginRequestHeaders: &originRequestHeaders,
-			OriginUrl:            configModel.Backend.OriginURL,
-			Type:                 new("http"),
-			Geofencing:           &geofencing,
+		cdnConfig.Backend.HttpBackend = &cdnSdk.HttpBackend{
+			OriginRequestHeaders: originRequestHeaders,
+			OriginUrl:            *configModel.Backend.OriginURL,
+			Type:                 "http",
+			Geofencing:           geofencing,
 		}
 	case "bucket":
-		cdnConfig.Backend.BucketBackend = &cdn.BucketBackend{
-			Type:      new("bucket"),
-			BucketUrl: configModel.Backend.BucketURL,
-			Region:    configModel.Backend.Region,
+		cdnConfig.Backend.BucketBackend = &cdnSdk.BucketBackend{
+			Type:      "bucket",
+			BucketUrl: *configModel.Backend.BucketURL,
+			Region:    *configModel.Backend.Region,
 		}
 	}
 
@@ -1435,7 +1428,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdn.Config, error) {
 		}
 
 		if !utils.IsUndefined(optimizerModel.Enabled) {
-			cdnConfig.Optimizer = cdn.NewOptimizer(optimizerModel.Enabled.ValueBool())
+			cdnConfig.Optimizer = cdnSdk.NewOptimizer(optimizerModel.Enabled.ValueBool())
 		}
 	}
 
