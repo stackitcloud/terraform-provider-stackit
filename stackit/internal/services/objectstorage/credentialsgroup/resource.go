@@ -21,8 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -187,18 +186,18 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "region", region)
 
 	createCredentialsGroupPayload := objectstorage.CreateCredentialsGroupPayload{
-		DisplayName: sdkUtils.Ptr(credentialsGroupName),
+		DisplayName: credentialsGroupName,
 	}
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client)
+	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
 
 	// Create new credentials group
-	got, err := r.client.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
+	got, err := r.client.DefaultAPI.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -206,11 +205,11 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 
 	ctx = core.LogResponse(ctx)
 
-	if got == nil || got.CredentialsGroup == nil || got.CredentialsGroup.CredentialsGroupId == nil {
+	if got == nil || got.CredentialsGroup.CredentialsGroupId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", "Got empty credential group id id")
 		return
 	}
-	credentialsGroupId := *got.CredentialsGroup.CredentialsGroupId
+	credentialsGroupId := got.CredentialsGroup.CredentialsGroupId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":           projectId,
@@ -254,7 +253,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentialsGroups(ctx, &model, region, r.client)
+	found, err := readCredentialsGroups(ctx, &model, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
@@ -304,7 +303,7 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credentials group
-	_, err := r.client.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
+	_, err := r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials group", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -338,15 +337,12 @@ func mapFields(credentialsGroupResp *objectstorage.CreateCredentialsGroupRespons
 	if credentialsGroupResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
-	if credentialsGroupResp.CredentialsGroup == nil {
-		return fmt.Errorf("response credentialsGroup is nil")
-	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 	credentialsGroup := credentialsGroupResp.CredentialsGroup
 
-	err := mapCredentialsGroup(*credentialsGroup, model, region)
+	err := mapCredentialsGroup(credentialsGroup, model, region)
 	if err != nil {
 		return err
 	}
@@ -358,30 +354,25 @@ func mapCredentialsGroup(credentialsGroup objectstorage.CredentialsGroup, model 
 	var credentialsGroupId string
 	if !utils.IsUndefined(model.CredentialsGroupId) {
 		credentialsGroupId = model.CredentialsGroupId.ValueString()
-	} else if credentialsGroup.CredentialsGroupId != nil {
-		credentialsGroupId = *credentialsGroup.CredentialsGroupId
+	} else if credentialsGroup.CredentialsGroupId != "" {
+		credentialsGroupId = credentialsGroup.CredentialsGroupId
 	} else {
 		return fmt.Errorf("credential id not present")
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, credentialsGroupId)
 	model.CredentialsGroupId = types.StringValue(credentialsGroupId)
-	model.URN = types.StringPointerValue(credentialsGroup.Urn)
-	model.Name = types.StringPointerValue(credentialsGroup.DisplayName)
+	model.URN = types.StringValue(credentialsGroup.Urn)
+	model.Name = types.StringValue(credentialsGroup.DisplayName)
 	return nil
 }
 
-type objectStorageClient interface {
-	EnableServiceExecute(ctx context.Context, projectId, region string) (*objectstorage.ProjectStatus, error)
-	ListCredentialsGroupsExecute(ctx context.Context, projectId, region string) (*objectstorage.ListCredentialsGroupsResponse, error)
-}
-
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
-func enableProject(ctx context.Context, model *Model, region string, client objectStorageClient) error {
+func enableProject(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) error {
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableServiceExecute(ctx, projectId, region)
+	_, err := client.EnableService(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}
@@ -391,14 +382,14 @@ func enableProject(ctx context.Context, model *Model, region string, client obje
 // readCredentialsGroups gets all the existing credentials groups for the specified project,
 // finds the credentials group that is being read and updates the state.
 // Returns True if the credential was found, False otherwise.
-func readCredentialsGroups(ctx context.Context, model *Model, region string, client objectStorageClient) (bool, error) {
+func readCredentialsGroups(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) (bool, error) {
 	found := false
 
 	if model.CredentialsGroupId.ValueString() == "" && model.Name.ValueString() == "" {
 		return found, fmt.Errorf("missing configuration: either name or credentials group id must be provided")
 	}
 
-	credentialsGroupsResp, err := client.ListCredentialsGroupsExecute(ctx, model.ProjectId.ValueString(), region)
+	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -411,8 +402,8 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 		return found, fmt.Errorf("nil response from GET credentials groups")
 	}
 
-	for _, credentialsGroup := range *credentialsGroupsResp.CredentialsGroups {
-		if *credentialsGroup.CredentialsGroupId != model.CredentialsGroupId.ValueString() && *credentialsGroup.DisplayName != model.Name.ValueString() {
+	for _, credentialsGroup := range credentialsGroupsResp.CredentialsGroups {
+		if credentialsGroup.CredentialsGroupId != model.CredentialsGroupId.ValueString() && credentialsGroup.DisplayName != model.Name.ValueString() {
 			continue
 		}
 		found = true

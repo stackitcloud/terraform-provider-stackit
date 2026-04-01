@@ -314,7 +314,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	zoneId := createResp.Zone.Id
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"zone_id":    zoneId,
 	})
@@ -485,7 +485,7 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 		return
 	}
 
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": idParts[0],
 		"zone_id":    idParts[1],
 	})

@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 )
 
@@ -37,7 +36,7 @@ func fixtureInstance(mods ...func(instance *edge.Instance)) edge.Instance {
 		FrontendUrl: fmt.Sprintf("https://%s.example.com", id),
 		Status:      "ACTIVE",
 		Created:     testTime,
-		Description: utils.Ptr(description),
+		Description: new(description),
 	}
 
 	for _, mod := range mods {
@@ -83,10 +82,10 @@ func TestMapInstanceToAttrs(t *testing.T) {
 		{
 			description: "valid instance, empty description",
 			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Description = utils.Ptr("")
+				i.Description = new("")
 			}),
 			expected: fixtureAttrs(validInstanceAttrs, func(m map[string]attr.Value) {
-				m["description"] = types.StringPointerValue(utils.Ptr(""))
+				m["description"] = types.StringPointerValue(new(""))
 			}),
 		},
 		{

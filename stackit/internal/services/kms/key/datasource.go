@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -159,7 +159,7 @@ func (k *keyDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
-	keyResponse, err := k.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	keyResponse, err := k.client.DefaultAPI.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

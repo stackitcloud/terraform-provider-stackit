@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,7 +30,7 @@ func TestMapFields(t *testing.T) {
 					SecurityGroupId: types.StringValue("sgid"),
 				},
 				input: &iaas.SecurityGroup{
-					Id: utils.Ptr("sgid"),
+					Id: new("sgid"),
 				},
 				region: "eu01",
 			},
@@ -56,13 +55,13 @@ func TestMapFields(t *testing.T) {
 					Region:          types.StringValue("eu01"),
 				},
 				input: &iaas.SecurityGroup{
-					Id:       utils.Ptr("sgid"),
-					Name:     utils.Ptr("name"),
-					Stateful: utils.Ptr(true),
-					Labels: &map[string]interface{}{
+					Id:       new("sgid"),
+					Name:     new("name"),
+					Stateful: new(true),
+					Labels: &map[string]any{
 						"key": "value",
 					},
-					Description: utils.Ptr("desc"),
+					Description: new("desc"),
 				},
 				region: "eu02",
 			},
@@ -88,8 +87,8 @@ func TestMapFields(t *testing.T) {
 					SecurityGroupId: types.StringValue("sgid"),
 				},
 				input: &iaas.SecurityGroup{
-					Id:     utils.Ptr("sgid"),
-					Labels: &map[string]interface{}{},
+					Id:     new("sgid"),
+					Labels: &map[string]any{},
 				},
 				region: "eu01",
 			},
@@ -155,12 +154,12 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			&iaas.CreateSecurityGroupPayload{
-				Name:     utils.Ptr("name"),
-				Stateful: utils.Ptr(true),
-				Labels: &map[string]interface{}{
+				Name:     new("name"),
+				Stateful: new(true),
+				Labels: &map[string]any{
 					"key": "value",
 				},
-				Description: utils.Ptr("desc"),
+				Description: new("desc"),
 			},
 			true,
 		},
@@ -201,11 +200,11 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			&iaas.UpdateSecurityGroupPayload{
-				Name: utils.Ptr("name"),
-				Labels: &map[string]interface{}{
+				Name: new("name"),
+				Labels: &map[string]any{
 					"key": "value",
 				},
-				Description: utils.Ptr("desc"),
+				Description: new("desc"),
 			},
 			true,
 		},

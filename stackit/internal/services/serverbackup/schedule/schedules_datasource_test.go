@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
 )
 
@@ -42,13 +41,13 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 			&sdk.GetBackupSchedulesResponse{
 				Items: &[]sdk.BackupSchedule{
 					{
-						Id:      utils.Ptr(int64(5)),
-						Enabled: utils.Ptr(true),
-						Name:    utils.Ptr("backup_schedule_name_1"),
-						Rrule:   utils.Ptr("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
+						Id:      new(int64(5)),
+						Enabled: new(true),
+						Name:    new("backup_schedule_name_1"),
+						Rrule:   new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 						BackupProperties: &sdk.BackupProperties{
-							Name:            utils.Ptr("backup_name_1"),
-							RetentionPeriod: utils.Ptr(int64(14)),
+							Name:            new("backup_name_1"),
+							RetentionPeriod: new(int64(14)),
 							VolumeIds:       &[]string{"uuid1", "uuid2"},
 						},
 					},

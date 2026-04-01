@@ -9,6 +9,14 @@ resource "stackit_server_backup_schedule" "example" {
     retention_period = 14
     volume_ids       = null
   }
+  depends_on = [
+    stackit_server_backup_enable.enable
+  ]
+}
+
+resource "stackit_server_backup_enable" "enable" {
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  server_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
 # Only use the import statement, if you want to import an existing server backup schedule

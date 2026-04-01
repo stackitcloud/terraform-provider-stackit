@@ -6,13 +6,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 	id := fmt.Sprintf("%s,%s", "pid", testRegion)
-	retentionDays := int64(30)
+	retentionDays := int32(30)
 	tests := []struct {
 		description string
 		input       *objectstorage.ComplianceLockResponse
@@ -23,22 +23,23 @@ func TestMapFields(t *testing.T) {
 			"default_values",
 			&objectstorage.ComplianceLockResponse{},
 			Model{
-				Id:        types.StringValue(id),
-				ProjectId: types.StringValue("pid"),
-				Region:    types.StringValue("eu01"),
+				Id:               types.StringValue(id),
+				ProjectId:        types.StringValue("pid"),
+				Region:           types.StringValue("eu01"),
+				MaxRetentionDays: types.Int32Value(0),
 			},
 			true,
 		},
 		{
 			"simple_values",
 			&objectstorage.ComplianceLockResponse{
-				MaxRetentionDays: &retentionDays,
+				MaxRetentionDays: retentionDays,
 			},
 			Model{
 				Id:               types.StringValue(id),
 				ProjectId:        types.StringValue("pid"),
 				Region:           types.StringValue("eu01"),
-				MaxRetentionDays: types.Int64Value(retentionDays),
+				MaxRetentionDays: types.Int32Value(retentionDays),
 			},
 			true,
 		},

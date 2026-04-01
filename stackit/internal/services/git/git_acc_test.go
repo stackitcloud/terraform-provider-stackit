@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 	"testing"
 
@@ -13,8 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/git"
+	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -321,20 +321,17 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting git instances: %w", err)
 	}
 
-	gitInstances := *instancesResp.Instances
+	gitInstances := instancesResp.Instances
 	for i := range gitInstances {
-		if gitInstances[i].Id == nil {
-			continue
-		}
-		if utils.Contains(instancesToDestroy, *gitInstances[i].Id) {
-			err := client.DeleteInstance(ctx, testutil.ProjectId, *gitInstances[i].Id).Execute()
+		if slices.Contains(instancesToDestroy, gitInstances[i].Id) {
+			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, gitInstances[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying git instance %s during CheckDestroy: %w", *gitInstances[i].Id, err)
+				return fmt.Errorf("destroying git instance %s during CheckDestroy: %w", gitInstances[i].Id, err)
 			}
 		}
 	}

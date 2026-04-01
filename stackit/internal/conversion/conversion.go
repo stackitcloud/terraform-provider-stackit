@@ -63,14 +63,14 @@ func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.M
 }
 
 // ToStringInterfaceMap converts a basetypes.MapValue of Strings to a map[string]interface{}.
-func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]interface{}, error) {
+func ToStringInterfaceMap(ctx context.Context, m basetypes.MapValue) (map[string]any, error) {
 	labels := map[string]string{}
 	diags := m.ElementsAs(ctx, &labels, false)
 	if diags.HasError() {
 		return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
 	}
 
-	interfaceMap := make(map[string]interface{}, len(labels))
+	interfaceMap := make(map[string]any, len(labels))
 	for k, v := range labels {
 		interfaceMap[k] = v
 	}
@@ -151,10 +151,17 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 // It returns nil if the value is null or unknown.
 // Note: It sorts the resulting slice to ensure deterministic behavior.
 func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
+	result, err := StringSetToSlice(set)
+	return &result, err
+}
+
+// StringSetToSlice converts basetypes.SetValue to a slice of strings.
+// It returns nil if the value is null or unknown.
+// Note: It sorts the resulting slice to ensure deterministic behavior.
+func StringSetToSlice(set basetypes.SetValue) ([]string, error) {
 	if set.IsNull() || set.IsUnknown() {
 		return nil, nil
 	}
-
 	elements := set.Elements()
 	result := make([]string, 0, len(elements))
 
@@ -170,14 +177,14 @@ func StringSetToPointer(set basetypes.SetValue) (*[]string, error) {
 	// prevent non-deterministic behavior in the provider logic or API calls.
 	sort.Strings(result)
 
-	return &result, nil
+	return result, nil
 }
 
 // ToJSONMApPartialUpdatePayload returns a map[string]interface{} to be used in a PATCH request payload.
 // It takes a current map as it is in the terraform state and a desired map as it is in the user configuratiom
 // and builds a map which sets to null keys that should be removed, updates the values of existing keys and adds new keys
 // This method is needed because in partial updates, e.g. if the key is not provided it is ignored and not removed
-func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]interface{}, error) {
+func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.Map) (map[string]any, error) {
 	currentMap, err := ToStringInterfaceMap(ctx, current)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -188,7 +195,7 @@ func ToJSONMapPartialUpdatePayload(ctx context.Context, current, desired types.M
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	mapPayload := map[string]interface{}{}
+	mapPayload := map[string]any{}
 	// Update and remove existing keys
 	for k := range currentMap {
 		if desiredValue, ok := desiredMap[k]; ok {

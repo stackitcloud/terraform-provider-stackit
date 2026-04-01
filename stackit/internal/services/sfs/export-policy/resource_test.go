@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 )
 
@@ -20,20 +19,20 @@ var project_id = "project_id"
 func fixtureRulesResponse() *[]sfs.ShareExportPolicyRule {
 	return &[]sfs.ShareExportPolicyRule{
 		{
-			Description: sfs.NewNullableString(utils.Ptr("description")),
-			IpAcl:       utils.Ptr([]string{"172.16.0.0/24", "172.16.0.251/32"}),
-			Order:       utils.Ptr(int64(0)),
-			ReadOnly:    utils.Ptr(false),
-			SetUuid:     utils.Ptr(false),
-			SuperUser:   utils.Ptr(false),
+			Description: sfs.NewNullableString(new("description")),
+			IpAcl:       new([]string{"172.16.0.0/24", "172.16.0.251/32"}),
+			Order:       new(int64(0)),
+			ReadOnly:    new(false),
+			SetUuid:     new(false),
+			SuperUser:   new(false),
 		},
 		{
-			Description: sfs.NewNullableString(utils.Ptr("description")),
-			IpAcl:       utils.Ptr([]string{"172.32.0.0/24", "172.32.0.251/32"}),
-			Order:       utils.Ptr(int64(1)),
-			ReadOnly:    utils.Ptr(false),
-			SetUuid:     utils.Ptr(false),
-			SuperUser:   utils.Ptr(false),
+			Description: sfs.NewNullableString(new("description")),
+			IpAcl:       new([]string{"172.32.0.0/24", "172.32.0.251/32"}),
+			Order:       new(int64(1)),
+			ReadOnly:    new(false),
+			SetUuid:     new(false),
+			SuperUser:   new(false),
 		},
 	}
 }
@@ -79,26 +78,26 @@ func fixtureResponseModel(rulesModel basetypes.ListValue) *Model {
 func fixtureRulesCreatePayload() []sfs.CreateShareExportPolicyRequestRule {
 	return []sfs.CreateShareExportPolicyRequestRule{
 		{
-			Description: sfs.NewNullableString(utils.Ptr("description")),
+			Description: sfs.NewNullableString(new("description")),
 			IpAcl: &[]string{
 				"172.32.0.0/24",
 				"172.32.0.251/32",
 			},
-			Order:     utils.Ptr(int64(0)),
-			ReadOnly:  utils.Ptr(false),
-			SetUuid:   utils.Ptr(false),
-			SuperUser: utils.Ptr(false),
+			Order:     new(int64(0)),
+			ReadOnly:  new(false),
+			SetUuid:   new(false),
+			SuperUser: new(false),
 		},
 		{
-			Description: sfs.NewNullableString(utils.Ptr("description")),
+			Description: sfs.NewNullableString(new("description")),
 			IpAcl: &[]string{
 				"172.16.0.0/24",
 				"172.16.0.251/32",
 			},
-			Order:     utils.Ptr(int64(1)),
-			ReadOnly:  utils.Ptr(false),
-			SetUuid:   utils.Ptr(false),
-			SuperUser: utils.Ptr(false),
+			Order:     new(int64(1)),
+			ReadOnly:  new(false),
+			SetUuid:   new(false),
+			SuperUser: new(false),
 		},
 	}
 }
@@ -106,26 +105,26 @@ func fixtureRulesCreatePayload() []sfs.CreateShareExportPolicyRequestRule {
 func fixtureRulesUpdatePayload() []sfs.UpdateShareExportPolicyBodyRule {
 	return []sfs.UpdateShareExportPolicyBodyRule{
 		{
-			Description: sfs.NewNullableString(utils.Ptr("description")),
+			Description: sfs.NewNullableString(new("description")),
 			IpAcl: &[]string{
 				"172.32.0.0/24",
 				"172.32.0.251/32",
 			},
-			Order:     utils.Ptr(int64(0)),
-			ReadOnly:  utils.Ptr(false),
-			SetUuid:   utils.Ptr(false),
-			SuperUser: utils.Ptr(false),
+			Order:     new(int64(0)),
+			ReadOnly:  new(false),
+			SetUuid:   new(false),
+			SuperUser: new(false),
 		},
 		{
-			Description: sfs.NewNullableString(utils.Ptr("description")),
+			Description: sfs.NewNullableString(new("description")),
 			IpAcl: &[]string{
 				"172.16.0.0/24",
 				"172.16.0.251/32",
 			},
-			Order:     utils.Ptr(int64(1)),
-			ReadOnly:  utils.Ptr(false),
-			SetUuid:   utils.Ptr(false),
-			SuperUser: utils.Ptr(false),
+			Order:     new(int64(1)),
+			ReadOnly:  new(false),
+			SetUuid:   new(false),
+			SuperUser: new(false),
 		},
 	}
 }
@@ -153,7 +152,7 @@ func fixtureRulesPayloadModel() []rulesModel {
 
 func fixtureExportPolicyCreatePayload(rules *[]sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
 	return &sfs.CreateShareExportPolicyPayload{
-		Name:  utils.Ptr("createPayloadName"),
+		Name:  new("createPayloadName"),
 		Rules: rules,
 	}
 }
@@ -199,7 +198,7 @@ func TestMapFields(t *testing.T) {
 			},
 			input: &sfs.GetShareExportPolicyResponse{
 				ShareExportPolicy: &sfs.GetShareExportPolicyResponseShareExportPolicy{
-					Id:    utils.Ptr("uuid1"),
+					Id:    new("uuid1"),
 					Rules: &[]sfs.ShareExportPolicyRule{},
 				},
 			},
@@ -214,7 +213,7 @@ func TestMapFields(t *testing.T) {
 			},
 			input: &sfs.GetShareExportPolicyResponse{
 				ShareExportPolicy: &sfs.GetShareExportPolicyResponseShareExportPolicy{
-					Id:    utils.Ptr("uuid1"),
+					Id:    new("uuid1"),
 					Rules: fixtureRulesResponse(),
 				},
 			},
@@ -282,7 +281,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name:      types.StringValue("createPayloadName"),
 			},
 			rules:    fixtureRulesPayloadModel(),
-			expected: fixtureExportPolicyCreatePayload(utils.Ptr(fixtureRulesCreatePayload())),
+			expected: fixtureExportPolicyCreatePayload(new(fixtureRulesCreatePayload())),
 			wantErr:  false,
 		},
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 )
 
@@ -28,7 +27,7 @@ func TestMapFields(t *testing.T) {
 				Id:          "iid-123",
 				Created:     testTime,
 				DisplayName: "test-instance",
-				Description: utils.Ptr("Test description"),
+				Description: new("Test description"),
 				PlanId:      uuidString,
 				Status:      "CREATING",
 				FrontendUrl: "https://iid-123.example.com",
@@ -57,7 +56,7 @@ func TestMapFields(t *testing.T) {
 				Id:          "iid-123",
 				Created:     testTime,
 				DisplayName: "test-instance",
-				Description: utils.Ptr(""),
+				Description: new(""),
 				PlanId:      uuidString,
 				Status:      "ACTIVE",
 				FrontendUrl: "https://iid-123.example.com",
@@ -133,7 +132,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			edge.CreateInstancePayload{
 				DisplayName: "new-instance",
-				Description: utils.Ptr("A new test instance"),
+				Description: new("A new test instance"),
 				PlanId:      uuidString,
 			},
 			true,
@@ -181,8 +180,8 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanID:      types.StringValue(uuidOne),
 			},
 			edge.UpdateInstancePayload{
-				Description: utils.Ptr("Updated description"),
-				PlanId:      utils.Ptr(uuidOne),
+				Description: new("Updated description"),
+				PlanId:      new(uuidOne),
 			},
 			true,
 		},
@@ -194,7 +193,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			edge.UpdateInstancePayload{
 				Description: nil,
-				PlanId:      utils.Ptr(uuidOne),
+				PlanId:      new(uuidOne),
 			},
 			true,
 		},

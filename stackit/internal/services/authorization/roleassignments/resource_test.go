@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	tfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -33,8 +32,8 @@ func TestToCreatePayload(t *testing.T) {
 				ResourceType: &apiName,
 				Members: &[]authorization.Member{
 					{
-						Role:    utils.Ptr("editor"),
-						Subject: utils.Ptr("foo.bar@stackit.cloud"),
+						Role:    new("editor"),
+						Subject: new("foo.bar@stackit.cloud"),
 					},
 				},
 			},
@@ -196,8 +195,8 @@ func TestMapListMembersResponse(t *testing.T) {
 				ResourceId: &resourceID,
 				Members: &[]authorization.Member{
 					{
-						Role:    utils.Ptr("reader"),
-						Subject: utils.Ptr("foo.bar@stackit.cloud"),
+						Role:    new("reader"),
+						Subject: new("foo.bar@stackit.cloud"),
 					},
 				},
 			},
@@ -260,12 +259,12 @@ func TestCheckDuplicate(t *testing.T) {
 				ResourceId: &resourceID,
 				Members: &[]authorization.Member{
 					{
-						Role:    utils.Ptr("reader"),
-						Subject: utils.Ptr("foo.bar@stackit.cloud"),
+						Role:    new("reader"),
+						Subject: new("foo.bar@stackit.cloud"),
 					},
 					{
-						Role:    utils.Ptr("editor"),
-						Subject: utils.Ptr("someoneelse@stackit.cloud"),
+						Role:    new("editor"),
+						Subject: new("someoneelse@stackit.cloud"),
 					},
 				},
 			},

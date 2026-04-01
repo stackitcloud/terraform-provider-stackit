@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/logme"
 )
 
@@ -19,7 +18,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&logme.CredentialsResponse{
-				Id:  utils.Ptr("cid"),
+				Id:  new("cid"),
 				Raw: &logme.RawCredentials{},
 			},
 			Model{
@@ -38,14 +37,14 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&logme.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &logme.RawCredentials{
 					Credentials: &logme.Credentials{
-						Host:     utils.Ptr("host"),
-						Password: utils.Ptr("password"),
-						Port:     utils.Ptr(int64(1234)),
-						Uri:      utils.Ptr("uri"),
-						Username: utils.Ptr("username"),
+						Host:     new("host"),
+						Password: new("password"),
+						Port:     new(int64(1234)),
+						Uri:      new("uri"),
+						Username: new("username"),
 					},
 				},
 			},
@@ -65,14 +64,14 @@ func TestMapFields(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&logme.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &logme.RawCredentials{
 					Credentials: &logme.Credentials{
-						Host:     utils.Ptr(""),
-						Password: utils.Ptr(""),
-						Port:     utils.Ptr(int64(2123456789)),
+						Host:     new(""),
+						Password: new(""),
+						Port:     new(int64(2123456789)),
 						Uri:      nil,
-						Username: utils.Ptr(""),
+						Username: new(""),
 					},
 				},
 			},
@@ -104,7 +103,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"nil_raw_credential",
 			&logme.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 			},
 			Model{},
 			false,

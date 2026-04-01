@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
 )
 
@@ -20,13 +19,13 @@ func TestComputeValidUntil(t *testing.T) {
 	}{
 		{
 			name:     "ttlDays is 10",
-			ttlDays:  utils.Ptr(10),
+			ttlDays:  new(10),
 			isValid:  true,
 			expected: time.Now().UTC().Add(time.Duration(10) * 24 * time.Hour),
 		},
 		{
 			name:     "ttlDays is 0",
-			ttlDays:  utils.Ptr(0),
+			ttlDays:  new(0),
 			isValid:  true,
 			expected: time.Now().UTC().Add(time.Duration(0) * 24 * time.Hour),
 		},
@@ -62,7 +61,7 @@ func TestMapResponse(t *testing.T) {
 		{
 			description: "default_values",
 			input: &serviceaccount.CreateServiceAccountKeyResponse{
-				Id: utils.Ptr("id"),
+				Id: new("id"),
 			},
 			expected: Model{
 				Id:                  types.StringValue("pid,email,id"),
@@ -89,7 +88,7 @@ func TestMapResponse(t *testing.T) {
 		{
 			description: "no_id",
 			input: &serviceaccount.CreateServiceAccountKeyResponse{
-				Active: utils.Ptr(true),
+				Active: new(true),
 			},
 			expected: Model{},
 			isValid:  false,
