@@ -82,7 +82,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"plugins":                "List of plugins to install. Must be a supported plugin name. The plugins `repository-s3` and `repository-azure` are enabled by default and cannot be disabled.",
 		"syslog":                 "List of syslog servers to send logs to.",
 		"tls_ciphers":            "List of TLS ciphers to use.",
-		"tls_protocols":          "The TLS protocol to use.",
+		"tls_protocols":          "List of TLS protocols to use.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -181,7 +181,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["tls_ciphers"],
 						Computed:    true,
 					},
-					"tls_protocols": schema.StringAttribute{
+					"tls_protocols": schema.ListAttribute{
+						ElementType: types.StringType,
 						Description: parametersDescriptions["tls_protocols"],
 						Computed:    true,
 					},
