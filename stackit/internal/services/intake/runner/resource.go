@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -169,7 +168,6 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: descriptions["labels"],
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.UseStateForUnknown(),
 				},
@@ -438,8 +436,8 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		model.RunnerId = types.StringValue(runnerResp.Id)
 	}
 
-	if runnerResp.Labels == nil {
-		model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+	if runnerResp.Labels == nil || len(runnerResp.Labels) == 0 {
+		model.Labels = types.MapNull(types.StringType)
 	} else {
 		labels, diags := types.MapValueFrom(context.Background(), types.StringType, runnerResp.Labels)
 		if diags.HasError() {
