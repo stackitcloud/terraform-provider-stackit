@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -41,7 +41,7 @@ var dataSourceConfigTypes = map[string]attr.Type{
 }
 
 type distributionDataSource struct {
-	client *cdn.APIClient
+	client *cdnSdk.APIClient
 }
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -217,7 +217,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
-	distributionResp, err := r.client.GetDistributionExecute(ctx, projectId, distributionId)
+	distributionResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -234,7 +234,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = core.LogResponse(ctx)
 
 	// Use specific Data Source mapping function
-	err = mapDataSourceFields(ctx, distributionResp.Distribution, &model)
+	err = mapDataSourceFields(ctx, &distributionResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading CDN distribution", fmt.Sprintf("Error processing API response: %v", err))
 		return
@@ -245,7 +245,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 // mapDataSourceFields is a specialized version of mapFields for the Data Source.
 // It uses dataSourceConfigTypes (excludes bucket access and secrets) and skips state restoration logic.
-func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, model *Model) error {
+func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Model) error {
 	if distribution == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -254,13 +254,13 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 	}
 
 	// Basic fields mapping (same as resource)
-	if distribution.ProjectId == nil || distribution.Id == nil || distribution.CreatedAt == nil || distribution.UpdatedAt == nil || distribution.Status == nil {
+	if distribution.ProjectId == "" || distribution.Id == "" || distribution.Status == "" {
 		return fmt.Errorf("missing required fields in response")
 	}
 
-	model.ID = utils.BuildInternalTerraformId(*distribution.ProjectId, *distribution.Id)
-	model.DistributionId = types.StringValue(*distribution.Id)
-	model.ProjectId = types.StringValue(*distribution.ProjectId)
+	model.ID = utils.BuildInternalTerraformId(distribution.ProjectId, distribution.Id)
+	model.DistributionId = types.StringValue(distribution.Id)
+	model.ProjectId = types.StringValue(distribution.ProjectId)
 	model.Status = types.StringValue(string(distribution.GetStatus()))
 	model.CreatedAt = types.StringValue(distribution.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(distribution.UpdatedAt.String())
@@ -268,8 +268,8 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 	// Distribution Errors
 	distributionErrors := []attr.Value{}
 	if distribution.Errors != nil {
-		for _, e := range *distribution.Errors {
-			distributionErrors = append(distributionErrors, types.StringValue(*e.En))
+		for _, e := range distribution.Errors {
+			distributionErrors = append(distributionErrors, types.StringValue(e.En))
 		}
 	}
 	modelErrors, diags := types.ListValue(types.StringType, distributionErrors)
@@ -280,7 +280,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 
 	// Regions
 	regions := []attr.Value{}
-	for _, r := range *distribution.Config.Regions {
+	for _, r := range distribution.Config.Regions {
 		regions = append(regions, types.StringValue(string(r)))
 	}
 	modelRegions, diags := types.ListValue(types.StringType, regions)
@@ -290,8 +290,8 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 
 	// Blocked Countries
 	var blockedCountries []attr.Value
-	if distribution.Config != nil && distribution.Config.BlockedCountries != nil {
-		for _, c := range *distribution.Config.BlockedCountries {
+	if distribution.Config.BlockedCountries != nil {
+		for _, c := range distribution.Config.BlockedCountries {
 			blockedCountries = append(blockedCountries, types.StringValue(string(c)))
 		}
 	}
@@ -308,9 +308,9 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 	// If HTTP Backend is present
 	if distribution.Config.Backend.HttpBackend != nil {
 		// Headers
-		if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; origHeaders != nil && len(*origHeaders) > 0 {
+		if origHeaders := distribution.Config.Backend.HttpBackend.OriginRequestHeaders; len(origHeaders) > 0 {
 			headers := map[string]attr.Value{}
-			for k, v := range *origHeaders {
+			for k, v := range origHeaders {
 				headers[k] = types.StringValue(v)
 			}
 			mappedHeaders, diags := types.MapValue(types.StringType, headers)
@@ -321,9 +321,9 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 		}
 
 		// Geofencing
-		if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; geofencingAPI != nil && len(*geofencingAPI) > 0 {
+		if geofencingAPI := distribution.Config.Backend.HttpBackend.Geofencing; len(geofencingAPI) > 0 {
 			geofencingMapElems := make(map[string]attr.Value)
-			for url, countries := range *geofencingAPI {
+			for url, countries := range geofencingAPI {
 				listVal, diags := types.ListValueFrom(ctx, types.StringType, countries)
 				if diags.HasError() {
 					return core.DiagsToError(diags)
@@ -339,7 +339,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 
 		backendValues = map[string]attr.Value{
 			"type":                   types.StringValue("http"),
-			"origin_url":             types.StringValue(*distribution.Config.Backend.HttpBackend.OriginUrl),
+			"origin_url":             types.StringValue(distribution.Config.Backend.HttpBackend.OriginUrl),
 			"origin_request_headers": originRequestHeaders,
 			"geofencing":             geofencingVal,
 			"bucket_url":             types.StringNull(),
@@ -349,8 +349,8 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 		// For Data Source, we strictly return what API gives us. No secret restoration.
 		backendValues = map[string]attr.Value{
 			"type":                   types.StringValue("bucket"),
-			"bucket_url":             types.StringValue(*distribution.Config.Backend.BucketBackend.BucketUrl),
-			"region":                 types.StringValue(*distribution.Config.Backend.BucketBackend.Region),
+			"bucket_url":             types.StringValue(distribution.Config.Backend.BucketBackend.BucketUrl),
+			"region":                 types.StringValue(distribution.Config.Backend.BucketBackend.Region),
 			"origin_url":             types.StringNull(),
 			"origin_request_headers": types.MapNull(types.StringType),
 			"geofencing":             types.MapNull(geofencingTypes.ElemType),
@@ -369,7 +369,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 		if enabled, ok := o.GetEnabledOk(); ok {
 			var diags diag.Diagnostics
 			optimizerVal, diags = types.ObjectValue(optimizerTypes, map[string]attr.Value{
-				"enabled": types.BoolValue(enabled),
+				"enabled": types.BoolPointerValue(enabled),
 			})
 			if diags.HasError() {
 				return core.DiagsToError(diags)
@@ -392,11 +392,11 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 	// Domains
 	domains := []attr.Value{}
 	if distribution.Domains != nil {
-		for _, d := range *distribution.Domains {
+		for _, d := range distribution.Domains {
 			domainErrors := []attr.Value{}
 			if d.Errors != nil {
-				for _, e := range *d.Errors {
-					domainErrors = append(domainErrors, types.StringValue(*e.En))
+				for _, e := range d.Errors {
+					domainErrors = append(domainErrors, types.StringValue(e.En))
 				}
 			}
 			modelDomainErrors, diags := types.ListValue(types.StringType, domainErrors)
@@ -404,9 +404,9 @@ func mapDataSourceFields(ctx context.Context, distribution *cdn.Distribution, mo
 				return core.DiagsToError(diags)
 			}
 			modelDomain, diags := types.ObjectValue(domainTypes, map[string]attr.Value{
-				"name":   types.StringValue(*d.Name),
-				"status": types.StringValue(string(*d.Status)),
-				"type":   types.StringValue(string(*d.Type)),
+				"name":   types.StringValue(d.Name),
+				"status": types.StringValue(string(d.Status)),
+				"type":   types.StringValue(string(d.Type)),
 				"errors": modelDomainErrors,
 			})
 			if diags.HasError() {

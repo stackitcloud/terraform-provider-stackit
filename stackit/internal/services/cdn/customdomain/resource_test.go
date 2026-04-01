@@ -18,13 +18,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
 func TestMapFields(t *testing.T) {
 	// Redefine certificateTypes locally for testing, matching the updated schema
 	certificateTypes := map[string]attr.Type{
-		"version":     types.Int64Type,
+		"version":     types.Int32Type,
 		"certificate": types.StringType,
 		"private_key": types.StringType,
 	}
@@ -36,7 +36,7 @@ func TestMapFields(t *testing.T) {
 
 	// Expected object when a custom certificate is returned
 	certAttributes := map[string]attr.Value{
-		"version":     types.Int64Value(3),
+		"version":     types.Int32Value(3),
 		"certificate": types.StringValue(dummyCert),
 		"private_key": types.StringValue(dummyKey),
 	}
@@ -57,30 +57,31 @@ func TestMapFields(t *testing.T) {
 		return model
 	}
 
+	// API response fixtures for custom and managed certificates
 	customType := "custom"
-	customVersion := int64(3)
-	getRespCustom := cdn.GetCustomDomainResponseGetCertificateAttributeType(&cdn.GetCustomDomainResponseCertificate{
-		GetCustomDomainCustomCertificate: &cdn.GetCustomDomainCustomCertificate{
-			Type:    &customType,
-			Version: &customVersion,
+	customVersion := int32(3)
+	getRespCustom := cdnSdk.GetCustomDomainResponseCertificate{
+		GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
+			Type:    customType,
+			Version: customVersion,
 		},
-	})
+	}
 
 	managedType := "managed"
-	getRespManaged := cdn.GetCustomDomainResponseGetCertificateAttributeType(&cdn.GetCustomDomainResponseCertificate{
-		GetCustomDomainManagedCertificate: &cdn.GetCustomDomainManagedCertificate{
-			Type: &managedType,
+	getRespManaged := cdnSdk.GetCustomDomainResponseCertificate{
+		GetCustomDomainManagedCertificate: &cdnSdk.GetCustomDomainManagedCertificate{
+			Type: managedType,
 		},
-	})
+	}
 
-	customDomainFixture := func(mods ...func(*cdn.GetCustomDomainResponse)) *cdn.GetCustomDomainResponse {
-		distribution := &cdn.CustomDomain{
-			Errors: &[]cdn.StatusError{},
-			Name:   new("https://testdomain.com"),
-			Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
+	customDomainFixture := func(mods ...func(*cdnSdk.GetCustomDomainResponse)) *cdnSdk.GetCustomDomainResponse {
+		distribution := &cdnSdk.CustomDomain{
+			Errors: []cdnSdk.StatusError{},
+			Name:   "https://testdomain.com",
+			Status: cdnSdk.DOMAINSTATUS_ACTIVE,
 		}
-		customDomainResponse := &cdn.GetCustomDomainResponse{
-			CustomDomain: distribution,
+		customDomainResponse := &cdnSdk.GetCustomDomainResponse{
+			CustomDomain: *distribution,
 			Certificate:  getRespCustom,
 		}
 
@@ -91,7 +92,7 @@ func TestMapFields(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		Input          *cdn.GetCustomDomainResponse
+		Input          *cdnSdk.GetCustomDomainResponse
 		Certificate    any
 		Expected       *CustomDomainModel
 		InitialModel   *CustomDomainModel
@@ -108,7 +109,7 @@ func TestMapFields(t *testing.T) {
 				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
 					"certificate": types.StringValue(dummyCert),
 					"private_key": types.StringValue(dummyKey),
-					"version":     types.Int64Null(),
+					"version":     types.Int32Null(),
 				})
 			}),
 		},
@@ -116,7 +117,7 @@ func TestMapFields(t *testing.T) {
 			Expected: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = types.ObjectNull(certificateTypes)
 			}),
-			Input: customDomainFixture(func(gcdr *cdn.GetCustomDomainResponse) {
+			Input: customDomainFixture(func(gcdr *cdnSdk.GetCustomDomainResponse) {
 				gcdr.Certificate = getRespManaged
 			}),
 			IsValid:      true,
@@ -127,15 +128,15 @@ func TestMapFields(t *testing.T) {
 				m.Status = types.StringValue("ERROR")
 				m.Certificate = certificateObj
 			}),
-			Input: customDomainFixture(func(d *cdn.GetCustomDomainResponse) {
-				d.CustomDomain.Status = cdn.DOMAINSTATUS_ERROR.Ptr()
+			Input: customDomainFixture(func(d *cdnSdk.GetCustomDomainResponse) {
+				d.CustomDomain.Status = cdnSdk.DOMAINSTATUS_ERROR
 			}),
 			IsValid: true,
 			InitialModel: expectedModel(func(m *CustomDomainModel) {
 				m.Certificate = basetypes.NewObjectValueMust(certificateTypes, map[string]attr.Value{
 					"certificate": types.StringValue(dummyCert),
 					"private_key": types.StringValue(dummyKey),
-					"version":     types.Int64Null(),
+					"version":     types.Int32Null(),
 				})
 			}),
 		},
@@ -147,8 +148,8 @@ func TestMapFields(t *testing.T) {
 		},
 		"sad_path_name_missing": {
 			Expected: expectedModel(),
-			Input: customDomainFixture(func(d *cdn.GetCustomDomainResponse) {
-				d.CustomDomain.Name = nil
+			Input: customDomainFixture(func(d *cdnSdk.GetCustomDomainResponse) {
+				d.CustomDomain.Name = ""
 			}),
 			IsValid:      false,
 			InitialModel: &CustomDomainModel{},
@@ -223,7 +224,7 @@ func TestToCertificatePayload(t *testing.T) {
 
 	tests := map[string]struct {
 		model           *CustomDomainModel
-		expectedPayload *cdn.PutCustomDomainPayloadCertificate
+		expectedPayload *cdnSdk.PutCustomDomainPayloadCertificate
 		expectErr       bool
 		expectedErrMsg  string
 	}{
@@ -231,8 +232,8 @@ func TestToCertificatePayload(t *testing.T) {
 			model: &CustomDomainModel{
 				Certificate: types.ObjectNull(certificateTypes),
 			},
-			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
-				PutCustomDomainManagedCertificate: cdn.NewPutCustomDomainManagedCertificate("managed"),
+			expectedPayload: &cdnSdk.PutCustomDomainPayloadCertificate{
+				PutCustomDomainManagedCertificate: cdnSdk.NewPutCustomDomainManagedCertificate("managed"),
 			},
 			expectErr: false,
 		},
@@ -241,14 +242,14 @@ func TestToCertificatePayload(t *testing.T) {
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"version":     types.Int64Null(),
+						"version":     types.Int32Null(),
 						"certificate": types.StringValue(certPEM),
 						"private_key": types.StringValue(keyPEM),
 					},
 				),
 			},
-			expectedPayload: &cdn.PutCustomDomainPayloadCertificate{
-				PutCustomDomainCustomCertificate: cdn.NewPutCustomDomainCustomCertificate(certBase64, keyBase64, "custom"),
+			expectedPayload: &cdnSdk.PutCustomDomainPayloadCertificate{
+				PutCustomDomainCustomCertificate: cdnSdk.NewPutCustomDomainCustomCertificate(certBase64, keyBase64, "custom"),
 			},
 			expectErr: false,
 		},
@@ -257,7 +258,7 @@ func TestToCertificatePayload(t *testing.T) {
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"version":     types.Int64Null(),
+						"version":     types.Int32Null(),
 						"certificate": types.StringValue(""), // Empty certificate
 						"private_key": types.StringValue(keyPEM),
 					},
@@ -272,7 +273,7 @@ func TestToCertificatePayload(t *testing.T) {
 				Certificate: basetypes.NewObjectValueMust(
 					certificateTypes,
 					map[string]attr.Value{
-						"version":     types.Int64Null(),
+						"version":     types.Int32Null(),
 						"certificate": types.StringNull(),
 						"private_key": types.StringNull(),
 					},

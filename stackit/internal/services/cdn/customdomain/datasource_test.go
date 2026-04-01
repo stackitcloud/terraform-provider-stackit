@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -14,7 +14,7 @@ func TestMapDataSourceFields(t *testing.T) {
 
 	// Expected certificate object when a custom certificate is returned
 	certAttributes := map[string]attr.Value{
-		"version": types.Int64Value(3),
+		"version": types.Int32Value(3),
 	}
 	certificateObj, _ := types.ObjectValue(certificateDataSourceTypes, certAttributes)
 
@@ -37,30 +37,30 @@ func TestMapDataSourceFields(t *testing.T) {
 
 	// API response fixtures for custom and managed certificates
 	customType := "custom"
-	customVersion := int64(3)
-	getRespCustom := cdn.GetCustomDomainResponseGetCertificateAttributeType(&cdn.GetCustomDomainResponseCertificate{
-		GetCustomDomainCustomCertificate: &cdn.GetCustomDomainCustomCertificate{
-			Type:    &customType,
-			Version: &customVersion,
+	customVersion := int32(3)
+	getRespCustom := cdnSdk.GetCustomDomainResponseCertificate{
+		GetCustomDomainCustomCertificate: &cdnSdk.GetCustomDomainCustomCertificate{
+			Type:    customType,
+			Version: customVersion,
 		},
-	})
+	}
 
 	managedType := "managed"
-	getRespManaged := cdn.GetCustomDomainResponseGetCertificateAttributeType(&cdn.GetCustomDomainResponseCertificate{
-		GetCustomDomainManagedCertificate: &cdn.GetCustomDomainManagedCertificate{
-			Type: &managedType,
+	getRespManaged := cdnSdk.GetCustomDomainResponseCertificate{
+		GetCustomDomainManagedCertificate: &cdnSdk.GetCustomDomainManagedCertificate{
+			Type: managedType,
 		},
-	})
+	}
 
 	// Helper to create API response fixtures
-	customDomainFixture := func(mods ...func(*cdn.GetCustomDomainResponse)) *cdn.GetCustomDomainResponse {
-		distribution := &cdn.CustomDomain{
-			Errors: &[]cdn.StatusError{},
-			Name:   new("https://testdomain.com"),
-			Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
+	customDomainFixture := func(mods ...func(*cdnSdk.GetCustomDomainResponse)) *cdnSdk.GetCustomDomainResponse {
+		distribution := &cdnSdk.CustomDomain{
+			Errors: []cdnSdk.StatusError{},
+			Name:   "https://testdomain.com",
+			Status: cdnSdk.DOMAINSTATUS_ACTIVE,
 		}
-		customDomainResponse := &cdn.GetCustomDomainResponse{
-			CustomDomain: distribution,
+		customDomainResponse := &cdnSdk.GetCustomDomainResponse{
+			CustomDomain: *distribution,
 			Certificate:  getRespCustom,
 		}
 
@@ -72,7 +72,7 @@ func TestMapDataSourceFields(t *testing.T) {
 
 	// Test cases
 	tests := map[string]struct {
-		Input    *cdn.GetCustomDomainResponse
+		Input    *cdnSdk.GetCustomDomainResponse
 		Expected *customDomainDataSourceModel
 		IsValid  bool
 	}{
@@ -87,7 +87,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			Expected: expectedModel(func(m *customDomainDataSourceModel) {
 				m.Certificate = types.ObjectNull(certificateDataSourceTypes)
 			}),
-			Input: customDomainFixture(func(gcdr *cdn.GetCustomDomainResponse) {
+			Input: customDomainFixture(func(gcdr *cdnSdk.GetCustomDomainResponse) {
 				gcdr.Certificate = getRespManaged
 			}),
 			IsValid: true,
@@ -97,8 +97,8 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Status = types.StringValue("ERROR")
 				m.Certificate = certificateObj
 			}),
-			Input: customDomainFixture(func(d *cdn.GetCustomDomainResponse) {
-				d.CustomDomain.Status = cdn.DOMAINSTATUS_ERROR.Ptr()
+			Input: customDomainFixture(func(d *cdnSdk.GetCustomDomainResponse) {
+				d.CustomDomain.Status = cdnSdk.DOMAINSTATUS_ERROR
 			}),
 			IsValid: true,
 		},
@@ -109,8 +109,8 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		"sad_path_name_missing": {
 			Expected: expectedModel(),
-			Input: customDomainFixture(func(d *cdn.GetCustomDomainResponse) {
-				d.CustomDomain.Name = nil
+			Input: customDomainFixture(func(d *cdnSdk.GetCustomDomainResponse) {
+				d.CustomDomain.Name = ""
 			}),
 			IsValid: false,
 		},
