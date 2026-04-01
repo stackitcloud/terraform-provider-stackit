@@ -186,12 +186,12 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
 	s.Reset(testutil.MockResponse{
 		StatusCode: http.StatusBadRequest,
 		ToJsonBody: sfs.ValidationError{
-			Type:  utils.Ptr("storage.stackit.cloud/validation-error"),
-			Title: utils.Ptr("Validation Failed"),
+			Type:  new("storage.stackit.cloud/validation-error"),
+			Title: new("Validation Failed"),
 			Fields: &[]sfs.ValidationErrorField{
 				{
-					Field:  utils.Ptr("ip"),
-					Reason: utils.Ptr("999.999.999 is not a valid ip address"),
+					Field:  new("ip"),
+					Reason: new("999.999.999 is not a valid ip address"),
 				},
 			},
 		},
