@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api/wait"
@@ -42,7 +41,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ObjectStorageProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -132,7 +131,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								project_id  = stackit_objectstorage_bucket.bucket_object_lock.project_id
 								name = stackit_objectstorage_bucket.bucket_object_lock.name
 							}`,
-					testutil.ObjectStorageProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Bucket data
@@ -285,15 +284,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *objectstorage.APIClient
-	var err error
-	if testutil.ObjectStorageCustomEndpoint == "" {
-		client, err = objectstorage.NewAPIClient()
-	} else {
-		client, err = objectstorage.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ObjectStorageCustomEndpoint),
-		)
-	}
+	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

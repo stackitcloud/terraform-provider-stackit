@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -85,7 +84,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ScfProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
@@ -121,7 +120,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 	                	org_id = stackit_scf_organization.org.org_id
 	                	project_id = stackit_scf_organization.org.project_id
 	                }
-					`, testutil.ScfProviderConfig()+resourceMin,
+					`, testutil.NewConfigBuilder().BuildProviderConfig()+resourceMin,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -213,7 +212,7 @@ func TestAccScfOrganizationMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testScfOrgConfigVarsMinUpdated(),
-				Config:          testutil.ScfProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testScfOrgConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testScfOrgConfigVarsMinUpdated()["name"])),
@@ -239,7 +238,7 @@ func TestAccScfOrgMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ScfProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
@@ -285,7 +284,7 @@ func TestAccScfOrgMax(t *testing.T) {
 	                	platform_id = stackit_scf_organization.org.platform_id
 	                	project_id = stackit_scf_organization.org.project_id
 	                }
-					`, testutil.ScfProviderConfig()+resourceMax,
+					`, testutil.NewConfigBuilder().BuildProviderConfig()+resourceMax,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -391,7 +390,7 @@ func TestAccScfOrgMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testScfOrgConfigVarsMaxUpdated(),
-				Config:          testutil.ScfProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_scf_organization.org", "name", testutil.ConvertConfigVariable(testScfOrgConfigVarsMaxUpdated()["name"])),
@@ -411,17 +410,7 @@ func TestAccScfOrgMax(t *testing.T) {
 
 func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *scf.APIClient
-	var err error
-
-	if testutil.ScfCustomEndpoint == "" {
-		client, err = scf.NewAPIClient()
-	} else {
-		client, err = scf.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ScfCustomEndpoint),
-		)
-	}
-
+	client, err := scf.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ScfCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -147,7 +146,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Distribution Create (Only Base config)
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttpBase,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpBase,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -179,7 +178,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Wait step, confirms the CNAME record has "propagated" before trying to add the custom domain
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttpBase,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpBase,
 				ConfigVariables: testConfigVarsHttp,
 				Check: func(_ *terraform.State) error {
 					_, err := blockUntilDomainResolves(fullDomainNameHttp)
@@ -188,7 +187,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Custom Domain Create (Now using Full config)
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttpFull,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpFull,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
@@ -246,7 +245,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttpFull,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpFull,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "distribution_id"),
@@ -286,7 +285,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttpFull,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpFull,
 				ConfigVariables: configVarsHttpUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -340,7 +339,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Distribution Create
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -399,7 +398,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "distribution_id"),
@@ -426,7 +425,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -452,7 +451,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			// empty list '[]', causing a state mismatch. The 'Default' modifier in the schema now
 			// ensures the missing config is treated as an empty list, matching the API response.
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "0"),
@@ -464,15 +463,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *cdn.APIClient
-	var err error
-	if testutil.CdnCustomEndpoint == "" {
-		client, err = cdn.NewAPIClient()
-	} else {
-		client, err = cdn.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.CdnCustomEndpoint),
-		)
-	}
+	client, err := cdn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -542,7 +533,7 @@ func blockUntilDomainResolves(domain string) (net.IP, error) {
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
 	var zero T
 	var errOuter error
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		dist, err := f()
 		if err == nil {
 			return dist, nil

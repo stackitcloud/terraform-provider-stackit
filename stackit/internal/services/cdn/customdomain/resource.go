@@ -11,6 +11,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
@@ -25,8 +26,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
+
+	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -46,7 +47,7 @@ var certificateSchemaDescriptions = map[string]string{
 }
 
 var certificateTypes = map[string]attr.Type{
-	"version":     types.Int64Type,
+	"version":     types.Int32Type,
 	"certificate": types.StringType,
 	"private_key": types.StringType,
 }
@@ -62,7 +63,7 @@ var customDomainSchemaDescriptions = map[string]string{
 type CertificateModel struct {
 	Certificate types.String `tfsdk:"certificate"`
 	PrivateKey  types.String `tfsdk:"private_key"`
-	Version     types.Int64  `tfsdk:"version"`
+	Version     types.Int32  `tfsdk:"version"`
 }
 
 type CustomDomainModel struct {
@@ -76,7 +77,7 @@ type CustomDomainModel struct {
 }
 
 type customDomainResource struct {
-	client *cdn.APIClient
+	client *cdnSdk.APIClient
 }
 
 func NewCustomDomainResource() resource.Resource {
@@ -85,7 +86,7 @@ func NewCustomDomainResource() resource.Resource {
 
 type Certificate struct {
 	Type    string
-	Version *int64
+	Version *int32
 }
 
 func (r *customDomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -159,7 +160,7 @@ func (r *customDomainResource) Schema(_ context.Context, _ resource.SchemaReques
 						Optional:    true,
 						Sensitive:   true,
 					},
-					"version": schema.Int64Attribute{
+					"version": schema.Int32Attribute{
 						Description: certificateSchemaDescriptions["version"],
 						Computed:    true,
 					},
@@ -200,11 +201,11 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	payload := cdn.PutCustomDomainPayload{
+	payload := cdnSdk.PutCustomDomainPayload{
 		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
-	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err = r.client.DefaultAPI.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -221,13 +222,13 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Waiting for create: %v", err))
 		return
 	}
 
-	respCustomDomain, err := r.client.GetCustomDomainExecute(ctx, projectId, distributionId, name)
+	respCustomDomain, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -263,7 +264,7 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
+	customDomainResp, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -316,11 +317,11 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	payload := cdn.PutCustomDomainPayload{
+	payload := cdnSdk.PutCustomDomainPayload{
 		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
-	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err = r.client.DefaultAPI.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -328,13 +329,13 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Waiting for update: %v", err))
 		return
 	}
 
-	respCustomDomain, err := r.client.GetCustomDomainExecute(ctx, projectId, distributionId, name)
+	respCustomDomain, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API to read final state: %v", err))
 		return
@@ -369,14 +370,14 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	_, err := r.client.DeleteCustomDomain(ctx, projectId, distributionId, name).Execute()
+	_, err := r.client.DefaultAPI.DeleteCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Delete custom domain: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).WaitWithContext(ctx)
+	_, err = wait.DeleteCDNCustomDomainWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Waiting for deletion: %v", err))
 		return
@@ -398,28 +399,25 @@ func (r *customDomainResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "CDN custom domain state imported")
 }
 
-func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAttributeType) (Certificate, error) {
-	var customCert *cdn.GetCustomDomainCustomCertificate
-	var managedCert *cdn.GetCustomDomainManagedCertificate
+func normalizeCertificate(certInput cdnSdk.GetCustomDomainResponseCertificate) (Certificate, error) {
+	var customCert *cdnSdk.GetCustomDomainCustomCertificate
+	var managedCert *cdnSdk.GetCustomDomainManagedCertificate
 
-	if certInput == nil {
-		return Certificate{}, errors.New("input of type GetCustomDomainResponseCertificate is nil")
-	}
 	customCert = certInput.GetCustomDomainCustomCertificate
 	managedCert = certInput.GetCustomDomainManagedCertificate
 
 	// Now we process the extracted certificates
-	if customCert != nil && customCert.Type != nil && customCert.Version != nil {
+	if customCert != nil && customCert.Type != "" {
 		return Certificate{
-			Type:    *customCert.Type,
-			Version: customCert.Version, // Converts from *int64 to int
+			Type:    customCert.Type,
+			Version: new(customCert.Version),
 		}, nil
 	}
 
-	if managedCert != nil && managedCert.Type != nil {
+	if managedCert != nil && managedCert.Type != "" {
 		// The version will be the zero value for int (0), as requested
 		return Certificate{
-			Type: *managedCert.Type,
+			Type: managedCert.Type,
 		}, nil
 	}
 
@@ -428,11 +426,11 @@ func normalizeCertificate(certInput cdn.GetCustomDomainResponseGetCertificateAtt
 
 // toCertificatePayload constructs the certificate part of the payload for the API request.
 // It defaults to a managed certificate if the certificate block is omitted, otherwise it creates a custom certificate.
-func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.PutCustomDomainPayloadCertificate, error) {
+func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdnSdk.PutCustomDomainPayloadCertificate, error) {
 	// If the certificate block is not specified, default to a managed certificate.
 	if model.Certificate.IsNull() {
-		managedCert := cdn.NewPutCustomDomainManagedCertificate("managed")
-		certPayload := cdn.PutCustomDomainManagedCertificateAsPutCustomDomainPayloadCertificate(managedCert)
+		managedCert := cdnSdk.NewPutCustomDomainManagedCertificate("managed")
+		certPayload := cdnSdk.PutCustomDomainManagedCertificateAsPutCustomDomainPayloadCertificate(managedCert)
 		return &certPayload, nil
 	}
 
@@ -454,17 +452,17 @@ func toCertificatePayload(ctx context.Context, model *CustomDomainModel) (*cdn.P
 		return nil, errors.New("invalid certificate or private key. Please check if the string of the public certificate and private key in PEM format")
 	}
 
-	customCert := cdn.NewPutCustomDomainCustomCertificate(
+	customCert := cdnSdk.NewPutCustomDomainCustomCertificate(
 		certStr,
 		keyStr,
 		"custom",
 	)
-	certPayload := cdn.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
+	certPayload := cdnSdk.PutCustomDomainCustomCertificateAsPutCustomDomainPayloadCertificate(customCert)
 
 	return &certPayload, nil
 }
 
-func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResponse, model *CustomDomainModel) error {
+func mapCustomDomainResourceFields(customDomainResponse *cdnSdk.GetCustomDomainResponse, model *CustomDomainModel) error {
 	if customDomainResponse == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -472,14 +470,11 @@ func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResp
 		return fmt.Errorf("model input is nil")
 	}
 
-	if customDomainResponse.CustomDomain == nil {
-		return fmt.Errorf("CustomDomain is missing in response")
-	}
-	if customDomainResponse.CustomDomain.Name == nil {
+	if customDomainResponse.CustomDomain.Name == "" {
 		return fmt.Errorf("name is missing in response")
 	}
 
-	if customDomainResponse.CustomDomain.Status == nil {
+	if customDomainResponse.CustomDomain.Status == "" {
 		return fmt.Errorf("status missing in response")
 	}
 	normalizedCert, err := normalizeCertificate(customDomainResponse.Certificate)
@@ -496,7 +491,7 @@ func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResp
 		certAttributes := map[string]attr.Value{
 			"certificate": types.StringNull(), // Default to null
 			"private_key": types.StringNull(), // Default to null
-			"version":     types.Int64Null(),
+			"version":     types.Int32Null(),
 		}
 
 		// Get existing values from the model's certificate object if it exists
@@ -512,7 +507,7 @@ func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResp
 
 		// Set the computed version from the API response
 		if normalizedCert.Version != nil {
-			certAttributes["version"] = types.Int64Value(*normalizedCert.Version)
+			certAttributes["version"] = types.Int32Value(*normalizedCert.Version)
 		}
 
 		certificateObj, diags := types.ObjectValue(certificateTypes, certAttributes)
@@ -522,16 +517,16 @@ func mapCustomDomainResourceFields(customDomainResponse *cdn.GetCustomDomainResp
 		model.Certificate = certificateObj
 	}
 
-	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.DistributionId.ValueString(), *customDomainResponse.CustomDomain.Name)
-	model.Status = types.StringValue(string(*customDomainResponse.CustomDomain.Status))
+	model.ID = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.DistributionId.ValueString(), customDomainResponse.CustomDomain.Name)
+	model.Status = types.StringValue(string(customDomainResponse.CustomDomain.Status))
 
 	customDomainErrors := []attr.Value{}
 	if customDomainResponse.CustomDomain.Errors != nil {
-		for _, e := range *customDomainResponse.CustomDomain.Errors {
-			if e.En == nil {
+		for _, e := range customDomainResponse.CustomDomain.Errors {
+			if e.En == "" {
 				return fmt.Errorf("error description missing")
 			}
-			customDomainErrors = append(customDomainErrors, types.StringValue(*e.En))
+			customDomainErrors = append(customDomainErrors, types.StringValue(e.En))
 		}
 	}
 	modelErrors, diags := types.ListValue(types.StringType, customDomainErrors)
