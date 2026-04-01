@@ -17,7 +17,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	fooUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/foo/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"k8s.io/apimachinery/pkg/api/validate"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/foo"      // Import service "foo" from the STACKIT SDK for Go
 	"github.com/stackitcloud/stackit-sdk-go/services/foo/wait" // Import service "foo" waiters from the STACKIT SDK for Go (in case the service API has asynchronous endpoints)
