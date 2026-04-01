@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/intake"
-	"github.com/stackitcloud/stackit-sdk-go/services/intake/wait"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
+	"github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -241,30 +241,26 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	}
 
 	// List all resources in the project/region to see what's left
-	instancesResp, err := client.ListIntakeRunners(ctx, testutil.ProjectId, testutil.Region).Execute()
+	instancesResp, err := client.DefaultAPI.ListIntakeRunners(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
 	// If the API returns a list of runners, check if our deleted ones are still there
-	items := *instancesResp.IntakeRunners
+	items := instancesResp.IntakeRunners
 	for i := range items {
-		if items[i].Id == nil {
-			continue
-		}
-
 		// If a runner we thought we deleted is found in the list
-		if utils.Contains(instancesToDestroy, *items[i].Id) {
+		if utils.Contains(instancesToDestroy, items[i].Id) {
 			// Attempt a final delete and wait, just like Postgres
-			err := client.DeleteIntakeRunner(ctx, testutil.ProjectId, testutil.Region, *items[i].Id).Execute()
+			err := client.DefaultAPI.DeleteIntakeRunner(ctx, testutil.ProjectId, testutil.Region, items[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("deleting runner %s during CheckDestroy: %w", *items[i].Id, err)
+				return fmt.Errorf("deleting runner %s during CheckDestroy: %w", items[i].Id, err)
 			}
 
 			// Using the wait handler for destruction verification
-			_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, items[i].Id).WaitWithContext(ctx)
 			if err != nil {
-				return fmt.Errorf("deleting runner %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
+				return fmt.Errorf("deleting runner %s during CheckDestroy: waiting for deletion %w", items[i].Id, err)
 			}
 		}
 	}

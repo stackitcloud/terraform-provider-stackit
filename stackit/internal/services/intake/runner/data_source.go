@@ -17,7 +17,7 @@ import (
 	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/intake"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -106,11 +106,11 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				ElementType: types.StringType,
 				Computed:    true,
 			},
-			"max_message_size_kib": schema.Int64Attribute{
+			"max_message_size_kib": schema.Int32Attribute{
 				Description: descriptions["max_message_size_kib"],
 				Computed:    true,
 			},
-			"max_messages_per_hour": schema.Int64Attribute{
+			"max_messages_per_hour": schema.Int32Attribute{
 				Description: descriptions["max_messages_per_hour"],
 				Computed:    true,
 			},
@@ -139,7 +139,7 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 
-	runnerResp, err := r.client.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
+	runnerResp, err := r.client.DefaultAPI.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {

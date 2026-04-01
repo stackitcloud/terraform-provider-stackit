@@ -17,14 +17,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	coreUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/intake"
-	"github.com/stackitcloud/stackit-sdk-go/services/intake/wait"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
+	"github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -43,8 +44,8 @@ type Model struct {
 	Name               types.String `tfsdk:"name"`
 	Description        types.String `tfsdk:"description"`
 	Labels             types.Map    `tfsdk:"labels"`
-	MaxMessageSizeKiB  types.Int64  `tfsdk:"max_message_size_kib"`
-	MaxMessagesPerHour types.Int64  `tfsdk:"max_messages_per_hour"`
+	MaxMessageSizeKiB  types.Int32  `tfsdk:"max_message_size_kib"`
+	MaxMessagesPerHour types.Int32  `tfsdk:"max_messages_per_hour"`
 	Region             types.String `tfsdk:"region"`
 }
 
@@ -173,11 +174,11 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					mapplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"max_message_size_kib": schema.Int64Attribute{
+			"max_message_size_kib": schema.Int32Attribute{
 				Description: descriptions["max_message_size_kib"],
 				Required:    true,
 			},
-			"max_messages_per_hour": schema.Int64Attribute{
+			"max_messages_per_hour": schema.Int32Attribute{
 				Description: descriptions["max_messages_per_hour"],
 				Required:    true,
 			},
@@ -216,7 +217,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Create new runner
-	runnerResp, err := r.client.CreateIntakeRunner(ctx, projectId, region).CreateIntakeRunnerPayload(*payload).Execute()
+	runnerResp, err := r.client.DefaultAPI.CreateIntakeRunner(ctx, projectId, region).CreateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -226,7 +227,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
 		"project_id": projectId,
 		"region":     region,
-		"runner_id":  *runnerResp.Id,
+		"runner_id":  runnerResp.Id,
 	})
 
 	if resp.Diagnostics.HasError() {
@@ -234,7 +235,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Wait for creation of intake runner
-	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
+	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Intake runner creation waiting: %v", err))
 		return
@@ -269,7 +270,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 
-	runnerResp, err := r.client.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
+	runnerResp, err := r.client.DefaultAPI.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -324,7 +325,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Update runner
-	runnerResp, err := r.client.UpdateIntakeRunner(ctx, projectId, region, runnerId).UpdateIntakeRunnerPayload(*payload).Execute()
+	runnerResp, err := r.client.DefaultAPI.UpdateIntakeRunner(ctx, projectId, region, runnerId).UpdateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -333,7 +334,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Wait for update
-	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
+	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Runner update waiting: %v", err))
 		return
@@ -372,7 +373,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 
 	// Delete existing runner
-	err := r.client.DeleteIntakeRunner(ctx, projectId, region, runnerId).Execute()
+	err := r.client.DefaultAPI.DeleteIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -386,7 +387,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Wait for the delete operation to complete
-	_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
+	_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting runner", fmt.Sprintf("Runner deletion waiting: %v", err))
 		return
@@ -425,21 +426,16 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		return fmt.Errorf("model input is nil")
 	}
 
-	var runnerId string
-	if runnerResp.Id != nil {
-		runnerId = *runnerResp.Id
-	}
-
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
 		region,
-		runnerId,
+		runnerResp.Id,
 	)
 
-	if runnerResp.Id == nil || *runnerResp.Id == "" {
+	if runnerResp.Id == "" {
 		model.RunnerId = types.StringNull()
 	} else {
-		model.RunnerId = types.StringPointerValue(runnerResp.Id)
+		model.RunnerId = types.StringValue(runnerResp.Id)
 	}
 
 	if runnerResp.Labels == nil {
@@ -452,11 +448,27 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		model.Labels = labels
 	}
 
-	model.Name = types.StringPointerValue(runnerResp.DisplayName)
+	if runnerResp.DisplayName == "" {
+		model.Name = types.StringNull()
+	} else {
+		model.Name = types.StringValue(runnerResp.DisplayName)
+	}
+
 	model.Description = types.StringPointerValue(runnerResp.Description)
 	model.Region = types.StringValue(region)
-	model.MaxMessageSizeKiB = types.Int64PointerValue(runnerResp.MaxMessageSizeKiB)
-	model.MaxMessagesPerHour = types.Int64PointerValue(runnerResp.MaxMessagesPerHour)
+
+	if runnerResp.MaxMessageSizeKiB == 0 {
+		model.MaxMessageSizeKiB = types.Int32Null()
+	} else {
+		model.MaxMessageSizeKiB = types.Int32Value(runnerResp.MaxMessageSizeKiB)
+	}
+
+	if runnerResp.MaxMessagesPerHour == 0 {
+		model.MaxMessagesPerHour = types.Int32Null()
+	} else {
+		model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
+	}
+
 	return nil
 }
 
@@ -474,17 +486,12 @@ func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 		}
 	}
 
-	var labelsPtr *map[string]string
-	if len(labels) > 0 {
-		labelsPtr = &labels
-	}
-
 	return &intake.CreateIntakeRunnerPayload{
 		Description:        conversion.StringValueToPointer(model.Description),
-		DisplayName:        conversion.StringValueToPointer(model.Name),
-		Labels:             labelsPtr,
-		MaxMessageSizeKiB:  conversion.Int64ValueToPointer(model.MaxMessageSizeKiB),
-		MaxMessagesPerHour: conversion.Int64ValueToPointer(model.MaxMessagesPerHour),
+		DisplayName:        model.Name.ValueString(),
+		Labels:             labels,
+		MaxMessageSizeKiB:  int32(model.MaxMessageSizeKiB.ValueInt32()),
+		MaxMessagesPerHour: int32(model.MaxMessagesPerHour.ValueInt32()),
 	}, nil
 }
 
@@ -498,8 +505,13 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	}
 
 	payload := &intake.UpdateIntakeRunnerPayload{}
-	payload.MaxMessageSizeKiB = conversion.Int64ValueToPointer(model.MaxMessageSizeKiB)
-	payload.MaxMessagesPerHour = conversion.Int64ValueToPointer(model.MaxMessagesPerHour)
+	if !model.MaxMessageSizeKiB.IsNull() && !model.MaxMessageSizeKiB.IsUnknown() {
+		payload.MaxMessageSizeKiB = coreUtils.Ptr(model.MaxMessageSizeKiB.ValueInt32())
+	}
+
+	if !model.MaxMessagesPerHour.IsNull() && !model.MaxMessagesPerHour.IsUnknown() {
+		payload.MaxMessagesPerHour = coreUtils.Ptr(model.MaxMessagesPerHour.ValueInt32())
+	}
 
 	// Optional fields
 	payload.DisplayName = conversion.StringValueToPointer(model.Name)
@@ -511,7 +523,7 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 		if diags.HasError() {
 			return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
 		}
-		payload.Labels = &labels
+		payload.Labels = labels
 	}
 
 	return payload, nil
