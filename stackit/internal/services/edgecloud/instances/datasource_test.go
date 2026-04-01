@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"strings"
 	"testing"
 	"time"
 
@@ -75,14 +74,11 @@ func TestMapInstanceToAttrs(t *testing.T) {
 		description string
 		instance    edge.Instance
 		expected    map[string]attr.Value
-		expectError bool
-		errorMsg    string
 	}{
 		{
 			description: "valid instance",
 			instance:    validInstance,
 			expected:    validInstanceAttrs,
-			expectError: false,
 		},
 		{
 			description: "valid instance, empty description",
@@ -92,54 +88,12 @@ func TestMapInstanceToAttrs(t *testing.T) {
 			expected: fixtureAttrs(validInstanceAttrs, func(m map[string]attr.Value) {
 				m["description"] = types.StringPointerValue(utils.Ptr(""))
 			}),
-			expectError: false,
 		},
 		{
-			description: "error, empty display name",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.DisplayName = ""
-			}),
-			expectError: true,
-			errorMsg:    "missing a 'displayName'",
-		},
-		{
-			description: "error, empty id",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Id = ""
-			}),
-			expectError: true,
-			errorMsg:    "missing an 'id'",
-		},
-		{
-			description: "error, empty planId",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.PlanId = ""
-			}),
-			expectError: true,
-			errorMsg:    "missing a 'planId'",
-		},
-		{
-			description: "error, empty frontendUrl",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.FrontendUrl = ""
-			}),
-			expectError: true,
-			errorMsg:    "missing a 'frontendUrl'",
-		},
-		{
-			description: "error, empty status",
-			instance: fixtureInstance(func(i *edge.Instance) {
-				i.Status = ""
-			}),
-			expectError: true,
-			errorMsg:    "missing a 'status'",
-		},
-		{
-			description: "error, nil description",
+			description: "nil description",
 			instance: fixtureInstance(func(i *edge.Instance) {
 				i.Description = nil
 			}),
-			expectError: false,
 			expected: fixtureAttrs(validInstanceAttrs, func(m map[string]attr.Value) {
 				m["description"] = types.StringPointerValue(nil)
 			}),
@@ -148,21 +102,7 @@ func TestMapInstanceToAttrs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			attrs, err := mapInstanceToAttrs(tt.instance, region)
-
-			if tt.expectError {
-				if err == nil {
-					t.Fatalf("Expected an error, but got nil")
-				}
-				if tt.errorMsg != "" && !strings.Contains(err.Error(), tt.errorMsg) {
-					t.Errorf("Expected error message to contain %q, but got: %v", tt.errorMsg, err)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("Expected no error, but got: %v", err)
-			}
+			attrs := mapInstanceToAttrs(&tt.instance, region)
 
 			diff := cmp.Diff(tt.expected, attrs, cmpopts.EquateEmpty())
 			if diff != "" {
@@ -186,63 +126,27 @@ func TestBuildInstancesList(t *testing.T) {
 		i.DisplayName = "second"
 	})
 
-	instanceInvalidPlan := fixtureInstance(func(i *edge.Instance) {
-		i.PlanId = ""
-	})
-
-	// Invalid: Empty Display Name
-	instanceEmptyName := fixtureInstance(func(i *edge.Instance) {
-		i.DisplayName = ""
-	})
-
-	// Invalid: Empty ID and Empty Display Name
-	instanceEmptyIdAndName := fixtureInstance(func(i *edge.Instance) {
-		i.Id = ""
-		i.DisplayName = ""
-	})
-
 	// Pre-calculate expected mapped objects for the valid instances
-	attrs1, _ := mapInstanceToAttrs(instance1, region)
+	attrs1 := mapInstanceToAttrs(&instance1, region)
 	obj1, _ := types.ObjectValue(instanceTypes, attrs1)
 
-	attrs2, _ := mapInstanceToAttrs(instance2, region)
+	attrs2 := mapInstanceToAttrs(&instance2, region)
 	obj2, _ := types.ObjectValue(instanceTypes, attrs2)
 
 	tests := []struct {
-		description       string
-		instances         []edge.Instance
-		expectedList      []attr.Value
-		expectedDiagCount int
+		description  string
+		instances    []edge.Instance
+		expectedList []attr.Value
 	}{
 		{
-			description:       "empty instance list",
-			instances:         []edge.Instance{}, // No test case for nil, since this is checked before buildInstancesList is called
-			expectedList:      []attr.Value{},
-			expectedDiagCount: 0,
+			description:  "empty instance list",
+			instances:    []edge.Instance{}, // No test case for nil, since this is checked before buildInstancesList is called
+			expectedList: []attr.Value{},
 		},
 		{
-			description:       "two valid instances",
-			instances:         []edge.Instance{instance1, instance2},
-			expectedList:      []attr.Value{obj1, obj2},
-			expectedDiagCount: 0,
-		},
-		{
-			description:       "one valid, one invalid (empty planId)",
-			instances:         []edge.Instance{instance1, instanceInvalidPlan},
-			expectedList:      []attr.Value{obj1},
-			expectedDiagCount: 1,
-		},
-		{
-			description:       "one valid, one invalid (empty display name)",
-			instances:         []edge.Instance{instance1, instanceEmptyName},
-			expectedList:      []attr.Value{obj1},
-			expectedDiagCount: 1,
-		},
-		{
-			description:       "one valid, one invalid (empty id and empty display name)",
-			instances:         []edge.Instance{instance1, instanceEmptyIdAndName},
-			expectedList:      []attr.Value{obj1},
-			expectedDiagCount: 1,
+			description:  "two valid instances",
+			instances:    []edge.Instance{instance1, instance2},
+			expectedList: []attr.Value{obj1, obj2},
 		},
 	}
 
@@ -252,19 +156,7 @@ func TestBuildInstancesList(t *testing.T) {
 
 			resultList := buildInstancesList(ctx, tt.instances, region, &diags)
 
-			if tt.expectedDiagCount > 0 {
-				if !diags.HasError() {
-					t.Errorf("Expected diagnostics to have errors, but it didn't")
-				}
-				if len(diags) != tt.expectedDiagCount {
-					t.Errorf("Expected %d diagnostic(s), but got %d", tt.expectedDiagCount, len(diags))
-				}
-				for _, d := range diags {
-					if d.Severity() != diag.SeverityError {
-						t.Errorf("Expected diagnostic to be an Error, but got %v", d.Severity())
-					}
-				}
-			} else if diags.HasError() {
+			if diags.HasError() {
 				t.Errorf("Expected no errors, but got diagnostics: %v", diags)
 			}
 
