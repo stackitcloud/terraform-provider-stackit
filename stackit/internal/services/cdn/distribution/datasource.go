@@ -356,15 +356,15 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// redirects
 	redirectsVal := types.ObjectNull(redirectsTypes)
-	if distribution.Config != nil && distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
+	if distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
 		var tfRules []attr.Value
-		for _, r := range *distribution.Config.Redirects.Rules {
+		for _, r := range distribution.Config.Redirects.Rules {
 			var tfMatchers []attr.Value
 			if r.Matchers != nil {
-				for _, m := range *r.Matchers {
+				for _, m := range r.Matchers {
 					var tfValues []attr.Value
 					if m.Values != nil {
-						for _, v := range *m.Values {
+						for _, v := range m.Values {
 							tfValues = append(tfValues, types.StringValue(v))
 						}
 					}
@@ -405,13 +405,13 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			}
 
 			tfTargetUrl := types.StringNull()
-			if r.TargetUrl != nil {
-				tfTargetUrl = types.StringValue(*r.TargetUrl)
+			if r.TargetUrl != "" {
+				tfTargetUrl = types.StringValue(r.TargetUrl)
 			}
 
 			tfStatusCode := types.Int32Null()
-			if r.StatusCode != nil {
-				tfStatusCode = types.Int32Value(int32(*r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
+			if r.StatusCode != 0 {
+				tfStatusCode = types.Int32Value(int32(r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
 			}
 
 			tfRuleMatchCond := types.StringNull()

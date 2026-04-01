@@ -30,7 +30,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -684,7 +683,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// blockedCountries
 	// Use a pointer to a slice to distinguish between an empty list (unblock all) and nil (no change).
-	var blockedCountries *[]string
+	var blockedCountries []string
 	if configModel.BlockedCountries != nil {
 		// Use a temporary slice
 		tempBlockedCountries := []string{}
@@ -699,7 +698,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		// Point to the populated slice
-		blockedCountries = &tempBlockedCountries
+		blockedCountries = tempBlockedCountries
 	}
 
 	// redirects
@@ -717,7 +716,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 					}
 
 					matchers = append(matchers, cdnSdk.Matcher{
-						Values:              &matcher.Values,
+						Values:              matcher.Values,
 						ValueMatchCondition: matchCond,
 					})
 				}
@@ -727,23 +726,21 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
 					ruleMatchCond = &cond
 				}
-
-				statusCode := cdnSdk.RedirectRuleStatusCode(rule.StatusCode)
 				targetUrl := rule.TargetUrl
 
 				sdkConfigRule := cdnSdk.RedirectRule{
 					Description:        rule.Description,
 					Enabled:            rule.Enabled,
-					Matchers:           &matchers,
+					Matchers:           matchers,
 					RuleMatchCondition: ruleMatchCond,
-					StatusCode:         &statusCode,
-					TargetUrl:          &targetUrl,
+					StatusCode:         rule.StatusCode,
+					TargetUrl:          targetUrl,
 				}
 				sdkRules = append(sdkRules, sdkConfigRule)
 			}
 		}
 		redirectsConfig = &cdnSdk.RedirectConfig{
-			Rules: &sdkRules,
+			Rules: sdkRules,
 		}
 	}
 
@@ -790,7 +787,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	configPatch := &cdnSdk.ConfigPatch{
 		Backend:          configPatchBackend,
-		Regions:          &regions,
+		Regions:          regions,
 		BlockedCountries: blockedCountries,
 		Redirects:        redirectsConfig,
 	}
@@ -949,15 +946,15 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 	// redirects
 	redirectsVal := types.ObjectNull(redirectsTypes)
-	if distribution.Config != nil && distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
+	if distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
 		var tfRules []attr.Value
-		for _, r := range *distribution.Config.Redirects.Rules {
+		for _, r := range distribution.Config.Redirects.Rules {
 			var tfMatchers []attr.Value
 			if r.Matchers != nil {
-				for _, m := range *r.Matchers {
+				for _, m := range r.Matchers {
 					var tfValues []attr.Value
 					if m.Values != nil {
-						for _, v := range *m.Values {
+						for _, v := range m.Values {
 							tfValues = append(tfValues, types.StringValue(v))
 						}
 					}
@@ -998,13 +995,13 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			}
 
 			tfTargetUrl := types.StringNull()
-			if r.TargetUrl != nil {
-				tfTargetUrl = types.StringValue(*r.TargetUrl)
+			if r.TargetUrl != "" {
+				tfTargetUrl = types.StringValue(r.TargetUrl)
 			}
 
 			tfStatusCode := types.Int32Null()
-			if r.StatusCode != nil {
-				tfStatusCode = types.Int32Value(int32(*r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
+			if r.StatusCode > 0 {
+				tfStatusCode = types.Int32Value(int32(r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
 			}
 
 			tfRuleMatchCond := types.StringValue("ANY")
@@ -1275,9 +1272,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 			},
 		}
 	}
-	intendId := uuid.NewString()
 	payload := &cdnSdk.CreateDistributionPayload{
-		IntentId:         new(intendId),
+		IntentId:         new(uuid.NewString()),
 		Regions:          cfg.Regions,
 		Backend:          *backend,
 		BlockedCountries: cfg.BlockedCountries,
@@ -1335,42 +1331,39 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 		if len(configModel.Redirects.Rules) > 0 {
 			for _, rule := range configModel.Redirects.Rules {
-				matchers := []cdn.Matcher{}
+				matchers := []cdnSdk.Matcher{}
 				for _, matcher := range rule.Matchers {
-					var matchCond *cdn.MatchCondition
+					var matchCond *cdnSdk.MatchCondition
 					if matcher.ValueMatchCondition != nil {
-						cond := cdn.MatchCondition(*matcher.ValueMatchCondition)
+						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
 						matchCond = &cond
 					}
 
-					matchers = append(matchers, cdn.Matcher{
-						Values:              &matcher.Values,
+					matchers = append(matchers, cdnSdk.Matcher{
+						Values:              matcher.Values,
 						ValueMatchCondition: matchCond,
 					})
 				}
 
-				var ruleMatchCond *cdn.MatchCondition
+				var ruleMatchCond *cdnSdk.MatchCondition
 				if rule.RuleMatchCondition != nil {
-					cond := cdn.MatchCondition(*rule.RuleMatchCondition)
+					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
 					ruleMatchCond = &cond
 				}
 
-				statusCode := cdn.RedirectRuleStatusCode(rule.StatusCode)
-				targerUrl := rule.TargetUrl
-
-				sdkConfigRule := cdn.RedirectRule{
+				sdkConfigRule := cdnSdk.RedirectRule{
 					Description:        rule.Description,
 					Enabled:            rule.Enabled,
-					Matchers:           &matchers,
+					Matchers:           matchers,
 					RuleMatchCondition: ruleMatchCond,
-					StatusCode:         &statusCode,
-					TargetUrl:          &targerUrl,
+					StatusCode:         rule.StatusCode,
+					TargetUrl:          rule.TargetUrl,
 				}
 				sdkRules = append(sdkRules, sdkConfigRule)
 			}
 		}
 		redirectsConfig = &cdnSdk.RedirectConfig{
-			Rules: &sdkRules,
+			Rules: sdkRules,
 		}
 	}
 
