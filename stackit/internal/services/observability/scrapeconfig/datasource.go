@@ -8,7 +8,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -36,7 +36,7 @@ func NewScrapeConfigDataSource() datasource.DataSource {
 
 // scrapeConfigDataSource is the data source implementation.
 type scrapeConfigDataSource struct {
-	client *observability.APIClient
+	client *observabilitySdk.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -108,11 +108,11 @@ func (d *scrapeConfigDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed: true,
 			},
 
-			"sample_limit": schema.Int64Attribute{
+			"sample_limit": schema.Int32Attribute{
 				Description: "Specifies the scrape sample limit.",
 				Computed:    true,
-				Validators: []validator.Int64{
-					int64validator.Between(1, 3000000),
+				Validators: []validator.Int32{
+					int32validator.Between(1, 3000000),
 				},
 			},
 
@@ -198,7 +198,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
 
-	scResp, err := d.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	scResp, err := d.client.DefaultAPI.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -216,7 +216,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, scResp.Data, &model)
+	err = mapFields(ctx, &scResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Mapping fields", err.Error())
 		return

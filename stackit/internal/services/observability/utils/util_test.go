@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -35,7 +35,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *observability.APIClient
+		expected *observabilitySdk.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -44,8 +44,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *observability.APIClient {
-				apiClient, err := observability.NewAPIClient(
+			expected: func() *observabilitySdk.APIClient {
+				apiClient, err := observabilitySdk.NewAPIClient(
 					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
@@ -64,8 +64,8 @@ func TestConfigureClient(t *testing.T) {
 					ObservabilityCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *observability.APIClient {
-				apiClient, err := observability.NewAPIClient(
+			expected: func() *observabilitySdk.APIClient {
+				apiClient, err := observabilitySdk.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)

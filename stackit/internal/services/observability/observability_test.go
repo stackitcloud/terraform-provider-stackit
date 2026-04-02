@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -40,13 +40,13 @@ resource "stackit_observability_instance" "instance" {
 
 	planList := testutil.MockResponse{
 		Description: "plan list",
-		ToJsonBody: observability.PlansResponse{
-			Plans: new([]observability.Plan{
+		ToJsonBody: observabilitySdk.PlansResponse{
+			Plans: []observabilitySdk.Plan{
 				{
 					Name:   utils.Ptr(planName),
-					PlanId: new(planId),
+					PlanId: planId,
 				},
-			}),
+			},
 		},
 	}
 
@@ -61,8 +61,8 @@ resource "stackit_observability_instance" "instance" {
 						planList,
 						testutil.MockResponse{
 							Description: "create instance",
-							ToJsonBody: observability.CreateInstanceResponse{
-								InstanceId: new(instanceId),
+							ToJsonBody: observabilitySdk.CreateInstanceResponse{
+								InstanceId: instanceId,
 							},
 						},
 						testutil.MockResponse{
@@ -90,9 +90,9 @@ resource "stackit_observability_instance" "instance" {
 						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
 						testutil.MockResponse{
 							Description: "delete waiter",
-							ToJsonBody: observability.GetInstanceResponse{
-								Id:     new(instanceId),
-								Status: observability.GETINSTANCERESPONSESTATUS_DELETE_SUCCEEDED.Ptr(),
+							ToJsonBody: observabilitySdk.GetInstanceResponse{
+								Id:     instanceId,
+								Status: "DELETE_SUCCEEDED",
 							},
 						},
 					)
@@ -143,7 +143,7 @@ resource "stackit_observability_scrapeconfig" "instance" {
 					s.Reset(
 						testutil.MockResponse{
 							Description: "create scrape config",
-							ToJsonBody:  observability.ScrapeConfigsResponse{},
+							ToJsonBody:  observabilitySdk.ScrapeConfigsResponse{},
 						},
 						testutil.MockResponse{
 							Description: "failing waiter",
@@ -170,8 +170,8 @@ resource "stackit_observability_scrapeconfig" "instance" {
 						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
 						testutil.MockResponse{
 							Description: "delete waiter",
-							ToJsonBody: observability.ListScrapeConfigsResponse{
-								Data: new([]observability.Job{}),
+							ToJsonBody: observabilitySdk.ListScrapeConfigsResponse{
+								Data: []observabilitySdk.Job{},
 							},
 						},
 					)

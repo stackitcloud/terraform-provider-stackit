@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -84,7 +84,7 @@ func NewLogAlertGroupResource() resource.Resource {
 
 // alertGroupResource is the resource implementation.
 type logAlertGroupResource struct {
-	client *observability.APIClient
+	client *observabilitySdk.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -254,7 +254,7 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	createAlertGroupResp, err := l.client.CreateLogsAlertgroups(ctx, instanceId, projectId).CreateLogsAlertgroupsPayload(*payload).Execute()
+	createAlertGroupResp, err := l.client.DefaultAPI.CreateLogsAlertgroups(ctx, instanceId, projectId).CreateLogsAlertgroupsPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating alertgroup", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -273,8 +273,8 @@ func (l *logAlertGroupResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// all log alert groups are returned. We have to search the map for the one corresponding to our name
-	for _, alertGroup := range *createAlertGroupResp.Data {
-		if model.Name.ValueString() != *alertGroup.Name {
+	for _, alertGroup := range createAlertGroupResp.Data {
+		if model.Name.ValueString() != alertGroup.Name {
 			continue
 		}
 
@@ -312,7 +312,7 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	readAlertGroupResp, err := l.client.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	readAlertGroupResp, err := l.client.DefaultAPI.GetLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -325,7 +325,7 @@ func (l *logAlertGroupResource) Read(ctx context.Context, req resource.ReadReque
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, readAlertGroupResp.Data, &model)
+	err = mapFields(ctx, &readAlertGroupResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading log alert group", fmt.Sprintf("Error processing API response: %v", err))
 		return
@@ -363,7 +363,7 @@ func (l *logAlertGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "log_alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	_, err := l.client.DeleteLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	_, err := l.client.DefaultAPI.DeleteLogsAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -401,15 +401,15 @@ func (l *logAlertGroupResource) ImportState(ctx context.Context, req resource.Im
 }
 
 // toCreatePayload generates the payload to create a new log alert group.
-func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateLogsAlertgroupsPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*observabilitySdk.CreateLogsAlertgroupsPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	payload := observability.CreateLogsAlertgroupsPayload{}
+	payload := observabilitySdk.CreateLogsAlertgroupsPayload{}
 
 	if !utils.IsUndefined(model.Name) {
-		payload.Name = model.Name.ValueStringPointer()
+		payload.Name = model.Name.ValueString()
 	}
 
 	if !utils.IsUndefined(model.Interval) {
@@ -421,16 +421,16 @@ func toCreatePayload(ctx context.Context, model *Model) (*observability.CreateLo
 		if err != nil {
 			return nil, err
 		}
-		payload.Rules = &rules
+		payload.Rules = rules
 	}
 
 	return &payload, nil
 }
 
 // toRulesPayload generates rules for create payload.
-func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLogsAlertgroupsPayloadRulesInner, error) {
+func toRulesPayload(ctx context.Context, model *Model) ([]observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner, error) {
 	if model.Rules.Elements() == nil || len(model.Rules.Elements()) == 0 {
-		return []observability.CreateLogsAlertgroupsPayloadRulesInner{}, nil
+		return []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{}, nil
 	}
 
 	var rules []rule
@@ -439,10 +439,10 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLo
 		return nil, core.DiagsToError(diags)
 	}
 
-	var oarrs []observability.CreateLogsAlertgroupsPayloadRulesInner
+	var oarrs []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner
 	for i := range rules {
 		rule := &rules[i]
-		oarr := observability.CreateLogsAlertgroupsPayloadRulesInner{}
+		oarr := observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{}
 
 		if !utils.IsUndefined(rule.Alert) {
 			alert := conversion.StringValueToPointer(rule.Alert)
@@ -457,7 +457,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLo
 			if expression == nil {
 				return nil, fmt.Errorf("found nil expression for rule[%d]", i)
 			}
-			oarr.Expr = expression
+			oarr.Expr = *expression
 		}
 
 		if !utils.IsUndefined(rule.For) {
@@ -473,7 +473,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLo
 			if err != nil {
 				return nil, fmt.Errorf("converting to Go map: %w", err)
 			}
-			oarr.Labels = &labels
+			oarr.Labels = labels
 		}
 
 		if !utils.IsUndefined(rule.Annotations) {
@@ -481,7 +481,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLo
 			if err != nil {
 				return nil, fmt.Errorf("converting to Go map: %w", err)
 			}
-			oarr.Annotations = &annotations
+			oarr.Annotations = annotations
 		}
 
 		oarrs = append(oarrs, oarr)
@@ -491,7 +491,7 @@ func toRulesPayload(ctx context.Context, model *Model) ([]observability.CreateLo
 }
 
 // mapRules maps alertGroup response to the model.
-func mapFields(ctx context.Context, alertGroup *observability.AlertGroup, model *Model) error {
+func mapFields(ctx context.Context, alertGroup *observabilitySdk.AlertGroup, model *Model) error {
 	if alertGroup == nil {
 		return fmt.Errorf("nil alertGroup")
 	}
@@ -515,8 +515,8 @@ func mapFields(ctx context.Context, alertGroup *observability.AlertGroup, model 
 	var name string
 	if !utils.IsUndefined(model.Name) {
 		name = model.Name.ValueString()
-	} else if alertGroup.Name != nil {
-		name = *alertGroup.Name
+	} else if alertGroup.Name != "" {
+		name = alertGroup.Name
 	} else {
 		return fmt.Errorf("found empty name")
 	}
@@ -545,13 +545,13 @@ func mapFields(ctx context.Context, alertGroup *observability.AlertGroup, model 
 }
 
 // mapRules maps alertGroup response rules to the model rules.
-func mapRules(_ context.Context, alertGroup *observability.AlertGroup, model *Model) error {
+func mapRules(_ context.Context, alertGroup *observabilitySdk.AlertGroup, model *Model) error {
 	var newRules []attr.Value
 
-	for i, r := range *alertGroup.Rules {
+	for i, r := range alertGroup.Rules {
 		ruleMap := map[string]attr.Value{
 			"alert":       types.StringPointerValue(r.Alert),
-			"expression":  types.StringPointerValue(r.Expr),
+			"expression":  types.StringValue(r.Expr),
 			"for":         types.StringPointerValue(r.For),
 			"labels":      types.MapNull(types.StringType),
 			"annotations": types.MapNull(types.StringType),
