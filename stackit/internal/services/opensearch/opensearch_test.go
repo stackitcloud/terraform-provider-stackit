@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/opensearch"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -49,14 +49,14 @@ resource "stackit_opensearch_instance" "instance" {
 						testutil.MockResponse{
 							Description: "offerings",
 							ToJsonBody: &opensearch.ListOfferingsResponse{
-								Offerings: &[]opensearch.Offering{
+								Offerings: []opensearch.Offering{
 									{
-										Name:    new("offering-name"),
-										Version: utils.Ptr(version),
-										Plans: &[]opensearch.Plan{
+										Name:    "offering-name",
+										Version: version,
+										Plans: []opensearch.Plan{
 											{
-												Id:   new("plan-id"),
-												Name: utils.Ptr(planName),
+												Id:   "plan-id",
+												Name: planName,
 											},
 										},
 									},
@@ -66,7 +66,7 @@ resource "stackit_opensearch_instance" "instance" {
 						testutil.MockResponse{
 							Description: "create instance",
 							ToJsonBody: &opensearch.CreateInstanceResponse{
-								InstanceId: new(instanceId),
+								InstanceId: instanceId,
 							},
 						},
 						testutil.MockResponse{Description: "failing waiter", StatusCode: http.StatusInternalServerError},
@@ -128,7 +128,7 @@ resource "stackit_opensearch_credential" "credential" {
 						testutil.MockResponse{
 							Description: "create credential",
 							ToJsonBody: &opensearch.CredentialsResponse{
-								Id: new(credentialId),
+								Id: credentialId,
 							},
 						},
 						testutil.MockResponse{Description: "create waiter", StatusCode: http.StatusInternalServerError},
