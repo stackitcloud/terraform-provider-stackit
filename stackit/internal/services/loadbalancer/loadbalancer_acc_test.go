@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -13,8 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-
-	"maps"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
@@ -432,7 +431,7 @@ func testAccCheckLoadBalancerDestroy(s *terraform.State) error {
 		return fmt.Errorf("getting loadbalancersResp: %w", err)
 	}
 
-	if loadbalancersResp.LoadBalancers == nil || (len(loadbalancersResp.LoadBalancers) == 0) {
+	if len(loadbalancersResp.LoadBalancers) == 0 {
 		fmt.Print("No load balancers found for project \n")
 		return nil
 	}
