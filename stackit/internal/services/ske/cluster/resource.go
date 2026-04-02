@@ -37,11 +37,12 @@ import (
 	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
+	"golang.org/x/mod/semver"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-	"golang.org/x/mod/semver"
 )
 
 const (

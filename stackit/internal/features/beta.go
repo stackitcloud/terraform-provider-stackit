@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
