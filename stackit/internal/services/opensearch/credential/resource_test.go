@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/opensearch"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -25,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&opensearch.CredentialsResponse{
-				Id:  new("cid"),
+				Id:  "cid",
 				Raw: &opensearch.RawCredentials{},
 			},
 			Model{
@@ -33,13 +33,13 @@ func TestMapFields(t *testing.T) {
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
-				Host:         types.StringNull(),
+				Host:         types.StringValue(""),
 				Hosts:        types.ListNull(types.StringType),
-				Password:     types.StringNull(),
-				Port:         types.Int64Null(),
+				Password:     types.StringValue(""),
+				Port:         types.Int32Null(),
 				Scheme:       types.StringNull(),
 				Uri:          types.StringNull(),
-				Username:     types.StringNull(),
+				Username:     types.StringValue(""),
 			},
 			true,
 		},
@@ -50,19 +50,19 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&opensearch.CredentialsResponse{
-				Id: new("cid"),
+				Id: "cid",
 				Raw: &opensearch.RawCredentials{
-					Credentials: &opensearch.Credentials{
-						Host: new("host"),
-						Hosts: &[]string{
+					Credentials: opensearch.Credentials{
+						Host: "host",
+						Hosts: []string{
 							"host_1",
 							"",
 						},
-						Password: new("password"),
-						Port:     new(int64(1234)),
+						Password: "password",
+						Port:     new(int32(1234)),
 						Scheme:   new("scheme"),
 						Uri:      new("uri"),
-						Username: new("username"),
+						Username: "username",
 					},
 				},
 			},
@@ -77,7 +77,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue(""),
 				}),
 				Password: types.StringValue("password"),
-				Port:     types.Int64Value(1234),
+				Port:     types.Int32Value(1234),
 				Scheme:   types.StringValue("scheme"),
 				Uri:      types.StringValue("uri"),
 				Username: types.StringValue("username"),
@@ -96,20 +96,20 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			&opensearch.CredentialsResponse{
-				Id: new("cid"),
+				Id: "cid",
 				Raw: &opensearch.RawCredentials{
-					Credentials: &opensearch.Credentials{
-						Host: new("host"),
-						Hosts: &[]string{
+					Credentials: opensearch.Credentials{
+						Host: "host",
+						Hosts: []string{
 							"",
 							"host_1",
 							"host_2",
 						},
-						Password: new("password"),
-						Port:     new(int64(1234)),
+						Password: "password",
+						Port:     new(int32(1234)),
 						Scheme:   new("scheme"),
 						Uri:      new("uri"),
-						Username: new("username"),
+						Username: "username",
 					},
 				},
 			},
@@ -125,7 +125,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("host_1"),
 				}),
 				Password: types.StringValue("password"),
-				Port:     types.Int64Value(1234),
+				Port:     types.Int32Value(1234),
 				Scheme:   types.StringValue("scheme"),
 				Uri:      types.StringValue("uri"),
 				Username: types.StringValue("username"),
@@ -139,16 +139,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&opensearch.CredentialsResponse{
-				Id: new("cid"),
+				Id: "cid",
 				Raw: &opensearch.RawCredentials{
-					Credentials: &opensearch.Credentials{
-						Host:     new(""),
-						Hosts:    &[]string{},
-						Password: new(""),
-						Port:     new(int64(2123456789)),
+					Credentials: opensearch.Credentials{
+						Host:     "",
+						Hosts:    []string{},
+						Password: "",
+						Port:     new(int32(2123456789)),
 						Scheme:   nil,
 						Uri:      nil,
-						Username: new(""),
+						Username: "",
 					},
 				},
 			},
@@ -160,7 +160,7 @@ func TestMapFields(t *testing.T) {
 				Host:         types.StringValue(""),
 				Hosts:        types.ListValueMust(types.StringType, []attr.Value{}),
 				Password:     types.StringValue(""),
-				Port:         types.Int64Value(2123456789),
+				Port:         types.Int32Value(2123456789),
 				Scheme:       types.StringNull(),
 				Uri:          types.StringNull(),
 				Username:     types.StringValue(""),
@@ -194,7 +194,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&opensearch.CredentialsResponse{
-				Id: new("cid"),
+				Id: "cid",
 			},
 			Model{},
 			false,

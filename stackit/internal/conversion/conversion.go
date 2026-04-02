@@ -131,11 +131,21 @@ func BoolValueToPointer(s basetypes.BoolValue) *bool {
 // StringListToPointer converts basetypes.ListValue to a pointer to a list of strings.
 // It returns nil if the value is null or unknown.
 func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
+	result, err := StringListToSlice(list)
+	if result == nil {
+		return nil, err
+	}
+	return &result, err
+}
+
+// StringListToSlice converts basetypes.ListValue to a list of strings.
+// It returns nil if the value is null or unknown.
+func StringListToSlice(list basetypes.ListValue) ([]string, error) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
 
-	listStr := []string{}
+	var listStr []string
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
@@ -144,7 +154,7 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 		listStr = append(listStr, elStr.ValueString())
 	}
 
-	return &listStr, nil
+	return listStr, nil
 }
 
 // StringSetToPointer converts basetypes.SetValue to a pointer to a list of strings.

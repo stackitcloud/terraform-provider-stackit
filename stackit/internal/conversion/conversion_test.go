@@ -449,3 +449,59 @@ func TestStringSetToSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestStringListToSlice(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		in      basetypes.ListValue
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "unknown",
+			in:   basetypes.NewListUnknown(types.StringType),
+			want: nil,
+		},
+		{
+			name: "null",
+			in:   basetypes.NewListNull(types.StringType),
+			want: nil,
+		},
+		{
+			name:    "invalid type",
+			in:      basetypes.NewListValueMust(types.Int64Type, []attr.Value{types.Int64Value(123)}),
+			wantErr: true,
+		},
+		{
+			name: "some values",
+			in: basetypes.NewListValueMust(
+				types.StringType,
+				[]attr.Value{
+					types.StringValue("abc"),
+					types.StringValue("xyz"),
+				},
+			),
+			want: []string{
+				"abc",
+				"xyz",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := StringListToSlice(tt.in)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			if d := cmp.Diff(got, tt.want); d != "" {
+				t.Fatalf("no match, diff: %s", d)
+			}
+		})
+	}
+}

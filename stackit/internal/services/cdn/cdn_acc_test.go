@@ -21,8 +21,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -463,7 +464,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := cdn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint, false)...)
+	client, err := cdnSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -478,11 +479,11 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	}
 
 	for _, dist := range distributionsToDestroy {
-		_, err := client.DeleteDistribution(ctx, testutil.ProjectId, dist).Execute()
+		_, err := client.DefaultAPI.DeleteDistribution(ctx, testutil.ProjectId, dist).Execute()
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: %w", dist, err)
 		}
-		_, err = wait.DeleteDistributionWaitHandler(ctx, client, testutil.ProjectId, dist).WaitWithContext(ctx)
+		_, err = wait.DeleteDistributionWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, dist).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: waiting for deletion %w", dist, err)
 		}

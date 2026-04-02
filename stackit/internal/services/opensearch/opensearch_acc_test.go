@@ -9,8 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/opensearch"
-	"github.com/stackitcloud/stackit-sdk-go/services/opensearch/wait"
+	legacyOpensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -252,23 +253,23 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
 		if instances[i].InstanceId == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -279,14 +280,14 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *opensearch.Instance) bool {
-	if *i.LastOperation.Type != opensearch.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type != string(legacyOpensearch.INSTANCELASTOPERATIONTYPE_DELETE) {
 		return false
 	}
 
-	if *i.LastOperation.Type == opensearch.INSTANCELASTOPERATIONTYPE_DELETE {
-		if *i.LastOperation.State != opensearch.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
+	if i.LastOperation.Type == string(legacyOpensearch.INSTANCELASTOPERATIONTYPE_DELETE) {
+		if i.LastOperation.State != string(legacyOpensearch.INSTANCELASTOPERATIONSTATE_SUCCEEDED) {
 			return false
-		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
+		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false
 		}
 	}
