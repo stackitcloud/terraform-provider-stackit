@@ -17,7 +17,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -32,7 +32,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *logme.APIClient
+	client *logmeSdk.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -133,11 +133,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["enable_monitoring"],
 						Computed:    true,
 					},
-					"fluentd_tcp": schema.Int64Attribute{
+					"fluentd_tcp": schema.Int32Attribute{
 						Description: parametersDescriptions["fluentd_tcp"],
 						Computed:    true,
 					},
-					"fluentd_tls": schema.Int64Attribute{
+					"fluentd_tls": schema.Int32Attribute{
 						Description: parametersDescriptions["fluentd_tls"],
 						Computed:    true,
 					},
@@ -157,7 +157,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["fluentd_tls_version"],
 						Computed:    true,
 					},
-					"fluentd_udp": schema.Int64Attribute{
+					"fluentd_udp": schema.Int32Attribute{
 						Description: parametersDescriptions["fluentd_udp"],
 						Computed:    true,
 					},
@@ -169,27 +169,27 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["ism_deletion_after"],
 						Computed:    true,
 					},
-					"ism_jitter": schema.Float64Attribute{
+					"ism_jitter": schema.Float32Attribute{
 						Description: parametersDescriptions["ism_jitter"],
 						Computed:    true,
 					},
-					"ism_job_interval": schema.Int64Attribute{
+					"ism_job_interval": schema.Int32Attribute{
 						Description: parametersDescriptions["ism_job_interval"],
 						Computed:    true,
 					},
-					"java_heapspace": schema.Int64Attribute{
+					"java_heapspace": schema.Int32Attribute{
 						Description: parametersDescriptions["java_heapspace"],
 						Computed:    true,
 					},
-					"java_maxmetaspace": schema.Int64Attribute{
+					"java_maxmetaspace": schema.Int32Attribute{
 						Description: parametersDescriptions["java_maxmetaspace"],
 						Computed:    true,
 					},
-					"max_disk_threshold": schema.Int64Attribute{
+					"max_disk_threshold": schema.Int32Attribute{
 						Description: parametersDescriptions["max_disk_threshold"],
 						Computed:    true,
 					},
-					"metrics_frequency": schema.Int64Attribute{
+					"metrics_frequency": schema.Int32Attribute{
 						Description: parametersDescriptions["metrics_frequency"],
 						Computed:    true,
 					},
@@ -254,7 +254,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

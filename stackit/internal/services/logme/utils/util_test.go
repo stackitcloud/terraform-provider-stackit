@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -34,7 +34,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *logme.APIClient
+		expected *logmeSdk.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -43,8 +43,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *logme.APIClient {
-				apiClient, err := logme.NewAPIClient(
+			expected: func() *logmeSdk.APIClient {
+				apiClient, err := logmeSdk.NewAPIClient(
 					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
@@ -63,8 +63,8 @@ func TestConfigureClient(t *testing.T) {
 					LogMeCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *logme.APIClient {
-				apiClient, err := logme.NewAPIClient(
+			expected: func() *logmeSdk.APIClient {
+				apiClient, err := logmeSdk.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)

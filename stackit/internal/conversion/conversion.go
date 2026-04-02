@@ -108,6 +108,16 @@ func Int64ValueToPointer(s basetypes.Int64Value) *int64 {
 	return &value
 }
 
+// Float32ValueToPointer converts basetypes.Float32Value to a pointer to float32.
+// It returns nil if the value is null or unknown.
+func Float32ValueToPointer(s basetypes.Float32Value) *float32 {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueFloat32()
+	return &value
+}
+
 // Float64ValueToPointer converts basetypes.Float64Value to a pointer to float64.
 // It returns nil if the value is null or unknown.
 func Float64ValueToPointer(s basetypes.Float64Value) *float64 {

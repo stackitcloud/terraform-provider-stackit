@@ -22,8 +22,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme/wait"
+
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/v1api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -40,7 +41,7 @@ type Model struct {
 	ProjectId    types.String `tfsdk:"project_id"`
 	Host         types.String `tfsdk:"host"`
 	Password     types.String `tfsdk:"password"`
-	Port         types.Int64  `tfsdk:"port"`
+	Port         types.Int32  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
 	Username     types.String `tfsdk:"username"`
 }
@@ -52,7 +53,7 @@ func NewCredentialResource() resource.Resource {
 
 // credentialResource is the resource implementation.
 type credentialResource struct {
-	client *logme.APIClient
+	client *logmeSdk.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -137,7 +138,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Computed:  true,
 				Sensitive: true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				Computed: true,
 			},
 			"uri": schema.StringAttribute{
@@ -168,7 +169,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Create new recordset
-	credentialsResp, err := r.client.CreateCredentials(ctx, projectId, instanceId).Execute()
+	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -176,11 +177,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	ctx = core.LogResponse(ctx)
 
-	if credentialsResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credential id")
-		return
-	}
-	credentialId := *credentialsResp.Id
+	credentialId := credentialsResp.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    projectId,
@@ -191,7 +188,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -229,7 +226,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -283,14 +280,14 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
 	// Delete existing record set
-	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).WaitWithContext(ctx)
+	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -318,7 +315,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "LogMe credential state imported")
 }
 
-func mapFields(credentialsResp *logme.CredentialsResponse, model *Model) error {
+func mapFields(credentialsResp *logmeSdk.CredentialsResponse, model *Model) error {
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -333,20 +330,19 @@ func mapFields(credentialsResp *logme.CredentialsResponse, model *Model) error {
 	var credentialId string
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
-	} else if credentialsResp.Id != nil {
-		credentialId = *credentialsResp.Id
+	} else if credentialsResp.Id != "" {
+		credentialId = credentialsResp.Id
 	} else {
 		return fmt.Errorf("credentials id not present")
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId)
 	model.CredentialId = types.StringValue(credentialId)
-	if credentials != nil {
-		model.Host = types.StringPointerValue(credentials.Host)
-		model.Password = types.StringPointerValue(credentials.Password)
-		model.Port = types.Int64PointerValue(credentials.Port)
-		model.Uri = types.StringPointerValue(credentials.Uri)
-		model.Username = types.StringPointerValue(credentials.Username)
-	}
+	model.Host = types.StringValue(credentials.Host)
+	model.Password = types.StringValue(credentials.Password)
+	model.Port = types.Int32PointerValue(credentials.Port)
+	model.Uri = types.StringPointerValue(credentials.Uri)
+	model.Username = types.StringValue(credentials.Username)
+
 	return nil
 }

@@ -13,10 +13,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
+
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/v1api/wait"
 )
 
 var (
@@ -421,7 +422,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := logme.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, true)...)
+	client, err := logmeSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -436,23 +437,23 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
 		if instances[i].InstanceId == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -462,15 +463,13 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 	return nil
 }
 
-func checkInstanceDeleteSuccess(i *logme.Instance) bool {
-	if *i.LastOperation.Type != logme.INSTANCELASTOPERATIONTYPE_DELETE {
+func checkInstanceDeleteSuccess(i *logmeSdk.Instance) bool {
+	if i.LastOperation.Type != wait.INSTANCESTATUS_DELETING {
 		return false
 	}
 
-	if *i.LastOperation.Type == logme.INSTANCELASTOPERATIONTYPE_DELETE {
-		if *i.LastOperation.State != logme.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
-			return false
-		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
+	if i.LastOperation.Type == wait.INSTANCESTATUS_DELETING {
+		if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false
 		}
 	}
