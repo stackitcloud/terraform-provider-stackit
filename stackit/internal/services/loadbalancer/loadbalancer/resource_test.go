@@ -9,7 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	legacyLoadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
 )
 
 const (
@@ -49,8 +50,8 @@ func TestToCreatePayload(t *testing.T) {
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
-						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
+						"port":         types.Int32Value(80),
+						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -73,11 +74,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -102,14 +103,14 @@ func TestToCreatePayload(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
-							"healthy_threshold":   types.Int64Value(1),
+							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
 							"timeout":             types.StringValue("4s"),
-							"unhealthy_threshold": types.Int64Value(5),
+							"unhealthy_threshold": types.Int32Value(5),
 						}),
 						"name":        types.StringValue("name"),
-						"target_port": types.Int64Value(80),
+						"target_port": types.Int32Value(80),
 						"targets": types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
 							types.ObjectValueMust(targetTypes, map[string]attr.Value{
 								"display_name": types.StringValue("display_name"),
@@ -124,39 +125,39 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&loadbalancer.CreateLoadBalancerPayload{
 				ExternalAddress: new("external_address"),
-				Listeners: &[]loadbalancer.Listener{
+				Listeners: []loadbalancer.Listener{
 					{
 						DisplayName: new("display_name"),
-						Port:        new(int64(80)),
-						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
-						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
+						Port:        new(int32(80)),
+						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
 							},
 						},
 						TargetPool: new("target_pool"),
-						Tcp: &loadbalancer.OptionsTCP{
+						Tcp: new(loadbalancer.OptionsTCP{
 							IdleTimeout: new("50s"),
-						},
-						Udp: &loadbalancer.OptionsUDP{
+						}),
+						Udp: new(loadbalancer.OptionsUDP{
 							IdleTimeout: new("50s"),
-						},
+						}),
 					},
 				},
 				Name: new("name"),
-				Networks: &[]loadbalancer.Network{
+				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
-						AllowedSourceRanges: &[]string{"cidr"},
+						AllowedSourceRanges: []string{"cidr"},
 					},
 					PrivateNetworkOnly: new(true),
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
@@ -170,18 +171,18 @@ func TestToCreatePayload(t *testing.T) {
 						},
 					},
 				},
-				TargetPools: &[]loadbalancer.TargetPool{
+				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   new(int64(1)),
+							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
 							Timeout:            new("4s"),
-							UnhealthyThreshold: new(int64(5)),
+							UnhealthyThreshold: new(int32(5)),
 						},
 						Name:       new("name"),
-						TargetPort: new(int64(80)),
-						Targets: &[]loadbalancer.Target{
+						TargetPort: new(int32(80)),
+						Targets: []loadbalancer.Target{
 							{
 								DisplayName: new("display_name"),
 								Ip:          new("ip"),
@@ -203,8 +204,8 @@ func TestToCreatePayload(t *testing.T) {
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
-						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
+						"port":         types.Int32Value(80),
+						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -223,11 +224,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -252,14 +253,14 @@ func TestToCreatePayload(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
-							"healthy_threshold":   types.Int64Value(1),
+							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
 							"timeout":             types.StringValue("4s"),
-							"unhealthy_threshold": types.Int64Value(5),
+							"unhealthy_threshold": types.Int32Value(5),
 						}),
 						"name":        types.StringValue("name"),
-						"target_port": types.Int64Value(80),
+						"target_port": types.Int32Value(80),
 						"targets": types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
 							types.ObjectValueMust(targetTypes, map[string]attr.Value{
 								"display_name": types.StringValue("display_name"),
@@ -275,12 +276,12 @@ func TestToCreatePayload(t *testing.T) {
 			&loadbalancer.CreateLoadBalancerPayload{
 				PlanId:          new("p10"),
 				ExternalAddress: new("external_address"),
-				Listeners: &[]loadbalancer.Listener{
+				Listeners: []loadbalancer.Listener{
 					{
 						DisplayName: new("display_name"),
-						Port:        new(int64(80)),
-						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
-						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
+						Port:        new(int32(80)),
+						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
 							},
@@ -289,19 +290,19 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				},
 				Name: new("name"),
-				Networks: &[]loadbalancer.Network{
+				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
-						AllowedSourceRanges: &[]string{"cidr"},
+						AllowedSourceRanges: []string{"cidr"},
 					},
 					PrivateNetworkOnly: new(true),
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
@@ -315,18 +316,18 @@ func TestToCreatePayload(t *testing.T) {
 						},
 					},
 				},
-				TargetPools: &[]loadbalancer.TargetPool{
+				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   new(int64(1)),
+							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
 							Timeout:            new("4s"),
-							UnhealthyThreshold: new(int64(5)),
+							UnhealthyThreshold: new(int32(5)),
 						},
 						Name:       new("name"),
-						TargetPort: new(int64(80)),
-						Targets: &[]loadbalancer.Target{
+						TargetPort: new(int32(80)),
+						Targets: []loadbalancer.Target{
 							{
 								DisplayName: new("display_name"),
 								Ip:          new("ip"),
@@ -383,14 +384,14 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 			"simple_values_ok",
 			&targetPool{
 				ActiveHealthCheck: types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
-					"healthy_threshold":   types.Int64Value(1),
+					"healthy_threshold":   types.Int32Value(1),
 					"interval":            types.StringValue("2s"),
 					"interval_jitter":     types.StringValue("3s"),
 					"timeout":             types.StringValue("4s"),
-					"unhealthy_threshold": types.Int64Value(5),
+					"unhealthy_threshold": types.Int32Value(5),
 				}),
 				Name:       types.StringValue("name"),
-				TargetPort: types.Int64Value(80),
+				TargetPort: types.Int32Value(80),
 				Targets: types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
 					types.ObjectValueMust(targetTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
@@ -403,15 +404,15 @@ func TestToTargetPoolUpdatePayload(t *testing.T) {
 			},
 			&loadbalancer.UpdateTargetPoolPayload{
 				ActiveHealthCheck: &loadbalancer.ActiveHealthCheck{
-					HealthyThreshold:   new(int64(1)),
+					HealthyThreshold:   new(int32(1)),
 					Interval:           new("2s"),
 					IntervalJitter:     new("3s"),
 					Timeout:            new("4s"),
-					UnhealthyThreshold: new(int64(5)),
+					UnhealthyThreshold: new(int32(5)),
 				},
 				Name:       new("name"),
-				TargetPort: new(int64(80)),
-				Targets: &[]loadbalancer.Target{
+				TargetPort: new(int32(80)),
+				Targets: []loadbalancer.Target{
 					{
 						DisplayName: new("display_name"),
 						Ip:          new("ip"),
@@ -513,12 +514,12 @@ func TestMapFields(t *testing.T) {
 			"simple_values_ok",
 			&loadbalancer.LoadBalancer{
 				ExternalAddress: new("external_address"),
-				Listeners: new([]loadbalancer.Listener{
+				Listeners: []loadbalancer.Listener{
 					{
 						DisplayName: new("display_name"),
-						Port:        new(int64(80)),
-						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
-						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
+						Port:        new(int32(80)),
+						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
 							},
@@ -531,18 +532,18 @@ func TestMapFields(t *testing.T) {
 							IdleTimeout: new("50s"),
 						},
 					},
-				}),
+				},
 				Name: new("name"),
-				Networks: new([]loadbalancer.Network{
+				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
-				}),
+				},
 				Options: new(loadbalancer.LoadBalancerOptions{
 					PrivateNetworkOnly: new(true),
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
@@ -556,32 +557,32 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 				}),
-				TargetSecurityGroup: loadbalancer.LoadBalancerGetTargetSecurityGroupAttributeType(&loadbalancer.SecurityGroup{
+				TargetSecurityGroup: new(loadbalancer.SecurityGroup{
 					Id:   new("sg-id-12345"),
 					Name: new("sg-name-abcde"),
 				}),
-				TargetPools: new([]loadbalancer.TargetPool{
+				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: new(loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   new(int64(1)),
+							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
 							Timeout:            new("4s"),
-							UnhealthyThreshold: new(int64(5)),
+							UnhealthyThreshold: new(int32(5)),
 						}),
 						Name:       new("name"),
-						TargetPort: new(int64(80)),
-						Targets: new([]loadbalancer.Target{
+						TargetPort: new(int32(80)),
+						Targets: []loadbalancer.Target{
 							{
 								DisplayName: new("display_name"),
 								Ip:          new("ip"),
 							},
-						}),
+						},
 						SessionPersistence: new(loadbalancer.SessionPersistence{
 							UseSourceIpAddress: new(true),
 						}),
 					},
-				}),
+				},
 			},
 			nil,
 			testRegion,
@@ -593,8 +594,8 @@ func TestMapFields(t *testing.T) {
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
-						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
+						"port":         types.Int32Value(80),
+						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -617,11 +618,11 @@ func TestMapFields(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -644,14 +645,14 @@ func TestMapFields(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
-							"healthy_threshold":   types.Int64Value(1),
+							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
 							"timeout":             types.StringValue("4s"),
-							"unhealthy_threshold": types.Int64Value(5),
+							"unhealthy_threshold": types.Int32Value(5),
 						}),
 						"name":        types.StringValue("name"),
-						"target_port": types.Int64Value(80),
+						"target_port": types.Int32Value(80),
 						"targets": types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
 							types.ObjectValueMust(targetTypes, map[string]attr.Value{
 								"display_name": types.StringValue("display_name"),
@@ -671,33 +672,33 @@ func TestMapFields(t *testing.T) {
 			"simple_values_ok_with_null_private_network_only_response",
 			&loadbalancer.LoadBalancer{
 				ExternalAddress: new("external_address"),
-				Listeners: new([]loadbalancer.Listener{
+				Listeners: []loadbalancer.Listener{
 					{
 						DisplayName: new("display_name"),
-						Port:        new(int64(80)),
-						Protocol:    loadbalancer.LISTENERPROTOCOL_TCP.Ptr(),
-						ServerNameIndicators: &[]loadbalancer.ServerNameIndicator{
+						Port:        new(int32(80)),
+						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
 							},
 						},
 						TargetPool: new("target_pool"),
 					},
-				}),
+				},
 				Name: new("name"),
-				Networks: new([]loadbalancer.Network{
+				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS.Ptr(),
+						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					},
-				}),
+				},
 				Options: new(loadbalancer.LoadBalancerOptions{
 					AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{
-						AllowedSourceRanges: new([]string{"cidr"}),
+						AllowedSourceRanges: []string{"cidr"},
 					},
 					PrivateNetworkOnly: nil, // API sets this to nil if it's false in the request
 					Observability: &loadbalancer.LoadbalancerOptionObservability{
@@ -711,28 +712,28 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 				}),
-				TargetPools: new([]loadbalancer.TargetPool{
+				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: new(loadbalancer.ActiveHealthCheck{
-							HealthyThreshold:   new(int64(1)),
+							HealthyThreshold:   new(int32(1)),
 							Interval:           new("2s"),
 							IntervalJitter:     new("3s"),
 							Timeout:            new("4s"),
-							UnhealthyThreshold: new(int64(5)),
+							UnhealthyThreshold: new(int32(5)),
 						}),
 						Name:       new("name"),
-						TargetPort: new(int64(80)),
-						Targets: new([]loadbalancer.Target{
+						TargetPort: new(int32(80)),
+						Targets: []loadbalancer.Target{
 							{
 								DisplayName: new("display_name"),
 								Ip:          new("ip"),
 							},
-						}),
+						},
 						SessionPersistence: new(loadbalancer.SessionPersistence{
 							UseSourceIpAddress: new(true),
 						}),
 					},
-				}),
+				},
 			},
 			new(false),
 			testRegion,
@@ -743,8 +744,8 @@ func TestMapFields(t *testing.T) {
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
-						"port":         types.Int64Value(80),
-						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_TCP)),
+						"port":         types.Int32Value(80),
+						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -763,11 +764,11 @@ func TestMapFields(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -792,14 +793,14 @@ func TestMapFields(t *testing.T) {
 				TargetPools: types.ListValueMust(types.ObjectType{AttrTypes: targetPoolTypes}, []attr.Value{
 					types.ObjectValueMust(targetPoolTypes, map[string]attr.Value{
 						"active_health_check": types.ObjectValueMust(activeHealthCheckTypes, map[string]attr.Value{
-							"healthy_threshold":   types.Int64Value(1),
+							"healthy_threshold":   types.Int32Value(1),
 							"interval":            types.StringValue("2s"),
 							"interval_jitter":     types.StringValue("3s"),
 							"timeout":             types.StringValue("4s"),
-							"unhealthy_threshold": types.Int64Value(5),
+							"unhealthy_threshold": types.Int32Value(5),
 						}),
 						"name":        types.StringValue("name"),
-						"target_port": types.Int64Value(80),
+						"target_port": types.Int32Value(80),
 						"targets": types.ListValueMust(types.ObjectType{AttrTypes: targetTypes}, []attr.Value{
 							types.ObjectValueMust(targetTypes, map[string]attr.Value{
 								"display_name": types.StringValue("display_name"),

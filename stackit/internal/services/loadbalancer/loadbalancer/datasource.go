@@ -20,7 +20,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -151,7 +151,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: descriptions["listeners.display_name"],
 							Computed:    true,
 						},
-						"port": schema.Int64Attribute{
+						"port": schema.Int32Attribute{
 							Description: descriptions["port"],
 							Computed:    true,
 						},
@@ -160,8 +160,9 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Computed:    true,
 						},
 						"server_name_indicators": schema.ListNestedAttribute{
-							Description: descriptions["server_name_indicators"],
-							Optional:    true,
+							Description:        descriptions["server_name_indicators"],
+							DeprecationMessage: "`server_name_indicators` is deprecated and will be removed after October 2026",
+							Optional:           true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"name": schema.StringAttribute{
@@ -326,7 +327,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: descriptions["target_pools.name"],
 							Computed:    true,
 						},
-						"target_port": schema.Int64Attribute{
+						"target_port": schema.Int32Attribute{
 							Description: descriptions["target_port"],
 							Computed:    true,
 						},
@@ -395,7 +396,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
