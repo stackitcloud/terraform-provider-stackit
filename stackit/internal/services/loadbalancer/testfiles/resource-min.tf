@@ -52,7 +52,7 @@ resource "stackit_server" "server" {
   boot_volume = {
     size                  = 32
     source_type           = "image"
-    source_id             = "59838a89-51b1-4892-b57f-b3caf598ee2f"
+    source_id             = "7b10e105-295b-4369-b6e0-567ec940a02b"
     delete_on_termination = "true"
   }
   network_interfaces = [stackit_network_interface.network_interface.network_interface_id]
