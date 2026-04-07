@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.12.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
-	github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.6.0
@@ -29,7 +29,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.25.6
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0

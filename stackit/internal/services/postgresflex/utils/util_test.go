@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -45,7 +45,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *postgresflex.APIClient {
 				apiClient, err := postgresflex.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
