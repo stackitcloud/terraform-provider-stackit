@@ -8,8 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	edgeCloud "github.com/stackitcloud/stackit-sdk-go/services/edge"
-	edgeCloudWait "github.com/stackitcloud/stackit-sdk-go/services/edge/wait"
+	edgeCloud "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	edgeCloudWait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	edgeCloudUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/utils"
 
@@ -305,7 +305,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
+		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
@@ -314,7 +314,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
+		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
@@ -340,7 +340,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	kubeconfig, err := marshalKubeconfig(*kubeconfigResp.Kubeconfig)
+	kubeconfig, err := marshalKubeconfig(kubeconfigResp.Kubeconfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge/wait"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -349,7 +349,7 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 		}
 		projectId, region, instanceId := idParts[0], idParts[1], idParts[2]
 
-		_, err := client.GetInstance(ctx, projectId, region, instanceId).Execute()
+		_, err := client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 		if err == nil {
 			return fmt.Errorf("edge instance %q still exists", instanceId)
 		}
@@ -358,11 +358,11 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
 		if !ok || oapiErr.StatusCode != http.StatusNotFound {
-			err := client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+			err := client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", instanceId, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, projectId, region, instanceId).WaitWithContext(ctx)
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("waiting for instance deletion %s during CheckDestroy: %w", instanceId, err)
 			}

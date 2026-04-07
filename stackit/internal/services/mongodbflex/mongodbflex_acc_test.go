@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -312,22 +312,22 @@ func testAccCheckMongoDBFlexDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId, testutil.Region).Tag("").Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, testutil.Region).Tag("").Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	items := *instancesResp.Items
+	items := instancesResp.Items
 	for i := range items {
 		if items[i].Id == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *items[i].Id) {
-			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *items[i].Id, testutil.Region)
+			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *items[i].Id, testutil.Region).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *items[i].Id, testutil.Region).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}

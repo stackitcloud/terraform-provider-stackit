@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	edgeCloud "github.com/stackitcloud/stackit-sdk-go/services/edge"
-	edgeCloudWait "github.com/stackitcloud/stackit-sdk-go/services/edge/wait"
+	edgeCloud "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	edgeCloudWait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	edgeCloudUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/utils"
 
@@ -303,7 +303,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
+		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return
@@ -312,7 +312,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
+		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return
@@ -332,11 +332,11 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "API response is nil")
 		return
 	}
-	if tokenResp.Token == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "token field in the API response is nil")
+	if tokenResp.Token == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "token field in the API response is empty")
 		return
 	}
-	model.Token = types.StringPointerValue(tokenResp.Token)
+	model.Token = types.StringValue(tokenResp.Token)
 
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
