@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
 )
 
@@ -59,10 +58,10 @@ func TestMapFields(t *testing.T) {
 							"host_1",
 							"",
 						},
-						Name:     utils.Ptr("name"),
+						Name:     new("name"),
 						Password: "password",
-						Port:     utils.Ptr(int32(1234)),
-						Uri:      utils.Ptr("uri"),
+						Port:     new(int32(1234)),
+						Uri:      new("uri"),
 						Username: "username",
 					},
 				},
@@ -106,10 +105,10 @@ func TestMapFields(t *testing.T) {
 							"host_1",
 							"host_2",
 						},
-						Name:     utils.Ptr("name"),
+						Name:     new("name"),
 						Password: "password",
-						Port:     utils.Ptr(int32(1234)),
-						Uri:      utils.Ptr("uri"),
+						Port:     new(int32(1234)),
+						Uri:      new("uri"),
 						Username: "username",
 					},
 				},
@@ -147,7 +146,7 @@ func TestMapFields(t *testing.T) {
 						Hosts:    []string{},
 						Name:     nil,
 						Password: "",
-						Port:     utils.Ptr(int32(2123456789)),
+						Port:     new(int32(2123456789)),
 						Uri:      nil,
 						Username: "",
 					},

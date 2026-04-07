@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
 )
 
@@ -38,13 +37,13 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 })
 
 var fixtureInstanceParameters = mariadb.InstanceParameters{
-	SgwAcl:               utils.Ptr("acl"),
-	EnableMonitoring:     utils.Ptr(true),
-	Graphite:             utils.Ptr("graphite"),
-	MaxDiskThreshold:     utils.Ptr(int32(10)),
-	MetricsFrequency:     utils.Ptr(int32(10)),
-	MetricsPrefix:        utils.Ptr("prefix"),
-	MonitoringInstanceId: utils.Ptr("mid"),
+	SgwAcl:               new("acl"),
+	EnableMonitoring:     new(true),
+	Graphite:             new("graphite"),
+	MaxDiskThreshold:     new(int32(10)),
+	MetricsFrequency:     new(int32(10)),
+	MetricsPrefix:        new("prefix"),
+	MonitoringInstanceId: new("mid"),
 	Syslog:               []string{"syslog", "syslog2"},
 }
 
@@ -81,10 +80,10 @@ func TestMapFields(t *testing.T) {
 				CfSpaceGuid:        "space",
 				DashboardUrl:       "dashboard",
 				ImageUrl:           "image",
-				InstanceId:         utils.Ptr("iid"),
+				InstanceId:         new("iid"),
 				Name:               "name",
 				CfOrganizationGuid: "org",
-				Parameters: map[string]interface{}{
+				Parameters: map[string]any{
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
@@ -125,7 +124,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&mariadb.Instance{
-				Parameters: map[string]interface{}{
+				Parameters: map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -135,7 +134,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&mariadb.Instance{
-				Parameters: map[string]interface{}{
+				Parameters: map[string]any{
 					"sgw_acl": 1,
 				},
 			},
