@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
@@ -124,7 +123,7 @@ func TestAccSKEMin(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config:          testutil.SKEProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -249,7 +248,7 @@ func TestAccSKEMax(t *testing.T) {
 
 			// 1) Creation
 			{
-				Config:          testutil.SKEProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -478,7 +477,7 @@ func TestAccProviderOption(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ConfigVariables: testConfigDatasource,
-				Config:          testutil.SKEProviderConfig() + "\n" + dataSourceProviderOptions,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + dataSourceProviderOptions,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_ske_kubernetes_versions.example", "version_state", "SUPPORTED"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_kubernetes_versions.example", "kubernetes_versions.0.version"),
@@ -503,15 +502,7 @@ func TestAccProviderOption(t *testing.T) {
 
 func testAccCheckSKEDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *ske.APIClient
-	var err error
-	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient()
-	} else {
-		client, err = ske.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.SKECustomEndpoint),
-		)
-	}
+	client, err := ske.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SKECustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -567,15 +558,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 
 	ctx := context.Background()
 
-	var client *ske.APIClient
-	var err error
-
-	if testutil.SKECustomEndpoint == "" {
-		client, err = ske.NewAPIClient()
-	} else {
-		client, err = ske.NewAPIClient(coreConfig.WithEndpoint(testutil.SKECustomEndpoint))
-	}
-
+	client, err := ske.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SKECustomEndpoint, false)...)
 	if err != nil {
 		panic("failed to create SKE client: " + err.Error())
 	}

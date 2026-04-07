@@ -12,10 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/wait"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -69,7 +68,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceMinConfig),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -120,7 +119,7 @@ func TestAccMariaDbResourceMin(t *testing.T) {
 						project_id = stackit_mariadb_credential.credential.project_id
 						instance_id = stackit_mariadb_credential.credential.instance_id
 					    credential_id = stackit_mariadb_credential.credential.credential_id
-					}`, testutil.MariaDBProviderConfig(), resourceMinConfig,
+					}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceMinConfig,
 				),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance data
@@ -205,7 +204,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceMaxConfig),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -270,7 +269,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 						project_id = stackit_mariadb_credential.credential.project_id
 						instance_id = stackit_mariadb_credential.credential.instance_id
 					    credential_id = stackit_mariadb_credential.credential.credential_id
-					}`, testutil.MariaDBProviderConfig(), resourceMaxConfig,
+					}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceMaxConfig,
 				),
 				Check: resource.ComposeTestCheckFunc(
 					// Instance data
@@ -353,7 +352,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.MariaDBProviderConfig(), resourceMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_mariadb_instance.instance", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
@@ -408,17 +407,7 @@ func TestAccMariaDbResourceMax(t *testing.T) {
 
 func testAccCheckMariaDBDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *mariadb.APIClient
-	var err error
-	if testutil.MariaDBCustomEndpoint == "" {
-		client, err = mariadb.NewAPIClient(
-			stackitSdkConfig.WithRegion("eu01"),
-		)
-	} else {
-		client, err = mariadb.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.MariaDBCustomEndpoint),
-		)
-	}
+	client, err := mariadb.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.MariaDBCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -433,23 +422,23 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
 		if instances[i].InstanceId == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -460,14 +449,14 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *mariadb.Instance) bool {
-	if *i.LastOperation.Type != mariadb.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type != "delete" {
 		return false
 	}
 
-	if *i.LastOperation.Type == mariadb.INSTANCELASTOPERATIONTYPE_DELETE {
-		if *i.LastOperation.State != mariadb.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
+	if i.LastOperation.Type == "delete" {
+		if i.LastOperation.State != "succeeded" {
 			return false
-		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
+		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false
 		}
 	}

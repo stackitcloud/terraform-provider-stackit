@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	mongodbflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/utils"
 	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
@@ -25,13 +26,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/wait"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -50,7 +50,7 @@ type Model struct {
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Flavor         types.Object `tfsdk:"flavor"`
-	Replicas       types.Int64  `tfsdk:"replicas"`
+	Replicas       types.Int32  `tfsdk:"replicas"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
 	Options        types.Object `tfsdk:"options"`
@@ -61,16 +61,16 @@ type Model struct {
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
-	CPU         types.Int64  `tfsdk:"cpu"`
-	RAM         types.Int64  `tfsdk:"ram"`
+	CPU         types.Int32  `tfsdk:"cpu"`
+	RAM         types.Int32  `tfsdk:"ram"`
 }
 
 // Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
-	"cpu":         basetypes.Int64Type{},
-	"ram":         basetypes.Int64Type{},
+	"cpu":         basetypes.Int32Type{},
+	"ram":         basetypes.Int32Type{},
 }
 
 // Struct corresponding to Model.Storage
@@ -88,21 +88,21 @@ var storageTypes = map[string]attr.Type{
 // Struct corresponding to Model.Options
 type optionsModel struct {
 	Type                           types.String `tfsdk:"type"`
-	SnapshotRetentionDays          types.Int64  `tfsdk:"snapshot_retention_days"`
-	PointInTimeWindowHours         types.Int64  `tfsdk:"point_in_time_window_hours"`
-	DailySnapshotRetentionDays     types.Int64  `tfsdk:"daily_snapshot_retention_days"`
-	WeeklySnapshotRetentionWeeks   types.Int64  `tfsdk:"weekly_snapshot_retention_weeks"`
-	MonthlySnapshotRetentionMonths types.Int64  `tfsdk:"monthly_snapshot_retention_months"`
+	SnapshotRetentionDays          types.Int32  `tfsdk:"snapshot_retention_days"`
+	PointInTimeWindowHours         types.Int32  `tfsdk:"point_in_time_window_hours"`
+	DailySnapshotRetentionDays     types.Int32  `tfsdk:"daily_snapshot_retention_days"`
+	WeeklySnapshotRetentionWeeks   types.Int32  `tfsdk:"weekly_snapshot_retention_weeks"`
+	MonthlySnapshotRetentionMonths types.Int32  `tfsdk:"monthly_snapshot_retention_months"`
 }
 
 // Types corresponding to optionsModel
 var optionsTypes = map[string]attr.Type{
 	"type":                              basetypes.StringType{},
-	"snapshot_retention_days":           basetypes.Int64Type{},
-	"point_in_time_window_hours":        basetypes.Int64Type{},
-	"daily_snapshot_retention_days":     basetypes.Int64Type{},
-	"weekly_snapshot_retention_weeks":   basetypes.Int64Type{},
-	"monthly_snapshot_retention_months": basetypes.Int64Type{},
+	"snapshot_retention_days":           basetypes.Int32Type{},
+	"point_in_time_window_hours":        basetypes.Int32Type{},
+	"daily_snapshot_retention_days":     basetypes.Int32Type{},
+	"weekly_snapshot_retention_weeks":   basetypes.Int32Type{},
+	"monthly_snapshot_retention_months": basetypes.Int32Type{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -254,18 +254,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"description": schema.StringAttribute{
 						Computed: true,
 					},
-					"cpu": schema.Int64Attribute{
+					"cpu": schema.Int32Attribute{
 						Required: true,
 					},
-					"ram": schema.Int64Attribute{
+					"ram": schema.Int32Attribute{
 						Required: true,
 					},
 				},
 			},
-			"replicas": schema.Int64Attribute{
+			"replicas": schema.Int32Attribute{
 				Required: true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"storage": schema.SingleNestedAttribute{
@@ -295,43 +295,43 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-					"snapshot_retention_days": schema.Int64Attribute{
+					"snapshot_retention_days": schema.Int32Attribute{
 						Description: descriptions["snapshot_retention_days"],
 						Optional:    true,
 						Computed:    true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier.UseStateForUnknown(),
 						},
 					},
-					"daily_snapshot_retention_days": schema.Int64Attribute{
+					"daily_snapshot_retention_days": schema.Int32Attribute{
 						Description: descriptions["daily_snapshot_retention_days"],
 						Optional:    true,
 						Computed:    true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier.UseStateForUnknown(),
 						},
 					},
-					"weekly_snapshot_retention_weeks": schema.Int64Attribute{
+					"weekly_snapshot_retention_weeks": schema.Int32Attribute{
 						Description: descriptions["weekly_snapshot_retention_weeks"],
 						Optional:    true,
 						Computed:    true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier.UseStateForUnknown(),
 						},
 					},
-					"monthly_snapshot_retention_months": schema.Int64Attribute{
+					"monthly_snapshot_retention_months": schema.Int32Attribute{
 						Description: descriptions["monthly_snapshot_retention_months"],
 						Optional:    true,
 						Computed:    true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier.UseStateForUnknown(),
 						},
 					},
-					"point_in_time_window_hours": schema.Int64Attribute{
+					"point_in_time_window_hours": schema.Int32Attribute{
 						Description: descriptions["point_in_time_window_hours"],
 						Required:    true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -381,7 +381,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor, region)
+		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -412,7 +412,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -437,7 +437,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -461,7 +461,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	backupScheduleOptions, err := r.client.DefaultAPI.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
 		return
@@ -526,7 +526,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -588,7 +588,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor, region)
+		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -619,7 +619,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -627,7 +627,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -645,7 +645,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	backupScheduleOptions, err := r.client.DefaultAPI.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
 		return
@@ -685,7 +685,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -693,7 +693,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -753,7 +753,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		respACL := *instance.Acl.Items
+		respACL := instance.Acl.Items
 		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -779,8 +779,8 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 		flavorValues = map[string]attr.Value{
 			"id":          types.StringValue(*instance.Flavor.Id),
 			"description": types.StringValue(*instance.Flavor.Description),
-			"cpu":         types.Int64PointerValue(instance.Flavor.Cpu),
-			"ram":         types.Int64PointerValue(instance.Flavor.Memory),
+			"cpu":         types.Int32PointerValue(instance.Flavor.Cpu),
+			"ram":         types.Int32PointerValue(instance.Flavor.Memory),
 		}
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
@@ -809,46 +809,46 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	if instance.Options == nil {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
-			"snapshot_retention_days":           types.Int64Null(),
-			"daily_snapshot_retention_days":     types.Int64Null(),
-			"weekly_snapshot_retention_weeks":   types.Int64Null(),
-			"monthly_snapshot_retention_months": types.Int64Null(),
-			"point_in_time_window_hours":        types.Int64Null(),
+			"snapshot_retention_days":           types.Int32Null(),
+			"daily_snapshot_retention_days":     types.Int32Null(),
+			"weekly_snapshot_retention_weeks":   types.Int32Null(),
+			"monthly_snapshot_retention_months": types.Int32Null(),
+			"point_in_time_window_hours":        types.Int32Null(),
 		}
 	} else {
 		snapshotRetentionDaysStr := (*instance.Options)["snapshotRetentionDays"]
-		snapshotRetentionDays, err := strconv.ParseInt(snapshotRetentionDaysStr, 10, 64)
+		snapshotRetentionDays, err := strconv.ParseInt(snapshotRetentionDaysStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse snapshot retention days: %w", err)
 		}
 		dailySnapshotRetentionDaysStr := (*instance.Options)["dailySnapshotRetentionDays"]
-		dailySnapshotRetentionDays, err := strconv.ParseInt(dailySnapshotRetentionDaysStr, 10, 64)
+		dailySnapshotRetentionDays, err := strconv.ParseInt(dailySnapshotRetentionDaysStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse daily snapshot retention days: %w", err)
 		}
 		weeklySnapshotRetentionWeeksStr := (*instance.Options)["weeklySnapshotRetentionWeeks"]
-		weeklySnapshotRetentionWeeks, err := strconv.ParseInt(weeklySnapshotRetentionWeeksStr, 10, 64)
+		weeklySnapshotRetentionWeeks, err := strconv.ParseInt(weeklySnapshotRetentionWeeksStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse weekly snapshot retention weeks: %w", err)
 		}
 		monthlySnapshotRetentionMonthsStr := (*instance.Options)["monthlySnapshotRetentionMonths"]
-		monthlySnapshotRetentionMonths, err := strconv.ParseInt(monthlySnapshotRetentionMonthsStr, 10, 64)
+		monthlySnapshotRetentionMonths, err := strconv.ParseInt(monthlySnapshotRetentionMonthsStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse monthly snapshot retention months: %w", err)
 		}
 		pointInTimeWindowHoursStr := (*instance.Options)["pointInTimeWindowHours"]
-		pointInTimeWindowHours, err := strconv.ParseInt(pointInTimeWindowHoursStr, 10, 64)
+		pointInTimeWindowHours, err := strconv.ParseInt(pointInTimeWindowHoursStr, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse point in time window hours: %w", err)
 		}
 
 		optionsValues = map[string]attr.Value{
 			"type":                              types.StringValue((*instance.Options)["type"]),
-			"snapshot_retention_days":           types.Int64Value(snapshotRetentionDays),
-			"daily_snapshot_retention_days":     types.Int64Value(dailySnapshotRetentionDays),
-			"weekly_snapshot_retention_weeks":   types.Int64Value(weeklySnapshotRetentionWeeks),
-			"monthly_snapshot_retention_months": types.Int64Value(monthlySnapshotRetentionMonths),
-			"point_in_time_window_hours":        types.Int64Value(pointInTimeWindowHours),
+			"snapshot_retention_days":           types.Int32Value(int32(snapshotRetentionDays)),
+			"daily_snapshot_retention_days":     types.Int32Value(int32(dailySnapshotRetentionDays)),
+			"weekly_snapshot_retention_weeks":   types.Int32Value(int32(weeklySnapshotRetentionWeeks)),
+			"monthly_snapshot_retention_months": types.Int32Value(int32(monthlySnapshotRetentionMonths)),
+			"point_in_time_window_hours":        types.Int32Value(int32(pointInTimeWindowHours)),
 		}
 	}
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
@@ -870,7 +870,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
 	model.Flavor = flavorObject
-	model.Replicas = types.Int64PointerValue(instance.Replicas)
+	model.Replicas = types.Int32PointerValue(instance.Replicas)
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Options = optionsObject
@@ -882,20 +882,20 @@ func mapOptions(model *Model, options *optionsModel, backupScheduleOptions *mong
 	if backupScheduleOptions == nil {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
-			"snapshot_retention_days":           types.Int64Null(),
-			"daily_snapshot_retention_days":     types.Int64Null(),
-			"weekly_snapshot_retention_weeks":   types.Int64Null(),
-			"monthly_snapshot_retention_months": types.Int64Null(),
-			"point_in_time_window_hours":        types.Int64Null(),
+			"snapshot_retention_days":           types.Int32Null(),
+			"daily_snapshot_retention_days":     types.Int32Null(),
+			"weekly_snapshot_retention_weeks":   types.Int32Null(),
+			"monthly_snapshot_retention_months": types.Int32Null(),
+			"point_in_time_window_hours":        types.Int32Null(),
 		}
 	} else {
 		optionsValues = map[string]attr.Value{
 			"type":                              options.Type,
-			"snapshot_retention_days":           types.Int64Value(*backupScheduleOptions.SnapshotRetentionDays),
-			"daily_snapshot_retention_days":     types.Int64Value(*backupScheduleOptions.DailySnapshotRetentionDays),
-			"weekly_snapshot_retention_weeks":   types.Int64Value(*backupScheduleOptions.WeeklySnapshotRetentionWeeks),
-			"monthly_snapshot_retention_months": types.Int64Value(*backupScheduleOptions.MonthlySnapshotRetentionMonths),
-			"point_in_time_window_hours":        types.Int64Value(*backupScheduleOptions.PointInTimeWindowHours),
+			"snapshot_retention_days":           types.Int32Value(*backupScheduleOptions.SnapshotRetentionDays),
+			"daily_snapshot_retention_days":     types.Int32Value(*backupScheduleOptions.DailySnapshotRetentionDays),
+			"weekly_snapshot_retention_weeks":   types.Int32Value(*backupScheduleOptions.WeeklySnapshotRetentionWeeks),
+			"monthly_snapshot_retention_months": types.Int32Value(*backupScheduleOptions.MonthlySnapshotRetentionMonths),
+			"point_in_time_window_hours":        types.Int32Value(*backupScheduleOptions.PointInTimeWindowHours),
 		}
 	}
 	optionsTF, diags := types.ObjectValue(optionsTypes, optionsValues)
@@ -929,19 +929,19 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	return &mongodbflex.CreateInstancePayload{
-		Acl: &mongodbflex.CreateInstancePayloadAcl{
-			Items: &acl,
+		Acl: mongodbflex.ACL{
+			Items: acl,
 		},
-		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       conversion.StringValueToPointer(flavor.Id),
-		Name:           conversion.StringValueToPointer(model.Name),
-		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
-		Storage: &mongodbflex.Storage{
+		BackupSchedule: model.BackupSchedule.ValueString(),
+		FlavorId:       flavor.Id.ValueString(),
+		Name:           model.Name.ValueString(),
+		Replicas:       model.Replicas.ValueInt32(),
+		Storage: mongodbflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
 		},
-		Version: conversion.StringValueToPointer(model.Version),
-		Options: &payloadOptions,
+		Version: model.Version.ValueString(),
+		Options: payloadOptions,
 	}, nil
 }
 
@@ -969,12 +969,12 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 
 	return &mongodbflex.PartialUpdateInstancePayload{
 		Acl: &mongodbflex.ACL{
-			Items: &acl,
+			Items: acl,
 		},
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
-		Replicas:       conversion.Int64ValueToPointer(model.Replicas),
+		Replicas:       conversion.Int32ValueToPointer(model.Replicas),
 		Storage: &mongodbflex.Storage{
 			Class: conversion.StringValueToPointer(storage.Class),
 			Size:  conversion.Int64ValueToPointer(storage.Size),
@@ -999,29 +999,29 @@ func toUpdateBackupScheduleOptionsPayload(ctx context.Context, model *Model, con
 
 	backupSchedule := conversion.StringValueToPointer(model.BackupSchedule)
 
-	snapshotRetentionDays := conversion.Int64ValueToPointer(configuredOptions.SnapshotRetentionDays)
+	snapshotRetentionDays := conversion.Int32ValueToPointer(configuredOptions.SnapshotRetentionDays)
 	if snapshotRetentionDays == nil {
-		snapshotRetentionDays = conversion.Int64ValueToPointer(currOptions.SnapshotRetentionDays)
+		snapshotRetentionDays = conversion.Int32ValueToPointer(currOptions.SnapshotRetentionDays)
 	}
 
-	dailySnapshotRetentionDays := conversion.Int64ValueToPointer(configuredOptions.DailySnapshotRetentionDays)
+	dailySnapshotRetentionDays := conversion.Int32ValueToPointer(configuredOptions.DailySnapshotRetentionDays)
 	if dailySnapshotRetentionDays == nil {
-		dailySnapshotRetentionDays = conversion.Int64ValueToPointer(currOptions.DailySnapshotRetentionDays)
+		dailySnapshotRetentionDays = conversion.Int32ValueToPointer(currOptions.DailySnapshotRetentionDays)
 	}
 
-	weeklySnapshotRetentionWeeks := conversion.Int64ValueToPointer(configuredOptions.WeeklySnapshotRetentionWeeks)
+	weeklySnapshotRetentionWeeks := conversion.Int32ValueToPointer(configuredOptions.WeeklySnapshotRetentionWeeks)
 	if weeklySnapshotRetentionWeeks == nil {
-		weeklySnapshotRetentionWeeks = conversion.Int64ValueToPointer(currOptions.WeeklySnapshotRetentionWeeks)
+		weeklySnapshotRetentionWeeks = conversion.Int32ValueToPointer(currOptions.WeeklySnapshotRetentionWeeks)
 	}
 
-	monthlySnapshotRetentionMonths := conversion.Int64ValueToPointer(configuredOptions.MonthlySnapshotRetentionMonths)
+	monthlySnapshotRetentionMonths := conversion.Int32ValueToPointer(configuredOptions.MonthlySnapshotRetentionMonths)
 	if monthlySnapshotRetentionMonths == nil {
-		monthlySnapshotRetentionMonths = conversion.Int64ValueToPointer(currOptions.MonthlySnapshotRetentionMonths)
+		monthlySnapshotRetentionMonths = conversion.Int32ValueToPointer(currOptions.MonthlySnapshotRetentionMonths)
 	}
 
-	pointInTimeWindowHours := conversion.Int64ValueToPointer(configuredOptions.PointInTimeWindowHours)
+	pointInTimeWindowHours := conversion.Int32ValueToPointer(configuredOptions.PointInTimeWindowHours)
 	if pointInTimeWindowHours == nil {
-		pointInTimeWindowHours = conversion.Int64ValueToPointer(currOptions.PointInTimeWindowHours)
+		pointInTimeWindowHours = conversion.Int32ValueToPointer(currOptions.PointInTimeWindowHours)
 	}
 
 	return &mongodbflex.UpdateBackupSchedulePayload{
@@ -1036,7 +1036,8 @@ func toUpdateBackupScheduleOptionsPayload(ctx context.Context, model *Model, con
 }
 
 type mongoDBFlexClient interface {
-	ListFlavorsExecute(ctx context.Context, projectId, region string) (*mongodbflex.ListFlavorsResponse, error)
+	ListFlavors(ctx context.Context, projectId, region string) mongodbflex.ApiListFlavorsRequest
+	ListFlavorsExecute(r mongodbflex.ApiListFlavorsRequest) (*mongodbflex.ListFlavorsResponse, error)
 }
 
 func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, flavor *flavorModel, region string) error {
@@ -1046,17 +1047,18 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.Int64ValueToPointer(flavor.CPU)
+	cpu := conversion.Int32ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.Int64ValueToPointer(flavor.RAM)
+	ram := conversion.Int32ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}
 
 	projectId := model.ProjectId.ValueString()
-	res, err := client.ListFlavorsExecute(ctx, projectId, region)
+	req := client.ListFlavors(ctx, projectId, region)
+	res, err := client.ListFlavorsExecute(req)
 	if err != nil {
 		return fmt.Errorf("listing mongodbflex flavors: %w", err)
 	}
@@ -1065,7 +1067,7 @@ func loadFlavorId(ctx context.Context, client mongoDBFlexClient, model *Model, f
 	if res.Flavors == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
-	for _, f := range *res.Flavors {
+	for _, f := range res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}

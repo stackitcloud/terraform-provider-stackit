@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -62,12 +62,12 @@ resource "stackit_mongodbflex_instance" "instance" {
 					s.Reset(
 						testutil.MockResponse{
 							Description: "ListFlavors",
-							ToJsonBody: &mongodbflex.ListFlavorsResponse{Flavors: &[]mongodbflex.InstanceFlavor{
+							ToJsonBody: &mongodbflex.ListFlavorsResponse{Flavors: []mongodbflex.InstanceFlavor{
 								{
 									Description: new("flava-flav"),
-									Cpu:         new(int64(2)),
+									Cpu:         new(int32(2)),
 									Id:          new("flavor-id"),
-									Memory:      new(int64(4)),
+									Memory:      new(int32(4)),
 								},
 							}},
 						},

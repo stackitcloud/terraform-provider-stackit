@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 )
 
 const (
@@ -60,7 +60,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&mongodbflex.CreateUserResponse{
 				Item: &mongodbflex.User{
 					Id: new(userId),
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -99,7 +99,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&mongodbflex.CreateUserResponse{
 				Item: &mongodbflex.User{
 					Id:       new(userId),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Database: nil,
 					Password: new(""),
@@ -215,7 +215,7 @@ func TestMapFields(t *testing.T) {
 			"simple_values",
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -250,7 +250,7 @@ func TestMapFields(t *testing.T) {
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
 					Id:       new(userId),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Database: nil,
 					Host:     nil,
@@ -333,9 +333,9 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&mongodbflex.CreateUserPayload{
-				Roles:    &[]string{},
+				Roles:    []string{},
 				Username: nil,
-				Database: nil,
+				Database: "",
 			},
 			true,
 		},
@@ -350,12 +350,12 @@ func TestToCreatePayload(t *testing.T) {
 				"role_2",
 			},
 			&mongodbflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
 				Username: new("username"),
-				Database: new("database"),
+				Database: "database",
 			},
 			true,
 		},
@@ -369,11 +369,11 @@ func TestToCreatePayload(t *testing.T) {
 				"",
 			},
 			&mongodbflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
 				Username: nil,
-				Database: nil,
+				Database: "",
 			},
 			true,
 		},
@@ -424,8 +424,8 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&mongodbflex.UpdateUserPayload{
-				Roles:    &[]string{},
-				Database: nil,
+				Roles:    []string{},
+				Database: "",
 			},
 			true,
 		},
@@ -440,11 +440,11 @@ func TestToUpdatePayload(t *testing.T) {
 				"role_2",
 			},
 			&mongodbflex.UpdateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
-				Database: new("database"),
+				Database: "database",
 			},
 			true,
 		},
@@ -458,10 +458,10 @@ func TestToUpdatePayload(t *testing.T) {
 				"",
 			},
 			&mongodbflex.UpdateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
-				Database: nil,
+				Database: "",
 			},
 			true,
 		},

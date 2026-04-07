@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -71,7 +70,7 @@ func TestAccGitMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.GitProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMin["name"])),
@@ -94,7 +93,7 @@ func TestAccGitMin(t *testing.T) {
 						project_id  = stackit_git.git.project_id
 						instance_id = stackit_git.git.instance_id
 					}
-					`, testutil.GitProviderConfig()+resourceMin,
+					`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()+resourceMin,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -158,7 +157,7 @@ func TestAccGitMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsMinUpdated(),
-				Config:          testutil.GitProviderConfig() + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["name"])),
@@ -184,7 +183,7 @@ func TestAccGitMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.GitProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMax["name"])),
@@ -208,7 +207,7 @@ func TestAccGitMax(t *testing.T) {
 						project_id  = stackit_git.git.project_id
 						instance_id = stackit_git.git.instance_id
 					}
-					`, testutil.GitProviderConfig()+resourceMax,
+					`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()+resourceMax,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -276,7 +275,7 @@ func TestAccGitMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsMaxUpdated(),
-				Config:          testutil.GitProviderConfig() + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_git.git", "project_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr("stackit_git.git", "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["name"])),
@@ -297,17 +296,7 @@ func TestAccGitMax(t *testing.T) {
 
 func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *git.APIClient
-	var err error
-
-	if testutil.GitCustomEndpoint == "" {
-		client, err = git.NewAPIClient()
-	} else {
-		client, err = git.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.GitCustomEndpoint),
-		)
-	}
-
+	client, err := git.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
