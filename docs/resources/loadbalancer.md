@@ -260,7 +260,7 @@ Required:
 Optional:
 
 - `display_name` (String)
-- `server_name_indicators` (Attributes List) A list of domain names to match in order to pass TLS traffic to the target pool in the current listener (see [below for nested schema](#nestedatt--listeners--server_name_indicators))
+- `server_name_indicators` (Attributes List, Deprecated) A list of domain names to match in order to pass TLS traffic to the target pool in the current listener (see [below for nested schema](#nestedatt--listeners--server_name_indicators))
 - `tcp` (Attributes) Options that are specific to the TCP protocol. (see [below for nested schema](#nestedatt--listeners--tcp))
 - `udp` (Attributes) Options that are specific to the UDP protocol. (see [below for nested schema](#nestedatt--listeners--udp))
 

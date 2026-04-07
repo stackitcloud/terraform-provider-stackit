@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 )
 
@@ -42,21 +41,21 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&secretsmanager.Instance{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			&secretsmanager.ListACLsResponse{
 				Acls: &[]secretsmanager.ACL{
 					{
-						Cidr: utils.Ptr("cidr-1"),
-						Id:   utils.Ptr("id-cidr-1"),
+						Cidr: new("cidr-1"),
+						Id:   new("id-cidr-1"),
 					},
 					{
-						Cidr: utils.Ptr("cidr-2"),
-						Id:   utils.Ptr("id-cidr-2"),
+						Cidr: new("cidr-2"),
+						Id:   new("id-cidr-2"),
 					},
 					{
-						Cidr: utils.Ptr("cidr-3"),
-						Id:   utils.Ptr("id-cidr-3"),
+						Cidr: new("cidr-3"),
+						Id:   new("id-cidr-3"),
 					},
 				},
 			},
@@ -137,7 +136,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name: types.StringValue("name"),
 			},
 			&secretsmanager.CreateInstancePayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			true,
 		},
@@ -153,12 +152,12 @@ func TestToCreatePayload(t *testing.T) {
 				},
 			},
 			&secretsmanager.CreateInstancePayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				KmsKey: &secretsmanager.KmsKeyPayload{
-					KeyId:               utils.Ptr("kid"),
-					KeyRingId:           utils.Ptr("key-ring-id"),
-					KeyVersion:          utils.Ptr(int64(1)),
-					ServiceAccountEmail: utils.Ptr("service-account-email"),
+					KeyId:               new("kid"),
+					KeyRingId:           new("key-ring-id"),
+					KeyVersion:          new(int64(1)),
+					ServiceAccountEmail: new("service-account-email"),
 				},
 			},
 			true,
@@ -169,7 +168,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name: types.StringValue(""),
 			},
 			&secretsmanager.CreateInstancePayload{
-				Name: utils.Ptr(""),
+				Name: new(""),
 			},
 			true,
 		},
@@ -204,20 +203,20 @@ func TestUpdateACLs(t *testing.T) {
 	getAllACLsResp := secretsmanager.ListACLsResponse{
 		Acls: &[]secretsmanager.ACL{
 			{
-				Cidr: utils.Ptr("acl-1"),
-				Id:   utils.Ptr("id-acl-1"),
+				Cidr: new("acl-1"),
+				Id:   new("id-acl-1"),
 			},
 			{
-				Cidr: utils.Ptr("acl-2"),
-				Id:   utils.Ptr("id-acl-2"),
+				Cidr: new("acl-2"),
+				Id:   new("id-acl-2"),
 			},
 			{
-				Cidr: utils.Ptr("acl-3"),
-				Id:   utils.Ptr("id-acl-3"),
+				Cidr: new("acl-3"),
+				Id:   new("id-acl-3"),
 			},
 			{
-				Cidr: utils.Ptr("acl-2"),
-				Id:   utils.Ptr("id-acl-2-repeated"),
+				Cidr: new("acl-2"),
+				Id:   new("id-acl-2-repeated"),
 			},
 		},
 	}
@@ -414,8 +413,8 @@ func TestUpdateACLs(t *testing.T) {
 				}
 
 				resp := secretsmanager.ACL{
-					Cidr: utils.Ptr(cidr),
-					Id:   utils.Ptr(fmt.Sprintf("id-%s", cidr)),
+					Cidr: new(cidr),
+					Id:   new(fmt.Sprintf("id-%s", cidr)),
 				}
 				respBytes, err := json.Marshal(resp)
 				if err != nil {
@@ -473,9 +472,10 @@ func TestUpdateACLs(t *testing.T) {
 			// Setup server and client
 			router := mux.NewRouter()
 			router.HandleFunc("/v1/projects/{projectId}/instances/{instanceId}/acls", func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == "GET" {
+				switch r.Method {
+				case http.MethodGet:
 					getAllACLsHandler(w, r)
-				} else if r.Method == "POST" {
+				case http.MethodPost:
 					createACLHandler(w, r)
 				}
 			})
@@ -527,7 +527,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Name: types.StringValue("name"),
 			},
 			&secretsmanager.UpdateInstancePayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 			},
 			true,
 		},
@@ -543,12 +543,12 @@ func TestToUpdatePayload(t *testing.T) {
 				},
 			},
 			&secretsmanager.UpdateInstancePayload{
-				Name: utils.Ptr("name"),
+				Name: new("name"),
 				KmsKey: &secretsmanager.KmsKeyPayload{
-					KeyId:               utils.Ptr("kid"),
-					KeyRingId:           utils.Ptr("key-ring-id"),
-					KeyVersion:          utils.Ptr(int64(1)),
-					ServiceAccountEmail: utils.Ptr("service-account-email"),
+					KeyId:               new("kid"),
+					KeyRingId:           new("key-ring-id"),
+					KeyVersion:          new(int64(1)),
+					ServiceAccountEmail: new("service-account-email"),
 				},
 			},
 			true,
@@ -559,7 +559,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Name: types.StringValue(""),
 			},
 			&secretsmanager.UpdateInstancePayload{
-				Name: utils.Ptr(""),
+				Name: new(""),
 			},
 			true,
 		},

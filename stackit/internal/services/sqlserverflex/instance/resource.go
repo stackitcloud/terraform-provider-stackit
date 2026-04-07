@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
+	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -32,9 +33,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+<<<<<<< sqlserverflex-sdk-update
 	coreUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api/wait"
+=======
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
+>>>>>>> main
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -233,6 +239,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifierCustom.CronNormalizationModifier{},
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
@@ -785,10 +792,11 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
 	}
 
-	simplifiedModelBackupSchedule := utils.SimplifyBackupSchedule(model.BackupSchedule.ValueString())
-	// If the value returned by the API is different from the one in the model after simplification,
-	// we update the model so that it causes an error in Terraform
-	if simplifiedModelBackupSchedule != types.StringPointerValue(instance.BackupSchedule).ValueString() {
+	// If the API returned "0 0 * * *" but user defined "00 00 * * *" in its config,
+	// we keep the user's "00 00 * * *" in the state to satisfy Terraform.
+	backupScheduleApiResp := types.StringPointerValue(instance.BackupSchedule)
+	if utils.SimplifyCronString(model.BackupSchedule.ValueString()) != utils.SimplifyCronString(backupScheduleApiResp.ValueString()) {
+		// If the API actually changed it to something else, use the API value
 		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	}
 
@@ -827,7 +835,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		retentionDaysInt := conversion.Int64ValueToPointer(options.RetentionDays)
 		var retentionDays *string
 		if retentionDaysInt != nil {
-			retentionDays = coreUtils.Ptr(strconv.FormatInt(*retentionDaysInt, 10))
+			retentionDays = new(strconv.FormatInt(*retentionDaysInt, 10))
 		}
 		optionsPayload.RetentionDays = retentionDays
 	}

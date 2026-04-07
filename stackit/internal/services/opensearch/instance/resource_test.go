@@ -8,19 +8,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/opensearch"
+	legacyOpensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 )
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
 	"sgw_acl":                types.StringValue("acl"),
 	"enable_monitoring":      types.BoolValue(true),
 	"graphite":               types.StringValue("graphite"),
-	"java_garbage_collector": types.StringValue(string(opensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
-	"java_heapspace":         types.Int64Value(10),
-	"java_maxmetaspace":      types.Int64Value(10),
-	"max_disk_threshold":     types.Int64Value(10),
-	"metrics_frequency":      types.Int64Value(10),
+	"java_garbage_collector": types.StringValue(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+	"java_heapspace":         types.Int32Value(10),
+	"java_maxmetaspace":      types.Int32Value(10),
+	"max_disk_threshold":     types.Int32Value(10),
+	"metrics_frequency":      types.Int32Value(10),
 	"metrics_prefix":         types.StringValue("prefix"),
 	"monitoring_instance_id": types.StringValue("mid"),
 	"plugins": types.ListValueMust(types.StringType, []attr.Value{
@@ -46,10 +46,10 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 	"enable_monitoring":      types.BoolNull(),
 	"graphite":               types.StringNull(),
 	"java_garbage_collector": types.StringNull(),
-	"java_heapspace":         types.Int64Null(),
-	"java_maxmetaspace":      types.Int64Null(),
-	"max_disk_threshold":     types.Int64Null(),
-	"metrics_frequency":      types.Int64Null(),
+	"java_heapspace":         types.Int32Null(),
+	"java_maxmetaspace":      types.Int32Null(),
+	"max_disk_threshold":     types.Int32Null(),
+	"metrics_frequency":      types.Int32Null(),
 	"metrics_prefix":         types.StringNull(),
 	"monitoring_instance_id": types.StringNull(),
 	"plugins":                types.ListNull(types.StringType),
@@ -59,20 +59,20 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 })
 
 var fixtureInstanceParameters = opensearch.InstanceParameters{
-	SgwAcl:               utils.Ptr("acl"),
-	EnableMonitoring:     utils.Ptr(true),
-	Graphite:             utils.Ptr("graphite"),
-	JavaGarbageCollector: opensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC.Ptr(),
-	JavaHeapspace:        utils.Ptr(int64(10)),
-	JavaMaxmetaspace:     utils.Ptr(int64(10)),
-	MaxDiskThreshold:     utils.Ptr(int64(10)),
-	MetricsFrequency:     utils.Ptr(int64(10)),
-	MetricsPrefix:        utils.Ptr("prefix"),
-	MonitoringInstanceId: utils.Ptr("mid"),
-	Plugins:              &[]string{"plugin", "plugin2"},
-	Syslog:               &[]string{"syslog", "syslog2"},
-	TlsCiphers:           &[]string{"cipher", "cipher2"},
-	TlsProtocols:         &[]string{"TLSv1.2", "TLSv1.3"},
+	SgwAcl:               new("acl"),
+	EnableMonitoring:     new(true),
+	Graphite:             new("graphite"),
+	JavaGarbageCollector: new(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+	JavaHeapspace:        new(int32(10)),
+	JavaMaxmetaspace:     new(int32(10)),
+	MaxDiskThreshold:     new(int32(10)),
+	MetricsFrequency:     new(int32(10)),
+	MetricsPrefix:        new("prefix"),
+	MonitoringInstanceId: new("mid"),
+	Plugins:              []string{"plugin", "plugin2"},
+	Syslog:               []string{"syslog", "syslog2"},
+	TlsCiphers:           []string{"cipher", "cipher2"},
+	TlsProtocols:         []string{"TLSv1.2", "TLSv1.3"},
 }
 
 func TestMapFields(t *testing.T) {
@@ -89,13 +89,13 @@ func TestMapFields(t *testing.T) {
 				Id:                 types.StringValue("pid,iid"),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
-				PlanId:             types.StringNull(),
-				Name:               types.StringNull(),
-				CfGuid:             types.StringNull(),
-				CfSpaceGuid:        types.StringNull(),
-				DashboardUrl:       types.StringNull(),
-				ImageUrl:           types.StringNull(),
-				CfOrganizationGuid: types.StringNull(),
+				PlanId:             types.StringValue(""),
+				Name:               types.StringValue(""),
+				CfGuid:             types.StringValue(""),
+				CfSpaceGuid:        types.StringValue(""),
+				DashboardUrl:       types.StringValue(""),
+				ImageUrl:           types.StringValue(""),
+				CfOrganizationGuid: types.StringValue(""),
 				Parameters:         types.ObjectNull(parametersTypes),
 			},
 			true,
@@ -103,24 +103,24 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&opensearch.Instance{
-				PlanId:             utils.Ptr("plan"),
-				CfGuid:             utils.Ptr("cf"),
-				CfSpaceGuid:        utils.Ptr("space"),
-				DashboardUrl:       utils.Ptr("dashboard"),
-				ImageUrl:           utils.Ptr("image"),
-				InstanceId:         utils.Ptr("iid"),
-				Name:               utils.Ptr("name"),
-				CfOrganizationGuid: utils.Ptr("org"),
-				Parameters: &map[string]interface{}{
+				PlanId:             "plan",
+				CfGuid:             "cf",
+				CfSpaceGuid:        "space",
+				DashboardUrl:       "dashboard",
+				ImageUrl:           "image",
+				InstanceId:         new("iid"),
+				Name:               "name",
+				CfOrganizationGuid: "org",
+				Parameters: map[string]any{
 					// Using "-" on purpose on some fields because that is the API response
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
-					"java_garbage_collector": string(opensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC),
-					"java_heapspace":         int64(10),
-					"java_maxmetaspace":      int64(10),
-					"max_disk_threshold":     int64(10),
-					"metrics_frequency":      int64(10),
+					"java_garbage_collector": string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC),
+					"java_heapspace":         int32(10),
+					"java_maxmetaspace":      int32(10),
+					"max_disk_threshold":     int32(10),
+					"metrics_frequency":      int32(10),
 					"metrics_prefix":         "prefix",
 					"monitoring_instance_id": "mid",
 					"plugins":                []string{"plugin", "plugin2"},
@@ -159,7 +159,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_1",
 			&opensearch.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -169,7 +169,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"wrong_param_types_2",
 			&opensearch.Instance{
-				Parameters: &map[string]interface{}{
+				Parameters: map[string]any{
 					"sgw_acl": 1,
 				},
 			},
@@ -221,9 +221,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureModelParameters,
 			},
 			&opensearch.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
+				InstanceName: "name",
 				Parameters:   &fixtureInstanceParameters,
-				PlanId:       utils.Ptr("plan"),
+				PlanId:       "plan",
 			},
 			true,
 		},
@@ -235,9 +235,9 @@ func TestToCreatePayload(t *testing.T) {
 				Parameters: fixtureNullModelParameters,
 			},
 			&opensearch.CreateInstancePayload{
-				InstanceName: utils.Ptr(""),
+				InstanceName: "",
 				Parameters:   &opensearch.InstanceParameters{},
-				PlanId:       utils.Ptr(""),
+				PlanId:       "",
 			},
 			true,
 		},
@@ -254,8 +254,8 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&opensearch.CreateInstancePayload{
-				InstanceName: utils.Ptr("name"),
-				PlanId:       utils.Ptr("plan"),
+				InstanceName: "name",
+				PlanId:       "plan",
 			},
 			true,
 		},
@@ -310,7 +310,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&opensearch.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr("plan"),
+				PlanId:     new("plan"),
 			},
 			true,
 		},
@@ -322,7 +322,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&opensearch.PartialUpdateInstancePayload{
 				Parameters: &opensearch.InstanceParameters{},
-				PlanId:     utils.Ptr(""),
+				PlanId:     new(""),
 			},
 			true,
 		},
@@ -338,7 +338,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&opensearch.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId: new("plan"),
 			},
 			true,
 		},

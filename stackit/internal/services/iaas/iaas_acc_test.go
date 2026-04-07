@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
@@ -127,9 +126,7 @@ var testConfigServerVarsMin = config.Variables{
 
 var testConfigServerVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigServerVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigServerVarsMin)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	return updatedConfig
@@ -155,9 +152,7 @@ var testConfigServerVarsMax = config.Variables{
 
 var testConfigServerVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigServerVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigServerVarsMax)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
@@ -167,9 +162,7 @@ var testConfigServerVarsMaxUpdated = func() config.Variables {
 
 var testConfigServerVarsMaxUpdatedDesiredStatus = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigServerVarsMaxUpdated {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigServerVarsMaxUpdated)
 	updatedConfig["name"] = config.StringVariable(testutil.ProjectId)
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
@@ -207,9 +200,7 @@ var testConfigNetworkInterfaceVarsMax = config.Variables{
 
 var testConfigNetworkInterfaceVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkInterfaceVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkInterfaceVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["name"])))
 	updatedConfig["ipv4"] = config.StringVariable("10.2.10.21")
 	updatedConfig["security"] = config.BoolVariable(false)
@@ -227,9 +218,7 @@ var testConfigVolumeVarsMin = config.Variables{
 
 var testConfigVolumeVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigVolumeVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigVolumeVarsMin)
 	updatedConfig["size"] = config.IntegerVariable(20)
 	return updatedConfig
 }()
@@ -250,9 +239,7 @@ var testConfigVolumeVarsMax = config.Variables{
 
 var testConfigVolumeVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigVolumeVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigVolumeVarsMax)
 	updatedConfig["size"] = config.IntegerVariable(20)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["name"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["description"])))
@@ -310,9 +297,7 @@ var testConfigNetworkAreaVarsMin = config.Variables{
 
 var testConfigNetworkAreaVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	return updatedConfig
 }()
@@ -337,9 +322,7 @@ var testConfigNetworkAreaVarsMax = config.Variables{
 
 var testConfigNetworkAreaVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	updatedConfig["default_nameservers"] = config.StringVariable("1.1.1.2")
@@ -366,9 +349,7 @@ var testConfigNetworkAreaRegionVarsMin = config.Variables{
 
 var testConfigNetworkAreaRegionVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaRegionVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaRegionVarsMin)
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	return updatedConfig
 }()
@@ -388,9 +369,7 @@ var testConfigNetworkAreaRegionVarsMax = config.Variables{
 
 var testConfigNetworkAreaRegionVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigNetworkAreaRegionVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigNetworkAreaRegionVarsMax)
 	updatedConfig["network_ranges_prefix"] = config.StringVariable("10.0.0.0/18")
 	updatedConfig["default_nameservers"] = config.StringVariable("8.8.8.8")
 	updatedConfig["default_prefix_length"] = config.IntegerVariable(27)
@@ -409,9 +388,7 @@ var testConfigSecurityGroupsVarsMin = config.Variables{
 
 func testConfigSecurityGroupsVarsMinUpdated() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigSecurityGroupsVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigSecurityGroupsVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	return updatedConfig
 }
@@ -437,9 +414,7 @@ var testConfigSecurityGroupsVarsMax = config.Variables{
 
 func testConfigSecurityGroupsVarsMaxUpdated() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigSecurityGroupsVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigSecurityGroupsVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["name_remote"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name_remote"])))
 	updatedConfig["description"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["description"])))
@@ -470,9 +445,7 @@ var testConfigImageVarsMin = func() config.Variables {
 
 var testConfigImageVarsMinUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigImageVarsMin {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigImageVarsMin)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	return updatedConfig
 }()
@@ -515,9 +488,7 @@ var testConfigImageVarsMax = func() config.Variables {
 
 var testConfigImageVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigImageVarsMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigImageVarsMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
 	updatedConfig["min_disk_size"] = config.IntegerVariable(25)
 	updatedConfig["min_ram"] = config.IntegerVariable(4096)
@@ -555,9 +526,7 @@ var testConfigKeyPairMax = config.Variables{
 
 var testConfigKeyPairMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigKeyPairMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigKeyPairMax)
 	updatedConfig["label"] = config.StringVariable("updated")
 	return updatedConfig
 }()
@@ -590,9 +559,7 @@ var testConfigRoutingTableMax = config.Variables{
 
 var testConfigRoutingTableMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
-	for k, v := range testConfigRoutingTableMax {
-		updatedConfig[k] = v
-	}
+	maps.Copy(updatedConfig, testConfigRoutingTableMax)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("acc-test-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)))
 	updatedConfig["description"] = config.StringVariable("This is the updated description of the routing table.")
 	updatedConfig["label"] = config.StringVariable("routing-table-updated-label-01")
@@ -648,7 +615,7 @@ func TestAccNetworkMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceNetworkMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkVarsMin["project_id"])),
@@ -674,7 +641,7 @@ func TestAccNetworkMin(t *testing.T) {
 						network_id  = stackit_network.network.network_id
 					}
 					`,
-					testutil.IaaSProviderConfigWithExperiments(), resourceNetworkMinConfig,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_network.network", "network_id"),
@@ -721,7 +688,7 @@ func TestAccNetworkMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceNetworkMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_network.network", "network_id"),
 					resource.TestCheckResourceAttr("stackit_network.network", "project_id", testutil.ConvertConfigVariable(testConfigNetworkVarsMinUpdated["project_id"])),
@@ -748,7 +715,7 @@ func TestAccNetworkMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceNetworkMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network with prefix
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "network_id"),
@@ -836,7 +803,7 @@ func TestAccNetworkMax(t *testing.T) {
 						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
 					}
 					`,
-					testutil.IaaSProviderConfigWithExperiments(), resourceNetworkMaxConfig,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network with prefix
@@ -988,7 +955,7 @@ func TestAccNetworkMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceNetworkMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "network_id"),
 					resource.TestCheckResourceAttrPair(
@@ -1065,7 +1032,7 @@ func TestAccNetworkAreaMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkAreaVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMin["organization_id"])),
@@ -1086,7 +1053,7 @@ func TestAccNetworkAreaMin(t *testing.T) {
 						network_area_id  = stackit_network_area.network_area.network_area_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceNetworkAreaMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
@@ -1121,7 +1088,7 @@ func TestAccNetworkAreaMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkAreaVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMinUpdated["organization_id"])),
@@ -1144,7 +1111,7 @@ func TestAccNetworkAreaMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkAreaVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMax["organization_id"])),
@@ -1195,7 +1162,7 @@ func TestAccNetworkAreaMax(t *testing.T) {
 						network_area_route_id = stackit_network_area_route.network_area_route.network_area_route_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceNetworkAreaMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
@@ -1291,7 +1258,7 @@ func TestAccNetworkAreaMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkAreaVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area.network_area", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkAreaVarsMaxUpdated["organization_id"])),
@@ -1338,7 +1305,7 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkAreaRegionVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaRegionMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRegionMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionCreate),
@@ -1374,7 +1341,7 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 						network_area_id  = stackit_network_area_region.network_area_region.network_area_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceNetworkAreaRegionMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRegionMinConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -1419,7 +1386,7 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkAreaRegionVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaRegionMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRegionMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionNoop),
@@ -1456,7 +1423,7 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkAreaRegionVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaRegionMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRegionMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionCreate),
@@ -1493,7 +1460,7 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 						network_area_id  = stackit_network_area_region.network_area_region.network_area_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceNetworkAreaRegionMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRegionMaxConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -1540,7 +1507,7 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkAreaRegionVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkAreaRegionMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkAreaRegionMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_network_area.network_area", plancheck.ResourceActionNoop),
@@ -1579,7 +1546,7 @@ func TestAccVolumeMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVolumeVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceVolumeMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Volume size
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMin["project_id"])),
@@ -1626,7 +1593,7 @@ func TestAccVolumeMin(t *testing.T) {
 						volume_id = stackit_volume.volume_source.volume_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceVolumeMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceVolumeMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Volume size
@@ -1698,7 +1665,7 @@ func TestAccVolumeMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVolumeVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceVolumeMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Volume size
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMinUpdated["project_id"])),
@@ -1743,7 +1710,7 @@ func TestAccVolumeMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVolumeVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceVolumeMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Volume size
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMax["project_id"])),
@@ -1894,7 +1861,7 @@ func TestAccVolumeMax(t *testing.T) {
 						volume_id = stackit_volume.volume_encrypted_with_write_only_key_payload.volume_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceVolumeMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceVolumeMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Volume size
@@ -2095,7 +2062,7 @@ func TestAccVolumeMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVolumeVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceVolumeMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceVolumeMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Volume size
 					resource.TestCheckResourceAttr("stackit_volume.volume_size", "project_id", testutil.ConvertConfigVariable(testConfigVolumeVarsMaxUpdated["project_id"])),
@@ -2226,7 +2193,7 @@ func TestAccServerMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigServerVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server
 					resource.TestCheckResourceAttr("stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMin["project_id"])),
@@ -2269,7 +2236,7 @@ func TestAccServerMin(t *testing.T) {
 							server_id = stackit_server.server.server_id
 						}
 						`,
-					testutil.IaaSProviderConfig(), resourceServerMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server
@@ -2331,7 +2298,7 @@ func TestAccServerMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigServerVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server
 					resource.TestCheckResourceAttr("stackit_server.server", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMinUpdated["project_id"])),
@@ -2376,7 +2343,7 @@ func TestAccServerMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigServerVarsMax,
-				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.IaaSProviderConfig(), resourceServerMaxConfig, resourceServerMaxAttachmentConfig),
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMaxConfig, resourceServerMaxAttachmentConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Affinity group
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
@@ -2515,7 +2482,7 @@ func TestAccServerMax(t *testing.T) {
 							server_id = stackit_server.server.server_id
 						}
 						`,
-					testutil.IaaSProviderConfig(), resourceServerMaxConfig, resourceServerMaxAttachmentConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMaxConfig, resourceServerMaxAttachmentConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server
@@ -2762,7 +2729,7 @@ func TestAccServerMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigServerVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Affinity group
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
@@ -2867,7 +2834,7 @@ func TestAccServerMax(t *testing.T) {
 			// Updated desired status
 			{
 				ConfigVariables: testConfigServerVarsMaxUpdatedDesiredStatus,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceServerMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceServerMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Affinity group
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["project_id"])),
@@ -2983,7 +2950,7 @@ func TestAccAffinityGroupMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigAffinityGroupVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceAffinityGroupMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceAffinityGroupMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
@@ -3004,7 +2971,7 @@ func TestAccAffinityGroupMin(t *testing.T) {
 						affinity_group_id = stackit_affinity_group.affinity_group.affinity_group_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceAffinityGroupMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceAffinityGroupMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_affinity_group.affinity_group", "project_id", testutil.ConvertConfigVariable(testConfigAffinityGroupVarsMin["project_id"])),
@@ -3049,7 +3016,7 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigSecurityGroupsVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceSecurityGroupMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Security Group
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMin["project_id"])),
@@ -3088,7 +3055,7 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 						security_group_rule_id = stackit_security_group_rule.security_group_rule.security_group_rule_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceSecurityGroupMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceSecurityGroupMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -3154,7 +3121,7 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigSecurityGroupsVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceSecurityGroupMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Security Group
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMinUpdated()["project_id"])),
@@ -3190,7 +3157,7 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigSecurityGroupsVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceSecurityGroupMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Security Group (default)
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["project_id"])),
@@ -3294,7 +3261,7 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 						security_group_rule_id = stackit_security_group_rule.security_group_rule_remote_security_group.security_group_rule_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceSecurityGroupMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceSecurityGroupMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Security Group (default)
@@ -3462,7 +3429,7 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigSecurityGroupsVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceSecurityGroupMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceSecurityGroupMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Security Group (default)
 					resource.TestCheckResourceAttr("stackit_security_group.security_group", "project_id", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["project_id"])),
@@ -3545,7 +3512,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkInterfaceVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkInterfaceMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkInterfaceMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network interface instance
 					resource.TestCheckNoResourceAttr("stackit_network_interface.network_interface", "name"),
@@ -3602,7 +3569,7 @@ func TestAccNetworkInterfaceMin(t *testing.T) {
 						public_ip_id = stackit_public_ip.public_ip.public_ip_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceNetworkInterfaceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkInterfaceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network interface instance
@@ -3710,7 +3677,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigNetworkInterfaceVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkInterfaceMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkInterfaceMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network interface instance
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMax["project_id"])),
@@ -3814,7 +3781,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 						public_ip_id = stackit_public_ip.public_ip_simple.public_ip_id
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceNetworkInterfaceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkInterfaceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network interface instance
@@ -4024,7 +3991,7 @@ func TestAccNetworkInterfaceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigNetworkInterfaceVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceNetworkInterfaceMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceNetworkInterfaceMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network interface instance
 					resource.TestCheckResourceAttr("stackit_network_interface.network_interface", "project_id", testutil.ConvertConfigVariable(testConfigNetworkInterfaceVarsMaxUpdated["project_id"])),
@@ -4102,7 +4069,7 @@ func TestAccKeyPairMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigKeyPairMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceKeyPairMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyPairMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMin["name"])),
 					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMin["public_key"])),
@@ -4120,7 +4087,7 @@ func TestAccKeyPairMin(t *testing.T) {
 						name = stackit_key_pair.key_pair.name
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceKeyPairMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyPairMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -4166,7 +4133,7 @@ func TestAccKeyPairMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigKeyPairMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceKeyPairMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyPairMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMax["name"])),
 					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMax["public_key"])),
@@ -4185,7 +4152,7 @@ func TestAccKeyPairMax(t *testing.T) {
 						name = stackit_key_pair.key_pair.name
 					}
 					`,
-					testutil.IaaSProviderConfig(), resourceKeyPairMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyPairMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -4219,7 +4186,7 @@ func TestAccKeyPairMax(t *testing.T) {
 			},
 			{
 				ConfigVariables: testConfigKeyPairMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfig(), resourceKeyPairMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), resourceKeyPairMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "name", testutil.ConvertConfigVariable(testConfigKeyPairMaxUpdated["name"])),
 					resource.TestCheckResourceAttr("stackit_key_pair.key_pair", "public_key", testutil.ConvertConfigVariable(testConfigKeyPairMaxUpdated["public_key"])),
@@ -4242,7 +4209,7 @@ func TestAccImageMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigImageVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.IaaSProviderConfig()),
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.NewConfigBuilder().BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMin["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
@@ -4269,7 +4236,7 @@ func TestAccImageMin(t *testing.T) {
 						image_id = stackit_image.image.image_id
 					}
 					`,
-					resourceImageMinConfig, testutil.IaaSProviderConfig(),
+					resourceImageMinConfig, testutil.NewConfigBuilder().BuildProviderConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -4310,7 +4277,7 @@ func TestAccImageMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigImageVarsMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.IaaSProviderConfig()),
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMinConfig, testutil.NewConfigBuilder().BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
@@ -4340,7 +4307,7 @@ func TestAccImageMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigImageVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", resourceImageMaxConfig, testutil.IaaSProviderConfig()),
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMaxConfig, testutil.NewConfigBuilder().BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
@@ -4383,7 +4350,7 @@ func TestAccImageMax(t *testing.T) {
 						image_id = stackit_image.image.image_id
 					}
 					`,
-					resourceImageMaxConfig, testutil.IaaSProviderConfig(),
+					resourceImageMaxConfig, testutil.NewConfigBuilder().BuildProviderConfig(),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -4440,7 +4407,7 @@ func TestAccImageMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigImageVarsMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", resourceImageMaxConfig, testutil.IaaSProviderConfig()),
+				Config:          fmt.Sprintf("%s\n%s", resourceImageMaxConfig, testutil.NewConfigBuilder().BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_image.image", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "image_id"),
@@ -4484,7 +4451,7 @@ func TestAccImageDatasourceSearchVariants(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: config.Variables{"project_id": config.StringVariable(testutil.ProjectId)},
-				Config:          fmt.Sprintf("%s\n%s", dataSourceImageVariants, testutil.IaaSProviderConfigWithBetaResourcesEnabled()),
+				Config:          fmt.Sprintf("%s\n%s", dataSourceImageVariants, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_image_v2.name_match_ubuntu_22_04", "project_id", testutil.ConvertConfigVariable(testConfigImageVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_image_v2.name_match_ubuntu_22_04", "image_id"),
@@ -4611,7 +4578,7 @@ func TestAccDatasourcePublicIpRanges(t *testing.T) {
 			// Read
 			{
 				ConfigVariables: config.Variables{},
-				Config:          fmt.Sprintf("%s\n%s", datasourcePublicIpRanges, testutil.IaaSProviderConfig()),
+				Config:          fmt.Sprintf("%s\n%s", datasourcePublicIpRanges, testutil.NewConfigBuilder().BuildProviderConfig()),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_public_ip_ranges.example", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_public_ip_ranges.example", "public_ip_ranges.0.cidr"),
@@ -4637,7 +4604,7 @@ func TestAccProject(t *testing.T) {
 						project_id = %q
 					}
 					`,
-					testutil.IaaSProviderConfig(), testutil.ProjectId,
+					testutil.NewConfigBuilder().BuildProviderConfig(), testutil.ProjectId,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -4662,7 +4629,7 @@ func TestAccMachineType(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ConfigVariables: testConfigMachineTypeVars,
-				Config:          fmt.Sprintf("%s\n%s", dataSourceMachineTypeConfig, testutil.IaaSProviderConfigWithBetaResourcesEnabled()),
+				Config:          fmt.Sprintf("%s\n%s", dataSourceMachineTypeConfig, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig()),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_machine_type.two_vcpus_filter", "project_id", testutil.ConvertConfigVariable(testConfigMachineTypeVars["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_machine_type.two_vcpus_filter", "id"),
@@ -4702,7 +4669,7 @@ func TestAccRoutingTableMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigRoutingTableMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionCreate),
@@ -4763,7 +4730,7 @@ func TestAccRoutingTableMin(t *testing.T) {
 						network_area_id  = stackit_network_area.network_area.network_area_id
 					}
 					`,
-					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableMinConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -4850,7 +4817,7 @@ func TestAccRoutingTableMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigRoutingTableMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionUpdate),
@@ -4887,7 +4854,7 @@ func TestAccRoutingTableMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigRoutingTableMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionCreate),
@@ -4947,7 +4914,7 @@ func TestAccRoutingTableMax(t *testing.T) {
 						network_area_id  = stackit_routing_table.routing_table.network_area_id
 					}
 					`,
-					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableMaxConfig,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -5036,7 +5003,7 @@ func TestAccRoutingTableMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigRoutingTableMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_routing_table.routing_table", plancheck.ResourceActionUpdate),
@@ -5074,7 +5041,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigRoutingTableRouteMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableRouteMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMin["organization_id"])),
@@ -5143,7 +5110,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 					}
 					`,
-					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableRouteMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table route
@@ -5227,7 +5194,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigRoutingTableRouteMinUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableRouteMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table
 					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMinUpdated["organization_id"])),
@@ -5272,7 +5239,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigRoutingTableRouteMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableRouteMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Network Area
 					resource.TestCheckResourceAttr("stackit_network_area_region.network_area_region", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMax["organization_id"])),
@@ -5342,7 +5309,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 					}
 					`,
-					testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableRouteMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table route
@@ -5428,7 +5395,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigRoutingTableRouteMaxUpdated,
-				Config:          fmt.Sprintf("%s\n%s", testutil.IaaSProviderConfigWithExperiments(), resourceRoutingTableRouteMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceRoutingTableRouteMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Routing table
 					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigRoutingTableRouteMaxUpdated["organization_id"])),
@@ -5502,15 +5469,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5544,15 +5503,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5587,15 +5538,7 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5632,15 +5575,7 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 
 func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5677,15 +5612,7 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5722,21 +5649,9 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var alphaClient *iaas.APIClient
-	var client *iaas.APIClient
-	var err error
-	var alphaErr error
-	if testutil.IaaSCustomEndpoint == "" {
-		alphaClient, alphaErr = iaas.NewAPIClient()
-		client, err = iaas.NewAPIClient()
-	} else {
-		alphaClient, alphaErr = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-		client, err = iaas.NewAPIClient()
-	}
-	if err != nil || alphaErr != nil {
-		return fmt.Errorf("creating client: %w, %w", err, alphaErr)
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
 	}
 
 	// Servers
@@ -5751,7 +5666,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
-	serversResp, err := alphaClient.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
+	serversResp, err := client.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
 	if err != nil {
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
@@ -5762,7 +5677,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			continue
 		}
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
-			err := alphaClient.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
+			err := client.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
 			if err != nil {
 				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
 			}
@@ -5804,15 +5719,7 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 
 func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5849,15 +5756,7 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5894,15 +5793,7 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5939,15 +5830,7 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -5983,16 +5866,7 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 
 func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -6029,15 +5903,7 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 
 func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -6068,15 +5934,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 
 func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.IaaSCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

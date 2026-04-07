@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -722,13 +721,13 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit: sdkUtils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		SampleLimit: new(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      observability.CreateScrapeConfigPayloadGetSchemeAttributeType(conversion.StringValueToPointer(model.Scheme)),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		if sc.Params != nil {
 			m = *sc.Params
 		}
@@ -758,7 +757,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 		ti.Targets = &urls
 
-		labels := map[string]interface{}{}
+		labels := map[string]any{}
 		for k, v := range target.Labels.Elements() {
 			labels[k], _ = conversion.ToString(ctx, v)
 		}
@@ -778,17 +777,17 @@ func setDefaultsCreateScrapeConfig(sc *observability.CreateScrapeConfigPayload, 
 		sc.Scheme = DefaultScheme.Ptr()
 	}
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
-		sc.ScrapeInterval = sdkUtils.Ptr(DefaultScrapeInterval)
+		sc.ScrapeInterval = new(DefaultScrapeInterval)
 	}
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
-		sc.ScrapeTimeout = sdkUtils.Ptr(DefaultScrapeTimeout)
+		sc.ScrapeTimeout = new(DefaultScrapeTimeout)
 	}
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
-		sc.SampleLimit = sdkUtils.Ptr(float64(DefaultSampleLimit))
+		sc.SampleLimit = new(float64(DefaultSampleLimit))
 	}
 	// Make the API default more explicit by setting the field.
 	if saml2Model.EnableURLParameters.IsNull() || saml2Model.EnableURLParameters.IsUnknown() {
-		m := map[string]interface{}{}
+		m := map[string]any{}
 		if sc.Params != nil {
 			m = *sc.Params
 		}
@@ -811,13 +810,13 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeInterval: conversion.StringValueToPointer(model.ScrapeInterval),
 		ScrapeTimeout:  conversion.StringValueToPointer(model.ScrapeTimeout),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
-		SampleLimit: sdkUtils.Ptr(float64(model.SampleLimit.ValueInt64())),
+		SampleLimit: new(float64(model.SampleLimit.ValueInt64())),
 		Scheme:      observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(conversion.StringValueToPointer(model.Scheme)),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
 
 	if !saml2Model.EnableURLParameters.IsNull() && !saml2Model.EnableURLParameters.IsUnknown() {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		if sc.Params != nil {
 			m = *sc.Params
 		}
@@ -847,7 +846,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		}
 		ti.Targets = &urls
 
-		ls := map[string]interface{}{}
+		ls := map[string]any{}
 		for k, v := range target.Labels.Elements() {
 			ls[k], _ = conversion.ToString(ctx, v)
 		}
@@ -867,12 +866,12 @@ func setDefaultsUpdateScrapeConfig(sc *observability.UpdateScrapeConfigPayload, 
 		sc.Scheme = observability.UpdateScrapeConfigPayloadGetSchemeAttributeType(DefaultScheme.Ptr())
 	}
 	if model.ScrapeInterval.IsNull() || model.ScrapeInterval.IsUnknown() {
-		sc.ScrapeInterval = sdkUtils.Ptr(DefaultScrapeInterval)
+		sc.ScrapeInterval = new(DefaultScrapeInterval)
 	}
 	if model.ScrapeTimeout.IsNull() || model.ScrapeTimeout.IsUnknown() {
-		sc.ScrapeTimeout = sdkUtils.Ptr(DefaultScrapeTimeout)
+		sc.ScrapeTimeout = new(DefaultScrapeTimeout)
 	}
 	if model.SampleLimit.IsNull() || model.SampleLimit.IsUnknown() {
-		sc.SampleLimit = sdkUtils.Ptr(float64(DefaultSampleLimit))
+		sc.SampleLimit = new(float64(DefaultSampleLimit))
 	}
 }

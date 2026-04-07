@@ -33,11 +33,11 @@ func TestMapFields(t *testing.T) {
 			input: &ske.ProviderOptions{
 				MachineImages: &[]ske.MachineImage{
 					{
-						Name: skeutils.Ptr("flatcar"),
+						Name: new("flatcar"),
 						Versions: &[]ske.MachineImageVersion{
 							{
-								Version:        skeutils.Ptr("4230.2.1"),
-								State:          skeutils.Ptr("supported"),
+								Version:        new("4230.2.1"),
+								State:          new("supported"),
 								ExpirationDate: &timestamp,
 								Cri: &[]ske.CRI{
 									{
@@ -82,11 +82,11 @@ func TestMapFields(t *testing.T) {
 			input: &ske.ProviderOptions{
 				MachineImages: &[]ske.MachineImage{
 					{
-						Name: skeutils.Ptr("flatcar"),
+						Name: new("flatcar"),
 						Versions: &[]ske.MachineImageVersion{
 							{
-								Version:        skeutils.Ptr("4230.2.1"),
-								State:          skeutils.Ptr("supported"),
+								Version:        new("4230.2.1"),
+								State:          new("supported"),
 								ExpirationDate: &timestamp,
 								Cri: &[]ske.CRI{
 									{
@@ -148,11 +148,11 @@ func TestMapFields(t *testing.T) {
 			input: &ske.ProviderOptions{
 				MachineImages: &[]ske.MachineImage{
 					{
-						Name: skeutils.Ptr("flatcar"),
+						Name: new("flatcar"),
 						Versions: &[]ske.MachineImageVersion{
 							{
-								Version:        skeutils.Ptr("4230.2.1"),
-								State:          skeutils.Ptr("deprecated"),
+								Version:        new("4230.2.1"),
+								State:          new("deprecated"),
 								ExpirationDate: &timestamp,
 								Cri: &[]ske.CRI{
 									{
@@ -161,8 +161,8 @@ func TestMapFields(t *testing.T) {
 								},
 							},
 							{
-								Version:        skeutils.Ptr("4230.2.3"),
-								State:          skeutils.Ptr("supported"),
+								Version:        new("4230.2.3"),
+								State:          new("supported"),
 								ExpirationDate: nil, // no expiration
 								Cri: &[]ske.CRI{
 									{
@@ -171,8 +171,8 @@ func TestMapFields(t *testing.T) {
 								},
 							},
 							{
-								Version:        skeutils.Ptr("4459.2.1"),
-								State:          skeutils.Ptr("preview"),
+								Version:        new("4459.2.1"),
+								State:          new("preview"),
 								ExpirationDate: nil,
 								Cri: &[]ske.CRI{
 									{
@@ -183,11 +183,11 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 					{
-						Name: skeutils.Ptr("ubuntu"),
+						Name: new("ubuntu"),
 						Versions: &[]ske.MachineImageVersion{
 							{
-								Version:        skeutils.Ptr("2204.20250728.0"),
-								State:          skeutils.Ptr("supported"),
+								Version:        new("2204.20250728.0"),
+								State:          new("supported"),
 								ExpirationDate: nil,
 								// empty CRI slice
 								Cri: &[]ske.CRI{},
@@ -296,11 +296,11 @@ func TestMapFields(t *testing.T) {
 			input: &ske.ProviderOptions{
 				MachineImages: &[]ske.MachineImage{
 					{
-						Name: skeutils.Ptr("ubuntu"),
+						Name: new("ubuntu"),
 						Versions: &[]ske.MachineImageVersion{
 							{
-								Version:        skeutils.Ptr("2204.20250728.0"),
-								State:          skeutils.Ptr("supported"),
+								Version:        new("2204.20250728.0"),
+								State:          new("supported"),
 								ExpirationDate: nil,
 								Cri:            nil, // explicit nil => empty list
 							},

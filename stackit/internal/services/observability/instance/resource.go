@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -534,7 +533,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days", "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
+					int64planmodifier.UseStateForUnknownIf(int64planmodifier.Int64Changed, "metrics_retention_days", "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
 				},
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
@@ -542,7 +541,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days_5m_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
+					int64planmodifier.UseStateForUnknownIf(int64planmodifier.Int64Changed, "metrics_retention_days_5m_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
 				},
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
@@ -550,7 +549,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknownIf(utils.Int64Changed, "metrics_retention_days_1h_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
+					int64planmodifier.UseStateForUnknownIf(int64planmodifier.Int64Changed, "metrics_retention_days_1h_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
 				},
 			},
 			"metrics_url": schema.StringAttribute{
@@ -1889,25 +1888,25 @@ func mapGlobalConfigToAttributes(respGlobalConfigs *observability.Global, global
 	if globalConfigsTF != nil {
 		if respGlobalConfigs.SmtpSmarthost == nil &&
 			!globalConfigsTF.SmtpSmartHost.IsNull() && !globalConfigsTF.SmtpSmartHost.IsUnknown() {
-			smtpSmartHost = sdkUtils.Ptr(globalConfigsTF.SmtpSmartHost.ValueString())
+			smtpSmartHost = new(globalConfigsTF.SmtpSmartHost.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthIdentity == nil &&
 			!globalConfigsTF.SmtpAuthIdentity.IsNull() && !globalConfigsTF.SmtpAuthIdentity.IsUnknown() {
-			smtpAuthIdentity = sdkUtils.Ptr(globalConfigsTF.SmtpAuthIdentity.ValueString())
+			smtpAuthIdentity = new(globalConfigsTF.SmtpAuthIdentity.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthPassword == nil &&
 			!globalConfigsTF.SmtpAuthPassword.IsNull() && !globalConfigsTF.SmtpAuthPassword.IsUnknown() {
-			smtpAuthPassword = sdkUtils.Ptr(globalConfigsTF.SmtpAuthPassword.ValueString())
+			smtpAuthPassword = new(globalConfigsTF.SmtpAuthPassword.ValueString())
 		}
 		if respGlobalConfigs.SmtpAuthUsername == nil &&
 			!globalConfigsTF.SmtpAuthUsername.IsNull() && !globalConfigsTF.SmtpAuthUsername.IsUnknown() {
-			smtpAuthUsername = sdkUtils.Ptr(globalConfigsTF.SmtpAuthUsername.ValueString())
+			smtpAuthUsername = new(globalConfigsTF.SmtpAuthUsername.ValueString())
 		}
 		if respGlobalConfigs.OpsgenieApiKey == nil {
-			opsgenieApiKey = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiKey.ValueString())
+			opsgenieApiKey = new(globalConfigsTF.OpsgenieApiKey.ValueString())
 		}
 		if respGlobalConfigs.OpsgenieApiUrl == nil {
-			opsgenieApiUrl = sdkUtils.Ptr(globalConfigsTF.OpsgenieApiUrl.ValueString())
+			opsgenieApiUrl = new(globalConfigsTF.OpsgenieApiUrl.ValueString())
 		}
 	}
 
@@ -2154,7 +2153,7 @@ func toCreatePayload(model *Model, setGrafanaAdminEnabled bool) (*observability.
 		return nil, fmt.Errorf("nil model")
 	}
 	elements := model.Parameters.Elements()
-	pa := make(map[string]interface{}, len(elements))
+	pa := make(map[string]any, len(elements))
 	for k := range elements {
 		pa[k] = elements[k].String()
 	}
@@ -2206,7 +2205,7 @@ func toUpdateMetricsStorageRetentionPayload(retentionDaysRaw, retentionDays5m, r
 
 func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *observability.APIClient) error {
 	payload := observability.UpdateACLPayload{
-		Acl: sdkUtils.Ptr(acl),
+		Acl: new(acl),
 	}
 
 	_, err := client.UpdateACL(ctx, instanceId, projectId).UpdateACLPayload(payload).Execute()
@@ -2222,7 +2221,7 @@ func toUpdatePayload(model *Model, setGrafanaAdminEnabled bool) (*observability.
 		return nil, fmt.Errorf("nil model")
 	}
 	elements := model.Parameters.Elements()
-	pa := make(map[string]interface{}, len(elements))
+	pa := make(map[string]any, len(elements))
 	for k, v := range elements {
 		pa[k] = v.String()
 	}
@@ -2439,7 +2438,7 @@ func toChildRoutePayload(ctx context.Context, routeTF *routeModelMiddle) (*obser
 	}
 
 	var groupByPayload, matchersPayload *[]string
-	var matchPayload, matchRegexPayload *map[string]interface{}
+	var matchPayload, matchRegexPayload *map[string]any
 
 	if !utils.IsUndefined(routeTF.GroupBy) {
 		groupByPayload = &[]string{}
@@ -2541,30 +2540,30 @@ func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *ale
 	if utils.IsUndefined(model.AlertConfig) {
 		*alertConfig, err = getMockAlertConfig(ctx)
 		if err != nil {
-			return fmt.Errorf("Getting mock alert config: %w", err)
+			return fmt.Errorf("getting mock alert config: %w", err)
 		}
 	}
 
 	alertConfigPayload, err := toUpdateAlertConfigPayload(ctx, alertConfig)
 	if err != nil {
-		return fmt.Errorf("Building alert config payload: %w", err)
+		return fmt.Errorf("building alert config payload: %w", err)
 	}
 
 	if alertConfigPayload != nil {
 		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting alert config: %w", err)
+			return fmt.Errorf("setting alert config: %w", err)
 		}
 	}
 
 	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 	if err != nil {
-		return fmt.Errorf("Calling API to get alert config: %w", err)
+		return fmt.Errorf("calling API to get alert config: %w", err)
 	}
 	// Map response body to schema
 	err = mapAlertConfigField(ctx, alertConfigResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the alert config: %w", err)
+		return fmt.Errorf("processing API response for the alert config: %w", err)
 	}
 	return nil
 }
@@ -2577,7 +2576,7 @@ func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model)
 	if tracesRetentionDays != nil {
 		tracesResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
-			return fmt.Errorf("Getting traces retention policy: %w", err)
+			return fmt.Errorf("getting traces retention policy: %w", err)
 		}
 		if tracesResp == nil {
 			return fmt.Errorf("nil response")
@@ -2586,18 +2585,18 @@ func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model)
 		retentionDays := fmt.Sprintf("%dh", *tracesRetentionDays*24)
 		_, err = r.client.UpdateTracesConfigs(ctx, instanceId, projectId).UpdateTracesConfigsPayload(observability.UpdateTracesConfigsPayload{Retention: &retentionDays}).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting traces retention policy: %w", err)
+			return fmt.Errorf("setting traces retention policy: %w", err)
 		}
 	}
 
 	tracesResp, err := r.client.GetTracesConfigsExecute(ctx, instanceId, projectId)
 	if err != nil {
-		return fmt.Errorf("Getting traces retention policy: %w", err)
+		return fmt.Errorf("getting traces retention policy: %w", err)
 	}
 
 	err = mapTracesRetentionField(tracesResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the traces retention %w", err)
+		return fmt.Errorf("processing API response for the traces retention %w", err)
 	}
 
 	return nil
@@ -2611,7 +2610,7 @@ func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) e
 	if logsRetentionDays != nil {
 		logsResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
-			return fmt.Errorf("Getting logs retention policy: %w", err)
+			return fmt.Errorf("getting logs retention policy: %w", err)
 		}
 		if logsResp == nil {
 			return fmt.Errorf("nil response")
@@ -2620,18 +2619,18 @@ func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) e
 		retentionDays := fmt.Sprintf("%dh", *logsRetentionDays*24)
 		_, err = r.client.UpdateLogsConfigs(ctx, instanceId, projectId).UpdateLogsConfigsPayload(observability.UpdateLogsConfigsPayload{Retention: &retentionDays}).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting logs retention policy: %w", err)
+			return fmt.Errorf("setting logs retention policy: %w", err)
 		}
 	}
 
 	logsResp, err := r.client.GetLogsConfigsExecute(ctx, instanceId, projectId)
 	if err != nil {
-		return fmt.Errorf("Getting logs retention policy: %w", err)
+		return fmt.Errorf("getting logs retention policy: %w", err)
 	}
 
 	err = mapLogsRetentionField(logsResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the logs retention %w", err)
+		return fmt.Errorf("processing API response for the logs retention %w", err)
 	}
 
 	return nil
@@ -2649,29 +2648,29 @@ func (r *instanceResource) getMetricsRetention(ctx context.Context, model *Model
 		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
 		metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
 		if err != nil {
-			return fmt.Errorf("Getting metrics retention policy: %w", err)
+			return fmt.Errorf("getting metrics retention policy: %w", err)
 		}
 
 		metricsRetentionPayload, err := toUpdateMetricsStorageRetentionPayload(metricsRetentionDays, metricsRetentionDays5mDownsampling, metricsRetentionDays1hDownsampling, metricsResp)
 		if err != nil {
-			return fmt.Errorf("Building metrics retention policy payload: %w", err)
+			return fmt.Errorf("building metrics retention policy payload: %w", err)
 		}
 		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
 		if err != nil {
-			return fmt.Errorf("Setting metrics retention policy: %w", err)
+			return fmt.Errorf("setting metrics retention policy: %w", err)
 		}
 	}
 
 	// Get metrics retention policy after update
 	metricsResp, err := r.client.GetMetricsStorageRetentionExecute(ctx, instanceId, projectId)
 	if err != nil {
-		return fmt.Errorf("Getting metrics retention policy: %w", err)
+		return fmt.Errorf("getting metrics retention policy: %w", err)
 	}
 
 	// Map response body to schema
 	err = mapMetricsRetentionField(metricsResp, model)
 	if err != nil {
-		return fmt.Errorf("Processing API response for the metrics retention %w", err)
+		return fmt.Errorf("processing API response for the metrics retention %w", err)
 	}
 	return nil
 }

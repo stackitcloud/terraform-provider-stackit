@@ -6,8 +6,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+<<<<<<< sqlserverflex-sdk-update
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+=======
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+>>>>>>> main
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -47,9 +51,9 @@ func TestMapDataSourceFields(t *testing.T) {
 						"role_2",
 						"",
 					},
-					Username: utils.Ptr("username"),
-					Host:     utils.Ptr("host"),
-					Port:     utils.Ptr(int64(1234)),
+					Username: new("username"),
+					Host:     new("host"),
+					Port:     new(int64(1234)),
 				},
 			},
 			testRegion,
@@ -74,11 +78,16 @@ func TestMapDataSourceFields(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{
+<<<<<<< sqlserverflex-sdk-update
 					Id:       utils.Ptr("uid"),
 					Roles:    []string{},
+=======
+					Id:       new("uid"),
+					Roles:    &[]string{},
+>>>>>>> main
 					Username: nil,
 					Host:     nil,
-					Port:     utils.Ptr(int64(2123456789)),
+					Port:     new(int64(2123456789)),
 				},
 			},
 			testRegion,

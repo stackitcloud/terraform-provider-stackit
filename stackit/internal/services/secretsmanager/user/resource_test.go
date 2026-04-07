@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
 )
 
@@ -20,7 +19,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&secretsmanager.User{
-				Id: utils.Ptr("uid"),
+				Id: new("uid"),
 			},
 			nil,
 			Model{
@@ -38,11 +37,11 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&secretsmanager.User{
-				Id:          utils.Ptr("uid"),
-				Description: utils.Ptr("description"),
-				Write:       utils.Ptr(false),
-				Username:    utils.Ptr("username"),
-				Password:    utils.Ptr("password"),
+				Id:          new("uid"),
+				Description: new("description"),
+				Write:       new(false),
+				Username:    new("username"),
+				Password:    new("password"),
 			},
 			nil,
 			Model{
@@ -74,12 +73,12 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_password_in_response_1",
 			&secretsmanager.User{
-				Id:          utils.Ptr("uid"),
-				Description: utils.Ptr("description"),
-				Write:       utils.Ptr(false),
-				Username:    utils.Ptr("username"),
+				Id:          new("uid"),
+				Description: new("description"),
+				Write:       new(false),
+				Username:    new("username"),
 			},
-			utils.Ptr("password"),
+			new("password"),
 			Model{
 				Id:           types.StringValue("pid,iid,uid"),
 				UserId:       types.StringValue("uid"),
@@ -95,13 +94,13 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_password_in_response_2",
 			&secretsmanager.User{
-				Id:          utils.Ptr("uid"),
-				Description: utils.Ptr("description"),
-				Write:       utils.Ptr(false),
-				Username:    utils.Ptr("username"),
-				Password:    utils.Ptr(""),
+				Id:          new("uid"),
+				Description: new("description"),
+				Write:       new(false),
+				Username:    new("username"),
+				Password:    new(""),
 			},
-			utils.Ptr("password"),
+			new("password"),
 			Model{
 				Id:           types.StringValue("pid,iid,uid"),
 				UserId:       types.StringValue("uid"),
@@ -164,8 +163,8 @@ func TestToCreatePayload(t *testing.T) {
 				WriteEnabled: types.BoolValue(false),
 			},
 			&secretsmanager.CreateUserPayload{
-				Description: utils.Ptr("description"),
-				Write:       utils.Ptr(false),
+				Description: new("description"),
+				Write:       new(false),
 			},
 			true,
 		},
@@ -188,7 +187,7 @@ func TestToCreatePayload(t *testing.T) {
 				WriteEnabled: types.BoolNull(),
 			},
 			&secretsmanager.CreateUserPayload{
-				Description: utils.Ptr(""),
+				Description: new(""),
 				Write:       nil,
 			},
 			true,
@@ -240,7 +239,7 @@ func TestToUpdatePayload(t *testing.T) {
 				WriteEnabled: types.BoolValue(false),
 			},
 			&secretsmanager.UpdateUserPayload{
-				Write: utils.Ptr(false),
+				Write: new(false),
 			},
 			true,
 		},

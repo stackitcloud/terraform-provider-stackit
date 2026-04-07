@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 )
 
@@ -29,15 +28,15 @@ func TestMapFields(t *testing.T) {
 			description: "full_input",
 			input: &authorization.GetRoleResponse{
 				ResourceId:   &testProjectId,
-				ResourceType: utils.Ptr("project"),
-				Role: utils.Ptr(authorization.Role{
+				ResourceType: new("project"),
+				Role: new(authorization.Role{
 					Id:          &testRoleId,
-					Name:        utils.Ptr("role-name"),
-					Description: utils.Ptr("Some description"),
-					Permissions: utils.Ptr([]authorization.Permission{
+					Name:        new("role-name"),
+					Description: new("Some description"),
+					Permissions: new([]authorization.Permission{
 						{
-							Name:        utils.Ptr("iam.subject.get"),
-							Description: utils.Ptr("Can read subjects."),
+							Name:        new("iam.subject.get"),
+							Description: new("Can read subjects."),
 						},
 					}),
 				}),
@@ -58,12 +57,12 @@ func TestMapFields(t *testing.T) {
 			description: "partial_input",
 			input: &authorization.GetRoleResponse{
 				ResourceId:   &testProjectId,
-				ResourceType: utils.Ptr("project"),
-				Role: utils.Ptr(authorization.Role{
+				ResourceType: new("project"),
+				Role: new(authorization.Role{
 					Id: &testRoleId,
-					Permissions: utils.Ptr([]authorization.Permission{
+					Permissions: new([]authorization.Permission{
 						{
-							Name: utils.Ptr("iam.subject.get"),
+							Name: new("iam.subject.get"),
 						},
 					}),
 				}),
@@ -82,10 +81,10 @@ func TestMapFields(t *testing.T) {
 			description: "partial_input_without_permissions",
 			input: &authorization.GetRoleResponse{
 				ResourceId:   &testProjectId,
-				ResourceType: utils.Ptr("project"),
-				Role: utils.Ptr(authorization.Role{
+				ResourceType: new("project"),
+				Role: new(authorization.Role{
 					Id:          &testRoleId,
-					Permissions: utils.Ptr([]authorization.Permission{}),
+					Permissions: new([]authorization.Permission{}),
 				}),
 			},
 			expected: &Model{
@@ -112,7 +111,7 @@ func TestMapFields(t *testing.T) {
 			description: "missing_role",
 			input: &authorization.GetRoleResponse{
 				ResourceId:   &testProjectId,
-				ResourceType: utils.Ptr("project"),
+				ResourceType: new("project"),
 			},
 			expected: nil,
 			isValid:  false,
@@ -121,8 +120,8 @@ func TestMapFields(t *testing.T) {
 			description: "missing_permissions",
 			input: &authorization.GetRoleResponse{
 				ResourceId:   &testProjectId,
-				ResourceType: utils.Ptr("project"),
-				Role: utils.Ptr(authorization.Role{
+				ResourceType: new("project"),
+				Role: new(authorization.Role{
 					Id: &testRoleId,
 				}),
 			},
@@ -133,9 +132,9 @@ func TestMapFields(t *testing.T) {
 			description: "missing_role_id",
 			input: &authorization.GetRoleResponse{
 				ResourceId:   &testProjectId,
-				ResourceType: utils.Ptr("project"),
-				Role: utils.Ptr(authorization.Role{
-					Permissions: utils.Ptr([]authorization.Permission{}),
+				ResourceType: new("project"),
+				Role: new(authorization.Role{
+					Permissions: new([]authorization.Permission{}),
 				}),
 			},
 			expected: nil,
@@ -182,11 +181,11 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: authorization.AddRolePayload{
-				Name:        utils.Ptr("role-name"),
-				Description: utils.Ptr("Some description"),
-				Permissions: utils.Ptr([]authorization.PermissionRequest{
+				Name:        new("role-name"),
+				Description: new("Some description"),
+				Permissions: new([]authorization.PermissionRequest{
 					{
-						Name: utils.Ptr("iam.subject.get"),
+						Name: new("iam.subject.get"),
 					},
 				}),
 			},
@@ -195,7 +194,7 @@ func TestToCreatePayload(t *testing.T) {
 			description: "empty values still valid",
 			input:       &Model{},
 			expected: authorization.AddRolePayload{
-				Permissions: utils.Ptr([]authorization.PermissionRequest{}),
+				Permissions: new([]authorization.PermissionRequest{}),
 			},
 			expectError: false,
 		},

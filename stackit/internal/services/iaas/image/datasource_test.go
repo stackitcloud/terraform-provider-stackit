@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -31,7 +30,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					ImageId:   types.StringValue("iid"),
 				},
 				input: &iaas.Image{
-					Id: utils.Ptr("iid"),
+					Id: new("iid"),
 				},
 				region: "eu01",
 			},
@@ -53,33 +52,33 @@ func TestMapDataSourceFields(t *testing.T) {
 					Region:    types.StringValue("eu01"),
 				},
 				input: &iaas.Image{
-					Id:          utils.Ptr("iid"),
-					Name:        utils.Ptr("name"),
-					DiskFormat:  utils.Ptr("format"),
-					MinDiskSize: utils.Ptr(int64(1)),
-					MinRam:      utils.Ptr(int64(1)),
-					Protected:   utils.Ptr(true),
-					Scope:       utils.Ptr("scope"),
+					Id:          new("iid"),
+					Name:        new("name"),
+					DiskFormat:  new("format"),
+					MinDiskSize: new(int64(1)),
+					MinRam:      new(int64(1)),
+					Protected:   new(true),
+					Scope:       new("scope"),
 					Config: &iaas.ImageConfig{
-						BootMenu:               utils.Ptr(true),
-						CdromBus:               iaas.NewNullableString(utils.Ptr("cdrom_bus")),
-						DiskBus:                iaas.NewNullableString(utils.Ptr("disk_bus")),
-						NicModel:               iaas.NewNullableString(utils.Ptr("model")),
-						OperatingSystem:        utils.Ptr("os"),
-						OperatingSystemDistro:  iaas.NewNullableString(utils.Ptr("os_distro")),
-						OperatingSystemVersion: iaas.NewNullableString(utils.Ptr("os_version")),
-						RescueBus:              iaas.NewNullableString(utils.Ptr("rescue_bus")),
-						RescueDevice:           iaas.NewNullableString(utils.Ptr("rescue_device")),
-						SecureBoot:             utils.Ptr(true),
-						Uefi:                   utils.Ptr(true),
-						VideoModel:             iaas.NewNullableString(utils.Ptr("model")),
-						VirtioScsi:             utils.Ptr(true),
+						BootMenu:               new(true),
+						CdromBus:               iaas.NewNullableString(new("cdrom_bus")),
+						DiskBus:                iaas.NewNullableString(new("disk_bus")),
+						NicModel:               iaas.NewNullableString(new("model")),
+						OperatingSystem:        new("os"),
+						OperatingSystemDistro:  iaas.NewNullableString(new("os_distro")),
+						OperatingSystemVersion: iaas.NewNullableString(new("os_version")),
+						RescueBus:              iaas.NewNullableString(new("rescue_bus")),
+						RescueDevice:           iaas.NewNullableString(new("rescue_device")),
+						SecureBoot:             new(true),
+						Uefi:                   new(true),
+						VideoModel:             iaas.NewNullableString(new("model")),
+						VirtioScsi:             new(true),
 					},
 					Checksum: &iaas.ImageChecksum{
-						Algorithm: utils.Ptr("algorithm"),
-						Digest:    utils.Ptr("digest"),
+						Algorithm: new("algorithm"),
+						Digest:    new("digest"),
 					},
-					Labels: &map[string]interface{}{
+					Labels: &map[string]any{
 						"key": "value",
 					},
 				},
@@ -130,7 +129,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Image{
-					Id: utils.Ptr("iid"),
+					Id: new("iid"),
 				},
 				region: "eu01",
 			},

@@ -48,12 +48,12 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId:         utils.Ptr(iaas.AreaId{String: utils.Ptr("aid")}),
-				CreatedAt:      utils.Ptr(testTimestamp()),
-				InternetAccess: utils.Ptr(true),
+				AreaId:         new(iaas.AreaId{String: new("aid")}),
+				CreatedAt:      new(testTimestamp()),
+				InternetAccess: new(true),
 				Id:             utils.Ptr(projectId),
-				Status:         utils.Ptr("CREATED"),
-				UpdatedAt:      utils.Ptr(testTimestamp()),
+				Status:         new("CREATED"),
+				UpdatedAt:      new(testTimestamp()),
 			},
 			expected: &DatasourceModel{
 				Id:             types.StringValue(projectId),
@@ -73,7 +73,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				AreaId: utils.Ptr(iaas.AreaId{
+				AreaId: new(iaas.AreaId{
 					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(),
 				}),
 				Id: utils.Ptr(projectId),

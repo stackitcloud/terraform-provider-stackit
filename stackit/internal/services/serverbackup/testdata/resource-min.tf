@@ -37,6 +37,11 @@ resource "stackit_server" "server" {
   ]
 }
 
+resource "stackit_server_backup_enable" "enable" {
+  project_id = var.project_id
+  server_id  = stackit_server.server.server_id
+}
+
 resource "stackit_server_backup_schedule" "test_schedule" {
   project_id = var.project_id
   server_id  = stackit_server.server.server_id
@@ -48,15 +53,7 @@ resource "stackit_server_backup_schedule" "test_schedule" {
     retention_period = var.retention_period
     volume_ids       = null
   }
-}
-
-data "stackit_server_backup_schedule" "schedule_data_test" {
-  project_id         = var.project_id
-  server_id          = stackit_server.server.server_id
-  backup_schedule_id = stackit_server_backup_schedule.test_schedule.backup_schedule_id
-}
-
-data "stackit_server_backup_schedules" "schedules_data_test" {
-  project_id = var.project_id
-  server_id  = stackit_server.server.server_id
+  depends_on = [
+    stackit_server_backup_enable.enable
+  ]
 }

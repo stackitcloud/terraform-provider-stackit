@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 )
 
@@ -71,12 +70,12 @@ func TestMapFields(t *testing.T) {
 			description: "max values",
 			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
 				accessToken.Permissions = []string{"write"}
-				accessToken.AccessToken = utils.Ptr("")
-				accessToken.Description = utils.Ptr("description")
+				accessToken.AccessToken = new("")
+				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"
 				accessToken.Creator = "testUser"
 				accessToken.Expires = false
-				accessToken.ValidUntil = utils.Ptr(testTime)
+				accessToken.ValidUntil = new(testTime)
 			}),
 			expected: fixtureModel(func(model *Model) {
 				model.Permissions = types.ListValueMust(types.StringType, []attr.Value{
@@ -151,9 +150,9 @@ func TestToCreatePayload(t *testing.T) {
 			}),
 			expected: &logs.CreateAccessTokenPayload{
 				Permissions: []string{"read", "write"},
-				Description: utils.Ptr("description"),
+				Description: new("description"),
 				DisplayName: "display-name",
-				Lifetime:    utils.Ptr(int32(7)),
+				Lifetime:    new(int32(7)),
 			},
 		},
 		{
@@ -197,8 +196,8 @@ func TestToUpdatePayload(t *testing.T) {
 				model.DisplayName = types.StringValue("display-name")
 			}),
 			expected: &logs.UpdateAccessTokenPayload{
-				Description: utils.Ptr("description"),
-				DisplayName: utils.Ptr("display-name"),
+				Description: new("description"),
+				DisplayName: new("display-name"),
 			},
 		},
 		{

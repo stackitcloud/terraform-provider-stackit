@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis/wait"
@@ -21,9 +20,9 @@ import (
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("redis"),
-	"plan_id":         "96e24604-7a43-4ff8-9ba4-609d4235a137",
+	"plan_id":         "3849f72f-99cc-4e2c-afda-700d66ef08f2",
 	"plan_name":       "stackit-redis-1.4.10-single",
-	"version":         "6",
+	"version":         "7",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
 	"sgw_acl_valid2":  "10.10.10.0/24",
@@ -43,16 +42,17 @@ func parametersConfig(params map[string]string) string {
 		"syslog",
 		"tls_ciphers",
 	}
-	parameters := "parameters = {"
+	var parameters strings.Builder
+	parameters.WriteString("parameters = {")
 	for k, v := range params {
 		if utils.Contains(nonStringParams, k) {
-			parameters += fmt.Sprintf("%s = %s\n", k, v)
+			parameters.WriteString(fmt.Sprintf("%s = %s\n", k, v))
 		} else {
-			parameters += fmt.Sprintf("%s = %q\n", k, v)
+			parameters.WriteString(fmt.Sprintf("%s = %q\n", k, v))
 		}
 	}
-	parameters += "\n}"
-	return parameters
+	parameters.WriteString("\n}")
+	return parameters.String()
 }
 
 func resourceConfig(params map[string]string) string {
@@ -69,7 +69,7 @@ func resourceConfig(params map[string]string) string {
 
 				%s
 				`,
-		testutil.RedisProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],
@@ -273,17 +273,7 @@ func checkInstanceDeleteSuccess(i *redis.Instance) bool {
 
 func testAccCheckRedisDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *redis.APIClient
-	var err error
-	if testutil.RedisCustomEndpoint == "" {
-		client, err = redis.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = redis.NewAPIClient(
-			config.WithEndpoint(testutil.RedisCustomEndpoint),
-		)
-	}
+	client, err := redis.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RedisCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

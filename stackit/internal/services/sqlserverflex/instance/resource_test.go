@@ -8,8 +8,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+<<<<<<< sqlserverflex-sdk-update
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+=======
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+>>>>>>> main
 )
 
 type sqlserverflexClientMocked struct {
@@ -98,8 +102,9 @@ func TestMapFields(t *testing.T) {
 							"",
 						},
 					},
-					BackupSchedule: utils.Ptr("schedule"),
+					BackupSchedule: new("schedule"),
 					Flavor: &sqlserverflex.Flavor{
+<<<<<<< sqlserverflex-sdk-update
 						Cpu:         utils.Ptr(int32(12)),
 						Description: utils.Ptr("description"),
 						Id:          utils.Ptr("flavor_id"),
@@ -109,15 +114,26 @@ func TestMapFields(t *testing.T) {
 					Name:     utils.Ptr("name"),
 					Replicas: utils.Ptr(int32(56)),
 					Status:   utils.Ptr("status"),
+=======
+						Cpu:         new(int64(12)),
+						Description: new("description"),
+						Id:          new("flavor_id"),
+						Memory:      new(int64(34)),
+					},
+					Id:       new("iid"),
+					Name:     new("name"),
+					Replicas: new(int64(56)),
+					Status:   new("status"),
+>>>>>>> main
 					Storage: &sqlserverflex.Storage{
-						Class: utils.Ptr("class"),
-						Size:  utils.Ptr(int64(78)),
+						Class: new("class"),
+						Size:  new(int64(78)),
 					},
 					Options: &map[string]string{
 						"edition":       "edition",
 						"retentionDays": "1",
 					},
-					Version: utils.Ptr("version"),
+					Version: new("version"),
 				},
 			},
 			&flavorModel{},
@@ -170,18 +186,25 @@ func TestMapFields(t *testing.T) {
 							"",
 						},
 					},
-					BackupSchedule: utils.Ptr("schedule"),
+					BackupSchedule: new("schedule"),
 					Flavor:         nil,
+<<<<<<< sqlserverflex-sdk-update
 					Id:             utils.Ptr("iid"),
 					Name:           utils.Ptr("name"),
 					Replicas:       utils.Ptr(int32(56)),
 					Status:         utils.Ptr("status"),
+=======
+					Id:             new("iid"),
+					Name:           new("name"),
+					Replicas:       new(int64(56)),
+					Status:         new("status"),
+>>>>>>> main
 					Storage:        nil,
 					Options: &map[string]string{
 						"edition":       "edition",
 						"retentionDays": "1",
 					},
-					Version: utils.Ptr("version"),
+					Version: new("version"),
 				},
 			},
 			&flavorModel{
@@ -248,18 +271,25 @@ func TestMapFields(t *testing.T) {
 							"ip2",
 						},
 					},
-					BackupSchedule: utils.Ptr("schedule"),
+					BackupSchedule: new("schedule"),
 					Flavor:         nil,
+<<<<<<< sqlserverflex-sdk-update
 					Id:             utils.Ptr("iid"),
 					Name:           utils.Ptr("name"),
 					Replicas:       utils.Ptr(int32(56)),
 					Status:         utils.Ptr("status"),
+=======
+					Id:             new("iid"),
+					Name:           new("name"),
+					Replicas:       new(int64(56)),
+					Status:         new("status"),
+>>>>>>> main
 					Storage:        nil,
 					Options: &map[string]string{
 						"edition":       "edition",
 						"retentionDays": "1",
 					},
-					Version: utils.Ptr("version"),
+					Version: new("version"),
 				},
 			},
 			&flavorModel{
@@ -408,6 +438,7 @@ func TestToCreatePayload(t *testing.T) {
 						"ip_2",
 					},
 				},
+<<<<<<< sqlserverflex-sdk-update
 				BackupSchedule: utils.Ptr("schedule"),
 				FlavorId:       "flavor_id",
 				Name:           "name",
@@ -418,8 +449,20 @@ func TestToCreatePayload(t *testing.T) {
 				Options: &sqlserverflex.InstanceDocumentationOptions{
 					Edition:       utils.Ptr("edition"),
 					RetentionDays: utils.Ptr("1"),
+=======
+				BackupSchedule: new("schedule"),
+				FlavorId:       new("flavor_id"),
+				Name:           new("name"),
+				Storage: &sqlserverflex.CreateInstancePayloadStorage{
+					Class: new("class"),
+					Size:  new(int64(34)),
 				},
-				Version: utils.Ptr("version"),
+				Options: &sqlserverflex.CreateInstancePayloadOptions{
+					Edition:       new("edition"),
+					RetentionDays: new("1"),
+>>>>>>> main
+				},
+				Version: new("version"),
 			},
 			true,
 		},
@@ -592,10 +635,10 @@ func TestToUpdatePayload(t *testing.T) {
 						"ip_2",
 					},
 				},
-				BackupSchedule: utils.Ptr("schedule"),
-				FlavorId:       utils.Ptr("flavor_id"),
-				Name:           utils.Ptr("name"),
-				Version:        utils.Ptr("version"),
+				BackupSchedule: new("schedule"),
+				FlavorId:       new("flavor_id"),
+				Name:           new("name"),
+				Version:        new("version"),
 			},
 			true,
 		},
@@ -690,10 +733,17 @@ func TestLoadFlavorId(t *testing.T) {
 			&sqlserverflex.ListFlavorsResponse{
 				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
+<<<<<<< sqlserverflex-sdk-update
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int32(2)),
 						Description: utils.Ptr("description"),
 						Memory:      utils.Ptr(int32(8)),
+=======
+						Id:          new("fid-1"),
+						Cpu:         new(int64(2)),
+						Description: new("description"),
+						Memory:      new(int64(8)),
+>>>>>>> main
 					},
 				},
 			},
@@ -715,6 +765,7 @@ func TestLoadFlavorId(t *testing.T) {
 			&sqlserverflex.ListFlavorsResponse{
 				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
+<<<<<<< sqlserverflex-sdk-update
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int32(2)),
 						Description: utils.Ptr("description"),
@@ -725,6 +776,18 @@ func TestLoadFlavorId(t *testing.T) {
 						Cpu:         utils.Ptr(int32(1)),
 						Description: utils.Ptr("description"),
 						Memory:      utils.Ptr(int32(4)),
+=======
+						Id:          new("fid-1"),
+						Cpu:         new(int64(2)),
+						Description: new("description"),
+						Memory:      new(int64(8)),
+					},
+					{
+						Id:          new("fid-2"),
+						Cpu:         new(int64(1)),
+						Description: new("description"),
+						Memory:      new(int64(4)),
+>>>>>>> main
 					},
 				},
 			},
@@ -746,6 +809,7 @@ func TestLoadFlavorId(t *testing.T) {
 			&sqlserverflex.ListFlavorsResponse{
 				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
+<<<<<<< sqlserverflex-sdk-update
 						Id:          utils.Ptr("fid-1"),
 						Cpu:         utils.Ptr(int32(1)),
 						Description: utils.Ptr("description"),
@@ -756,6 +820,18 @@ func TestLoadFlavorId(t *testing.T) {
 						Cpu:         utils.Ptr(int32(1)),
 						Description: utils.Ptr("description"),
 						Memory:      utils.Ptr(int32(4)),
+=======
+						Id:          new("fid-1"),
+						Cpu:         new(int64(1)),
+						Description: new("description"),
+						Memory:      new(int64(8)),
+					},
+					{
+						Id:          new("fid-2"),
+						Cpu:         new(int64(1)),
+						Description: new("description"),
+						Memory:      new(int64(4)),
+>>>>>>> main
 					},
 				},
 			},

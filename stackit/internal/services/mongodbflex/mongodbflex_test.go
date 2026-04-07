@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -65,16 +64,16 @@ resource "stackit_mongodbflex_instance" "instance" {
 							Description: "ListFlavors",
 							ToJsonBody: &mongodbflex.ListFlavorsResponse{Flavors: &[]mongodbflex.InstanceFlavor{
 								{
-									Description: utils.Ptr("flava-flav"),
-									Cpu:         utils.Ptr(int64(2)),
-									Id:          utils.Ptr("flavor-id"),
-									Memory:      utils.Ptr(int64(4)),
+									Description: new("flava-flav"),
+									Cpu:         new(int64(2)),
+									Id:          new("flavor-id"),
+									Memory:      new(int64(4)),
 								},
 							}},
 						},
 						testutil.MockResponse{
 							Description: "create instance",
-							ToJsonBody:  &mongodbflex.CreateInstanceResponse{Id: utils.Ptr(instanceId)},
+							ToJsonBody:  &mongodbflex.CreateInstanceResponse{Id: new(instanceId)},
 						},
 						testutil.MockResponse{Description: "create waiter", StatusCode: http.StatusInternalServerError},
 					)
@@ -136,7 +135,7 @@ resource "stackit_mongodbflex_user" "user" {
 					s.Reset(
 						testutil.MockResponse{
 							Description: "create user",
-							ToJsonBody:  &mongodbflex.CreateUserResponse{Item: &mongodbflex.User{Id: utils.Ptr(userId)}},
+							ToJsonBody:  &mongodbflex.CreateUserResponse{Item: &mongodbflex.User{Id: new(userId)}},
 						},
 						testutil.MockResponse{Description: "failing waiter", StatusCode: http.StatusInternalServerError},
 					)

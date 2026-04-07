@@ -569,7 +569,7 @@ func mapFields(instance *mariadb.Instance, model *Model) error {
 	return nil
 }
 
-func mapParameters(params map[string]interface{}) (types.Object, error) {
+func mapParameters(params map[string]any) (types.Object, error) {
 	attributes := map[string]attr.Value{}
 	for attribute := range parametersTypes {
 		valueInterface, ok := params[attribute]
@@ -638,7 +638,7 @@ func mapParameters(params map[string]interface{}) (types.Object, error) {
 					for _, x := range temp {
 						valueList = append(valueList, types.StringValue(x))
 					}
-				case []interface{}:
+				case []any:
 					for _, x := range temp {
 						xString, ok := x.(string)
 						if !ok {
