@@ -7,7 +7,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -41,15 +42,15 @@ func TestMapDataSourceFields(t *testing.T) {
 			"simple_values",
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
 					},
-					Username: new("username"),
-					Database: new("database"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
+					Username: utils.Ptr("username"),
+					Database: utils.Ptr("database"),
+					Host:     utils.Ptr("host"),
+					Port:     utils.Ptr(int64(1234)),
 				},
 			},
 			testRegion,
@@ -74,12 +75,12 @@ func TestMapDataSourceFields(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
-					Id:       new(userId),
-					Roles:    &[]string{},
+					Id:       utils.Ptr(userId),
+					Roles:    []string{},
 					Username: nil,
 					Database: nil,
 					Host:     nil,
-					Port:     new(int64(2123456789)),
+					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
 			testRegion,

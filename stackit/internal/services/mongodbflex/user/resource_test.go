@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 )
 
 const (
@@ -34,8 +35,8 @@ func TestMapFieldsCreate(t *testing.T) {
 			"default_values",
 			&mongodbflex.CreateUserResponse{
 				Item: &mongodbflex.User{
-					Id:       new(userId),
-					Password: new(""),
+					Id:       utils.Ptr(userId),
+					Password: utils.Ptr(""),
 				},
 			},
 			testRegion,
@@ -59,18 +60,18 @@ func TestMapFieldsCreate(t *testing.T) {
 			"simple_values",
 			&mongodbflex.CreateUserResponse{
 				Item: &mongodbflex.User{
-					Id: new(userId),
-					Roles: &[]string{
+					Id: utils.Ptr(userId),
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
 					},
-					Username: new("username"),
-					Database: new("database"),
-					Password: new("password"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
-					Uri:      new("uri"),
+					Username: utils.Ptr("username"),
+					Database: utils.Ptr("database"),
+					Password: utils.Ptr("password"),
+					Host:     utils.Ptr("host"),
+					Port:     utils.Ptr(int64(1234)),
+					Uri:      utils.Ptr("uri"),
 				},
 			},
 			testRegion,
@@ -98,13 +99,13 @@ func TestMapFieldsCreate(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&mongodbflex.CreateUserResponse{
 				Item: &mongodbflex.User{
-					Id:       new(userId),
-					Roles:    &[]string{},
+					Id:       utils.Ptr(userId),
+					Roles:    []string{},
 					Username: nil,
 					Database: nil,
-					Password: new(""),
+					Password: utils.Ptr(""),
 					Host:     nil,
-					Port:     new(int64(2123456789)),
+					Port:     utils.Ptr(int64(2123456789)),
 					Uri:      nil,
 				},
 			},
@@ -152,7 +153,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			"no_password",
 			&mongodbflex.CreateUserResponse{
 				Item: &mongodbflex.User{
-					Id: new(userId),
+					Id: utils.Ptr(userId),
 				},
 			},
 			testRegion,
@@ -215,15 +216,15 @@ func TestMapFields(t *testing.T) {
 			"simple_values",
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
 					},
-					Username: new("username"),
-					Database: new("database"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
+					Username: utils.Ptr("username"),
+					Database: utils.Ptr("database"),
+					Host:     utils.Ptr("host"),
+					Port:     utils.Ptr(int64(1234)),
 				},
 			},
 			testRegion,
@@ -249,12 +250,12 @@ func TestMapFields(t *testing.T) {
 			"null_fields_and_int_conversions",
 			&mongodbflex.GetUserResponse{
 				Item: &mongodbflex.InstanceResponseUser{
-					Id:       new(userId),
-					Roles:    &[]string{},
+					Id:       utils.Ptr(userId),
+					Roles:    []string{},
 					Username: nil,
 					Database: nil,
 					Host:     nil,
-					Port:     new(int64(2123456789)),
+					Port:     utils.Ptr(int64(2123456789)),
 				},
 			},
 			testRegion,
@@ -333,9 +334,9 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&mongodbflex.CreateUserPayload{
-				Roles:    &[]string{},
+				Roles:    []string{},
 				Username: nil,
-				Database: nil,
+				Database: "",
 			},
 			true,
 		},
@@ -350,12 +351,12 @@ func TestToCreatePayload(t *testing.T) {
 				"role_2",
 			},
 			&mongodbflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
-				Username: new("username"),
-				Database: new("database"),
+				Username: utils.Ptr("username"),
+				Database: "database",
 			},
 			true,
 		},
@@ -369,11 +370,11 @@ func TestToCreatePayload(t *testing.T) {
 				"",
 			},
 			&mongodbflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
 				Username: nil,
-				Database: nil,
+				Database: "",
 			},
 			true,
 		},
@@ -424,8 +425,8 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&mongodbflex.UpdateUserPayload{
-				Roles:    &[]string{},
-				Database: nil,
+				Roles:    []string{},
+				Database: "",
 			},
 			true,
 		},
@@ -440,11 +441,11 @@ func TestToUpdatePayload(t *testing.T) {
 				"role_2",
 			},
 			&mongodbflex.UpdateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
-				Database: new("database"),
+				Database: "database",
 			},
 			true,
 		},
@@ -458,10 +459,10 @@ func TestToUpdatePayload(t *testing.T) {
 				"",
 			},
 			&mongodbflex.UpdateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
-				Database: nil,
+				Database: "",
 			},
 			true,
 		},
