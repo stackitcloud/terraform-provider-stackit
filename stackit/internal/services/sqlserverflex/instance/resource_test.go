@@ -8,12 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-<<<<<<< sqlserverflex-sdk-update
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
-=======
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
->>>>>>> main
 )
 
 type sqlserverflexClientMocked struct {
@@ -104,27 +99,15 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: new("schedule"),
 					Flavor: &sqlserverflex.Flavor{
-<<<<<<< sqlserverflex-sdk-update
-						Cpu:         utils.Ptr(int32(12)),
-						Description: utils.Ptr("description"),
-						Id:          utils.Ptr("flavor_id"),
-						Memory:      utils.Ptr(int32(34)),
-					},
-					Id:       utils.Ptr("iid"),
-					Name:     utils.Ptr("name"),
-					Replicas: utils.Ptr(int32(56)),
-					Status:   utils.Ptr("status"),
-=======
-						Cpu:         new(int64(12)),
+						Cpu:         new(int32(12)),
 						Description: new("description"),
 						Id:          new("flavor_id"),
-						Memory:      new(int64(34)),
+						Memory:      new(int32(34)),
 					},
 					Id:       new("iid"),
 					Name:     new("name"),
-					Replicas: new(int64(56)),
+					Replicas: new(int32(56)),
 					Status:   new("status"),
->>>>>>> main
 					Storage: &sqlserverflex.Storage{
 						Class: new("class"),
 						Size:  new(int64(78)),
@@ -188,17 +171,10 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: new("schedule"),
 					Flavor:         nil,
-<<<<<<< sqlserverflex-sdk-update
-					Id:             utils.Ptr("iid"),
-					Name:           utils.Ptr("name"),
-					Replicas:       utils.Ptr(int32(56)),
-					Status:         utils.Ptr("status"),
-=======
 					Id:             new("iid"),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
+					Replicas:       new(int32(56)),
 					Status:         new("status"),
->>>>>>> main
 					Storage:        nil,
 					Options: &map[string]string{
 						"edition":       "edition",
@@ -273,17 +249,10 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: new("schedule"),
 					Flavor:         nil,
-<<<<<<< sqlserverflex-sdk-update
-					Id:             utils.Ptr("iid"),
-					Name:           utils.Ptr("name"),
-					Replicas:       utils.Ptr(int32(56)),
-					Status:         utils.Ptr("status"),
-=======
 					Id:             new("iid"),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
+					Replicas:       new(int32(56)),
 					Status:         new("status"),
->>>>>>> main
 					Storage:        nil,
 					Options: &map[string]string{
 						"edition":       "edition",
@@ -438,18 +407,6 @@ func TestToCreatePayload(t *testing.T) {
 						"ip_2",
 					},
 				},
-<<<<<<< sqlserverflex-sdk-update
-				BackupSchedule: utils.Ptr("schedule"),
-				FlavorId:       "flavor_id",
-				Name:           "name",
-				Storage: &sqlserverflex.InstanceDocumentationStorage{
-					Class: utils.Ptr("class"),
-					Size:  utils.Ptr(int64(34)),
-				},
-				Options: &sqlserverflex.InstanceDocumentationOptions{
-					Edition:       utils.Ptr("edition"),
-					RetentionDays: utils.Ptr("1"),
-=======
 				BackupSchedule: new("schedule"),
 				FlavorId:       new("flavor_id"),
 				Name:           new("name"),
@@ -460,7 +417,6 @@ func TestToCreatePayload(t *testing.T) {
 				Options: &sqlserverflex.CreateInstancePayloadOptions{
 					Edition:       new("edition"),
 					RetentionDays: new("1"),
->>>>>>> main
 				},
 				Version: new("version"),
 			},
@@ -733,17 +689,10 @@ func TestLoadFlavorId(t *testing.T) {
 			&sqlserverflex.ListFlavorsResponse{
 				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
-<<<<<<< sqlserverflex-sdk-update
-						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int32(2)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(8)),
-=======
 						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
+						Cpu:         new(int32(2)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
->>>>>>> main
+						Memory:      new(int32(8)),
 					},
 				},
 			},
@@ -765,29 +714,16 @@ func TestLoadFlavorId(t *testing.T) {
 			&sqlserverflex.ListFlavorsResponse{
 				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
-<<<<<<< sqlserverflex-sdk-update
-						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int32(2)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(8)),
-					},
-					{
-						Id:          utils.Ptr("fid-2"),
-						Cpu:         utils.Ptr(int32(1)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(4)),
-=======
 						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
+						Cpu:         new(int32(2)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 					{
 						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(4)),
->>>>>>> main
+						Memory:      new(int32(4)),
 					},
 				},
 			},
@@ -809,29 +745,16 @@ func TestLoadFlavorId(t *testing.T) {
 			&sqlserverflex.ListFlavorsResponse{
 				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
-<<<<<<< sqlserverflex-sdk-update
-						Id:          utils.Ptr("fid-1"),
-						Cpu:         utils.Ptr(int32(1)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(8)),
-					},
-					{
-						Id:          utils.Ptr("fid-2"),
-						Cpu:         utils.Ptr(int32(1)),
-						Description: utils.Ptr("description"),
-						Memory:      utils.Ptr(int32(4)),
-=======
 						Id:          new("fid-1"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 					{
 						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(4)),
->>>>>>> main
+						Memory:      new(int32(4)),
 					},
 				},
 			},
