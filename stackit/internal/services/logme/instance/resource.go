@@ -3,6 +3,7 @@ package logme
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"slices"
 	"strings"
@@ -27,8 +28,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/v1api/wait"
+
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -58,21 +60,21 @@ type Model struct {
 type parametersModel struct {
 	SgwAcl                 types.String  `tfsdk:"sgw_acl"`
 	EnableMonitoring       types.Bool    `tfsdk:"enable_monitoring"`
-	FluentdTcp             types.Int64   `tfsdk:"fluentd_tcp"`
-	FluentdTls             types.Int64   `tfsdk:"fluentd_tls"`
+	FluentdTcp             types.Int32   `tfsdk:"fluentd_tcp"`
+	FluentdTls             types.Int32   `tfsdk:"fluentd_tls"`
 	FluentdTlsCiphers      types.String  `tfsdk:"fluentd_tls_ciphers"`
 	FluentdTlsMaxVersion   types.String  `tfsdk:"fluentd_tls_max_version"`
 	FluentdTlsMinVersion   types.String  `tfsdk:"fluentd_tls_min_version"`
 	FluentdTlsVersion      types.String  `tfsdk:"fluentd_tls_version"`
-	FluentdUdp             types.Int64   `tfsdk:"fluentd_udp"`
+	FluentdUdp             types.Int32   `tfsdk:"fluentd_udp"`
 	Graphite               types.String  `tfsdk:"graphite"`
 	IsmDeletionAfter       types.String  `tfsdk:"ism_deletion_after"`
-	IsmJitter              types.Float64 `tfsdk:"ism_jitter"`
-	IsmJobInterval         types.Int64   `tfsdk:"ism_job_interval"`
-	JavaHeapspace          types.Int64   `tfsdk:"java_heapspace"`
-	JavaMaxmetaspace       types.Int64   `tfsdk:"java_maxmetaspace"`
-	MaxDiskThreshold       types.Int64   `tfsdk:"max_disk_threshold"`
-	MetricsFrequency       types.Int64   `tfsdk:"metrics_frequency"`
+	IsmJitter              types.Float32 `tfsdk:"ism_jitter"`
+	IsmJobInterval         types.Int32   `tfsdk:"ism_job_interval"`
+	JavaHeapspace          types.Int32   `tfsdk:"java_heapspace"`
+	JavaMaxmetaspace       types.Int32   `tfsdk:"java_maxmetaspace"`
+	MaxDiskThreshold       types.Int32   `tfsdk:"max_disk_threshold"`
+	MetricsFrequency       types.Int32   `tfsdk:"metrics_frequency"`
 	MetricsPrefix          types.String  `tfsdk:"metrics_prefix"`
 	MonitoringInstanceId   types.String  `tfsdk:"monitoring_instance_id"`
 	OpensearchTlsCiphers   types.List    `tfsdk:"opensearch_tls_ciphers"`
@@ -84,21 +86,21 @@ type parametersModel struct {
 var parametersTypes = map[string]attr.Type{
 	"sgw_acl":                  basetypes.StringType{},
 	"enable_monitoring":        basetypes.BoolType{},
-	"fluentd_tcp":              basetypes.Int64Type{},
-	"fluentd_tls":              basetypes.Int64Type{},
+	"fluentd_tcp":              basetypes.Int32Type{},
+	"fluentd_tls":              basetypes.Int32Type{},
 	"fluentd_tls_ciphers":      basetypes.StringType{},
 	"fluentd_tls_max_version":  basetypes.StringType{},
 	"fluentd_tls_min_version":  basetypes.StringType{},
 	"fluentd_tls_version":      basetypes.StringType{},
-	"fluentd_udp":              basetypes.Int64Type{},
+	"fluentd_udp":              basetypes.Int32Type{},
 	"graphite":                 basetypes.StringType{},
 	"ism_deletion_after":       basetypes.StringType{},
-	"ism_jitter":               basetypes.Float64Type{},
-	"ism_job_interval":         basetypes.Int64Type{},
-	"java_heapspace":           basetypes.Int64Type{},
-	"java_maxmetaspace":        basetypes.Int64Type{},
-	"max_disk_threshold":       basetypes.Int64Type{},
-	"metrics_frequency":        basetypes.Int64Type{},
+	"ism_jitter":               basetypes.Float32Type{},
+	"ism_job_interval":         basetypes.Int32Type{},
+	"java_heapspace":           basetypes.Int32Type{},
+	"java_maxmetaspace":        basetypes.Int32Type{},
+	"max_disk_threshold":       basetypes.Int32Type{},
+	"metrics_frequency":        basetypes.Int32Type{},
 	"metrics_prefix":           basetypes.StringType{},
 	"monitoring_instance_id":   basetypes.StringType{},
 	"opensearch_tls_ciphers":   basetypes.ListType{ElemType: types.StringType},
@@ -113,7 +115,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *logme.APIClient
+	client *logmeSdk.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -235,12 +237,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"fluentd_tcp": schema.Int64Attribute{
+					"fluentd_tcp": schema.Int32Attribute{
 						Description: parametersDescriptions["fluentd_tcp"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"fluentd_tls": schema.Int64Attribute{
+					"fluentd_tls": schema.Int32Attribute{
 						Description: parametersDescriptions["fluentd_tls"],
 						Optional:    true,
 						Computed:    true,
@@ -265,7 +267,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"fluentd_udp": schema.Int64Attribute{
+					"fluentd_udp": schema.Int32Attribute{
 						Description: parametersDescriptions["fluentd_udp"],
 						Optional:    true,
 						Computed:    true,
@@ -280,32 +282,32 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"ism_jitter": schema.Float64Attribute{
+					"ism_jitter": schema.Float32Attribute{
 						Description: parametersDescriptions["ism_jitter"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"ism_job_interval": schema.Int64Attribute{
+					"ism_job_interval": schema.Int32Attribute{
 						Description: parametersDescriptions["ism_job_interval"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"java_heapspace": schema.Int64Attribute{
+					"java_heapspace": schema.Int32Attribute{
 						Description: parametersDescriptions["java_heapspace"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"java_maxmetaspace": schema.Int64Attribute{
+					"java_maxmetaspace": schema.Int32Attribute{
 						Description: parametersDescriptions["java_maxmetaspace"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"max_disk_threshold": schema.Int64Attribute{
+					"max_disk_threshold": schema.Int32Attribute{
 						Description: parametersDescriptions["max_disk_threshold"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"metrics_frequency": schema.Int64Attribute{
+					"metrics_frequency": schema.Int32Attribute{
 						Description: parametersDescriptions["metrics_frequency"],
 						Optional:    true,
 						Computed:    true,
@@ -417,7 +419,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -425,7 +427,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	instanceId := *createResp.InstanceId
+	instanceId := createResp.InstanceId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
@@ -435,7 +437,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -473,7 +475,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -548,7 +550,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -556,7 +558,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -595,7 +597,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -603,7 +605,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -631,7 +633,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "LogMe instance state imported")
 }
 
-func mapFields(instance *logme.Instance, model *Model) error {
+func mapFields(instance *logmeSdk.Instance, model *Model) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -650,18 +652,18 @@ func mapFields(instance *logme.Instance, model *Model) error {
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
-	model.PlanId = types.StringPointerValue(instance.PlanId)
-	model.CfGuid = types.StringPointerValue(instance.CfGuid)
-	model.CfSpaceGuid = types.StringPointerValue(instance.CfSpaceGuid)
-	model.DashboardUrl = types.StringPointerValue(instance.DashboardUrl)
-	model.ImageUrl = types.StringPointerValue(instance.ImageUrl)
-	model.Name = types.StringPointerValue(instance.Name)
-	model.CfOrganizationGuid = types.StringPointerValue(instance.CfOrganizationGuid)
+	model.PlanId = types.StringValue(instance.PlanId)
+	model.CfGuid = types.StringValue(instance.CfGuid)
+	model.CfSpaceGuid = types.StringValue(instance.CfSpaceGuid)
+	model.DashboardUrl = types.StringValue(instance.DashboardUrl)
+	model.ImageUrl = types.StringValue(instance.ImageUrl)
+	model.Name = types.StringValue(instance.Name)
+	model.CfOrganizationGuid = types.StringValue(instance.CfOrganizationGuid)
 
 	if instance.Parameters == nil {
 		model.Parameters = types.ObjectNull(parametersTypes)
 	} else {
-		parameters, err := mapParameters(*instance.Parameters)
+		parameters, err := mapParameters(instance.Parameters)
 		if err != nil {
 			return fmt.Errorf("mapping parameters: %w", err)
 		}
@@ -726,26 +728,44 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				}
 				value = types.BoolValue(valueBool)
 			}
-		case basetypes.Int64Type:
+		case basetypes.Int32Type:
 			if valueInterface == nil {
-				value = types.Int64Null()
+				value = types.Int32Null()
 			} else {
 				// This may be int64, int32, int or float64
 				// We try to assert all 4
-				var valueInt64 int64
+				var valueInt32 int32
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
-				case int64:
-					valueInt64 = temp
 				case int32:
-					valueInt64 = int64(temp)
+					valueInt32 = temp
 				case int:
-					valueInt64 = int64(temp)
+					// check overflow
+					if temp > math.MaxInt32 || temp < math.MinInt32 {
+						return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, overflow detected", attribute, valueInterface)
+					}
+					valueInt32 = int32(temp)
 				case float64:
-					valueInt64 = int64(temp)
+					valueInt32 = int32(temp)
 				}
-				value = types.Int64Value(valueInt64)
+				value = types.Int32Value(valueInt32)
+			}
+
+		case basetypes.Float32Type:
+			if valueInterface == nil {
+				value = types.Float32Null()
+			} else {
+				var valueFloat32 float32
+				switch temp := valueInterface.(type) {
+				default:
+					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
+				case float32:
+					valueFloat32 = temp
+				case float64:
+					valueFloat32 = float32(temp)
+				}
+				value = types.Float32Value(valueFloat32)
 			}
 		case basetypes.Float64Type:
 			if valueInterface == nil {
@@ -755,6 +775,8 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
+				case float32:
+					valueFloat64 = float64(temp)
 				case float64:
 					valueFloat64 = float64(temp)
 				}
@@ -800,7 +822,7 @@ func mapParameters(params map[string]any) (types.Object, error) {
 	return output, nil
 }
 
-func toCreatePayload(model *Model, parameters *parametersModel) (*logme.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, parameters *parametersModel) (*logmeSdk.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -810,14 +832,14 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*logme.CreateIn
 		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 
-	return &logme.CreateInstancePayload{
-		InstanceName: conversion.StringValueToPointer(model.Name),
+	return &logmeSdk.CreateInstancePayload{
+		InstanceName: model.Name.ValueString(),
 		Parameters:   payloadParams,
-		PlanId:       conversion.StringValueToPointer(model.PlanId),
+		PlanId:       model.PlanId.ValueString(),
 	}, nil
 }
 
-func toUpdatePayload(model *Model, parameters *parametersModel) (*logme.PartialUpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, parameters *parametersModel) (*logmeSdk.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -827,50 +849,50 @@ func toUpdatePayload(model *Model, parameters *parametersModel) (*logme.PartialU
 		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 
-	return &logme.PartialUpdateInstancePayload{
+	return &logmeSdk.PartialUpdateInstancePayload{
 		Parameters: payloadParams,
 		PlanId:     conversion.StringValueToPointer(model.PlanId),
 	}, nil
 }
 
-func toInstanceParams(parameters *parametersModel) (*logme.InstanceParameters, error) {
+func toInstanceParams(parameters *parametersModel) (*logmeSdk.InstanceParameters, error) {
 	if parameters == nil {
 		return nil, nil
 	}
-	payloadParams := &logme.InstanceParameters{}
+	payloadParams := &logmeSdk.InstanceParameters{}
 
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
 	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
-	payloadParams.FluentdTcp = conversion.Int64ValueToPointer(parameters.FluentdTcp)
-	payloadParams.FluentdTls = conversion.Int64ValueToPointer(parameters.FluentdTls)
+	payloadParams.FluentdTcp = conversion.Int32ValueToPointer(parameters.FluentdTcp)
+	payloadParams.FluentdTls = conversion.Int32ValueToPointer(parameters.FluentdTls)
 	payloadParams.FluentdTlsCiphers = conversion.StringValueToPointer(parameters.FluentdTlsCiphers)
 	payloadParams.FluentdTlsMaxVersion = conversion.StringValueToPointer(parameters.FluentdTlsMaxVersion)
 	payloadParams.FluentdTlsMinVersion = conversion.StringValueToPointer(parameters.FluentdTlsMinVersion)
 	payloadParams.FluentdTlsVersion = conversion.StringValueToPointer(parameters.FluentdTlsVersion)
-	payloadParams.FluentdUdp = conversion.Int64ValueToPointer(parameters.FluentdUdp)
+	payloadParams.FluentdUdp = conversion.Int32ValueToPointer(parameters.FluentdUdp)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
 	payloadParams.IsmDeletionAfter = conversion.StringValueToPointer(parameters.IsmDeletionAfter)
-	payloadParams.IsmJitter = conversion.Float64ValueToPointer(parameters.IsmJitter)
-	payloadParams.IsmJobInterval = conversion.Int64ValueToPointer(parameters.IsmJobInterval)
-	payloadParams.JavaHeapspace = conversion.Int64ValueToPointer(parameters.JavaHeapspace)
-	payloadParams.JavaMaxmetaspace = conversion.Int64ValueToPointer(parameters.JavaMaxmetaspace)
-	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
-	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.IsmJitter = conversion.Float32ValueToPointer(parameters.IsmJitter)
+	payloadParams.IsmJobInterval = conversion.Int32ValueToPointer(parameters.IsmJobInterval)
+	payloadParams.JavaHeapspace = conversion.Int32ValueToPointer(parameters.JavaHeapspace)
+	payloadParams.JavaMaxmetaspace = conversion.Int32ValueToPointer(parameters.JavaMaxmetaspace)
+	payloadParams.MaxDiskThreshold = conversion.Int32ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int32ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 
 	var err error
-	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToPointer(parameters.OpensearchTlsCiphers)
+	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToSlice(parameters.OpensearchTlsCiphers)
 	if err != nil {
 		return nil, fmt.Errorf("convert opensearch_tls_ciphers: %w", err)
 	}
 
-	payloadParams.OpensearchTlsProtocols, err = conversion.StringListToPointer(parameters.OpensearchTlsProtocols)
+	payloadParams.OpensearchTlsProtocols, err = conversion.StringListToSlice(parameters.OpensearchTlsProtocols)
 	if err != nil {
 		return nil, fmt.Errorf("convert opensearch_tls_protocols: %w", err)
 	}
 
-	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	payloadParams.Syslog, err = conversion.StringListToSlice(parameters.Syslog)
 	if err != nil {
 		return nil, fmt.Errorf("convert syslog: %w", err)
 	}
@@ -880,7 +902,7 @@ func toInstanceParams(parameters *parametersModel) (*logme.InstanceParameters, e
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.ListOfferings(ctx, projectId).Execute()
+	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting LogMe offerings: %w", err)
 	}
@@ -890,22 +912,22 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	availableVersions := ""
 	availablePlanNames := ""
 	isValidVersion := false
-	for _, offer := range *res.Offerings {
-		if !strings.EqualFold(*offer.Version, version) {
-			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, *offer.Version)
+	for _, offer := range res.Offerings {
+		if !strings.EqualFold(offer.Version, version) {
+			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, offer.Version)
 			continue
 		}
 		isValidVersion = true
 
-		for _, plan := range *offer.Plans {
-			if plan.Name == nil {
+		for _, plan := range offer.Plans {
+			if plan.Name == "" {
 				continue
 			}
-			if strings.EqualFold(*plan.Name, planName) && plan.Id != nil {
-				model.PlanId = types.StringPointerValue(plan.Id)
+			if strings.EqualFold(plan.Name, planName) && plan.Id != "" {
+				model.PlanId = types.StringValue(plan.Id)
 				return nil
 			}
-			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, *plan.Name)
+			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, plan.Name)
 		}
 	}
 
@@ -915,19 +937,19 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
 }
 
-func loadPlanNameAndVersion(ctx context.Context, client *logme.APIClient, model *Model) error {
+func loadPlanNameAndVersion(ctx context.Context, client *logmeSdk.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.ListOfferings(ctx, projectId).Execute()
+	res, err := client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting LogMe offerings: %w", err)
 	}
 
-	for _, offer := range *res.Offerings {
-		for _, plan := range *offer.Plans {
-			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
-				model.PlanName = types.StringPointerValue(plan.Name)
-				model.Version = types.StringPointerValue(offer.Version)
+	for _, offer := range res.Offerings {
+		for _, plan := range offer.Plans {
+			if strings.EqualFold(plan.Id, planId) && plan.Id != "" {
+				model.PlanName = types.StringValue(plan.Name)
+				model.Version = types.StringValue(offer.Version)
 				return nil
 			}
 		}

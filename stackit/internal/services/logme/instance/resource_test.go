@@ -8,27 +8,27 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
 )
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
 	"sgw_acl":                 types.StringValue("acl"),
 	"enable_monitoring":       types.BoolValue(true),
-	"fluentd_tcp":             types.Int64Value(10),
-	"fluentd_tls":             types.Int64Value(10),
+	"fluentd_tcp":             types.Int32Value(10),
+	"fluentd_tls":             types.Int32Value(10),
 	"fluentd_tls_ciphers":     types.StringValue("ciphers"),
 	"fluentd_tls_max_version": types.StringValue("max_version"),
 	"fluentd_tls_min_version": types.StringValue("min_version"),
 	"fluentd_tls_version":     types.StringValue("version"),
-	"fluentd_udp":             types.Int64Value(10),
+	"fluentd_udp":             types.Int32Value(10),
 	"graphite":                types.StringValue("graphite"),
 	"ism_deletion_after":      types.StringValue("deletion_after"),
-	"ism_jitter":              types.Float64Value(10.1),
-	"ism_job_interval":        types.Int64Value(10),
-	"java_heapspace":          types.Int64Value(10),
-	"java_maxmetaspace":       types.Int64Value(10),
-	"max_disk_threshold":      types.Int64Value(10),
-	"metrics_frequency":       types.Int64Value(10),
+	"ism_jitter":              types.Float32Value(10.1),
+	"ism_job_interval":        types.Int32Value(10),
+	"java_heapspace":          types.Int32Value(10),
+	"java_maxmetaspace":       types.Int32Value(10),
+	"max_disk_threshold":      types.Int32Value(10),
+	"metrics_frequency":       types.Int32Value(10),
 	"metrics_prefix":          types.StringValue("prefix"),
 	"monitoring_instance_id":  types.StringValue("mid"),
 	"opensearch_tls_ciphers": types.ListValueMust(types.StringType, []attr.Value{
@@ -48,21 +48,21 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
 	"sgw_acl":                  types.StringNull(),
 	"enable_monitoring":        types.BoolNull(),
-	"fluentd_tcp":              types.Int64Null(),
-	"fluentd_tls":              types.Int64Null(),
+	"fluentd_tcp":              types.Int32Null(),
+	"fluentd_tls":              types.Int32Null(),
 	"fluentd_tls_ciphers":      types.StringNull(),
 	"fluentd_tls_max_version":  types.StringNull(),
 	"fluentd_tls_min_version":  types.StringNull(),
 	"fluentd_tls_version":      types.StringNull(),
-	"fluentd_udp":              types.Int64Null(),
+	"fluentd_udp":              types.Int32Null(),
 	"graphite":                 types.StringNull(),
 	"ism_deletion_after":       types.StringNull(),
-	"ism_jitter":               types.Float64Null(),
-	"ism_job_interval":         types.Int64Null(),
-	"java_heapspace":           types.Int64Null(),
-	"java_maxmetaspace":        types.Int64Null(),
-	"max_disk_threshold":       types.Int64Null(),
-	"metrics_frequency":        types.Int64Null(),
+	"ism_jitter":               types.Float32Null(),
+	"ism_job_interval":         types.Int32Null(),
+	"java_heapspace":           types.Int32Null(),
+	"java_maxmetaspace":        types.Int32Null(),
+	"max_disk_threshold":       types.Int32Null(),
+	"metrics_frequency":        types.Int32Null(),
 	"metrics_prefix":           types.StringNull(),
 	"monitoring_instance_id":   types.StringNull(),
 	"opensearch_tls_ciphers":   types.ListNull(types.StringType),
@@ -70,68 +70,69 @@ var fixtureNullModelParameters = types.ObjectValueMust(parametersTypes, map[stri
 	"syslog":                   types.ListNull(types.StringType),
 })
 
-var fixtureInstanceParameters = logme.InstanceParameters{
+var fixtureInstanceParameters = logmeSdk.InstanceParameters{
 	SgwAcl:                 new("acl"),
 	EnableMonitoring:       new(true),
-	FluentdTcp:             new(int64(10)),
-	FluentdTls:             new(int64(10)),
+	FluentdTcp:             new(int32(10)),
+	FluentdTls:             new(int32(10)),
 	FluentdTlsCiphers:      new("ciphers"),
 	FluentdTlsMaxVersion:   new("max_version"),
 	FluentdTlsMinVersion:   new("min_version"),
 	FluentdTlsVersion:      new("version"),
-	FluentdUdp:             new(int64(10)),
+	FluentdUdp:             new(int32(10)),
 	Graphite:               new("graphite"),
 	IsmDeletionAfter:       new("deletion_after"),
-	IsmJitter:              new(10.1),
-	IsmJobInterval:         new(int64(10)),
-	JavaHeapspace:          new(int64(10)),
-	JavaMaxmetaspace:       new(int64(10)),
-	MaxDiskThreshold:       new(int64(10)),
-	MetricsFrequency:       new(int64(10)),
+	IsmJitter:              new(float32(10.1)),
+	IsmJobInterval:         new(int32(10)),
+	JavaHeapspace:          new(int32(10)),
+	JavaMaxmetaspace:       new(int32(10)),
+	MaxDiskThreshold:       new(int32(10)),
+	MetricsFrequency:       new(int32(10)),
 	MetricsPrefix:          new("prefix"),
 	MonitoringInstanceId:   new("mid"),
-	OpensearchTlsCiphers:   &[]string{"ciphers", "ciphers2"},
-	OpensearchTlsProtocols: &[]string{"protocols", "protocols2"},
-	Syslog:                 &[]string{"syslog", "syslog2"},
+	OpensearchTlsCiphers:   []string{"ciphers", "ciphers2"},
+	OpensearchTlsProtocols: []string{"protocols", "protocols2"},
+	Syslog:                 []string{"syslog", "syslog2"},
 }
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *logme.Instance
+		input       *logmeSdk.Instance
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&logme.Instance{},
+			&logmeSdk.Instance{},
 			Model{
 				Id:                 types.StringValue("pid,iid"),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
-				PlanId:             types.StringNull(),
-				Name:               types.StringNull(),
-				CfGuid:             types.StringNull(),
-				CfSpaceGuid:        types.StringNull(),
-				DashboardUrl:       types.StringNull(),
-				ImageUrl:           types.StringNull(),
-				CfOrganizationGuid: types.StringNull(),
+				PlanId:             types.StringValue(""),
+				Name:               types.StringValue(""),
+				CfGuid:             types.StringValue(""),
+				CfSpaceGuid:        types.StringValue(""),
+				DashboardUrl:       types.StringValue(""),
+				ImageUrl:           types.StringValue(""),
+				CfOrganizationGuid: types.StringValue(""),
 				Parameters:         types.ObjectNull(parametersTypes),
 			},
 			true,
 		},
+
 		{
 			"simple_values",
-			&logme.Instance{
-				PlanId:             new("plan"),
-				CfGuid:             new("cf"),
-				CfSpaceGuid:        new("space"),
-				DashboardUrl:       new("dashboard"),
-				ImageUrl:           new("image"),
+			&logmeSdk.Instance{
+				PlanId:             "plan",
+				CfGuid:             "cf",
+				CfSpaceGuid:        "space",
+				DashboardUrl:       "dashboard",
+				ImageUrl:           "image",
 				InstanceId:         new("iid"),
-				Name:               new("name"),
-				CfOrganizationGuid: new("org"),
-				Parameters: &map[string]any{
+				Name:               "name",
+				CfOrganizationGuid: "org",
+				Parameters: map[string]any{
 					// Using "-" on purpose on some fields because that is the API response
 					"sgw_acl":                  "acl",
 					"enable_monitoring":        true,
@@ -180,14 +181,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
-			&logme.Instance{},
+			&logmeSdk.Instance{},
 			Model{},
 			false,
 		},
 		{
 			"wrong_param_types_1",
-			&logme.Instance{
-				Parameters: &map[string]any{
+			&logmeSdk.Instance{
+				Parameters: map[string]any{
 					"sgw_acl": true,
 				},
 			},
@@ -196,8 +197,8 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"wrong_param_types_2",
-			&logme.Instance{
-				Parameters: &map[string]any{
+			&logmeSdk.Instance{
+				Parameters: map[string]any{
 					"sgw_acl": 1,
 				},
 			},
@@ -232,13 +233,13 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *logme.CreateInstancePayload
+		expected    *logmeSdk.CreateInstancePayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&logme.CreateInstancePayload{},
+			&logmeSdk.CreateInstancePayload{},
 			true,
 		},
 		{
@@ -248,9 +249,9 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId:     types.StringValue("plan"),
 				Parameters: fixtureModelParameters,
 			},
-			&logme.CreateInstancePayload{
-				InstanceName: new("name"),
-				PlanId:       new("plan"),
+			&logmeSdk.CreateInstancePayload{
+				InstanceName: "name",
+				PlanId:       "plan",
 				Parameters:   &fixtureInstanceParameters,
 			},
 			true,
@@ -262,10 +263,10 @@ func TestToCreatePayload(t *testing.T) {
 				PlanId:     types.StringValue(""),
 				Parameters: fixtureNullModelParameters,
 			},
-			&logme.CreateInstancePayload{
-				InstanceName: new(""),
-				PlanId:       new(""),
-				Parameters:   &logme.InstanceParameters{},
+			&logmeSdk.CreateInstancePayload{
+				InstanceName: "",
+				PlanId:       "",
+				Parameters:   &logmeSdk.InstanceParameters{},
 			},
 			true,
 		},
@@ -281,9 +282,9 @@ func TestToCreatePayload(t *testing.T) {
 				Name:   types.StringValue("name"),
 				PlanId: types.StringValue("plan"),
 			},
-			&logme.CreateInstancePayload{
-				InstanceName: new("name"),
-				PlanId:       new("plan"),
+			&logmeSdk.CreateInstancePayload{
+				InstanceName: "name",
+				PlanId:       "plan",
 			},
 			true,
 		},
@@ -321,13 +322,13 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *logme.PartialUpdateInstancePayload
+		expected    *logmeSdk.PartialUpdateInstancePayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&logme.PartialUpdateInstancePayload{},
+			&logmeSdk.PartialUpdateInstancePayload{},
 			true,
 		},
 		{
@@ -336,7 +337,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId:     types.StringValue("plan"),
 				Parameters: fixtureModelParameters,
 			},
-			&logme.PartialUpdateInstancePayload{
+			&logmeSdk.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
 				PlanId:     new("plan"),
 			},
@@ -348,8 +349,8 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId:     types.StringValue(""),
 				Parameters: fixtureNullModelParameters,
 			},
-			&logme.PartialUpdateInstancePayload{
-				Parameters: &logme.InstanceParameters{},
+			&logmeSdk.PartialUpdateInstancePayload{
+				Parameters: &logmeSdk.InstanceParameters{},
 				PlanId:     new(""),
 			},
 			true,
@@ -365,7 +366,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				PlanId: types.StringValue("plan"),
 			},
-			&logme.PartialUpdateInstancePayload{
+			&logmeSdk.PartialUpdateInstancePayload{
 				PlanId: new("plan"),
 			},
 			true,

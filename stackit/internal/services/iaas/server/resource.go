@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -314,6 +315,9 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
+						Validators: []validator.String{
+							stringvalidator.OneOf(supportedSourceTypes...),
+						},
 					},
 					"source_id": schema.StringAttribute{
 						Description: "The ID of the source, either image ID or volume ID",
@@ -326,6 +330,7 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Description: "Delete the volume during the termination of the server. Only allowed when `source_type` is `image`.",
 						Optional:    true,
 						Computed:    true,
+						Default:     booldefault.StaticBool(false),
 						PlanModifiers: []planmodifier.Bool{
 							boolplanmodifier.RequiresReplace(),
 						},
