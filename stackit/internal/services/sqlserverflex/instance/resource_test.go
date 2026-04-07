@@ -8,15 +8,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 )
 
 type sqlserverflexClientMocked struct {
 	returnError     bool
 	listFlavorsResp *sqlserverflex.ListFlavorsResponse
+	listFlavorsReq  sqlserverflex.ApiListFlavorsRequest
 }
 
-func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ context.Context, _, _ string) (*sqlserverflex.ListFlavorsResponse, error) {
+func (c *sqlserverflexClientMocked) ListFlavors(_ context.Context, _, _ string) sqlserverflex.ApiListFlavorsRequest {
+	return c.listFlavorsReq
+}
+
+func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ sqlserverflex.ApiListFlavorsRequest) (*sqlserverflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -60,10 +65,10 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
+					"cpu":         types.Int32Null(),
+					"ram":         types.Int32Null(),
 				}),
-				Replicas: types.Int64Null(),
+				Replicas: types.Int32Null(),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringNull(),
 					"size":  types.Int64Null(),
@@ -86,7 +91,7 @@ func TestMapFields(t *testing.T) {
 			&sqlserverflex.GetInstanceResponse{
 				Item: &sqlserverflex.Instance{
 					Acl: &sqlserverflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"ip1",
 							"ip2",
 							"",
@@ -94,14 +99,14 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: new("schedule"),
 					Flavor: &sqlserverflex.Flavor{
-						Cpu:         new(int64(12)),
+						Cpu:         new(int32(12)),
 						Description: new("description"),
 						Id:          new("flavor_id"),
-						Memory:      new(int64(34)),
+						Memory:      new(int32(34)),
 					},
 					Id:       new("iid"),
 					Name:     new("name"),
-					Replicas: new(int64(56)),
+					Replicas: new(int32(56)),
 					Status:   new("status"),
 					Storage: &sqlserverflex.Storage{
 						Class: new("class"),
@@ -132,10 +137,10 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringValue("flavor_id"),
 					"description": types.StringValue("description"),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+					"cpu":         types.Int32Value(12),
+					"ram":         types.Int32Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -158,7 +163,7 @@ func TestMapFields(t *testing.T) {
 			&sqlserverflex.GetInstanceResponse{
 				Item: &sqlserverflex.Instance{
 					Acl: &sqlserverflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"ip1",
 							"ip2",
 							"",
@@ -168,7 +173,7 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             new("iid"),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
+					Replicas:       new(int32(56)),
 					Status:         new("status"),
 					Storage:        nil,
 					Options: &map[string]string{
@@ -179,8 +184,8 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
+				CPU: types.Int32Value(12),
+				RAM: types.Int32Value(34),
 			},
 			&storageModel{
 				Class: types.StringValue("class"),
@@ -205,10 +210,10 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+					"cpu":         types.Int32Value(12),
+					"ram":         types.Int32Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -236,7 +241,7 @@ func TestMapFields(t *testing.T) {
 			&sqlserverflex.GetInstanceResponse{
 				Item: &sqlserverflex.Instance{
 					Acl: &sqlserverflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"",
 							"ip1",
 							"ip2",
@@ -246,7 +251,7 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             new("iid"),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
+					Replicas:       new(int32(56)),
 					Status:         new("status"),
 					Storage:        nil,
 					Options: &map[string]string{
@@ -257,8 +262,8 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
+				CPU: types.Int32Value(12),
+				RAM: types.Int32Value(34),
 			},
 			&storageModel{
 				Class: types.StringValue("class"),
@@ -280,10 +285,10 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+					"cpu":         types.Int32Value(12),
+					"ram":         types.Int32Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -364,11 +369,11 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			&optionsModel{},
 			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{},
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{},
 				},
-				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
-				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+				Storage: &sqlserverflex.InstanceDocumentationStorage{},
+				Options: &sqlserverflex.InstanceDocumentationOptions{},
 			},
 			true,
 		},
@@ -377,7 +382,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
-				Replicas:       types.Int64Value(12),
+				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
 			[]string{
@@ -396,20 +401,20 @@ func TestToCreatePayload(t *testing.T) {
 				RetentionDays: types.Int64Value(1),
 			},
 			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{
 						"ip_1",
 						"ip_2",
 					},
 				},
 				BackupSchedule: new("schedule"),
-				FlavorId:       new("flavor_id"),
-				Name:           new("name"),
-				Storage: &sqlserverflex.CreateInstancePayloadStorage{
+				FlavorId:       "flavor_id",
+				Name:           "name",
+				Storage: &sqlserverflex.InstanceDocumentationStorage{
 					Class: new("class"),
 					Size:  new(int64(34)),
 				},
-				Options: &sqlserverflex.CreateInstancePayloadOptions{
+				Options: &sqlserverflex.InstanceDocumentationOptions{
 					Edition:       new("edition"),
 					RetentionDays: new("1"),
 				},
@@ -422,7 +427,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
-				Replicas:       types.Int64Value(2123456789),
+				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
 			[]string{
@@ -440,19 +445,19 @@ func TestToCreatePayload(t *testing.T) {
 				RetentionDays: types.Int64Null(),
 			},
 			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{
 						"",
 					},
 				},
 				BackupSchedule: nil,
-				FlavorId:       nil,
-				Name:           nil,
-				Storage: &sqlserverflex.CreateInstancePayloadStorage{
+				FlavorId:       "",
+				Name:           "",
+				Storage: &sqlserverflex.InstanceDocumentationStorage{
 					Class: nil,
 					Size:  nil,
 				},
-				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+				Options: &sqlserverflex.InstanceDocumentationOptions{},
 				Version: nil,
 			},
 			true,
@@ -475,9 +480,9 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			&optionsModel{},
 			&sqlserverflex.CreateInstancePayload{
-				Acl:     &sqlserverflex.CreateInstancePayloadAcl{},
-				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
-				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+				Acl:     &sqlserverflex.InstanceDocumentationACL{},
+				Storage: &sqlserverflex.InstanceDocumentationStorage{},
+				Options: &sqlserverflex.InstanceDocumentationOptions{},
 			},
 			true,
 		},
@@ -499,11 +504,11 @@ func TestToCreatePayload(t *testing.T) {
 			nil,
 			&optionsModel{},
 			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{},
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{},
 				},
-				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
-				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+				Storage: &sqlserverflex.InstanceDocumentationStorage{},
+				Options: &sqlserverflex.InstanceDocumentationOptions{},
 			},
 			true,
 		},
@@ -515,11 +520,11 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			nil,
 			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{},
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{},
 				},
-				Storage: &sqlserverflex.CreateInstancePayloadStorage{},
-				Options: &sqlserverflex.CreateInstancePayloadOptions{},
+				Storage: &sqlserverflex.InstanceDocumentationStorage{},
+				Options: &sqlserverflex.InstanceDocumentationOptions{},
 			},
 			true,
 		},
@@ -558,8 +563,8 @@ func TestToUpdatePayload(t *testing.T) {
 			[]string{},
 			&flavorModel{},
 			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{},
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{},
 				},
 			},
 			true,
@@ -569,7 +574,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
-				Replicas:       types.Int64Value(12),
+				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
 			[]string{
@@ -580,8 +585,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Id: types.StringValue("flavor_id"),
 			},
 			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{
 						"ip_1",
 						"ip_2",
 					},
@@ -598,7 +603,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
-				Replicas:       types.Int64Value(2123456789),
+				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
 			[]string{
@@ -608,8 +613,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Id: types.StringNull(),
 			},
 			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{
-					Items: &[]string{
+				Acl: &sqlserverflex.InstanceDocumentationACL{
+					Items: []string{
 						"",
 					},
 				},
@@ -634,7 +639,7 @@ func TestToUpdatePayload(t *testing.T) {
 			nil,
 			&flavorModel{},
 			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.CreateInstancePayloadAcl{},
+				Acl: &sqlserverflex.InstanceDocumentationACL{},
 			},
 			true,
 		},
@@ -678,24 +683,24 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"ok_flavor",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{
-				Flavors: &[]sqlserverflex.InstanceFlavorEntry{
+				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
 						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
+						Cpu:         new(int32(2)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 				},
 			},
 			&flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
-				CPU:         types.Int64Value(2),
-				RAM:         types.Int64Value(8),
+				CPU:         types.Int32Value(2),
+				RAM:         types.Int32Value(8),
 			},
 			false,
 			true,
@@ -703,30 +708,30 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"ok_flavor_2",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{
-				Flavors: &[]sqlserverflex.InstanceFlavorEntry{
+				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
 						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
+						Cpu:         new(int32(2)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 					{
 						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(4)),
+						Memory:      new(int32(4)),
 					},
 				},
 			},
 			&flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
-				CPU:         types.Int64Value(2),
-				RAM:         types.Int64Value(8),
+				CPU:         types.Int32Value(2),
+				RAM:         types.Int32Value(8),
 			},
 			false,
 			true,
@@ -734,28 +739,28 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"no_matching_flavor",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{
-				Flavors: &[]sqlserverflex.InstanceFlavorEntry{
+				Flavors: []sqlserverflex.InstanceFlavorEntry{
 					{
 						Id:          new("fid-1"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 					{
 						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(4)),
+						Memory:      new(int32(4)),
 					},
 				},
 			},
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			false,
 			false,
@@ -763,13 +768,13 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"nil_response",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{},
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			false,
 			false,
@@ -777,13 +782,13 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"error_response",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{},
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			true,
 			false,
