@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -65,12 +65,12 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.NIC{
 					Id:   new("nicid"),
 					Name: new("name"),
-					AllowedAddresses: &[]iaas.AllowedAddressesInner{
+					AllowedAddresses: []iaas.AllowedAddressesInner{
 						{
 							String: new("aa1"),
 						},
 					},
-					SecurityGroups: &[]string{
+					SecurityGroups: []string{
 						"prefix1",
 						"prefix2",
 					},
@@ -81,7 +81,7 @@ func TestMapFields(t *testing.T) {
 					Mac:         new("mac"),
 					Status:      new("status"),
 					Type:        new("type"),
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"label1": "ref1",
 					},
 				},
@@ -123,7 +123,7 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.NIC{
 					Id: new("nicid"),
-					AllowedAddresses: &[]iaas.AllowedAddressesInner{
+					AllowedAddresses: []iaas.AllowedAddressesInner{
 						{
 							String: new("aa2"),
 						},
@@ -236,11 +236,11 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateNicPayload{
 				Name: new("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: &[]iaas.AllowedAddressesInner{
+				AllowedAddresses: []iaas.AllowedAddressesInner{
 					{
 						String: new("aa1"),
 					},
@@ -262,7 +262,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateNicPayload{
 				Name: new("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
@@ -312,11 +312,11 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateNicPayload{
 				Name: new("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: &[]iaas.AllowedAddressesInner{
+				AllowedAddresses: []iaas.AllowedAddressesInner{
 					{
 						String: new("aa1"),
 					},
@@ -338,11 +338,11 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateNicPayload{
 				Name: new("name"),
-				SecurityGroups: &[]string{
+				SecurityGroups: []string{
 					"sg1",
 					"sg2",
 				},
-				AllowedAddresses: new([]iaas.AllowedAddressesInner{}),
+				AllowedAddresses: []iaas.AllowedAddressesInner{},
 			},
 			true,
 		},

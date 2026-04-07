@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -217,7 +218,7 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := d.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := d.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
@@ -294,8 +295,8 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	}
 	if serverResp.Nics != nil {
 		var respNics []string
-		for _, nic := range *serverResp.Nics {
-			respNics = append(respNics, *nic.NicId)
+		for _, nic := range serverResp.Nics {
+			respNics = append(respNics, nic.NicId)
 		}
 		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
 		if diags.HasError() {
@@ -332,15 +333,11 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	}
 	model.Agent = agent
 
-	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
-		model.UserData = types.StringValue(string(*serverResp.UserData))
-	}
-
 	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
 	model.ServerId = types.StringValue(serverId)
-	model.MachineType = types.StringPointerValue(serverResp.MachineType)
+	model.MachineType = types.StringValue(serverResp.MachineType)
 
-	model.Name = types.StringPointerValue(serverResp.Name)
+	model.Name = types.StringValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
@@ -348,6 +345,17 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt
+
+	// decode user data from base 64
+	model.UserData = types.StringNull()
+	if serverResp.UserData != nil {
+		userdata, err := base64.StdEncoding.DecodeString(*serverResp.UserData)
+		if err != nil {
+			return fmt.Errorf("failed to base64 decode user data: %w", err)
+		}
+
+		model.UserData = types.StringValue(string(userdata))
+	}
 
 	return nil
 }

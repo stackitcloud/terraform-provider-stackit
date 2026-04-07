@@ -24,8 +24,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -399,7 +399,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new network
 
-	network, err := r.client.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
+	network, err := r.client.DefaultAPI.CreateNetwork(ctx, projectId, region).CreateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -407,12 +407,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	if network.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", "Got empty network id")
-		return
-	}
-
-	networkId := *network.Id
+	networkId := network.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
@@ -423,7 +418,7 @@ func (r *networkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	network, err = wait.CreateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
+	network, err = wait.CreateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network", fmt.Sprintf("Network creation waiting: %v", err))
 		return
@@ -467,7 +462,7 @@ func (r *networkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	networkResp, err := r.client.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := r.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -532,12 +527,12 @@ func (r *networkResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = core.LogResponse(ctx)
 
 	// Update existing network
-	err = r.client.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
+	err = r.client.DefaultAPI.PartialUpdateNetwork(ctx, projectId, region, networkId).PartialUpdateNetworkPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network", fmt.Sprintf("Network update waiting: %v", err))
 		return
@@ -574,7 +569,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing network
-	err := r.client.DeleteNetwork(ctx, projectId, region, networkId).Execute()
+	err := r.client.DefaultAPI.DeleteNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -584,7 +579,7 @@ func (r *networkResource) Delete(ctx context.Context, req resource.DeleteRequest
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client, projectId, region, networkId).WaitWithContext(ctx)
+	_, err = wait.DeleteNetworkWaitHandler(ctx, r.client.DefaultAPI, projectId, region, networkId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network", fmt.Sprintf("Network deletion waiting: %v", err))
 		return
@@ -624,10 +619,8 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	var networkId string
 	if model.NetworkId.ValueString() != "" {
 		networkId = model.NetworkId.ValueString()
-	} else if networkResp.Id != nil {
-		networkId = *networkResp.Id
 	} else {
-		return fmt.Errorf("network id not present")
+		networkId = networkResp.Id
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, networkId)
@@ -642,7 +635,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Nameservers == nil {
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
-		respNameservers := *networkResp.Ipv4.Nameservers
+		respNameservers := networkResp.Ipv4.Nameservers
 		modelIPv4Nameservers, err := utils.ListValueToStringSlice(model.IPv4Nameservers)
 		if err != nil {
 			return fmt.Errorf("get current IPv4 network nameservers from model: %w", err)
@@ -662,7 +655,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Prefixes == nil {
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
-		respPrefixes := *networkResp.Ipv4.Prefixes
+		respPrefixes := networkResp.Ipv4.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
@@ -683,10 +676,10 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.IPv4Prefixes = prefixesTF
 	}
 
-	if networkResp.Ipv4 == nil || networkResp.Ipv4.Gateway == nil {
+	if networkResp.Ipv4 == nil {
 		model.IPv4Gateway = types.StringNull()
 	} else {
-		model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.GetGateway())
+		model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.Gateway.Get())
 	}
 
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.PublicIp == nil {
@@ -700,7 +693,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Nameservers == nil {
 		model.IPv6Nameservers = types.ListNull(types.StringType)
 	} else {
-		respIPv6Nameservers := *networkResp.Ipv6.Nameservers
+		respIPv6Nameservers := networkResp.Ipv6.Nameservers
 		modelIPv6Nameservers, errIpv6 := utils.ListValueToStringSlice(model.IPv6Nameservers)
 		if errIpv6 != nil {
 			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
@@ -721,7 +714,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Prefixes == nil {
 		model.IPv6Prefixes = types.ListNull(types.StringType)
 	} else {
-		respPrefixesV6 := *networkResp.Ipv6.Prefixes
+		respPrefixesV6 := networkResp.Ipv6.Prefixes
 		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
@@ -740,15 +733,15 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.IPv6Prefixes = prefixesV6TF
 	}
 
-	if networkResp.Ipv6 == nil || networkResp.Ipv6.Gateway == nil {
+	if networkResp.Ipv6 == nil {
 		model.IPv6Gateway = types.StringNull()
 	} else {
-		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
+		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.Gateway.Get())
 	}
 
 	model.RoutingTableID = types.StringPointerValue(networkResp.RoutingTableId)
 	model.NetworkId = types.StringValue(networkId)
-	model.Name = types.StringPointerValue(networkResp.Name)
+	model.Name = types.StringValue(networkResp.Name)
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
@@ -781,7 +774,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if !utils.IsUndefined(model.IPv6PrefixLength) {
 		ipv6Body = &iaas.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefixLength: &iaas.CreateNetworkIPv6WithPrefixLength{
-				PrefixLength: conversion.Int64ValueToPointer(model.IPv6PrefixLength),
+				PrefixLength: model.IPv6PrefixLength.ValueInt64(),
 			},
 		}
 
@@ -789,20 +782,20 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		// Setting it to a nil slice would result in a payload, where nameservers is set to null in the json payload,
 		// but it should actually be unset. Setting it to "null" will result in an error, because it's NOT nullable.
 		if modelIPv6Nameservers != nil {
-			ipv6Body.CreateNetworkIPv6WithPrefixLength.Nameservers = &modelIPv6Nameservers
+			ipv6Body.CreateNetworkIPv6WithPrefixLength.Nameservers = modelIPv6Nameservers
 		}
 	} else if !utils.IsUndefined(model.IPv6Prefix) {
-		var gateway *iaas.NullableString
+		var gateway iaas.NullableString
 		if model.NoIPv6Gateway.ValueBool() {
-			gateway = iaas.NewNullableString(nil)
+			gateway = *iaas.NewNullableString(nil)
 		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-			gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
+			gateway = *iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 		}
 
 		ipv6Body = &iaas.CreateNetworkIPv6{
 			CreateNetworkIPv6WithPrefix: &iaas.CreateNetworkIPv6WithPrefix{
 				Gateway: gateway,
-				Prefix:  conversion.StringValueToPointer(model.IPv6Prefix),
+				Prefix:  model.IPv6Prefix.ValueString(),
 			},
 		}
 
@@ -810,7 +803,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 		// Setting it to a nil slice would result in a payload, where nameservers is set to null in the json payload,
 		// but it should actually be unset. Setting it to "null" will result in an error, because it's NOT nullable.
 		if modelIPv6Nameservers != nil {
-			ipv6Body.CreateNetworkIPv6WithPrefix.Nameservers = &modelIPv6Nameservers
+			ipv6Body.CreateNetworkIPv6WithPrefix.Nameservers = modelIPv6Nameservers
 		}
 	}
 
@@ -831,28 +824,28 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	if !utils.IsUndefined(model.IPv4PrefixLength) {
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefixLength: &iaas.CreateNetworkIPv4WithPrefixLength{
-				PrefixLength: conversion.Int64ValueToPointer(model.IPv4PrefixLength),
+				PrefixLength: model.IPv4PrefixLength.ValueInt64(),
 			},
 		}
 		if modelIPv4Nameservers != nil {
-			ipv4Body.CreateNetworkIPv4WithPrefixLength.Nameservers = &modelIPv4Nameservers
+			ipv4Body.CreateNetworkIPv4WithPrefixLength.Nameservers = modelIPv4Nameservers
 		}
 	} else if !utils.IsUndefined(model.IPv4Prefix) {
-		var gateway *iaas.NullableString
+		var gateway iaas.NullableString
 		if model.NoIPv4Gateway.ValueBool() {
-			gateway = iaas.NewNullableString(nil)
+			gateway = *iaas.NewNullableString(nil)
 		} else if !(model.IPv4Gateway.IsUnknown() || model.IPv4Gateway.IsNull()) {
-			gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
+			gateway = *iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 		}
 
 		ipv4Body = &iaas.CreateNetworkIPv4{
 			CreateNetworkIPv4WithPrefix: &iaas.CreateNetworkIPv4WithPrefix{
-				Prefix:  conversion.StringValueToPointer(model.IPv4Prefix),
+				Prefix:  model.IPv4Prefix.ValueString(),
 				Gateway: gateway,
 			},
 		}
 		if modelIPv4Nameservers != nil {
-			ipv4Body.CreateNetworkIPv4WithPrefix.Nameservers = &modelIPv4Nameservers
+			ipv4Body.CreateNetworkIPv4WithPrefix.Nameservers = modelIPv4Nameservers
 		}
 	}
 
@@ -862,8 +855,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkPayl
 	}
 
 	payload := iaas.CreateNetworkPayload{
-		Name:           conversion.StringValueToPointer(model.Name),
-		Labels:         &labels,
+		Name:           model.Name.ValueString(),
+		Labels:         labels,
 		Routed:         conversion.BoolValueToPointer(model.Routed),
 		Ipv4:           ipv4Body,
 		Ipv6:           ipv6Body,
@@ -901,13 +894,13 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 		// Setting it to a nil slice would result in a payload, where nameservers is set to null in the json payload,
 		// but it should actually be unset. Setting it to "null" will result in an error, because it's NOT nullable.
 		if modelIPv6Nameservers != nil {
-			ipv6Body.Nameservers = &modelIPv6Nameservers
+			ipv6Body.Nameservers = modelIPv6Nameservers
 		}
 
 		if model.NoIPv6Gateway.ValueBool() {
-			ipv6Body.Gateway = iaas.NewNullableString(nil)
+			ipv6Body.Gateway = *iaas.NewNullableString(nil)
 		} else if !(model.IPv6Gateway.IsUnknown() || model.IPv6Gateway.IsNull()) {
-			ipv6Body.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
+			ipv6Body.Gateway = *iaas.NewNullableString(conversion.StringValueToPointer(model.IPv6Gateway))
 		}
 	}
 
@@ -923,13 +916,13 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 				}
 				modelIPv4Nameservers = append(modelIPv4Nameservers, ipv4NameserverString.ValueString())
 			}
-			ipv4Body.Nameservers = &modelIPv4Nameservers
+			ipv4Body.Nameservers = modelIPv4Nameservers
 		}
 
 		if model.NoIPv4Gateway.ValueBool() {
-			ipv4Body.Gateway = iaas.NewNullableString(nil)
+			ipv4Body.Gateway = *iaas.NewNullableString(nil)
 		} else if !utils.IsUndefined(model.IPv4Gateway) {
-			ipv4Body.Gateway = iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
+			ipv4Body.Gateway = *iaas.NewNullableString(conversion.StringValueToPointer(model.IPv4Gateway))
 		}
 	}
 
@@ -941,7 +934,7 @@ func toUpdatePayload(ctx context.Context, model, stateModel *Model) (*iaas.Parti
 
 	payload := iaas.PartialUpdateNetworkPayload{
 		Name:           conversion.StringValueToPointer(model.Name),
-		Labels:         &labels,
+		Labels:         labels,
 		Ipv4:           ipv4Body,
 		Ipv6:           ipv6Body,
 		RoutingTableId: conversion.StringValueToPointer(model.RoutingTableID),

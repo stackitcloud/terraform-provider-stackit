@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -381,18 +381,18 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
-	serversResp, err := client.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
+	serversResp, err := client.DefaultAPI.ListServers(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
 
-	servers := *serversResp.Items
+	servers := serversResp.Items
 	for i := range servers {
 		if servers[i].Id == nil {
 			continue
 		}
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
-			err := client.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
+			err := client.DefaultAPI.DeleteServer(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
 			}

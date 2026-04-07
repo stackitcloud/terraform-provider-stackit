@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -127,7 +127,7 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
-	publicIpResp, err := d.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
+	publicIpResp, err := d.client.DefaultAPI.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
