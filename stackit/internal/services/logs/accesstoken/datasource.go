@@ -187,7 +187,7 @@ func (d *logsAccessTokenDataSource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs access token read", map[string]interface{}{
+	tflog.Info(ctx, "Logs access token read", map[string]any{
 		"access_token_id": accessTokenID,
 	})
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
 	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/wait"
@@ -39,16 +38,17 @@ func parametersConfig(params map[string]string) string {
 		"syslog",
 		"tls_ciphers",
 	}
-	parameters := "parameters = {"
+	var parameters strings.Builder
+	parameters.WriteString("parameters = {")
 	for k, v := range params {
 		if utils.Contains(nonStringParams, k) {
-			parameters += fmt.Sprintf("%s = %s\n", k, v)
+			parameters.WriteString(fmt.Sprintf("%s = %s\n", k, v))
 		} else {
-			parameters += fmt.Sprintf("%s = %q\n", k, v)
+			parameters.WriteString(fmt.Sprintf("%s = %q\n", k, v))
 		}
 	}
-	parameters += "\n}"
-	return parameters
+	parameters.WriteString("\n}")
+	return parameters.String()
 }
 
 func resourceConfig(params map[string]string) string {
@@ -65,7 +65,7 @@ func resourceConfig(params map[string]string) string {
 
 				%s
 				`,
-		testutil.RabbitMQProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],
@@ -245,17 +245,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 
 func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *rabbitmq.APIClient
-	var err error
-	if testutil.RabbitMQCustomEndpoint == "" {
-		client, err = rabbitmq.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = rabbitmq.NewAPIClient(
-			config.WithEndpoint(testutil.RabbitMQCustomEndpoint),
-		)
-	}
+	client, err := rabbitmq.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RabbitMQCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

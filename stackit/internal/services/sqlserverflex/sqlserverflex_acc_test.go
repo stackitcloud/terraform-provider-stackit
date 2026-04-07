@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
@@ -31,7 +30,7 @@ var testConfigVarsMin = config.Variables{
 	"name":               config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
 	"flavor_cpu":         config.IntegerVariable(4),
 	"flavor_ram":         config.IntegerVariable(16),
-	"flavor_description": config.StringVariable("SQLServer-Flex-4.16-Standard-EU01"),
+	"flavor_description": config.StringVariable("SQLServer-Flex-4.16-Single-Standard-EU01"),
 	"replicas":           config.IntegerVariable(1),
 	"flavor_id":          config.StringVariable("4.16-Single"),
 	"username":           config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
@@ -76,7 +75,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -104,7 +103,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -131,7 +130,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -215,7 +214,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -241,7 +240,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -276,7 +275,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -311,7 +310,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 			},
 			// data source
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -404,7 +403,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.SQLServerFlexProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -432,15 +431,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 
 func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *sqlserverflex.APIClient
-	var err error
-	if testutil.SQLServerFlexCustomEndpoint == "" {
-		client, err = sqlserverflex.NewAPIClient()
-	} else {
-		client, err = sqlserverflex.NewAPIClient(
-			core_config.WithEndpoint(testutil.SQLServerFlexCustomEndpoint),
-		)
-	}
+	client, err := sqlserverflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SQLServerFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

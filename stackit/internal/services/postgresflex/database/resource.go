@@ -273,7 +273,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, databaseNotFoundErr) {
+		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -418,7 +418,7 @@ func toCreatePayload(model *Model) (*postgresflex.CreateDatabasePayload, error) 
 	}, nil
 }
 
-var databaseNotFoundErr = errors.New("database not found")
+var errDatabaseNotFound = errors.New("database not found")
 
 // The API does not have a GetDatabase endpoint, only ListDatabases
 func getDatabase(ctx context.Context, client *postgresflex.APIClient, projectId, region, instanceId, databaseId string) (*postgresflex.InstanceDatabase, error) {
@@ -434,5 +434,5 @@ func getDatabase(ctx context.Context, client *postgresflex.APIClient, projectId,
 			return &database, nil
 		}
 	}
-	return nil, databaseNotFoundErr
+	return nil, errDatabaseNotFound
 }

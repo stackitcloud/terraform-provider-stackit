@@ -15,7 +15,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -122,7 +122,7 @@ func (r *credentialsGroupDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentialsGroups(ctx, &model, region, r.client)
+	found, err := readCredentialsGroups(ctx, &model, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentials group", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return

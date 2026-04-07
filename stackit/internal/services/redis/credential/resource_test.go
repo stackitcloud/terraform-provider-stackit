@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis"
 )
 
@@ -26,7 +25,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&redis.CredentialsResponse{
-				Id:  utils.Ptr("cid"),
+				Id:  new("cid"),
 				Raw: &redis.RawCredentials{},
 			},
 			Model{
@@ -51,19 +50,19 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&redis.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &redis.RawCredentials{
 					Credentials: &redis.Credentials{
-						Host: utils.Ptr("host"),
+						Host: new("host"),
 						Hosts: &[]string{
 							"host_1",
 							"",
 						},
-						LoadBalancedHost: utils.Ptr("load_balanced_host"),
-						Password:         utils.Ptr("password"),
-						Port:             utils.Ptr(int64(1234)),
-						Uri:              utils.Ptr("uri"),
-						Username:         utils.Ptr("username"),
+						LoadBalancedHost: new("load_balanced_host"),
+						Password:         new("password"),
+						Port:             new(int64(1234)),
+						Uri:              new("uri"),
+						Username:         new("username"),
 					},
 				},
 			},
@@ -97,20 +96,20 @@ func TestMapFields(t *testing.T) {
 				}),
 			},
 			&redis.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &redis.RawCredentials{
 					Credentials: &redis.Credentials{
-						Host: utils.Ptr("host"),
+						Host: new("host"),
 						Hosts: &[]string{
 							"",
 							"host_1",
 							"host_2",
 						},
-						LoadBalancedHost: utils.Ptr("load_balanced_host"),
-						Password:         utils.Ptr("password"),
-						Port:             utils.Ptr(int64(1234)),
-						Uri:              utils.Ptr("uri"),
-						Username:         utils.Ptr("username"),
+						LoadBalancedHost: new("load_balanced_host"),
+						Password:         new("password"),
+						Port:             new(int64(1234)),
+						Uri:              new("uri"),
+						Username:         new("username"),
 					},
 				},
 			},
@@ -140,16 +139,16 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&redis.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 				Raw: &redis.RawCredentials{
 					Credentials: &redis.Credentials{
-						Host:             utils.Ptr(""),
+						Host:             new(""),
 						Hosts:            &[]string{},
 						LoadBalancedHost: nil,
-						Password:         utils.Ptr(""),
-						Port:             utils.Ptr(int64(2123456789)),
+						Password:         new(""),
+						Port:             new(int64(2123456789)),
 						Uri:              nil,
-						Username:         utils.Ptr(""),
+						Username:         new(""),
 					},
 				},
 			},
@@ -195,7 +194,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  types.StringValue("pid"),
 			},
 			&redis.CredentialsResponse{
-				Id: utils.Ptr("cid"),
+				Id: new("cid"),
 			},
 			Model{},
 			false,

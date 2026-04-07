@@ -9,13 +9,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 // Instance resource data
@@ -23,7 +23,7 @@ var instanceResource = map[string]string{
 	"project_id":              testutil.ProjectId,
 	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
 	"acl":                     "192.168.0.0/16",
-	"backup_schedule":         "00 16 * * *",
+	"backup_schedule":         "00 16 * * *", // ensure it works properly with leading zeros
 	"backup_schedule_updated": "00 12 * * *",
 	"flavor_cpu":              "2",
 	"flavor_ram":              "4",
@@ -87,7 +87,7 @@ func configResources(backupSchedule string, region *string) string {
 					owner = stackit_postgresflex_user.user.username
 				}
 				`,
-		testutil.PostgresFlexProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["acl"],
@@ -202,7 +202,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "acl.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "acl.0", instanceResource["acl"]),
-					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
+					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "backup_schedule", "0 16 * * *"),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.id", instanceResource["flavor_id"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.description", instanceResource["flavor_description"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
@@ -248,7 +248,18 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password"},
+				ImportStateVerifyIgnore: []string{"password", "backup_schedule"},
+				ImportStateCheck: func(s []*terraform.InstanceState) error {
+					if len(s) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(s))
+					}
+
+					if utils.SimplifyCronString(s[0].Attributes["backup_schedule"]) != utils.SimplifyCronString(instanceResource["backup_schedule"]) {
+						return fmt.Errorf("expected backup_schedule %s, got %s", instanceResource["backup_schedule"], s[0].Attributes["backup_schedule"])
+					}
+
+					return nil
+				},
 			},
 			{
 				ResourceName: "stackit_postgresflex_user.user",
@@ -321,15 +332,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 
 func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *postgresflex.APIClient
-	var err error
-	if testutil.PostgresFlexCustomEndpoint == "" {
-		client, err = postgresflex.NewAPIClient()
-	} else {
-		client, err = postgresflex.NewAPIClient(
-			config.WithEndpoint(testutil.PostgresFlexCustomEndpoint),
-		)
-	}
+	client, err := postgresflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.PostgresFlexCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -354,7 +357,7 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 		if items[i].Id == nil {
 			continue
 		}
-		if utils.Contains(instancesToDestroy, *items[i].Id) {
+		if sdkUtils.Contains(instancesToDestroy, *items[i].Id) {
 			err := client.ForceDeleteInstanceExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Id)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)

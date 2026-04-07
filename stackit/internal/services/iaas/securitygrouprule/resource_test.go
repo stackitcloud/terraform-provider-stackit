@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -18,8 +17,8 @@ var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[
 })
 
 var fixtureIcmpParameters = iaas.ICMPParameters{
-	Code: utils.Ptr(int64(1)),
-	Type: utils.Ptr(int64(2)),
+	Code: new(int64(1)),
+	Type: new(int64(2)),
 }
 
 var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]attr.Value{
@@ -28,8 +27,8 @@ var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]att
 })
 
 var fixturePortRange = iaas.PortRange{
-	Max: utils.Ptr(int64(2)),
-	Min: utils.Ptr(int64(1)),
+	Max: new(int64(2)),
+	Min: new(int64(1)),
 }
 
 var fixtureModelProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
@@ -38,8 +37,8 @@ var fixtureModelProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.
 })
 
 var fixtureProtocol = iaas.Protocol{
-	Name:   utils.Ptr("name"),
-	Number: utils.Ptr(int64(1)),
+	Name:   new("name"),
+	Number: new(int64(1)),
 }
 
 var fixtureModelCreateProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
@@ -48,7 +47,7 @@ var fixtureModelCreateProtocol = types.ObjectValueMust(protocolTypes, map[string
 })
 
 var fixtureCreateProtocol = iaas.CreateProtocol{
-	String: utils.Ptr("name"),
+	String: new("name"),
 }
 
 func TestMapFields(t *testing.T) {
@@ -72,7 +71,7 @@ func TestMapFields(t *testing.T) {
 					SecurityGroupRuleId: types.StringValue("sgrid"),
 				},
 				input: &iaas.SecurityGroupRule{
-					Id: utils.Ptr("sgrid"),
+					Id: new("sgrid"),
 				},
 				region: "eu01",
 			},
@@ -103,12 +102,12 @@ func TestMapFields(t *testing.T) {
 					Region:              types.StringValue("eu01"),
 				},
 				input: &iaas.SecurityGroupRule{
-					Id:                    utils.Ptr("sgrid"),
-					Description:           utils.Ptr("desc"),
-					Direction:             utils.Ptr("ingress"),
-					Ethertype:             utils.Ptr("ether"),
-					IpRange:               utils.Ptr("iprange"),
-					RemoteSecurityGroupId: utils.Ptr("remote"),
+					Id:                    new("sgrid"),
+					Description:           new("desc"),
+					Direction:             new("ingress"),
+					Ethertype:             new("ether"),
+					IpRange:               new("iprange"),
+					RemoteSecurityGroupId: new("remote"),
 					IcmpParameters:        &fixtureIcmpParameters,
 					PortRange:             &fixturePortRange,
 					Protocol:              &fixtureProtocol,
@@ -145,7 +144,7 @@ func TestMapFields(t *testing.T) {
 					}),
 				},
 				input: &iaas.SecurityGroupRule{
-					Id:       utils.Ptr("sgrid"),
+					Id:       new("sgrid"),
 					Protocol: &fixtureProtocol,
 				},
 				region: "eu01",
@@ -180,7 +179,7 @@ func TestMapFields(t *testing.T) {
 					}),
 				},
 				input: &iaas.SecurityGroupRule{
-					Id:       utils.Ptr("sgrid"),
+					Id:       new("sgrid"),
 					Protocol: &fixtureProtocol,
 				},
 				region: "eu01",
@@ -258,8 +257,8 @@ func TestToCreatePayload(t *testing.T) {
 				Protocol:       fixtureModelCreateProtocol,
 			},
 			&iaas.CreateSecurityGroupRulePayload{
-				Description:    utils.Ptr("desc"),
-				Direction:      utils.Ptr("ingress"),
+				Description:    new("desc"),
+				Direction:      new("ingress"),
 				IcmpParameters: &fixtureIcmpParameters,
 				PortRange:      &fixturePortRange,
 				Protocol:       &fixtureCreateProtocol,

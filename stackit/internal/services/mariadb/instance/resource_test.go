@@ -276,7 +276,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &fixtureInstanceParameters,
-				PlanId:     utils.Ptr("plan"),
+				PlanId:     new("plan"),
 			},
 			true,
 		},
@@ -288,7 +288,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&mariadb.PartialUpdateInstancePayload{
 				Parameters: &mariadb.InstanceParameters{},
-				PlanId:     utils.Ptr(""),
+				PlanId:     new(""),
 			},
 			true,
 		},
@@ -304,7 +304,7 @@ func TestToUpdatePayload(t *testing.T) {
 				PlanId: types.StringValue("plan"),
 			},
 			&mariadb.PartialUpdateInstancePayload{
-				PlanId: utils.Ptr("plan"),
+				PlanId: new("plan"),
 			},
 			true,
 		},

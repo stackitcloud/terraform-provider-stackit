@@ -40,6 +40,13 @@ resource "stackit_dns_zone" "zone" {
   refresh_time = var.refresh_time
   retry_time   = var.retry_time
   type         = var.type
+
+  timeouts = {
+    create = "20m"
+    read   = "20m"
+    update = "20m"
+    delete = "20m"
+  }
 }
 
 
@@ -55,20 +62,36 @@ resource "stackit_dns_record_set" "record_set" {
   comment = var.record_comment
   ttl     = var.record_ttl
   type    = var.record_type
+
+  timeouts = {
+    create = "20m"
+    read   = "20m"
+    update = "20m"
+    delete = "20m"
+  }
 }
 
 data "stackit_dns_zone" "zone" {
   project_id = var.project_id
   zone_id    = stackit_dns_zone.zone.zone_id
+  timeouts = {
+    read = "20m"
+  }
 }
 
 data "stackit_dns_zone" "zone_name" {
   project_id = var.project_id
   dns_name   = stackit_dns_zone.zone.dns_name
+  timeouts = {
+    read = "20m"
+  }
 }
 
 data "stackit_dns_record_set" "record_set" {
   project_id    = var.project_id
   zone_id       = stackit_dns_zone.zone.zone_id
   record_set_id = stackit_dns_record_set.record_set.record_set_id
+  timeouts = {
+    read = "20m"
+  }
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -42,7 +41,7 @@ func resourceConfigExportPolicy() string {
 		]
 		}
 	`,
-		testutil.SFSProviderConfig(),
+		testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(),
 		exportPolicyResource["project_id"],
 		exportPolicyResource["name"],
 		exportPolicyResource["ip_acl_1"],
@@ -69,7 +68,7 @@ func resourceConfigUpdateExportPolicy() string {
 		]
 		}
 	`,
-		testutil.SFSProviderConfig(),
+		testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(),
 		exportPolicyResource["project_id"],
 		exportPolicyResource["name"],
 		exportPolicyResource["ip_acl_1"],
@@ -81,7 +80,7 @@ func resourceConfigUpdateExportPolicy() string {
 
 var (
 	testCreateResourcePool = map[string]string{
-		"providerConfig":        testutil.SFSProviderConfig(),
+		"providerConfig":        testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(),
 		"name":                  fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":            testutil.ProjectId,
 		"availability_zone":     "eu01-m",
@@ -92,7 +91,7 @@ var (
 	}
 
 	testUpdateResourcePool = map[string]string{
-		"providerConfig":        testutil.SFSProviderConfig(),
+		"providerConfig":        testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(),
 		"name":                  fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":            testutil.ProjectId,
 		"availability_zone":     "eu01-m",
@@ -132,7 +131,7 @@ func resourcePoolConfig(configParams map[string]string) string {
 
 var (
 	testCreateShare = map[string]string{
-		"providerConfig":             testutil.SFSProviderConfig(),
+		"providerConfig":             testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(),
 		"resource_pool_name":         fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"name":                       fmt.Sprintf("acc-sfs-share-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":                 testutil.ProjectId,
@@ -141,7 +140,7 @@ var (
 	}
 
 	testUpdateShare = map[string]string{
-		"providerConfig":             testutil.SFSProviderConfig(),
+		"providerConfig":             testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(),
 		"resource_pool_name":         fmt.Sprintf("acc-sfs-resource-pool-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"name":                       fmt.Sprintf("acc-sfs-share-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum)),
 		"project_id":                 testutil.ProjectId,
@@ -431,16 +430,7 @@ func TestAccShareResource(t *testing.T) {
 }
 
 func createClient() (*sfs.APIClient, error) {
-	var client *sfs.APIClient
-	var err error
-	if testutil.SFSCustomEndpoint == "" {
-		client, err = sfs.NewAPIClient()
-	} else {
-		client, err = sfs.NewAPIClient(
-			config.WithEndpoint(testutil.SFSCustomEndpoint),
-			config.WithTokenEndpoint(testutil.TokenCustomEndpoint),
-		)
-	}
+	client, err := sfs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SFSCustomEndpoint, false)...)
 	if err != nil {
 		return nil, fmt.Errorf("creating client: %w", err)
 	}

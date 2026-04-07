@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	core_config "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
@@ -29,6 +28,9 @@ var (
 
 	//go:embed testdata/resource-max.tf
 	resourceMaxConfig string
+
+	//go:embed testdata/datasource.tf
+	datasourceConfig string
 )
 
 var testConfigVarsMin = config.Variables{
@@ -89,14 +91,14 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMinConfig,
 				ConfigVariables: configVarsInvalid(configVarsMinUpdated()),
 				ExpectError:     regexp.MustCompile(`.*maintenance_window value must be at least 1*`),
 			},
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -108,11 +110,15 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// data source
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMinConfig + "\n" + datasourceConfig,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -129,6 +135,10 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("data.stackit_server_update_enable.enable_test", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server_update_enable.enable_test", "enabled", "true"),
 				),
 			},
 			// Import
@@ -156,7 +166,7 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
@@ -169,6 +179,10 @@ func TestAccServerUpdateScheduleMinResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -186,14 +200,14 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMaxConfig,
 				ConfigVariables: configVarsInvalid(testConfigVarsMax),
 				ExpectError:     regexp.MustCompile(`.*maintenance_window value must be at least 1*`),
 			},
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -207,11 +221,15 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// data source
 			{
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMaxConfig + "\n" + datasourceConfig,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Server update schedule data
@@ -228,6 +246,10 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("data.stackit_server_update_schedules.schedules_data_test", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("data.stackit_server_update_enable.enable_test", "server_id"),
+					resource.TestCheckResourceAttr("data.stackit_server_update_enable.enable_test", "enabled", "true"),
 				),
 			},
 			// Import
@@ -255,7 +277,7 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ServerUpdateProviderConfig() + "\n" + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Update schedule data
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "project_id", testutil.ConvertConfigVariable(configVarsMinUpdated()["project_id"])),
@@ -268,6 +290,10 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 
 					// server
 					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
+
+					// enable
+					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
+					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -285,15 +311,7 @@ func testAccCheckServerUpdateScheduleDestroy(s *terraform.State) error {
 }
 
 func deleteSchedule(ctx context.Context, s *terraform.State) error {
-	var client *serverupdate.APIClient
-	var err error
-	if testutil.ServerUpdateCustomEndpoint == "" {
-		client, err = serverupdate.NewAPIClient()
-	} else {
-		client, err = serverupdate.NewAPIClient(
-			core_config.WithEndpoint(testutil.ServerUpdateCustomEndpoint),
-		)
-	}
+	client, err := serverupdate.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ServerUpdateCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -350,16 +368,7 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 // Additional function to check if the server was deleted if something went wrong in the first case.
 func testAccCheckServerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *iaas.APIClient
-	var err error
-
-	if testutil.IaaSCustomEndpoint == "" {
-		client, err = iaas.NewAPIClient()
-	} else {
-		client, err = iaas.NewAPIClient(
-			core_config.WithEndpoint(testutil.ServerBackupCustomEndpoint),
-		)
-	}
+	client, err := iaas.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

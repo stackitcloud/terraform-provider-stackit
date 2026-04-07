@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 )
 
@@ -135,39 +134,39 @@ func fixtureNullGlobalConfigModel() basetypes.ObjectValue {
 
 func fixtureEmailConfigsPayload() observability.CreateAlertConfigReceiverPayloadEmailConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadEmailConfigsInner{
-		AuthIdentity: utils.Ptr("identity"),
-		AuthPassword: utils.Ptr("password"),
-		AuthUsername: utils.Ptr("username"),
-		From:         utils.Ptr("notification@example.com"),
-		SendResolved: utils.Ptr(true),
-		Smarthost:    utils.Ptr("smtp.example.com"),
-		To:           utils.Ptr("me@example.com"),
+		AuthIdentity: new("identity"),
+		AuthPassword: new("password"),
+		AuthUsername: new("username"),
+		From:         new("notification@example.com"),
+		SendResolved: new(true),
+		Smarthost:    new("smtp.example.com"),
+		To:           new("me@example.com"),
 	}
 }
 
 func fixtureOpsGenieConfigsPayload() observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner{
-		ApiKey:       utils.Ptr("key"),
-		Tags:         utils.Ptr("tag"),
-		ApiUrl:       utils.Ptr("ops.example.com"),
-		Priority:     utils.Ptr("P3"),
-		SendResolved: utils.Ptr(true),
+		ApiKey:       new("key"),
+		Tags:         new("tag"),
+		ApiUrl:       new("ops.example.com"),
+		Priority:     new("P3"),
+		SendResolved: new(true),
 	}
 }
 
 func fixtureWebHooksConfigsPayload() observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner {
 	return observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner{
-		Url:          utils.Ptr("http://example.com"),
-		MsTeams:      utils.Ptr(true),
-		GoogleChat:   utils.Ptr(true),
-		SendResolved: utils.Ptr(true),
+		Url:          new("http://example.com"),
+		MsTeams:      new(true),
+		GoogleChat:   new(true),
+		SendResolved: new(true),
 	}
 }
 
 func fixtureReceiverPayload(emailConfigs *[]observability.CreateAlertConfigReceiverPayloadEmailConfigsInner, opsGenieConfigs *[]observability.CreateAlertConfigReceiverPayloadOpsgenieConfigsInner, webHooksConfigs *[]observability.CreateAlertConfigReceiverPayloadWebHookConfigsInner) observability.UpdateAlertConfigsPayloadReceiversInner {
 	return observability.UpdateAlertConfigsPayloadReceiversInner{
 		EmailConfigs:    emailConfigs,
-		Name:            utils.Ptr("name"),
+		Name:            new("name"),
 		OpsgenieConfigs: opsGenieConfigs,
 		WebHookConfigs:  webHooksConfigs,
 	}
@@ -175,23 +174,23 @@ func fixtureReceiverPayload(emailConfigs *[]observability.CreateAlertConfigRecei
 
 func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 	return &observability.UpdateAlertConfigsPayloadRoute{
-		Continue:       utils.Ptr(false),
-		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
-		GroupInterval:  utils.Ptr("1m"),
-		GroupWait:      utils.Ptr("1m"),
-		Receiver:       utils.Ptr("name"),
-		RepeatInterval: utils.Ptr("1m"),
+		Continue:       new(false),
+		GroupBy:        new([]string{"label1", "label2"}),
+		GroupInterval:  new("1m"),
+		GroupWait:      new("1m"),
+		Receiver:       new("name"),
+		RepeatInterval: new("1m"),
 		Routes: &[]observability.UpdateAlertConfigsPayloadRouteRoutesInner{
 			{
-				Continue:       utils.Ptr(false),
-				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
-				GroupInterval:  utils.Ptr("1m"),
-				GroupWait:      utils.Ptr("1m"),
-				Match:          &map[string]interface{}{"key": "value"},
-				MatchRe:        &map[string]interface{}{"key": "value"},
+				Continue:       new(false),
+				GroupBy:        new([]string{"label1", "label2"}),
+				GroupInterval:  new("1m"),
+				GroupWait:      new("1m"),
+				Match:          &map[string]any{"key": "value"},
+				MatchRe:        &map[string]any{"key": "value"},
 				Matchers:       &[]string{"matcher1", "matcher2"},
-				Receiver:       utils.Ptr("name"),
-				RepeatInterval: utils.Ptr("1m"),
+				Receiver:       new("name"),
+				RepeatInterval: new("1m"),
 			},
 		},
 	}
@@ -199,20 +198,20 @@ func fixtureRoutePayload() *observability.UpdateAlertConfigsPayloadRoute {
 
 func fixtureGlobalConfigPayload() *observability.UpdateAlertConfigsPayloadGlobal {
 	return &observability.UpdateAlertConfigsPayloadGlobal{
-		OpsgenieApiKey:   utils.Ptr("key"),
-		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
-		ResolveTimeout:   utils.Ptr("1m"),
-		SmtpAuthIdentity: utils.Ptr("identity"),
-		SmtpAuthUsername: utils.Ptr("username"),
-		SmtpAuthPassword: utils.Ptr("password"),
-		SmtpFrom:         utils.Ptr("me@example.com"),
-		SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+		OpsgenieApiKey:   new("key"),
+		OpsgenieApiUrl:   new("ops.example.com"),
+		ResolveTimeout:   new("1m"),
+		SmtpAuthIdentity: new("identity"),
+		SmtpAuthUsername: new("username"),
+		SmtpAuthPassword: new("password"),
+		SmtpFrom:         new("me@example.com"),
+		SmtpSmarthost:    new("smtp.example.com:25"),
 	}
 }
 
 func fixtureReceiverResponse(emailConfigs *[]observability.EmailConfig, opsGenieConfigs *[]observability.OpsgenieConfig, webhookConfigs *[]observability.WebHook) observability.Receivers {
 	return observability.Receivers{
-		Name:            utils.Ptr("name"),
+		Name:            new("name"),
 		EmailConfigs:    emailConfigs,
 		OpsgenieConfigs: opsGenieConfigs,
 		WebHookConfigs:  webhookConfigs,
@@ -221,57 +220,57 @@ func fixtureReceiverResponse(emailConfigs *[]observability.EmailConfig, opsGenie
 
 func fixtureEmailConfigsResponse() observability.EmailConfig {
 	return observability.EmailConfig{
-		AuthIdentity: utils.Ptr("identity"),
-		AuthPassword: utils.Ptr("password"),
-		AuthUsername: utils.Ptr("username"),
-		From:         utils.Ptr("notification@example.com"),
-		SendResolved: utils.Ptr(true),
-		Smarthost:    utils.Ptr("smtp.example.com"),
-		To:           utils.Ptr("me@example.com"),
+		AuthIdentity: new("identity"),
+		AuthPassword: new("password"),
+		AuthUsername: new("username"),
+		From:         new("notification@example.com"),
+		SendResolved: new(true),
+		Smarthost:    new("smtp.example.com"),
+		To:           new("me@example.com"),
 	}
 }
 
 func fixtureOpsGenieConfigsResponse() observability.OpsgenieConfig {
 	return observability.OpsgenieConfig{
-		ApiKey:       utils.Ptr("key"),
-		Tags:         utils.Ptr("tag"),
-		ApiUrl:       utils.Ptr("ops.example.com"),
-		Priority:     utils.Ptr("P3"),
-		SendResolved: utils.Ptr(true),
+		ApiKey:       new("key"),
+		Tags:         new("tag"),
+		ApiUrl:       new("ops.example.com"),
+		Priority:     new("P3"),
+		SendResolved: new(true),
 	}
 }
 
 func fixtureWebHooksConfigsResponse() observability.WebHook {
 	return observability.WebHook{
-		Url:          utils.Ptr("http://example.com"),
-		MsTeams:      utils.Ptr(true),
-		GoogleChat:   utils.Ptr(true),
-		SendResolved: utils.Ptr(true),
+		Url:          new("http://example.com"),
+		MsTeams:      new(true),
+		GoogleChat:   new(true),
+		SendResolved: new(true),
 	}
 }
 
 func fixtureRouteResponse() *observability.Route {
 	return &observability.Route{
-		Continue:       utils.Ptr(false),
-		GroupBy:        utils.Ptr([]string{"label1", "label2"}),
-		GroupInterval:  utils.Ptr("1m"),
-		GroupWait:      utils.Ptr("1m"),
+		Continue:       new(false),
+		GroupBy:        new([]string{"label1", "label2"}),
+		GroupInterval:  new("1m"),
+		GroupWait:      new("1m"),
 		Match:          &map[string]string{"key": "value"},
 		MatchRe:        &map[string]string{"key": "value"},
 		Matchers:       &[]string{"matcher1", "matcher2"},
-		Receiver:       utils.Ptr("name"),
-		RepeatInterval: utils.Ptr("1m"),
+		Receiver:       new("name"),
+		RepeatInterval: new("1m"),
 		Routes: &[]observability.RouteSerializer{
 			{
-				Continue:       utils.Ptr(false),
-				GroupBy:        utils.Ptr([]string{"label1", "label2"}),
-				GroupInterval:  utils.Ptr("1m"),
-				GroupWait:      utils.Ptr("1m"),
+				Continue:       new(false),
+				GroupBy:        new([]string{"label1", "label2"}),
+				GroupInterval:  new("1m"),
+				GroupWait:      new("1m"),
 				Match:          &map[string]string{"key": "value"},
 				MatchRe:        &map[string]string{"key": "value"},
 				Matchers:       &[]string{"matcher1", "matcher2"},
-				Receiver:       utils.Ptr("name"),
-				RepeatInterval: utils.Ptr("1m"),
+				Receiver:       new("name"),
+				RepeatInterval: new("1m"),
 			},
 		},
 	}
@@ -279,14 +278,14 @@ func fixtureRouteResponse() *observability.Route {
 
 func fixtureGlobalConfigResponse() *observability.Global {
 	return &observability.Global{
-		OpsgenieApiKey:   utils.Ptr("key"),
-		OpsgenieApiUrl:   utils.Ptr("ops.example.com"),
-		ResolveTimeout:   utils.Ptr("1m"),
-		SmtpAuthIdentity: utils.Ptr("identity"),
-		SmtpAuthUsername: utils.Ptr("username"),
-		SmtpAuthPassword: utils.Ptr("password"),
-		SmtpFrom:         utils.Ptr("me@example.com"),
-		SmtpSmarthost:    utils.Ptr("smtp.example.com:25"),
+		OpsgenieApiKey:   new("key"),
+		OpsgenieApiUrl:   new("ops.example.com"),
+		ResolveTimeout:   new("1m"),
+		SmtpAuthIdentity: new("identity"),
+		SmtpAuthUsername: new("username"),
+		SmtpAuthPassword: new("password"),
+		SmtpFrom:         new("me@example.com"),
+		SmtpSmarthost:    new("smtp.example.com:25"),
 	}
 }
 
@@ -364,16 +363,16 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_ok",
 			&observability.GetInstanceResponse{
-				Id: utils.Ptr("iid"),
+				Id: new("iid"),
 			},
 			&observability.ListACLResponse{},
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
-			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
-			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: new("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: new("168h")}},
 			Model{
 				Id:                                 types.StringValue("pid,iid"),
 				ProjectId:                          types.StringValue("pid"),
@@ -394,30 +393,30 @@ func TestMapFields(t *testing.T) {
 		{
 			"values_ok",
 			&observability.GetInstanceResponse{
-				Id:         utils.Ptr("iid"),
-				Name:       utils.Ptr("name"),
-				PlanName:   utils.Ptr("plan1"),
-				PlanId:     utils.Ptr("planId"),
+				Id:         new("iid"),
+				Name:       new("name"),
+				PlanName:   new("plan1"),
+				PlanId:     new("planId"),
 				Parameters: &map[string]string{"key": "value"},
 				Instance: &observability.InstanceSensitiveData{
-					MetricsRetentionTimeRaw: utils.Ptr(int64(60)),
-					MetricsRetentionTime1h:  utils.Ptr(int64(30)),
-					MetricsRetentionTime5m:  utils.Ptr(int64(7)),
+					MetricsRetentionTimeRaw: new(int64(60)),
+					MetricsRetentionTime1h:  new(int64(30)),
+					MetricsRetentionTime5m:  new(int64(7)),
 				},
 			},
 			&observability.ListACLResponse{
 				Acl: &[]string{
 					"1.1.1.1/32",
 				},
-				Message: utils.Ptr("message"),
+				Message: new("message"),
 			},
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
-			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
-			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: new("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: new("168h")}},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -440,10 +439,10 @@ func TestMapFields(t *testing.T) {
 		{
 			"values_ok_multiple_acls",
 			&observability.GetInstanceResponse{
-				Id:         utils.Ptr("iid"),
-				Name:       utils.Ptr("name"),
-				PlanName:   utils.Ptr("plan1"),
-				PlanId:     utils.Ptr("planId"),
+				Id:         new("iid"),
+				Name:       new("name"),
+				PlanName:   new("plan1"),
+				PlanId:     new("planId"),
 				Parameters: &map[string]string{"key": "value"},
 			},
 			&observability.ListACLResponse{
@@ -451,15 +450,15 @@ func TestMapFields(t *testing.T) {
 					"1.1.1.1/32",
 					"8.8.8.8/32",
 				},
-				Message: utils.Ptr("message"),
+				Message: new("message"),
 			},
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
-			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
-			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: new("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: new("168h")}},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -483,7 +482,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"nullable_fields_ok",
 			&observability.GetInstanceResponse{
-				Id:   utils.Ptr("iid"),
+				Id:   new("iid"),
 				Name: nil,
 			},
 			&observability.ListACLResponse{
@@ -491,12 +490,12 @@ func TestMapFields(t *testing.T) {
 				Message: nil,
 			},
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
-			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("168h")}},
-			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("168h")}},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: new("168h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: new("168h")}},
 			Model{
 				Id:                                 types.StringValue("pid,iid"),
 				ProjectId:                          types.StringValue("pid"),
@@ -537,7 +536,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty metrics retention",
 			&observability.GetInstanceResponse{
-				Id:   utils.Ptr("iid"),
+				Id:   new("iid"),
 				Name: nil,
 			},
 			&observability.ListACLResponse{
@@ -553,7 +552,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"nil metrics retention",
 			&observability.GetInstanceResponse{
-				Id:   utils.Ptr("iid"),
+				Id:   new("iid"),
 				Name: nil,
 			},
 			&observability.ListACLResponse{
@@ -569,30 +568,30 @@ func TestMapFields(t *testing.T) {
 		{
 			"update metrics retention",
 			&observability.GetInstanceResponse{
-				Id:         utils.Ptr("iid"),
-				Name:       utils.Ptr("name"),
-				PlanName:   utils.Ptr("plan1"),
-				PlanId:     utils.Ptr("planId"),
+				Id:         new("iid"),
+				Name:       new("name"),
+				PlanName:   new("plan1"),
+				PlanId:     new("planId"),
 				Parameters: &map[string]string{"key": "value"},
 				Instance: &observability.InstanceSensitiveData{
-					MetricsRetentionTimeRaw: utils.Ptr(int64(30)),
-					MetricsRetentionTime1h:  utils.Ptr(int64(15)),
-					MetricsRetentionTime5m:  utils.Ptr(int64(10)),
+					MetricsRetentionTimeRaw: new(int64(30)),
+					MetricsRetentionTime1h:  new(int64(15)),
+					MetricsRetentionTime5m:  new(int64(10)),
 				},
 			},
 			&observability.ListACLResponse{
 				Acl: &[]string{
 					"1.1.1.1/32",
 				},
-				Message: utils.Ptr("message"),
+				Message: new("message"),
 			},
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
-			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: utils.Ptr("480h")}},
-			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: utils.Ptr("720h")}},
+			&observability.LogsConfigResponse{Config: &observability.LogsConfig{Retention: new("480h")}},
+			&observability.TracesConfigResponse{Config: &observability.TraceConfig{Retention: new("720h")}},
 			Model{
 				Id:         types.StringValue("pid,iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -1007,10 +1006,10 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			true,
 			&observability.CreateInstancePayload{
-				GrafanaAdminEnabled: utils.Ptr(true),
+				GrafanaAdminEnabled: new(true),
 				Name:                nil,
-				PlanId:              utils.Ptr("planId"),
-				Parameter:           &map[string]interface{}{},
+				PlanId:              new("planId"),
+				Parameter:           &map[string]any{},
 			},
 			true,
 		},
@@ -1024,10 +1023,10 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			true,
 			&observability.CreateInstancePayload{
-				GrafanaAdminEnabled: utils.Ptr(false),
-				Name:                utils.Ptr("Name"),
-				PlanId:              utils.Ptr("planId"),
-				Parameter:           &map[string]interface{}{"key": `"value"`},
+				GrafanaAdminEnabled: new(false),
+				Name:                new("Name"),
+				PlanId:              new("planId"),
+				Parameter:           &map[string]any{"key": `"value"`},
 			},
 			true,
 		},
@@ -1040,9 +1039,9 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			false,
 			&observability.CreateInstancePayload{
-				Name:      utils.Ptr("Name"),
-				PlanId:    utils.Ptr("planId"),
-				Parameter: &map[string]interface{}{"key": `"value"`},
+				Name:      new("Name"),
+				PlanId:    new("planId"),
+				Parameter: &map[string]any{"key": `"value"`},
 			},
 			true,
 		},
@@ -1089,9 +1088,9 @@ func TestToPayloadUpdate(t *testing.T) {
 			},
 			true,
 			&observability.UpdateInstancePayload{
-				GrafanaAdminEnabled: utils.Ptr(true),
+				GrafanaAdminEnabled: new(true),
 				Name:                nil,
-				PlanId:              utils.Ptr("planId"),
+				PlanId:              new("planId"),
 				Parameter:           &map[string]any{},
 			},
 			true,
@@ -1106,9 +1105,9 @@ func TestToPayloadUpdate(t *testing.T) {
 			},
 			true,
 			&observability.UpdateInstancePayload{
-				GrafanaAdminEnabled: utils.Ptr(false),
-				Name:                utils.Ptr("Name"),
-				PlanId:              utils.Ptr("planId"),
+				GrafanaAdminEnabled: new(false),
+				Name:                new("Name"),
+				PlanId:              new("planId"),
 				Parameter:           &map[string]any{"key": `"value"`},
 			},
 			true,
@@ -1122,9 +1121,9 @@ func TestToPayloadUpdate(t *testing.T) {
 			},
 			false,
 			&observability.UpdateInstancePayload{
-				Name:      utils.Ptr("Name"),
-				PlanId:    utils.Ptr("planId"),
-				Parameter: &map[string]interface{}{"key": `"value"`},
+				Name:      new("Name"),
+				PlanId:    new("planId"),
+				Parameter: &map[string]any{"key": `"value"`},
 			},
 			true,
 		},
@@ -1167,52 +1166,52 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 	}{
 		{
 			"basic_ok",
-			utils.Ptr(int64(120)),
-			utils.Ptr(int64(60)),
-			utils.Ptr(int64(14)),
+			new(int64(120)),
+			new(int64(60)),
+			new(int64(14)),
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			&observability.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("120d"),
-				MetricsRetentionTime1h:  utils.Ptr("60d"),
-				MetricsRetentionTime5m:  utils.Ptr("14d"),
+				MetricsRetentionTimeRaw: new("120d"),
+				MetricsRetentionTime1h:  new("60d"),
+				MetricsRetentionTime5m:  new("14d"),
 			},
 			true,
 		},
 		{
 			"only_raw_given",
-			utils.Ptr(int64(120)),
+			new(int64(120)),
 			nil,
 			nil,
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			&observability.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("120d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("120d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			true,
 		},
 		{
 			"only_1h_given",
 			nil,
-			utils.Ptr(int64(60)),
+			new(int64(60)),
 			nil,
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			&observability.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("60d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("60d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			true,
 		},
@@ -1220,16 +1219,16 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			"only_5m_given",
 			nil,
 			nil,
-			utils.Ptr(int64(14)),
+			new(int64(14)),
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			&observability.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("14d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("14d"),
 			},
 			true,
 		},
@@ -1239,14 +1238,14 @@ func TestToUpdateMetricsStorageRetentionPayload(t *testing.T) {
 			nil,
 			nil,
 			&observability.GetMetricsStorageRetentionResponse{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			&observability.UpdateMetricsStorageRetentionPayload{
-				MetricsRetentionTimeRaw: utils.Ptr("60d"),
-				MetricsRetentionTime1h:  utils.Ptr("30d"),
-				MetricsRetentionTime5m:  utils.Ptr("7d"),
+				MetricsRetentionTimeRaw: new("60d"),
+				MetricsRetentionTime1h:  new("30d"),
+				MetricsRetentionTime5m:  new("7d"),
 			},
 			true,
 		},

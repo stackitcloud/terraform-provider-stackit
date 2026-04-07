@@ -172,7 +172,7 @@ func (d *logsInstanceDataSource) Read(ctx context.Context, req datasource.ReadRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Logs Instance read", map[string]interface{}{
+	tflog.Info(ctx, "Logs Instance read", map[string]any{
 		"instance_id": instanceID,
 	})
 }

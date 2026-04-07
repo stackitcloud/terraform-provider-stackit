@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
@@ -30,8 +29,8 @@ func TestMapFields(t *testing.T) {
 					NetworkInterfaceId: types.StringValue("nicid"),
 				},
 				input: &iaas.PublicIp{
-					Id:               utils.Ptr("pipid"),
-					NetworkInterface: iaas.NewNullableString(utils.Ptr("nicid")),
+					Id:               new("pipid"),
+					NetworkInterface: iaas.NewNullableString(new("nicid")),
 				},
 				region: "eu01",
 			},
@@ -54,9 +53,9 @@ func TestMapFields(t *testing.T) {
 					NetworkInterfaceId: types.StringValue("nicid"),
 				},
 				input: &iaas.PublicIp{
-					Id:               utils.Ptr("pipid"),
-					Ip:               utils.Ptr("ip"),
-					NetworkInterface: iaas.NewNullableString(utils.Ptr("nicid")),
+					Id:               new("pipid"),
+					Ip:               new("ip"),
+					NetworkInterface: iaas.NewNullableString(new("nicid")),
 				},
 				region: "eu02",
 			},
@@ -115,7 +114,7 @@ func TestToCreatePayload(t *testing.T) {
 				NetworkInterfaceId: types.StringValue("interface"),
 			},
 			&iaas.UpdatePublicIPPayload{
-				NetworkInterface: iaas.NewNullableString(utils.Ptr("interface")),
+				NetworkInterface: iaas.NewNullableString(new("interface")),
 			},
 			true,
 		},

@@ -16,7 +16,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -63,6 +63,7 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"id":                       "Terraform's internal data source identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
+		"object_lock":              "Enable Object Lock on this bucket. Can only be set at creation time. Requires an active project-level compliance lock.",
 		"url_path_style":           "URL in path style.",
 		"url_virtual_hosted_style": "URL in virtual hosted style.",
 		"region":                   "The resource region. If not defined, the provider region is used.",
@@ -89,6 +90,10 @@ func (r *bucketDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"object_lock": schema.BoolAttribute{
+				Description: descriptions["object_lock"],
+				Computed:    true,
 			},
 			"url_path_style": schema.StringAttribute{
 				Computed: true,
@@ -124,7 +129,7 @@ func (r *bucketDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.GetBucket(ctx, projectId, region, bucketName).Execute()
+	bucketResp, err := r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

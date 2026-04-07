@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/git"
-	"github.com/stackitcloud/stackit-sdk-go/services/git/wait"
+	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
+	"github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -209,7 +209,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	// Create the new git instance via the API client.
-	gitInstanceResp, err := g.client.CreateInstance(ctx, projectId).
+	gitInstanceResp, err := g.client.DefaultAPI.CreateInstance(ctx, projectId).
 		CreateInstancePayload(payload).
 		Execute()
 	if err != nil {
@@ -219,12 +219,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	ctx = core.LogResponse(ctx)
 
-	if gitInstanceResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", "Got empty git instance id")
-		return
-	}
-
-	gitInstanceId := *gitInstanceResp.Id
+	gitInstanceId := gitInstanceResp.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
@@ -234,7 +229,7 @@ func (g *gitResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	_, err = wait.CreateGitInstanceWaitHandler(ctx, g.client, projectId, gitInstanceId).WaitWithContext(ctx)
+	_, err = wait.CreateGitInstanceWaitHandler(ctx, g.client.DefaultAPI, projectId, gitInstanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating git instance", fmt.Sprintf("Git instance creation waiting: %v", err))
 		return
@@ -272,7 +267,7 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	instanceId := model.InstanceId.ValueString()
 
 	// Read the current git instance via id
-	gitInstanceResp, err := g.client.GetInstance(ctx, projectId, instanceId).Execute()
+	gitInstanceResp, err := g.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -327,7 +322,7 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Call API to delete the existing git instance.
-	err := g.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := g.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting git instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -335,7 +330,7 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteGitInstanceWaitHandler(ctx, g.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for instance deletion", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -359,7 +354,7 @@ func (g *gitResource) ImportState(ctx context.Context, req resource.ImportStateR
 		return
 	}
 	// Set the project ID and instance ID attributes in the state.
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]interface{}{
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
 		"instance_id": idParts[1],
 	})
@@ -375,13 +370,9 @@ func mapFields(ctx context.Context, resp *git.Instance, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if resp.Id == nil {
-		return fmt.Errorf("git instance id not present")
-	}
-
 	aclList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if resp.Acl != nil && len(*resp.Acl) > 0 {
+	if len(resp.Acl) > 0 {
 		aclList, diags = types.ListValueFrom(ctx, types.StringType, resp.Acl)
 		if diags.HasError() {
 			return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
@@ -389,20 +380,20 @@ func mapFields(ctx context.Context, resp *git.Instance, model *Model) error {
 	}
 
 	model.Created = types.StringNull()
-	if resp.Created != nil && resp.Created.String() != "" {
+	if resp.Created.String() != "" {
 		model.Created = types.StringValue(resp.Created.String())
 	}
 
 	// Build the ID by combining the project ID and instance id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *resp.Id)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), resp.Id)
 	model.ACL = aclList
-	model.ConsumedDisk = types.StringPointerValue(resp.ConsumedDisk)
-	model.ConsumedObjectStorage = types.StringPointerValue(resp.ConsumedObjectStorage)
-	model.Flavor = types.StringPointerValue(resp.Flavor)
-	model.InstanceId = types.StringPointerValue(resp.Id)
-	model.Name = types.StringPointerValue(resp.Name)
-	model.Url = types.StringPointerValue(resp.Url)
-	model.Version = types.StringPointerValue(resp.Version)
+	model.ConsumedDisk = types.StringValue(resp.ConsumedDisk)
+	model.ConsumedObjectStorage = types.StringValue(resp.ConsumedObjectStorage)
+	model.Flavor = types.StringValue(resp.Flavor)
+	model.InstanceId = types.StringValue(resp.Id)
+	model.Name = types.StringValue(resp.Name)
+	model.Url = types.StringValue(resp.Url)
+	model.Version = types.StringValue(resp.Version)
 
 	return nil
 }
@@ -416,7 +407,7 @@ func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePaylo
 	}
 
 	payload := git.CreateInstancePayload{
-		Name: model.Name.ValueStringPointer(),
+		Name: model.Name.ValueString(),
 	}
 
 	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
@@ -424,12 +415,12 @@ func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePaylo
 		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
 		diags.Append(aclDiags...)
 		if !aclDiags.HasError() {
-			payload.Acl = &acl
+			payload.Acl = acl
 		}
 	}
 
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		payload.Flavor = git.CreateInstancePayloadGetFlavorAttributeType(model.Flavor.ValueStringPointer())
+		payload.Flavor = model.Flavor.ValueStringPointer()
 	}
 
 	return payload, diags

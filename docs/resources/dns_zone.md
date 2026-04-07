@@ -53,6 +53,7 @@ import {
 - `primaries` (List of String) Primary name server for secondary zone. E.g. ["1.2.3.4"]
 - `refresh_time` (Number) Refresh time. E.g. 3600
 - `retry_time` (Number) Retry time. E.g. 600
+- `timeouts` (Attributes) (see [below for nested schema](#nestedatt--timeouts))
 - `type` (String) Zone type. Defaults to `primary`. Possible values are: `primary`, `secondary`.
 
 ### Read-Only
@@ -64,3 +65,13 @@ import {
 - `state` (String) Zone state. E.g. `CREATE_SUCCEEDED`.
 - `visibility` (String) Visibility of the zone. E.g. `public`.
 - `zone_id` (String) The zone ID.
+
+<a id="nestedatt--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+- `delete` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+- `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+- `update` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).

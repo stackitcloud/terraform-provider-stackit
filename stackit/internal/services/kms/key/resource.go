@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/kms/v1api/wait"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/kms"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	kmsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/utils"
@@ -259,7 +259,7 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createResponse, err := r.client.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
+	createResponse, err := r.client.DefaultAPI.CreateKey(ctx, projectId, region, keyRingId).CreateKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -267,21 +267,20 @@ func (r *keyResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	ctx = core.LogResponse(ctx)
 
-	if createResponse == nil || createResponse.Id == nil {
+	if createResponse == nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key", "API returned empty response")
 		return
 	}
 
-	keyId := *createResponse.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
 		"keyring_id": keyRingId,
-		"key_id":     keyId,
+		"key_id":     createResponse.Id,
 	})
 
-	waitHandlerResp, err := wait.CreateOrUpdateKeyWaitHandler(ctx, r.client, projectId, region, keyRingId, keyId).WaitWithContext(ctx)
+	waitHandlerResp, err := wait.CreateOrUpdateKeyWaitHandler(ctx, r.client.DefaultAPI, projectId, region, keyRingId, createResponse.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for key creation", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -321,7 +320,7 @@ func (r *keyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
-	keyResponse, err := r.client.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	keyResponse, err := r.client.DefaultAPI.GetKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -368,7 +367,7 @@ func (r *keyResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	keyId := model.KeyId.ValueString()
 
-	err := r.client.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
+	err := r.client.DefaultAPI.DeleteKey(ctx, projectId, region, keyRingId, keyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -413,28 +412,20 @@ func mapFields(key *kms.Key, model *Model, region string) error {
 	var keyId string
 	if model.KeyId.ValueString() != "" {
 		keyId = model.KeyId.ValueString()
-	} else if key.Id != nil {
-		keyId = *key.Id
 	} else {
-		return fmt.Errorf("key id not present")
+		keyId = key.Id
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.KeyRingId.ValueString(), keyId)
 	model.KeyId = types.StringValue(keyId)
-	model.DisplayName = types.StringPointerValue(key.DisplayName)
+	model.DisplayName = types.StringValue(key.DisplayName)
 	model.Region = types.StringValue(region)
-	model.ImportOnly = types.BoolPointerValue(key.ImportOnly)
+	model.ImportOnly = types.BoolValue(key.ImportOnly)
 	model.AccessScope = types.StringValue(string(key.GetAccessScope()))
 	model.Algorithm = types.StringValue(string(key.GetAlgorithm()))
 	model.Purpose = types.StringValue(string(key.GetPurpose()))
 	model.Protection = types.StringValue(string(key.GetProtection()))
-
-	// TODO: workaround - remove once STACKITKMS-377 is resolved (just write the return value from the API to the state then)
-	if !(model.Description.IsNull() && key.Description != nil && *key.Description == "") {
-		model.Description = types.StringPointerValue(key.Description)
-	} else {
-		model.Description = types.StringNull()
-	}
+	model.Description = types.StringPointerValue(key.Description)
 
 	return nil
 }
@@ -443,13 +434,19 @@ func toCreatePayload(model *Model) (*kms.CreateKeyPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
+
+	var accessScope *kms.AccessScope
+	if !utils.IsUndefined(model.AccessScope) {
+		accessScope = new(kms.AccessScope(model.AccessScope.ValueString()))
+	}
+
 	return &kms.CreateKeyPayload{
-		AccessScope: kms.CreateKeyPayloadGetAccessScopeAttributeType(conversion.StringValueToPointer(model.AccessScope)),
-		Algorithm:   kms.CreateKeyPayloadGetAlgorithmAttributeType(conversion.StringValueToPointer(model.Algorithm)),
-		Protection:  kms.CreateKeyPayloadGetProtectionAttributeType(conversion.StringValueToPointer(model.Protection)),
+		AccessScope: accessScope,
+		Algorithm:   kms.Algorithm(model.Algorithm.ValueString()),
+		Protection:  kms.Protection(model.Protection.ValueString()),
 		Description: conversion.StringValueToPointer(model.Description),
-		DisplayName: conversion.StringValueToPointer(model.DisplayName),
+		DisplayName: model.DisplayName.ValueString(),
 		ImportOnly:  conversion.BoolValueToPointer(model.ImportOnly),
-		Purpose:     kms.CreateKeyPayloadGetPurposeAttributeType(conversion.StringValueToPointer(model.Purpose)),
+		Purpose:     kms.Purpose(model.Purpose.ValueString()),
 	}, nil
 }
