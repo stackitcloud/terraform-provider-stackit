@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	certUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/utils"
@@ -56,7 +57,7 @@ func (r *certDataSource) Configure(ctx context.Context, req datasource.Configure
 func (r *certDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Certificates resource schema.",
-		"id":          "Terraform's internal resource ID. It is structured as `project_id`,`region`,`cert_id`.",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`cert_id`\".",
 		"project_id":  "STACKIT project ID to which the certificate is associated.",
 		"region":      "The resource region (e.g. eu01). If not defined, the provider region is used.",
 		"cert_id":     "The ID of the certificate.",

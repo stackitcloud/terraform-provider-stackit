@@ -35,7 +35,7 @@ resource "tls_self_signed_cert" "example" {
 
   subject {
     common_name  = "localhost"
-    organization = "Stackit Test"
+    organization = "STACKIT Test"
   }
 
   validity_period_hours = 12
@@ -73,4 +73,4 @@ resource "stackit_alb_certificate" "certificate" {
 ### Read-Only
 
 - `cert_id` (String) The ID of the certificate.
-- `id` (String) Terraform's internal resource ID. It is structured as `project_id`,`region`,`cert_id`.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`cert_id`".

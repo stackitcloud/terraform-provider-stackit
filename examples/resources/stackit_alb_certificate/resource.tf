@@ -16,7 +16,7 @@ resource "tls_self_signed_cert" "example" {
 
   subject {
     common_name  = "localhost"
-    organization = "Stackit Test"
+    organization = "STACKIT Test"
   }
 
   validity_period_hours = 12

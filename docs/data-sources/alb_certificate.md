@@ -29,7 +29,7 @@ data "stackit_alb_certificate" "example" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource ID. It is structured as `project_id`,`region`,`cert_id`.
+- `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`cert_id`".
 - `name` (String) Certificate name.
 - `public_key` (String) The PEM encoded public key part
 - `region` (String) The resource region (e.g. eu01). If not defined, the provider region is used.

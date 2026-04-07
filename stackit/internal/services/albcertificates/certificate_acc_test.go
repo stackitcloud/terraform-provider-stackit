@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -49,7 +49,7 @@ func TestAccCertResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.CertProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// ALB Certificate instance resource
 					resource.TestCheckResourceAttr("stackit_alb_certificate.certificate", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -72,7 +72,7 @@ func TestAccCertResourceMin(t *testing.T) {
 							cert_id    = stackit_alb_certificate.certificate.cert_id
 						}
 						`,
-					testutil.CertProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// ALB Certificate instance
@@ -142,7 +142,7 @@ func TestAccCertResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.CertProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// ALB Certificate instance resource
 					resource.TestCheckResourceAttr("stackit_alb_certificate.certificate", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -165,7 +165,7 @@ func TestAccCertResourceMax(t *testing.T) {
 							cert_id    = stackit_alb_certificate.certificate.cert_id
 						}
 						`,
-					testutil.CertProviderConfig()+resourceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// ALB Certificate instance
@@ -223,15 +223,7 @@ func TestAccCertResourceMax(t *testing.T) {
 
 func testAccCheckCertDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *certSdk.APIClient
-	var err error
-	if testutil.ALBCustomEndpoint == "" {
-		client, err = certSdk.NewAPIClient()
-	} else {
-		client, err = certSdk.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.CertCustomEndpoint),
-		)
-	}
+	client, err := certSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCertCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -240,14 +232,14 @@ func testAccCheckCertDestroy(s *terraform.State) error {
 	if testutil.Region != "" {
 		region = testutil.Region
 	}
-	certificateToDestroy := []string{}
+	certificatesToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_loadbalancer" {
+		if rs.Type != "stackit_alb_certificate" {
 			continue
 		}
-		// cetificate terraform ID: = "[project_id],[region],[name]"
-		certificateName := strings.Split(rs.Primary.ID, core.Separator)[1]
-		certificateToDestroy = append(certificateToDestroy, certificateName)
+		// certificate terraform ID: = "[project_id],[region],[cert_id]"
+		certificateID := strings.Split(rs.Primary.ID, core.Separator)[2]
+		certificatesToDestroy = append(certificatesToDestroy, certificateID)
 	}
 
 	certificateResp, err := client.DefaultAPI.ListCertificates(ctx, testutil.ProjectId, region).Execute()
@@ -260,16 +252,20 @@ func testAccCheckCertDestroy(s *terraform.State) error {
 		return nil
 	}
 
-	items := certificateResp.Items
-	for i := range items {
-		if items[i].Name == nil {
-			continue
+	for i := range certificatesToDestroy {
+		_, err := client.DefaultAPI.DeleteCertificate(ctx, testutil.ProjectId, region, certificatesToDestroy[i]).Execute()
+		if err != nil {
+			return fmt.Errorf("destroying certificate %s during CheckDestroy: %w", certificatesToDestroy[i], err)
 		}
-		if utils.Contains(certificateToDestroy, *items[i].Name) {
-			_, err := client.DefaultAPI.DeleteCertificate(ctx, testutil.ProjectId, region, *items[i].Id).Execute()
-			if err != nil {
-				return fmt.Errorf("destroying certificate %s during CheckDestroy: %w", *items[i].Name, err)
-			}
+	}
+
+	certificateResp, err = client.DefaultAPI.ListCertificates(ctx, testutil.ProjectId, region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting certificateResp after destroy: %w", err)
+	}
+	for i := range certificateResp.Items {
+		if utils.Contains(certificatesToDestroy, *certificateResp.Items[i].Id) {
+			return fmt.Errorf("certificate %s has not been destroyed", *certificateResp.Items[i].Id)
 		}
 	}
 	return nil
