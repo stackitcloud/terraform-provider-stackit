@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -166,7 +166,7 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Fetch all instances for the project and region
-	instancesResp, err := d.client.ListInstances(ctx, projectId, region).Execute()
+	instancesResp, err := d.client.DefaultAPI.ListInstances(ctx, projectId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -216,20 +216,11 @@ func (d *instancesDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 // buildInstancesList constructs a list of instance attributes
-func buildInstancesList(ctx context.Context, instances edge.InstanceListGetInstancesAttributeType, region string, diags *diag.Diagnostics) []attr.Value {
+func buildInstancesList(_ context.Context, instances []edge.Instance, region string, diags *diag.Diagnostics) []attr.Value {
 	var instancesList []attr.Value
 
-	for _, instance := range *instances {
-		instanceAttrs, err := mapInstanceToAttrs(instance, region)
-		if err != nil {
-			// Keep going in case there are more errors
-			instanceId := "without id"
-			if instance.Id != nil {
-				instanceId = *instance.Id
-			}
-			core.LogAndAddError(ctx, diags, "Error reading instances", fmt.Sprintf("Could not process instance %q: %v", instanceId, err))
-			continue
-		}
+	for _, instance := range instances {
+		instanceAttrs := mapInstanceToAttrs(&instance, region)
 
 		instanceObjectValue, objDiags := types.ObjectValue(instanceTypes, instanceAttrs)
 		diags.Append(objDiags...)
@@ -242,38 +233,16 @@ func buildInstancesList(ctx context.Context, instances edge.InstanceListGetInsta
 	return instancesList
 }
 
-func mapInstanceToAttrs(instance edge.Instance, region string) (map[string]attr.Value, error) {
-	if instance.Id == nil {
-		return nil, fmt.Errorf("instance is missing an 'id'")
-	}
-	if instance.DisplayName == nil || *instance.DisplayName == "" {
-		return nil, fmt.Errorf("instance %q is missing a 'displayName'", *instance.Id)
-	}
-	if instance.PlanId == nil {
-		return nil, fmt.Errorf("instance %q is missing a 'planId'", *instance.Id)
-	}
-	if instance.FrontendUrl == nil {
-		return nil, fmt.Errorf("instance %q is missing a 'frontendUrl'", *instance.Id)
-	}
-	if instance.Status == nil {
-		return nil, fmt.Errorf("instance %q is missing a 'status'", *instance.Id)
-	}
-	if instance.Created == nil {
-		return nil, fmt.Errorf("instance %q is missing a 'created' timestamp", *instance.Id)
-	}
-	if instance.Description == nil {
-		return nil, fmt.Errorf("instance %q is missing a 'description'", *instance.Id)
-	}
-
+func mapInstanceToAttrs(instance *edge.Instance, region string) map[string]attr.Value {
 	attrs := map[string]attr.Value{
-		"instance_id":  types.StringValue(*instance.Id),
-		"display_name": types.StringValue(*instance.DisplayName),
+		"instance_id":  types.StringValue(instance.Id),
+		"display_name": types.StringValue(instance.DisplayName),
 		"region":       types.StringValue(region),
-		"plan_id":      types.StringValue(*instance.PlanId),
-		"frontend_url": types.StringValue(*instance.FrontendUrl),
-		"status":       types.StringValue(string(instance.GetStatus())),
+		"plan_id":      types.StringValue(instance.PlanId),
+		"frontend_url": types.StringValue(instance.FrontendUrl),
+		"status":       types.StringValue(instance.Status),
 		"created":      types.StringValue(instance.Created.String()),
-		"description":  types.StringValue(*instance.Description),
+		"description":  types.StringPointerValue(instance.Description),
 	}
-	return attrs, nil
+	return attrs
 }

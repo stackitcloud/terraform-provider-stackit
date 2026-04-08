@@ -18,7 +18,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -158,7 +158,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	recordSetResp, err := d.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	recordSetResp, err := d.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -218,7 +218,7 @@ func mapDataSourceFields(userResp *mongodbflex.GetUserResponse, model *DataSourc
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range *user.Roles {
+		for _, role := range user.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)

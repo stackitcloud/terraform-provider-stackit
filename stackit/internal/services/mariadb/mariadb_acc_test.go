@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/wait"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -422,23 +422,23 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
 		if instances[i].InstanceId == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -449,14 +449,14 @@ func testAccCheckMariaDBDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *mariadb.Instance) bool {
-	if *i.LastOperation.Type != mariadb.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type != "delete" {
 		return false
 	}
 
-	if *i.LastOperation.Type == mariadb.INSTANCELASTOPERATIONTYPE_DELETE {
-		if *i.LastOperation.State != mariadb.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
+	if i.LastOperation.Type == "delete" {
+		if i.LastOperation.State != "succeeded" {
 			return false
-		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
+		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false
 		}
 	}

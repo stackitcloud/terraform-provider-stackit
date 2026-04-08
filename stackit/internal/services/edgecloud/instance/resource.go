@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
-	edgewait "github.com/stackitcloud/stackit-sdk-go/services/edge/wait"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	edgewait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -264,7 +264,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	tflog.Info(ctx, "Creating new Edge Cloud instance")
 	payload := toCreatePayload(&model)
-	createResp, err := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(payload).Execute()
+	createResp, err := i.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -276,23 +276,18 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API returned nil response")
 		return
 	}
-	if createResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "API returned nil Instance ID")
-		return
-	}
 
-	edgeCloudInstanceId := *createResp.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
-		"instance_id": edgeCloudInstanceId,
+		"instance_id": createResp.Id,
 		"region":      region,
 	})
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client, projectId, region, edgeCloudInstanceId).WaitWithContext(ctx)
+	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance waiting: %v", err))
 		return
@@ -329,7 +324,7 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	edgeCloudInstanceResp, err := i.client.GetInstance(ctx, projectId, region, instanceId).Execute()
+	edgeCloudInstanceResp, err := i.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -372,7 +367,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	tflog.Info(ctx, "Updating Edge Cloud instance", map[string]any{"instance_id": instanceId})
 	payload := toUpdatePayload(&model)
-	err := i.client.UpdateInstance(ctx, projectId, region, instanceId).UpdateInstancePayload(payload).Execute()
+	err := i.client.DefaultAPI.UpdateInstance(ctx, projectId, region, instanceId).UpdateInstancePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -380,7 +375,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client, projectId, region, instanceId).WaitWithContext(ctx)
+	waitResp, err := edgewait.CreateOrUpdateInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance waiting: %v", err))
 		return
@@ -414,7 +409,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := i.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	err := i.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -422,7 +417,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = edgewait.DeleteInstanceWaitHandler(ctx, i.client, projectId, region, instanceId).WaitWithContext(ctx)
+	_, err = edgewait.DeleteInstanceWaitHandler(ctx, i.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -461,8 +456,8 @@ func mapFields(resp *edge.Instance, model *Model) error {
 	var instanceId string
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
-	} else if resp.Id != nil {
-		instanceId = *resp.Id
+	} else if resp.Id != "" {
+		instanceId = resp.Id
 	}
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
@@ -471,10 +466,10 @@ func mapFields(resp *edge.Instance, model *Model) error {
 	} else {
 		model.Created = types.StringNull()
 	}
-	model.FrontendUrl = types.StringPointerValue(resp.FrontendUrl)
-	model.DisplayName = types.StringPointerValue(resp.DisplayName)
-	model.PlanID = types.StringPointerValue(resp.PlanId)
-	model.Status = types.StringValue(string(*resp.Status))
+	model.FrontendUrl = types.StringValue(resp.FrontendUrl)
+	model.DisplayName = types.StringValue(resp.DisplayName)
+	model.PlanID = types.StringValue(resp.PlanId)
+	model.Status = types.StringValue(resp.Status)
 
 	if resp.Description != nil {
 		model.Description = types.StringValue(*resp.Description)
@@ -488,9 +483,9 @@ func mapFields(resp *edge.Instance, model *Model) error {
 // toCreatePayload creates the payload for creating an Edge Cloud instance.
 func toCreatePayload(model *Model) edge.CreateInstancePayload {
 	return edge.CreateInstancePayload{
-		DisplayName: model.DisplayName.ValueStringPointer(),
+		DisplayName: model.DisplayName.ValueString(),
 		Description: model.Description.ValueStringPointer(),
-		PlanId:      model.PlanID.ValueStringPointer(),
+		PlanId:      model.PlanID.ValueString(),
 	}
 }
 

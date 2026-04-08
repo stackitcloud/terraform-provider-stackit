@@ -25,8 +25,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/wait"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -57,8 +57,8 @@ type parametersModel struct {
 	SgwAcl               types.String `tfsdk:"sgw_acl"`
 	EnableMonitoring     types.Bool   `tfsdk:"enable_monitoring"`
 	Graphite             types.String `tfsdk:"graphite"`
-	MaxDiskThreshold     types.Int64  `tfsdk:"max_disk_threshold"`
-	MetricsFrequency     types.Int64  `tfsdk:"metrics_frequency"`
+	MaxDiskThreshold     types.Int32  `tfsdk:"max_disk_threshold"`
+	MetricsFrequency     types.Int32  `tfsdk:"metrics_frequency"`
 	MetricsPrefix        types.String `tfsdk:"metrics_prefix"`
 	MonitoringInstanceId types.String `tfsdk:"monitoring_instance_id"`
 	Syslog               types.List   `tfsdk:"syslog"`
@@ -69,8 +69,8 @@ var parametersTypes = map[string]attr.Type{
 	"sgw_acl":                basetypes.StringType{},
 	"enable_monitoring":      basetypes.BoolType{},
 	"graphite":               basetypes.StringType{},
-	"max_disk_threshold":     basetypes.Int64Type{},
-	"metrics_frequency":      basetypes.Int64Type{},
+	"max_disk_threshold":     basetypes.Int32Type{},
+	"metrics_frequency":      basetypes.Int32Type{},
 	"metrics_prefix":         basetypes.StringType{},
 	"monitoring_instance_id": basetypes.StringType{},
 	"syslog":                 basetypes.ListType{ElemType: types.StringType},
@@ -205,12 +205,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"max_disk_threshold": schema.Int64Attribute{
+					"max_disk_threshold": schema.Int32Attribute{
 						Description: parametersDescriptions["max_disk_threshold"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"metrics_frequency": schema.Int64Attribute{
+					"metrics_frequency": schema.Int32Attribute{
 						Description: parametersDescriptions["metrics_frequency"],
 						Optional:    true,
 						Computed:    true,
@@ -310,7 +310,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -318,12 +318,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp == nil || createResp.InstanceId == nil {
+	if createResp == nil || createResp.InstanceId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Create API response: Incomplete response (id missing)")
 		return
 	}
 
-	instanceId := *createResp.InstanceId
+	instanceId := createResp.InstanceId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
@@ -334,7 +334,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -372,7 +372,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -447,7 +447,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -455,7 +455,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -494,7 +494,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -502,7 +502,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -549,18 +549,18 @@ func mapFields(instance *mariadb.Instance, model *Model) error {
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
-	model.PlanId = types.StringPointerValue(instance.PlanId)
-	model.CfGuid = types.StringPointerValue(instance.CfGuid)
-	model.CfSpaceGuid = types.StringPointerValue(instance.CfSpaceGuid)
-	model.DashboardUrl = types.StringPointerValue(instance.DashboardUrl)
-	model.ImageUrl = types.StringPointerValue(instance.ImageUrl)
-	model.Name = types.StringPointerValue(instance.Name)
-	model.CfOrganizationGuid = types.StringPointerValue(instance.CfOrganizationGuid)
+	model.PlanId = types.StringValue(instance.PlanId)
+	model.CfGuid = types.StringValue(instance.CfGuid)
+	model.CfSpaceGuid = types.StringValue(instance.CfSpaceGuid)
+	model.DashboardUrl = types.StringValue(instance.DashboardUrl)
+	model.ImageUrl = types.StringValue(instance.ImageUrl)
+	model.Name = types.StringValue(instance.Name)
+	model.CfOrganizationGuid = types.StringValue(instance.CfOrganizationGuid)
 
 	if instance.Parameters == nil {
 		model.Parameters = types.ObjectNull(parametersTypes)
 	} else {
-		parameters, err := mapParameters(*instance.Parameters)
+		parameters, err := mapParameters(instance.Parameters)
 		if err != nil {
 			return fmt.Errorf("mapping parameters: %w", err)
 		}
@@ -603,26 +603,22 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				}
 				value = types.BoolValue(valueBool)
 			}
-		case basetypes.Int64Type:
+		case basetypes.Int32Type:
 			if valueInterface == nil {
-				value = types.Int64Null()
+				value = types.Int32Null()
 			} else {
 				// This may be int64, int32, int or float64
 				// We try to assert all 4
-				var valueInt64 int64
+				var valueInt32 int32
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
-				case int64:
-					valueInt64 = temp
 				case int32:
-					valueInt64 = int64(temp)
-				case int:
-					valueInt64 = int64(temp)
+					valueInt32 = temp
 				case float64:
-					valueInt64 = int64(temp)
+					valueInt32 = int32(temp)
 				}
-				value = types.Int64Value(valueInt64)
+				value = types.Int32Value(valueInt32)
 			}
 		case basetypes.ListType: // Assumed to be a list of strings
 			if valueInterface == nil {
@@ -673,8 +669,8 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*mariadb.Create
 		return nil, fmt.Errorf("convert parameters: %w", err)
 	}
 	return &mariadb.CreateInstancePayload{
-		InstanceName: conversion.StringValueToPointer(model.Name),
-		PlanId:       conversion.StringValueToPointer(model.PlanId),
+		InstanceName: model.Name.ValueString(),
+		PlanId:       model.PlanId.ValueString(),
 		Parameters:   payloadParams,
 	}, nil
 }
@@ -702,12 +698,12 @@ func toInstanceParams(parameters *parametersModel) (*mariadb.InstanceParameters,
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
 	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
-	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
-	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MaxDiskThreshold = conversion.Int32ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.MetricsFrequency = conversion.Int32ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 
-	syslog, err := conversion.StringListToPointer(parameters.Syslog)
+	syslog, err := conversion.StringListToSlice(parameters.Syslog)
 	if err != nil {
 		return nil, fmt.Errorf("convert syslog: %w", err)
 	}
@@ -718,7 +714,7 @@ func toInstanceParams(parameters *parametersModel) (*mariadb.InstanceParameters,
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.ListOfferings(ctx, projectId).Execute()
+	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting MariaDB offerings: %w", err)
 	}
@@ -728,22 +724,22 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	availableVersions := ""
 	availablePlanNames := ""
 	isValidVersion := false
-	for _, offer := range *res.Offerings {
-		if !strings.EqualFold(*offer.Version, version) {
-			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, *offer.Version)
+	for offer := range res.Offerings {
+		if !strings.EqualFold(res.Offerings[offer].Version, version) {
+			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, res.Offerings[offer].Version)
 			continue
 		}
 		isValidVersion = true
 
-		for _, plan := range *offer.Plans {
-			if plan.Name == nil {
+		for _, plan := range res.Offerings[offer].Plans {
+			if plan.Name == "" {
 				continue
 			}
-			if strings.EqualFold(*plan.Name, planName) && plan.Id != nil {
-				model.PlanId = types.StringPointerValue(plan.Id)
+			if strings.EqualFold(plan.Name, planName) && plan.Id != "" {
+				model.PlanId = types.StringValue(plan.Id)
 				return nil
 			}
-			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, *plan.Name)
+			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, plan.Name)
 		}
 	}
 
@@ -756,16 +752,16 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 func loadPlanNameAndVersion(ctx context.Context, client *mariadb.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.ListOfferings(ctx, projectId).Execute()
+	res, err := client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting MariaDB offerings: %w", err)
 	}
 
-	for _, offer := range *res.Offerings {
-		for _, plan := range *offer.Plans {
-			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
-				model.PlanName = types.StringPointerValue(plan.Name)
-				model.Version = types.StringPointerValue(offer.Version)
+	for offer := range res.Offerings {
+		for _, plan := range res.Offerings[offer].Plans {
+			if strings.EqualFold(plan.Id, planId) && plan.Id != "" {
+				model.PlanName = types.StringValue(plan.Name)
+				model.Version = types.StringValue(res.Offerings[offer].Version)
 				return nil
 			}
 		}

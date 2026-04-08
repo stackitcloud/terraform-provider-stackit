@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 )
 
 const (
@@ -26,9 +26,14 @@ var (
 type mongoDBFlexClientMocked struct {
 	returnError     bool
 	listFlavorsResp *mongodbflex.ListFlavorsResponse
+	listFlavorsReq  mongodbflex.ApiListFlavorsRequest
 }
 
-func (c *mongoDBFlexClientMocked) ListFlavorsExecute(_ context.Context, _, _ string) (*mongodbflex.ListFlavorsResponse, error) {
+func (c *mongoDBFlexClientMocked) ListFlavors(_ context.Context, _, _ string) mongodbflex.ApiListFlavorsRequest {
+	return c.listFlavorsReq
+}
+
+func (c *mongoDBFlexClientMocked) ListFlavorsExecute(_ mongodbflex.ApiListFlavorsRequest) (*mongodbflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -71,21 +76,21 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
+					"cpu":         types.Int32Null(),
+					"ram":         types.Int32Null(),
 				}),
-				Replicas: types.Int64Null(),
+				Replicas: types.Int32Null(),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringNull(),
 					"size":  types.Int64Null(),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringNull(),
-					"snapshot_retention_days":           types.Int64Null(),
-					"daily_snapshot_retention_days":     types.Int64Null(),
-					"weekly_snapshot_retention_weeks":   types.Int64Null(),
-					"monthly_snapshot_retention_months": types.Int64Null(),
-					"point_in_time_window_hours":        types.Int64Null(),
+					"snapshot_retention_days":           types.Int32Null(),
+					"daily_snapshot_retention_days":     types.Int32Null(),
+					"weekly_snapshot_retention_weeks":   types.Int32Null(),
+					"monthly_snapshot_retention_months": types.Int32Null(),
+					"point_in_time_window_hours":        types.Int32Null(),
 				}),
 				Version: types.StringNull(),
 				Region:  types.StringValue(testRegion),
@@ -101,7 +106,7 @@ func TestMapFields(t *testing.T) {
 			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"ip1",
 							"ip2",
 							"",
@@ -109,15 +114,15 @@ func TestMapFields(t *testing.T) {
 					},
 					BackupSchedule: new("schedule"),
 					Flavor: &mongodbflex.Flavor{
-						Cpu:         new(int64(12)),
+						Cpu:         new(int32(12)),
 						Description: new("description"),
 						Id:          new("flavor_id"),
-						Memory:      new(int64(34)),
+						Memory:      new(int32(34)),
 					},
 					Id:       new(instanceId),
 					Name:     new("name"),
-					Replicas: new(int64(56)),
-					Status:   mongodbflex.INSTANCESTATUS_READY.Ptr(),
+					Replicas: new(int32(56)),
+					Status:   new("READY"),
 					Storage: &mongodbflex.Storage{
 						Class: new("class"),
 						Size:  new(int64(78)),
@@ -151,21 +156,21 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringValue("flavor_id"),
 					"description": types.StringValue("description"),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+					"cpu":         types.Int32Value(12),
+					"ram":         types.Int32Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringValue("type"),
-					"snapshot_retention_days":           types.Int64Value(5),
-					"daily_snapshot_retention_days":     types.Int64Value(6),
-					"weekly_snapshot_retention_weeks":   types.Int64Value(7),
-					"monthly_snapshot_retention_months": types.Int64Value(8),
-					"point_in_time_window_hours":        types.Int64Value(9),
+					"snapshot_retention_days":           types.Int32Value(5),
+					"daily_snapshot_retention_days":     types.Int32Value(6),
+					"weekly_snapshot_retention_weeks":   types.Int32Value(7),
+					"monthly_snapshot_retention_months": types.Int32Value(8),
+					"point_in_time_window_hours":        types.Int32Value(9),
 				}),
 				Region:  types.StringValue(testRegion),
 				Version: types.StringValue("version"),
@@ -181,7 +186,7 @@ func TestMapFields(t *testing.T) {
 			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"ip1",
 							"ip2",
 							"",
@@ -191,8 +196,8 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             new(instanceId),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
-					Status:         mongodbflex.INSTANCESTATUS_READY.Ptr(),
+					Replicas:       new(int32(56)),
+					Status:         new("READY"),
 					Storage:        nil,
 					Options: &map[string]string{
 						"type":                           "type",
@@ -206,8 +211,8 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
+				CPU: types.Int32Value(12),
+				RAM: types.Int32Value(34),
 			},
 			&storageModel{
 				Class: types.StringValue("class"),
@@ -231,21 +236,21 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+					"cpu":         types.Int32Value(12),
+					"ram":         types.Int32Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringValue("type"),
-					"snapshot_retention_days":           types.Int64Value(5),
-					"daily_snapshot_retention_days":     types.Int64Value(6),
-					"weekly_snapshot_retention_weeks":   types.Int64Value(7),
-					"monthly_snapshot_retention_months": types.Int64Value(8),
-					"point_in_time_window_hours":        types.Int64Value(9),
+					"snapshot_retention_days":           types.Int32Value(5),
+					"daily_snapshot_retention_days":     types.Int32Value(6),
+					"weekly_snapshot_retention_weeks":   types.Int32Value(7),
+					"monthly_snapshot_retention_months": types.Int32Value(8),
+					"point_in_time_window_hours":        types.Int32Value(9),
 				}),
 				Region:  types.StringValue(testRegion),
 				Version: types.StringValue("version"),
@@ -266,7 +271,7 @@ func TestMapFields(t *testing.T) {
 			&mongodbflex.InstanceResponse{
 				Item: &mongodbflex.Instance{
 					Acl: &mongodbflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"",
 							"ip1",
 							"ip2",
@@ -276,8 +281,8 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             new(instanceId),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
-					Status:         mongodbflex.INSTANCESTATUS_READY.Ptr(),
+					Replicas:       new(int32(56)),
+					Status:         new("READY"),
 					Storage:        nil,
 					Options: &map[string]string{
 						"type":                           "type",
@@ -291,8 +296,8 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
+				CPU: types.Int32Value(12),
+				RAM: types.Int32Value(34),
 			},
 			&storageModel{
 				Class: types.StringValue("class"),
@@ -316,21 +321,21 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+					"cpu":         types.Int32Value(12),
+					"ram":         types.Int32Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringValue("type"),
-					"snapshot_retention_days":           types.Int64Value(5),
-					"daily_snapshot_retention_days":     types.Int64Value(6),
-					"weekly_snapshot_retention_weeks":   types.Int64Value(7),
-					"monthly_snapshot_retention_months": types.Int64Value(8),
-					"point_in_time_window_hours":        types.Int64Value(9),
+					"snapshot_retention_days":           types.Int32Value(5),
+					"daily_snapshot_retention_days":     types.Int32Value(6),
+					"weekly_snapshot_retention_weeks":   types.Int32Value(7),
+					"monthly_snapshot_retention_months": types.Int32Value(8),
+					"point_in_time_window_hours":        types.Int32Value(9),
 				}),
 				Region:  types.StringValue(testRegion),
 				Version: types.StringValue("version"),
@@ -402,11 +407,11 @@ func TestMapOptions(t *testing.T) {
 			&Model{
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringNull(),
-					"snapshot_retention_days":           types.Int64Null(),
-					"daily_snapshot_retention_days":     types.Int64Null(),
-					"weekly_snapshot_retention_weeks":   types.Int64Null(),
-					"monthly_snapshot_retention_months": types.Int64Null(),
-					"point_in_time_window_hours":        types.Int64Null(),
+					"snapshot_retention_days":           types.Int32Null(),
+					"daily_snapshot_retention_days":     types.Int32Null(),
+					"weekly_snapshot_retention_weeks":   types.Int32Null(),
+					"monthly_snapshot_retention_months": types.Int32Null(),
+					"point_in_time_window_hours":        types.Int32Null(),
 				}),
 			},
 			true,
@@ -418,20 +423,20 @@ func TestMapOptions(t *testing.T) {
 				Type: types.StringValue("type"),
 			},
 			&mongodbflex.BackupSchedule{
-				SnapshotRetentionDays:          new(int64(1)),
-				DailySnapshotRetentionDays:     new(int64(2)),
-				WeeklySnapshotRetentionWeeks:   new(int64(3)),
-				MonthlySnapshotRetentionMonths: new(int64(4)),
-				PointInTimeWindowHours:         new(int64(5)),
+				SnapshotRetentionDays:          new(int32(1)),
+				DailySnapshotRetentionDays:     new(int32(2)),
+				WeeklySnapshotRetentionWeeks:   new(int32(3)),
+				MonthlySnapshotRetentionMonths: new(int32(4)),
+				PointInTimeWindowHours:         new(int32(5)),
 			},
 			&Model{
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringValue("type"),
-					"snapshot_retention_days":           types.Int64Value(1),
-					"daily_snapshot_retention_days":     types.Int64Value(2),
-					"weekly_snapshot_retention_weeks":   types.Int64Value(3),
-					"monthly_snapshot_retention_months": types.Int64Value(4),
-					"point_in_time_window_hours":        types.Int64Value(5),
+					"snapshot_retention_days":           types.Int32Value(1),
+					"daily_snapshot_retention_days":     types.Int32Value(2),
+					"weekly_snapshot_retention_weeks":   types.Int32Value(3),
+					"monthly_snapshot_retention_months": types.Int32Value(4),
+					"point_in_time_window_hours":        types.Int32Value(5),
 				}),
 			},
 			true,
@@ -475,11 +480,11 @@ func TestToCreatePayload(t *testing.T) {
 			&storageModel{},
 			&optionsModel{},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.CreateInstancePayloadAcl{
-					Items: &[]string{},
+				Acl: mongodbflex.ACL{
+					Items: []string{},
 				},
-				Storage: &mongodbflex.Storage{},
-				Options: &map[string]string{},
+				Storage: mongodbflex.Storage{},
+				Options: map[string]string{},
 			},
 			true,
 		},
@@ -488,7 +493,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
-				Replicas:       types.Int64Value(12),
+				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
 			[]string{
@@ -506,22 +511,22 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringValue("type"),
 			},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.CreateInstancePayloadAcl{
-					Items: &[]string{
+				Acl: mongodbflex.ACL{
+					Items: []string{
 						"ip_1",
 						"ip_2",
 					},
 				},
-				BackupSchedule: new("schedule"),
-				FlavorId:       new("flavor_id"),
-				Name:           new("name"),
-				Replicas:       new(int64(12)),
-				Storage: &mongodbflex.Storage{
+				BackupSchedule: "schedule",
+				FlavorId:       "flavor_id",
+				Name:           "name",
+				Replicas:       int32(12),
+				Storage: mongodbflex.Storage{
 					Class: new("class"),
 					Size:  new(int64(34)),
 				},
-				Options: &map[string]string{"type": "type"},
-				Version: new("version"),
+				Options: map[string]string{"type": "type"},
+				Version: "version",
 			},
 			true,
 		},
@@ -530,7 +535,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
-				Replicas:       types.Int64Value(2123456789),
+				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
 			[]string{
@@ -547,21 +552,21 @@ func TestToCreatePayload(t *testing.T) {
 				Type: types.StringNull(),
 			},
 			&mongodbflex.CreateInstancePayload{
-				Acl: &mongodbflex.CreateInstancePayloadAcl{
-					Items: &[]string{
+				Acl: mongodbflex.ACL{
+					Items: []string{
 						"",
 					},
 				},
-				BackupSchedule: nil,
-				FlavorId:       nil,
-				Name:           nil,
-				Replicas:       new(int64(2123456789)),
-				Storage: &mongodbflex.Storage{
+				BackupSchedule: "",
+				FlavorId:       "",
+				Name:           "",
+				Replicas:       int32(2123456789),
+				Storage: mongodbflex.Storage{
 					Class: nil,
 					Size:  nil,
 				},
-				Options: &map[string]string{},
-				Version: nil,
+				Options: map[string]string{},
+				Version: "",
 			},
 			true,
 		},
@@ -655,7 +660,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&optionsModel{},
 			&mongodbflex.PartialUpdateInstancePayload{
 				Acl: &mongodbflex.ACL{
-					Items: &[]string{},
+					Items: []string{},
 				},
 				Storage: &mongodbflex.Storage{},
 				Options: &map[string]string{},
@@ -667,7 +672,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
-				Replicas:       types.Int64Value(12),
+				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
 			[]string{
@@ -686,7 +691,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&mongodbflex.PartialUpdateInstancePayload{
 				Acl: &mongodbflex.ACL{
-					Items: &[]string{
+					Items: []string{
 						"ip_1",
 						"ip_2",
 					},
@@ -694,7 +699,7 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: new("schedule"),
 				FlavorId:       new("flavor_id"),
 				Name:           new("name"),
-				Replicas:       new(int64(12)),
+				Replicas:       new(int32(12)),
 				Storage: &mongodbflex.Storage{
 					Class: new("class"),
 					Size:  new(int64(34)),
@@ -709,7 +714,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
-				Replicas:       types.Int64Value(2123456789),
+				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
 			[]string{
@@ -727,14 +732,14 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&mongodbflex.PartialUpdateInstancePayload{
 				Acl: &mongodbflex.ACL{
-					Items: &[]string{
+					Items: []string{
 						"",
 					},
 				},
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       new(int64(2123456789)),
+				Replicas:       new(int32(2123456789)),
 				Storage: &mongodbflex.Storage{
 					Class: nil,
 					Size:  nil,
@@ -842,27 +847,27 @@ func TestToUpdateBackupScheduleOptionsPayload(t *testing.T) {
 				BackupSchedule: types.StringValue("schedule"),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringValue("type"),
-					"snapshot_retention_days":           types.Int64Value(1),
-					"daily_snapshot_retention_days":     types.Int64Value(2),
-					"weekly_snapshot_retention_weeks":   types.Int64Value(3),
-					"monthly_snapshot_retention_months": types.Int64Value(4),
-					"point_in_time_window_hours":        types.Int64Value(5),
+					"snapshot_retention_days":           types.Int32Value(1),
+					"daily_snapshot_retention_days":     types.Int32Value(2),
+					"weekly_snapshot_retention_weeks":   types.Int32Value(3),
+					"monthly_snapshot_retention_months": types.Int32Value(4),
+					"point_in_time_window_hours":        types.Int32Value(5),
 				}),
 			},
 			&optionsModel{
-				SnapshotRetentionDays:          types.Int64Value(6),
-				DailySnapshotRetentionDays:     types.Int64Value(7),
-				WeeklySnapshotRetentionWeeks:   types.Int64Value(8),
-				MonthlySnapshotRetentionMonths: types.Int64Value(9),
-				PointInTimeWindowHours:         types.Int64Value(10),
+				SnapshotRetentionDays:          types.Int32Value(6),
+				DailySnapshotRetentionDays:     types.Int32Value(7),
+				WeeklySnapshotRetentionWeeks:   types.Int32Value(8),
+				MonthlySnapshotRetentionMonths: types.Int32Value(9),
+				PointInTimeWindowHours:         types.Int32Value(10),
 			},
 			&mongodbflex.UpdateBackupSchedulePayload{
 				BackupSchedule:                 new("schedule"),
-				SnapshotRetentionDays:          new(int64(6)),
-				DailySnapshotRetentionDays:     new(int64(7)),
-				WeeklySnapshotRetentionWeeks:   new(int64(8)),
-				MonthlySnapshotRetentionMonths: new(int64(9)),
-				PointInTimeWindowHours:         new(int64(10)),
+				SnapshotRetentionDays:          new(int32(6)),
+				DailySnapshotRetentionDays:     new(int32(7)),
+				WeeklySnapshotRetentionWeeks:   new(int32(8)),
+				MonthlySnapshotRetentionMonths: new(int32(9)),
+				PointInTimeWindowHours:         new(int32(10)),
 			},
 			true,
 		},
@@ -872,27 +877,27 @@ func TestToUpdateBackupScheduleOptionsPayload(t *testing.T) {
 				BackupSchedule: types.StringValue("schedule"),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"type":                              types.StringValue("type"),
-					"snapshot_retention_days":           types.Int64Value(1),
-					"daily_snapshot_retention_days":     types.Int64Value(2),
-					"weekly_snapshot_retention_weeks":   types.Int64Value(3),
-					"monthly_snapshot_retention_months": types.Int64Value(4),
-					"point_in_time_window_hours":        types.Int64Value(5),
+					"snapshot_retention_days":           types.Int32Value(1),
+					"daily_snapshot_retention_days":     types.Int32Value(2),
+					"weekly_snapshot_retention_weeks":   types.Int32Value(3),
+					"monthly_snapshot_retention_months": types.Int32Value(4),
+					"point_in_time_window_hours":        types.Int32Value(5),
 				}),
 			},
 			&optionsModel{
-				SnapshotRetentionDays:          types.Int64Value(6),
-				DailySnapshotRetentionDays:     types.Int64Value(7),
-				WeeklySnapshotRetentionWeeks:   types.Int64Null(),
-				MonthlySnapshotRetentionMonths: types.Int64Null(),
-				PointInTimeWindowHours:         types.Int64Null(),
+				SnapshotRetentionDays:          types.Int32Value(6),
+				DailySnapshotRetentionDays:     types.Int32Value(7),
+				WeeklySnapshotRetentionWeeks:   types.Int32Null(),
+				MonthlySnapshotRetentionMonths: types.Int32Null(),
+				PointInTimeWindowHours:         types.Int32Null(),
 			},
 			&mongodbflex.UpdateBackupSchedulePayload{
 				BackupSchedule:                 new("schedule"),
-				SnapshotRetentionDays:          new(int64(6)),
-				DailySnapshotRetentionDays:     new(int64(7)),
-				WeeklySnapshotRetentionWeeks:   new(int64(3)),
-				MonthlySnapshotRetentionMonths: new(int64(4)),
-				PointInTimeWindowHours:         new(int64(5)),
+				SnapshotRetentionDays:          new(int32(6)),
+				DailySnapshotRetentionDays:     new(int32(7)),
+				WeeklySnapshotRetentionWeeks:   new(int32(3)),
+				MonthlySnapshotRetentionMonths: new(int32(4)),
+				PointInTimeWindowHours:         new(int32(5)),
 			},
 			true,
 		},
@@ -902,11 +907,11 @@ func TestToUpdateBackupScheduleOptionsPayload(t *testing.T) {
 				BackupSchedule: types.StringNull(),
 			},
 			&optionsModel{
-				SnapshotRetentionDays:          types.Int64Null(),
-				DailySnapshotRetentionDays:     types.Int64Null(),
-				WeeklySnapshotRetentionWeeks:   types.Int64Null(),
-				MonthlySnapshotRetentionMonths: types.Int64Null(),
-				PointInTimeWindowHours:         types.Int64Null(),
+				SnapshotRetentionDays:          types.Int32Null(),
+				DailySnapshotRetentionDays:     types.Int32Null(),
+				WeeklySnapshotRetentionWeeks:   types.Int32Null(),
+				MonthlySnapshotRetentionMonths: types.Int32Null(),
+				PointInTimeWindowHours:         types.Int32Null(),
 			},
 			&mongodbflex.UpdateBackupSchedulePayload{
 				BackupSchedule:                 nil,
@@ -950,24 +955,24 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"ok_flavor",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.InstanceFlavor{
+				Flavors: []mongodbflex.InstanceFlavor{
 					{
 						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
+						Cpu:         new(int32(2)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 				},
 			},
 			&flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
-				CPU:         types.Int64Value(2),
-				RAM:         types.Int64Value(8),
+				CPU:         types.Int32Value(2),
+				RAM:         types.Int32Value(8),
 			},
 			false,
 			true,
@@ -975,30 +980,30 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"ok_flavor_2",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.InstanceFlavor{
+				Flavors: []mongodbflex.InstanceFlavor{
 					{
 						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
+						Cpu:         new(int32(2)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 					{
 						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(4)),
+						Memory:      new(int32(4)),
 					},
 				},
 			},
 			&flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
-				CPU:         types.Int64Value(2),
-				RAM:         types.Int64Value(8),
+				CPU:         types.Int32Value(2),
+				RAM:         types.Int32Value(8),
 			},
 			false,
 			true,
@@ -1006,28 +1011,28 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"no_matching_flavor",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{
-				Flavors: &[]mongodbflex.InstanceFlavor{
+				Flavors: []mongodbflex.InstanceFlavor{
 					{
 						Id:          new("fid-1"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(8)),
+						Memory:      new(int32(8)),
 					},
 					{
 						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
+						Cpu:         new(int32(1)),
 						Description: new("description"),
-						Memory:      new(int64(4)),
+						Memory:      new(int32(4)),
 					},
 				},
 			},
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			false,
 			false,
@@ -1035,13 +1040,13 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"nil_response",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{},
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			false,
 			false,
@@ -1049,13 +1054,13 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"error_response",
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			&mongodbflex.ListFlavorsResponse{},
 			&flavorModel{
-				CPU: types.Int64Value(2),
-				RAM: types.Int64Value(8),
+				CPU: types.Int32Value(2),
+				RAM: types.Int32Value(8),
 			},
 			true,
 			false,

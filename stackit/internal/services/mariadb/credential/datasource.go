@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -110,7 +110,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:  true,
 				Sensitive: true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				Computed: true,
 			},
 			"uri": schema.StringAttribute{
@@ -142,7 +142,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

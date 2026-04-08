@@ -18,7 +18,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/mongodbflex"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -123,15 +123,15 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"description": schema.StringAttribute{
 						Computed: true,
 					},
-					"cpu": schema.Int64Attribute{
+					"cpu": schema.Int32Attribute{
 						Computed: true,
 					},
-					"ram": schema.Int64Attribute{
+					"ram": schema.Int32Attribute{
 						Computed: true,
 					},
 				},
 			},
-			"replicas": schema.Int64Attribute{
+			"replicas": schema.Int32Attribute{
 				Computed: true,
 			},
 			"storage": schema.SingleNestedAttribute{
@@ -156,23 +156,23 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: descriptions["type"],
 						Computed:    true,
 					},
-					"snapshot_retention_days": schema.Int64Attribute{
+					"snapshot_retention_days": schema.Int32Attribute{
 						Description: descriptions["snapshot_retention_days"],
 						Computed:    true,
 					},
-					"daily_snapshot_retention_days": schema.Int64Attribute{
+					"daily_snapshot_retention_days": schema.Int32Attribute{
 						Description: descriptions["daily_snapshot_retention_days"],
 						Computed:    true,
 					},
-					"weekly_snapshot_retention_weeks": schema.Int64Attribute{
+					"weekly_snapshot_retention_weeks": schema.Int32Attribute{
 						Description: descriptions["weekly_snapshot_retention_weeks"],
 						Computed:    true,
 					},
-					"monthly_snapshot_retention_months": schema.Int64Attribute{
+					"monthly_snapshot_retention_months": schema.Int32Attribute{
 						Description: descriptions["monthly_snapshot_retention_months"],
 						Computed:    true,
 					},
-					"point_in_time_window_hours": schema.Int64Attribute{
+					"point_in_time_window_hours": schema.Int32Attribute{
 						Description: descriptions["point_in_time_window_hours"],
 						Computed:    true,
 					},
@@ -205,7 +205,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	instanceResp, err := d.client.GetInstance(ctx, projectId, instanceId, region).Execute()
+	instanceResp, err := d.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
