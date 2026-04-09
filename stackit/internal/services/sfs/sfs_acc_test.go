@@ -199,7 +199,7 @@ func TestAccExportPolicyMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigExportPolicyVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceExportPolicyMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
@@ -220,7 +220,7 @@ func TestAccExportPolicyMin(t *testing.T) {
 					  policy_id  = stackit_sfs_export_policy.exportpolicy.policy_id
 					}
 					`,
-					testutil.SFSProviderConfig(), resourceExportPolicyMinConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
@@ -254,7 +254,7 @@ func TestAccExportPolicyMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigExportPolicyVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceExportPolicyMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
@@ -276,7 +276,7 @@ func TestAccExportPolicyMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigExportPolicyVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceExportPolicyMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
@@ -305,7 +305,7 @@ func TestAccExportPolicyMax(t *testing.T) {
 					  policy_id  = stackit_sfs_export_policy.exportpolicy.policy_id
 					}
 					`,
-					testutil.SFSProviderConfig(), resourceExportPolicyMaxConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
@@ -347,7 +347,7 @@ func TestAccExportPolicyMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigExportPolicyVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceExportPolicyMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
@@ -384,7 +384,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigResourcePoolVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceResourcePoolMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
@@ -410,7 +410,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					  resource_pool_id = stackit_sfs_resource_pool.resourcepool.resource_pool_id
 					}
 					`,
-					testutil.SFSProviderConfig(), resourceResourcePoolMinConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
@@ -449,7 +449,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigResourcePoolVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceResourcePoolMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
@@ -476,7 +476,7 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigResourcePoolVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceResourcePoolMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
@@ -502,7 +502,7 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					  resource_pool_id = stackit_sfs_resource_pool.resourcepool.resource_pool_id
 					}
 					`,
-					testutil.SFSProviderConfig(), resourceResourcePoolMaxConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
@@ -541,7 +541,7 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigResourcePoolVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceResourcePoolMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
@@ -568,7 +568,7 @@ func TestAccShareResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigShareVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceShareMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
@@ -591,7 +591,7 @@ func TestAccShareResourceMin(t *testing.T) {
 					  share_id         = stackit_sfs_share.share.share_id
 					}
 					`,
-					testutil.SFSProviderConfig(), resourceShareMinConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
@@ -631,7 +631,7 @@ func TestAccShareResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigShareVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceShareMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
@@ -654,7 +654,7 @@ func TestAccShareResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigShareVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceShareMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
@@ -678,7 +678,7 @@ func TestAccShareResourceMax(t *testing.T) {
 					  share_id         = stackit_sfs_share.share.share_id
 					}
 					`,
-					testutil.SFSProviderConfig(), resourceShareMaxConfig,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
@@ -719,7 +719,7 @@ func TestAccShareResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigShareVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.SFSProviderConfig(), resourceShareMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
