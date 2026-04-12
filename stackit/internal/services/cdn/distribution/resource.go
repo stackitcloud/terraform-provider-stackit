@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -83,6 +84,22 @@ var schemaDescriptions = map[string]string{
 	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
+	"config_waf":                                   "Configuration of the WAF of a distribution.",
+	"waf_mode":                                     "The WAF mode. ENABLED actively blocks, LOG_ONLY logs matches but never blocks, DISABLED completely turns off inspection.",
+	"waf_type":                                     "Enable or disable the Premium WAF. FREE or PREMIUM.",
+	"waf_paranoia_level":                           "Defines how aggressively the WAF should action on requests (L1 to L4).",
+	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted.",
+	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies.",
+	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts.",
+	"waf_enabled_rule_ids":                         "Ids of the WAF rules explicitly enabled.",
+	"waf_disabled_rule_ids":                        "Ids of WAF Rules explicitly disabled.",
+	"waf_log_only_rule_ids":                        "Ids of WAF Rules explicitly marked as Log Only.",
+	"waf_enabled_rule_group_ids":                   "Ids of WAF Rule Groups explicitly enabled.",
+	"waf_disabled_rule_group_ids":                  "Ids of WAF Rule Groups explicitly disabled.",
+	"waf_log_only_rule_group_ids":                  "Ids of WAF Rule Groups explicitly marked as log Only.",
+	"waf_enabled_rule_collection_ids":              "Ids of WAF Collections explicitly enabled.",
+	"waf_disabled_rule_collection_ids":             "Ids of WAF Collections explicitly disabled.",
+	"waf_log_only_rule_collection_ids":             "Ids of WAF Collections explicitly marked as log Only.",
 }
 
 type Model struct {
@@ -121,6 +138,7 @@ type distributionConfig struct {
 	Regions          *[]string       `tfsdk:"regions"`           // The regions in which data will be cached
 	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
 	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
+	Waf              types.Object    `tfsdk:"waf"`               // The WAF configuration
 }
 
 type optimizerConfig struct {
@@ -137,6 +155,24 @@ type backend struct {
 	Credentials          *backendCredentials   `tfsdk:"credentials"`
 }
 
+type wafConfig struct {
+	Mode                       types.String `tfsdk:"mode"`
+	Type                       types.String `tfsdk:"type"`
+	ParanoiaLevel              types.String `tfsdk:"paranoia_level"`
+	AllowedHttpVersions        types.List   `tfsdk:"allowed_http_versions"`
+	AllowedRequestContentTypes types.List   `tfsdk:"allowed_request_content_types"`
+	AllowedHttpMethods         types.List   `tfsdk:"allowed_http_methods"`
+	EnabledRuleIds             types.List   `tfsdk:"enabled_rule_ids"`
+	DisabledRuleIds            types.List   `tfsdk:"disabled_rule_ids"`
+	LogOnlyRuleIds             types.List   `tfsdk:"log_only_rule_ids"`
+	EnabledRuleGroupIds        types.List   `tfsdk:"enabled_rule_group_ids"`
+	DisabledRuleGroupIds       types.List   `tfsdk:"disabled_rule_group_ids"`
+	LogOnlyRuleGroupIds        types.List   `tfsdk:"log_only_rule_group_ids"`
+	EnabledRuleCollectionIds   types.List   `tfsdk:"enabled_rule_collection_ids"`
+	DisabledRuleCollectionIds  types.List   `tfsdk:"disabled_rule_collection_ids"`
+	LogOnlyRuleCollectionIds   types.List   `tfsdk:"log_only_rule_collection_ids"`
+}
+
 type backendCredentials struct {
 	AccessKey *string `tfsdk:"access_key_id"`
 	SecretKey *string `tfsdk:"secret_access_key"`
@@ -151,6 +187,9 @@ var configTypes = map[string]attr.Type{
 	},
 	"redirects": types.ObjectType{
 		AttrTypes: redirectsTypes,
+	},
+	"waf": types.ObjectType{
+		AttrTypes: wafTypes,
 	},
 }
 
@@ -186,6 +225,24 @@ var redirectsTypes = map[string]attr.Type{
 			AttrTypes: redirectRuleTypes,
 		},
 	},
+}
+
+var wafTypes = map[string]attr.Type{
+	"mode":                          types.StringType,
+	"type":                          types.StringType,
+	"paranoia_level":                types.StringType,
+	"allowed_http_versions":         types.ListType{ElemType: types.StringType},
+	"allowed_request_content_types": types.ListType{ElemType: types.StringType},
+	"allowed_http_methods":          types.ListType{ElemType: types.StringType},
+	"enabled_rule_ids":              types.ListType{ElemType: types.StringType},
+	"disabled_rule_ids":             types.ListType{ElemType: types.StringType},
+	"log_only_rule_ids":             types.ListType{ElemType: types.StringType},
+	"enabled_rule_group_ids":        types.ListType{ElemType: types.StringType},
+	"disabled_rule_group_ids":       types.ListType{ElemType: types.StringType},
+	"log_only_rule_group_ids":       types.ListType{ElemType: types.StringType},
+	"enabled_rule_collection_ids":   types.ListType{ElemType: types.StringType},
+	"disabled_rule_collection_ids":  types.ListType{ElemType: types.StringType},
+	"log_only_rule_collection_ids":  types.ListType{ElemType: types.StringType},
 }
 
 var backendTypes = map[string]attr.Type{
@@ -398,6 +455,114 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 											},
 										}},
 								},
+							},
+						},
+					},
+					"waf": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_waf"],
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"mode": schema.StringAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["waf_mode"],
+								Default:     stringdefault.StaticString("DISABLED"),
+							},
+							"type": schema.StringAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["waf_type"],
+								Default:     stringdefault.StaticString("FREE"),
+							},
+							"paranoia_level": schema.StringAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["waf_paranoia_level"],
+							},
+							"allowed_http_versions": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_versions"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"allowed_request_content_types": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_request_content_types"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"allowed_http_methods": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_methods"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"enabled_rule_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"disabled_rule_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"log_only_rule_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"enabled_rule_group_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"disabled_rule_group_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"log_only_rule_group_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"enabled_rule_collection_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"disabled_rule_collection_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"log_only_rule_collection_ids": schema.ListAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 						},
 					},
@@ -792,6 +957,39 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Redirects:        redirectsConfig,
 	}
 
+	if !utils.IsUndefined(configModel.Waf) {
+		var wafModel wafConfig
+		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
+			return
+		}
+
+		wafPatch := cdnSdk.WafConfigPatch{
+			Mode:                       new(cdnSdk.WafMode(wafModel.Mode.ValueString())),
+			Type:                       new(cdnSdk.WafType(wafModel.Type.ValueString())),
+			AllowedHttpVersions:        getSortedWafList(ctx, wafModel.AllowedHttpVersions),
+			AllowedRequestContentTypes: getSortedWafList(ctx, wafModel.AllowedRequestContentTypes),
+			AllowedHttpMethods:         getSortedWafList(ctx, wafModel.AllowedHttpMethods),
+			EnabledRuleIds:             getSortedWafList(ctx, wafModel.EnabledRuleIds),
+			DisabledRuleIds:            getSortedWafList(ctx, wafModel.DisabledRuleIds),
+			LogOnlyRuleIds:             getSortedWafList(ctx, wafModel.LogOnlyRuleIds),
+			EnabledRuleGroupIds:        getSortedWafList(ctx, wafModel.EnabledRuleGroupIds),
+			DisabledRuleGroupIds:       getSortedWafList(ctx, wafModel.DisabledRuleGroupIds),
+			LogOnlyRuleGroupIds:        getSortedWafList(ctx, wafModel.LogOnlyRuleGroupIds),
+			EnabledRuleCollectionIds:   getSortedWafList(ctx, wafModel.EnabledRuleCollectionIds),
+			DisabledRuleCollectionIds:  getSortedWafList(ctx, wafModel.DisabledRuleCollectionIds),
+			LogOnlyRuleCollectionIds:   getSortedWafList(ctx, wafModel.LogOnlyRuleCollectionIds),
+		}
+
+		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
+			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
+			wafPatch.ParanoiaLevel = &pl
+		}
+
+		configPatch.Waf = &wafPatch
+	}
+
 	if !utils.IsUndefined(configModel.Optimizer) {
 		var optimizerModel optimizerConfig
 
@@ -1156,6 +1354,50 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		return core.DiagsToError(diags)
 	}
 
+	// Map Waf
+	wafVal := types.ObjectNull(wafTypes)
+	wafObjAttrs := map[string]attr.Value{
+		"mode": types.StringValue(string(distribution.Config.Waf.Mode)),
+		"type": types.StringValue(string(distribution.Config.Waf.Type)),
+	}
+
+	if distribution.Config.Waf.ParanoiaLevel != nil {
+		wafObjAttrs["paranoia_level"] = types.StringValue(string(*distribution.Config.Waf.ParanoiaLevel))
+	} else {
+		wafObjAttrs["paranoia_level"] = types.StringNull()
+	}
+
+	wafObjAttrs["allowed_http_versions"] = mapWafListToHCL(distribution.Config.Waf.AllowedHttpVersions)
+	wafObjAttrs["allowed_request_content_types"] = mapWafListToHCL(distribution.Config.Waf.AllowedRequestContentTypes)
+	wafObjAttrs["allowed_http_methods"] = mapWafListToHCL(distribution.Config.Waf.AllowedHttpMethods)
+	wafObjAttrs["enabled_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleIds)
+	wafObjAttrs["disabled_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleIds)
+	wafObjAttrs["log_only_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleIds)
+	wafObjAttrs["enabled_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleGroupIds)
+	wafObjAttrs["disabled_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleGroupIds)
+	wafObjAttrs["log_only_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleGroupIds)
+	wafObjAttrs["enabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleCollectionIds)
+	wafObjAttrs["disabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleCollectionIds)
+	wafObjAttrs["log_only_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleCollectionIds)
+
+	// Prevent state drift if WAF wasn't in the config at all, but API returned default empty WAF
+	// By checking if the old config Waf block was null, we can avoid recreating a WAF block
+	// if the returned one matches the API default (FREE/DISABLED and empty lists).
+	isEmptyDefault := distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED &&
+		distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE &&
+		len(distribution.Config.Waf.AllowedHttpMethods) == 0 &&
+		len(distribution.Config.Waf.EnabledRuleIds) == 0
+
+	if isEmptyDefault && oldConfig.Waf.IsNull() {
+		wafVal = types.ObjectNull(wafTypes)
+	} else {
+		var diagWaf diag.Diagnostics
+		wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
+		if diagWaf.HasError() {
+			return core.DiagsToError(diagWaf)
+		}
+	}
+
 	optimizerVal := types.ObjectNull(optimizerTypes)
 	if o := distribution.Config.Optimizer; o != nil {
 		optimizerEnabled, ok := o.GetEnabledOk()
@@ -1175,6 +1417,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		"blocked_countries": modelBlockedCountries,
 		"optimizer":         optimizerVal,
 		"redirects":         redirectsVal,
+		"waf":               wafVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1234,6 +1477,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	if cfg.Optimizer != nil {
 		optimizer = cdnSdk.NewOptimizer(cfg.Optimizer.GetEnabled())
 	}
+
 	var backend *cdnSdk.CreateDistributionPayloadBackend
 	if cfg.Backend.HttpBackend != nil {
 		backend = &cdnSdk.CreateDistributionPayloadBackend{
@@ -1279,6 +1523,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
 		Redirects:        cfg.Redirects,
+		Waf:              &cfg.Waf,
 	}
 
 	return payload, nil
@@ -1393,6 +1638,36 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		Redirects:        redirectsConfig,
 	}
 
+	if !utils.IsUndefined(configModel.Waf) {
+		var wafModel wafConfig
+		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		cdnConfig.Waf = cdnSdk.WafConfig{
+			Mode:                       cdnSdk.WafMode(wafModel.Mode.ValueString()),
+			Type:                       cdnSdk.WafType(wafModel.Type.ValueString()),
+			AllowedHttpVersions:        getSortedWafList(ctx, wafModel.AllowedHttpVersions),
+			AllowedRequestContentTypes: getSortedWafList(ctx, wafModel.AllowedRequestContentTypes),
+			AllowedHttpMethods:         getSortedWafList(ctx, wafModel.AllowedHttpMethods),
+			EnabledRuleIds:             getSortedWafList(ctx, wafModel.EnabledRuleIds),
+			DisabledRuleIds:            getSortedWafList(ctx, wafModel.DisabledRuleIds),
+			LogOnlyRuleIds:             getSortedWafList(ctx, wafModel.LogOnlyRuleIds),
+			EnabledRuleGroupIds:        getSortedWafList(ctx, wafModel.EnabledRuleGroupIds),
+			DisabledRuleGroupIds:       getSortedWafList(ctx, wafModel.DisabledRuleGroupIds),
+			LogOnlyRuleGroupIds:        getSortedWafList(ctx, wafModel.LogOnlyRuleGroupIds),
+			EnabledRuleCollectionIds:   getSortedWafList(ctx, wafModel.EnabledRuleCollectionIds),
+			DisabledRuleCollectionIds:  getSortedWafList(ctx, wafModel.DisabledRuleCollectionIds),
+			LogOnlyRuleCollectionIds:   getSortedWafList(ctx, wafModel.LogOnlyRuleCollectionIds),
+		}
+
+		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
+			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
+			cdnConfig.Waf.ParanoiaLevel = &pl
+		}
+	}
+
 	switch configModel.Backend.Type {
 	case "http":
 		originRequestHeaders := map[string]string{}
@@ -1448,4 +1723,33 @@ func validateCountryCode(country string) (string, error) {
 	}
 
 	return upperCountry, nil
+}
+
+// getSortedWafList extracts strings from HCL list, sorts them and returns the slice
+func getSortedWafList(ctx context.Context, tfList basetypes.ListValue) []string {
+	if tfList.IsNull() || tfList.IsUnknown() {
+		return []string{}
+	}
+	var elements []string
+	diags := tfList.ElementsAs(ctx, &elements, true)
+	if diags.HasError() {
+		return []string{}
+	}
+	sort.Strings(elements)
+	return elements
+}
+
+// mapWafListToHCL guarantees the returned HCL List is sorted
+func mapWafListToHCL(apiList []string) basetypes.ListValue {
+	if len(apiList) == 0 {
+		return types.ListValueMust(types.StringType, []attr.Value{})
+	}
+	sorted := make([]string, len(apiList))
+	copy(sorted, apiList)
+	sort.Strings(sorted)
+	var elements []attr.Value
+	for _, val := range sorted {
+		elements = append(elements, types.StringValue(val))
+	}
+	return types.ListValueMust(types.StringType, elements)
 }
