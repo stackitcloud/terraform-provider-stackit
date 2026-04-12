@@ -41,6 +41,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"redirects": types.ObjectType{
 		AttrTypes: redirectsTypes, // Shared from resource.go
 	},
+	"waf": types.ObjectType{
+		AttrTypes: wafTypes, // Shared from resource.go
+	},
 }
 
 type distributionDataSource struct {
@@ -250,6 +253,84 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 										},
 									},
 								},
+							},
+						},
+					},
+					"waf": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_waf"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"mode": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["waf_mode"],
+							},
+							"type": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["waf_type"],
+							},
+							"paranoia_level": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["waf_paranoia_level"],
+							},
+							"allowed_http_versions": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_versions"],
+							},
+							"allowed_request_content_types": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_request_content_types"],
+							},
+							"allowed_http_methods": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_methods"],
+							},
+							"enabled_rule_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_ids"],
+							},
+							"disabled_rule_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_ids"],
+							},
+							"log_only_rule_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_ids"],
+							},
+							"enabled_rule_group_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
+							},
+							"disabled_rule_group_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
+							},
+							"log_only_rule_group_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
+							},
+							"enabled_rule_collection_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
+							},
+							"disabled_rule_collection_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
+							},
+							"log_only_rule_collection_ids": schema.ListAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
 							},
 						},
 					},
@@ -510,6 +591,41 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		return core.DiagsToError(diags)
 	}
 
+	// Map Waf
+	wafVal := types.ObjectNull(wafTypes)
+	if distribution.Config.Waf.Mode != "" {
+		wafObjAttrs := map[string]attr.Value{
+			"mode": types.StringValue(string(distribution.Config.Waf.Mode)),
+			"type": types.StringValue(string(distribution.Config.Waf.Type)),
+		}
+
+		if distribution.Config.Waf.ParanoiaLevel != nil {
+			wafObjAttrs["paranoia_level"] = types.StringValue(string(*distribution.Config.Waf.ParanoiaLevel))
+		} else {
+			wafObjAttrs["paranoia_level"] = types.StringNull()
+		}
+
+		// Uses the mapWafListToHCL defined in resource.go
+		wafObjAttrs["allowed_http_versions"] = mapWafListToHCL(distribution.Config.Waf.AllowedHttpVersions)
+		wafObjAttrs["allowed_request_content_types"] = mapWafListToHCL(distribution.Config.Waf.AllowedRequestContentTypes)
+		wafObjAttrs["allowed_http_methods"] = mapWafListToHCL(distribution.Config.Waf.AllowedHttpMethods)
+		wafObjAttrs["enabled_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleIds)
+		wafObjAttrs["disabled_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleIds)
+		wafObjAttrs["log_only_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleIds)
+		wafObjAttrs["enabled_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleGroupIds)
+		wafObjAttrs["disabled_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleGroupIds)
+		wafObjAttrs["log_only_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleGroupIds)
+		wafObjAttrs["enabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleCollectionIds)
+		wafObjAttrs["disabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleCollectionIds)
+		wafObjAttrs["log_only_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleCollectionIds)
+
+		var diagWaf diag.Diagnostics
+		wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
+		if diagWaf.HasError() {
+			return core.DiagsToError(diagWaf)
+		}
+	}
+
 	// Optimizer
 	optimizerVal := types.ObjectNull(optimizerTypes)
 	if o := distribution.Config.Optimizer; o != nil {
@@ -531,6 +647,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		"blocked_countries": modelBlockedCountries,
 		"optimizer":         optimizerVal,
 		"redirects":         redirectsVal,
+		"waf":               wafVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)

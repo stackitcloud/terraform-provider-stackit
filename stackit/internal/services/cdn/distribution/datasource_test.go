@@ -52,6 +52,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"redirects":         types.ObjectNull(redirectsAttrTypes),
+		"waf":               types.ObjectNull(wafTypes),
 	})
 	redirectsInput := cdnSdk.RedirectConfig{
 		Rules: []cdnSdk.RedirectRule{
@@ -100,6 +101,49 @@ func TestMapDataSourceFields(t *testing.T) {
 		"errors": types.ListValueMust(types.StringType, []attr.Value{}),
 	})
 	domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain})
+
+	// WAF Fixtures
+	populatedWafList := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("rule1"),
+		types.StringValue("rule2"),
+	})
+	populatedWaf := types.ObjectValueMust(wafTypes, map[string]attr.Value{
+		"mode":                          types.StringValue("ENABLED"),
+		"type":                          types.StringValue("PREMIUM"),
+		"paranoia_level":                types.StringValue("L2"),
+		"allowed_http_versions":         populatedWafList,
+		"allowed_request_content_types": populatedWafList,
+		"allowed_http_methods":          populatedWafList,
+		"enabled_rule_ids":              populatedWafList,
+		"disabled_rule_ids":             populatedWafList,
+		"log_only_rule_ids":             populatedWafList,
+		"enabled_rule_group_ids":        populatedWafList,
+		"disabled_rule_group_ids":       populatedWafList,
+		"log_only_rule_group_ids":       populatedWafList,
+		"enabled_rule_collection_ids":   populatedWafList,
+		"disabled_rule_collection_ids":  populatedWafList,
+		"log_only_rule_collection_ids":  populatedWafList,
+	})
+
+	expectedParanoiaLevel := cdnSdk.WafParanoiaLevel("L2")
+	expectedWafConfig := cdnSdk.WafConfig{
+		Mode:                       cdnSdk.WafMode("ENABLED"),
+		Type:                       cdnSdk.WafType("PREMIUM"),
+		ParanoiaLevel:              &expectedParanoiaLevel,
+		AllowedHttpVersions:        []string{"rule1", "rule2"},
+		AllowedRequestContentTypes: []string{"rule1", "rule2"},
+		AllowedHttpMethods:         []string{"rule1", "rule2"},
+		EnabledRuleIds:             []string{"rule1", "rule2"},
+		DisabledRuleIds:            []string{"rule1", "rule2"},
+		LogOnlyRuleIds:             []string{"rule1", "rule2"},
+		EnabledRuleGroupIds:        []string{"rule1", "rule2"},
+		DisabledRuleGroupIds:       []string{"rule1", "rule2"},
+		LogOnlyRuleGroupIds:        []string{"rule1", "rule2"},
+		EnabledRuleCollectionIds:   []string{"rule1", "rule2"},
+		DisabledRuleCollectionIds:  []string{"rule1", "rule2"},
+		LogOnlyRuleCollectionIds:   []string{"rule1", "rule2"},
+	}
+
 	expectedModel := func(mods ...func(*Model)) *Model {
 		model := &Model{
 			ID:             types.StringValue("test-project-id,test-distribution-id"),
@@ -117,6 +161,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		}
 		return model
 	}
+
 	distributionFixture := func(mods ...func(*cdnSdk.Distribution)) *cdnSdk.Distribution {
 		distribution := &cdnSdk.Distribution{
 			Config: cdnSdk.Config{
@@ -161,6 +206,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		"origin_request_headers": types.MapNull(types.StringType),
 		"geofencing":             types.MapNull(geofencingTypes.ElemType),
 	})
+
 	tests := map[string]struct {
 		Input    *cdnSdk.Distribution
 		Expected *Model
@@ -179,6 +225,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -205,6 +252,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
 			IsValid: true,
@@ -225,6 +273,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -249,10 +298,27 @@ func TestMapDataSourceFields(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         redirectsConfigExpected,
+					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Config.Redirects = &redirectsInput
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_waf": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"waf":               populatedWaf,
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Waf = expectedWafConfig
 			}),
 			IsValid: true,
 		},
