@@ -304,6 +304,20 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 	backendOptions := []string{"http", "bucket"}
 	matchCondition := []string{"ANY", "ALL", "NONE"}
 	statusCode := []int32{301, 302, 303, 307, 308}
+	defaultWafConfigAllowedHttpVersions := sortedStringListToAttrValueList([]string{
+		"HTTP/1.0", "HTTP/1.1", "HTTP/2", "HTTP/2.0",
+	})
+	defaultWafConfigAllowedRequestContentTypes := sortedStringListToAttrValueList([]string{
+		"application/x-www-form-urlencoded", "multipart/form-data", "multipart/related",
+		"text/xml", "application/xml", "application/soap+xml", "application/x-amf",
+		"application/json", "application/octet-stream", "application/csp-report",
+		"application/xss-auditor-report", "text/plain",
+	})
+	defaultWafConfigAllowedHttpMethods := sortedStringListToAttrValueList([]string{
+		"GET", "HEAD", "POST", "PUT", "DELETE",
+		"CONNECT", "OPTIONS", "TRACE", "PATCH",
+	})
+
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
@@ -485,21 +499,21 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_versions"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedHttpVersions)),
 							},
 							"allowed_request_content_types": schema.ListAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_request_content_types"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedRequestContentTypes)),
 							},
 							"allowed_http_methods": schema.ListAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_methods"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedHttpMethods)),
 							},
 							"enabled_rule_ids": schema.ListAttribute{
 								Optional:    true,
@@ -1385,10 +1399,9 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	// if the returned one matches the API default (FREE/DISABLED and empty lists).
 	isEmptyDefault := distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED &&
 		distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE &&
-		len(distribution.Config.Waf.AllowedHttpMethods) == 0 &&
 		len(distribution.Config.Waf.EnabledRuleIds) == 0
 
-	if isEmptyDefault && oldConfig.Waf.IsNull() {
+	if isEmptyDefault && utils.IsUndefined(oldConfig.Waf) {
 		wafVal = types.ObjectNull(wafTypes)
 	} else {
 		var diagWaf diag.Diagnostics
@@ -1469,10 +1482,21 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
 	}
+
+	var rawConfig distributionConfig
+	diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    false,
+		UnhandledUnknownAsEmpty: false,
+	})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
 	cfg, err := convertConfig(ctx, model)
 	if err != nil {
 		return nil, err
 	}
+
 	var optimizer *cdnSdk.Optimizer
 	if cfg.Optimizer != nil {
 		optimizer = cdnSdk.NewOptimizer(cfg.Optimizer.GetEnabled())
@@ -1489,16 +1513,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 			},
 		}
 	} else if cfg.Backend.BucketBackend != nil {
-		// We need to parse the model again to access the credentials,
-		// as convertConfig returns the SDK Config struct which hides them.
-		var rawConfig distributionConfig
-		diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    false,
-			UnhandledUnknownAsEmpty: false,
-		})
-		if diags.HasError() {
-			return nil, core.DiagsToError(diags)
-		}
 		var accessKey, secretKey *string
 		if rawConfig.Backend.Credentials != nil {
 			accessKey = rawConfig.Backend.Credentials.AccessKey
@@ -1516,6 +1530,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 			},
 		}
 	}
+
+	// Conditionally set the WAF payload to nil if it's not defined
+	var wafPayload *cdnSdk.WafConfig
+	if !utils.IsUndefined(rawConfig.Waf) {
+		wafPayload = &cfg.Waf
+	}
+
 	payload := &cdnSdk.CreateDistributionPayload{
 		IntentId:         new(uuid.NewString()),
 		Regions:          cfg.Regions,
@@ -1523,7 +1544,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
 		Redirects:        cfg.Redirects,
-		Waf:              &cfg.Waf,
+		Waf:              wafPayload, // Now passes nil if omitted
 	}
 
 	return payload, nil
@@ -1728,7 +1749,7 @@ func validateCountryCode(country string) (string, error) {
 // getSortedWafList extracts strings from HCL list, sorts them and returns the slice
 func getSortedWafList(ctx context.Context, tfList basetypes.ListValue) []string {
 	if tfList.IsNull() || tfList.IsUnknown() {
-		return []string{}
+		return nil
 	}
 	var elements []string
 	diags := tfList.ElementsAs(ctx, &elements, true)
@@ -1752,4 +1773,20 @@ func mapWafListToHCL(apiList []string) basetypes.ListValue {
 		elements = append(elements, types.StringValue(val))
 	}
 	return types.ListValueMust(types.StringType, elements)
+}
+
+// sortedStringListToAttrValueList sorts a slice of strings and converts it
+// to a slice of attr.Value for use in Terraform schema defaults.
+func sortedStringListToAttrValueList(items []string) []attr.Value {
+	sortedItems := make([]string, len(items))
+	copy(sortedItems, items)
+
+	sort.Strings(sortedItems)
+
+	attrValues := make([]attr.Value, len(sortedItems))
+	for i, val := range sortedItems {
+		attrValues[i] = types.StringValue(val)
+	}
+
+	return attrValues
 }

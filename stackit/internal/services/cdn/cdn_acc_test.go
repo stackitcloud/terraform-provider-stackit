@@ -94,6 +94,9 @@ var testConfigVarsHttp = config.Variables{
 	"redirect_target_url":          config.StringVariable("https://example.com"),
 	"redirect_status_code":         config.IntegerVariable(301),
 	"redirect_matcher_value":       config.StringVariable("/shop/*"),
+	"waf_mode":                     config.StringVariable("LOG_ONLY"),
+	"waf_type":                     config.StringVariable("PREMIUM"),
+	"waf_enabled_rule_ids":         config.ListVariable(config.StringVariable("@builtin/crs/request/941120")),
 }
 
 func configVarsHttpUpdated() config.Variables {
