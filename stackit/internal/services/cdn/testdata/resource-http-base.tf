@@ -11,7 +11,11 @@ variable "certificate" {}
 variable "private_key" {}
 variable "redirect_target_url" {}
 variable "redirect_status_code" {}
+variable "redirect_rule_description" {}
+variable "redirect_rule_enabled" {}
+variable "redirect_rule_match_condition" {}
 variable "redirect_matcher_value" {}
+variable "redirect_matcher_condition" {}
 
 # dns
 variable "dns_zone_name" {}
@@ -45,11 +49,15 @@ resource "stackit_cdn_distribution" "distribution" {
     redirects = {
       rules = [
         {
-          target_url  = var.redirect_target_url
-          status_code = var.redirect_status_code
+          description          = var.redirect_rule_description
+          enabled              = var.redirect_rule_enabled
+          target_url           = var.redirect_target_url
+          status_code          = var.redirect_status_code
+          rule_match_condition = var.redirect_rule_match_condition
           matchers = [
             {
-              values = [var.redirect_matcher_value]
+              values                = [var.redirect_matcher_value]
+              value_match_condition = var.redirect_matcher_condition
             }
           ]
         }
