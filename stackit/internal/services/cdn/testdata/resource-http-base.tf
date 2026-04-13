@@ -59,8 +59,8 @@ resource "stackit_cdn_distribution" "distribution" {
       ]
     }
     waf = {
-      mode = var.waf_mode
-      type = var.waf_type
+      mode             = var.waf_mode
+      type             = var.waf_type
       enabled_rule_ids = var.waf_enabled_rule_ids
     }
     backend = {

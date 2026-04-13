@@ -992,7 +992,6 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
 			return
 		}
-
 		wafPatch := cdnSdk.WafConfigPatch{
 			Mode:                       new(cdnSdk.WafMode(wafModel.Mode.ValueString())),
 			Type:                       new(cdnSdk.WafType(wafModel.Type.ValueString())),
@@ -1009,14 +1008,11 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			DisabledRuleCollectionIds:  getSortedWafList(ctx, wafModel.DisabledRuleCollectionIds),
 			LogOnlyRuleCollectionIds:   getSortedWafList(ctx, wafModel.LogOnlyRuleCollectionIds),
 		}
-
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
 			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
 			wafPatch.ParanoiaLevel = &pl
 		}
-
 		configPatch.Waf = &wafPatch
-
 	} else if !utils.IsUndefined(configStateModel.Waf) {
 		// User explicitly removed the WAF block from their terraform configuration
 		modeDisabled := cdnSdk.WafMode(cdnSdk.WAFMODE_DISABLED)
@@ -1025,7 +1021,6 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		wafPatch := cdnSdk.WafConfigPatch{
 			Mode: &modeDisabled,
 			Type: &typeFree,
-
 			// Send empty arrays to clear rules, keeping the API happy
 			EnabledRuleIds:            []string{},
 			DisabledRuleIds:           []string{},
@@ -1036,11 +1031,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			EnabledRuleCollectionIds:  []string{},
 			DisabledRuleCollectionIds: []string{},
 			LogOnlyRuleCollectionIds:  []string{},
-
 			// Intentionally omitted (nil) to avoid the 422 Unprocessable Entity error:
 			// AllowedHttpVersions, AllowedRequestContentTypes, AllowedHttpMethods
 		}
-
 		configPatch.Waf = &wafPatch
 	}
 
@@ -1409,7 +1402,6 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	}
 
 	// Map Waf
-	wafVal := types.ObjectNull(wafTypes)
 	wafObjAttrs := map[string]attr.Value{
 		"mode": types.StringValue(string(distribution.Config.Waf.Mode)),
 		"type": types.StringValue(string(distribution.Config.Waf.Type)),
@@ -1440,6 +1432,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 	// If the WAF is disabled in the API, and there wasn't a WAF block in the user's previous state,
 	// keep it null to prevent state drift from residual backend default values.
+	var wafVal attr.Value
 	if isWafDisabled && utils.IsUndefined(oldConfig.Waf) {
 		wafVal = types.ObjectNull(wafTypes)
 	} else {
