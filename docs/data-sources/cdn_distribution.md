@@ -27,7 +27,7 @@ data "stackit_cdn_distribution" "example" {
 
 ### Required
 
-- `distribution_id` (String) STACKIT project ID associated with the distribution
+- `distribution_id` (String) CDN distribution ID
 - `project_id` (String) STACKIT project ID associated with the distribution
 
 ### Read-Only
@@ -61,7 +61,7 @@ Read-Only:
 Read-Only:
 
 - `bucket_url` (String) The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.
-- `geofencing` (Map of List of String) The configured type http to configure countries where content is allowed. A map of URLs to a list of countries
+- `geofencing` (Map of List of String) Routes users from specific countries to alternative origins (HTTP backend required). Configure this by mapping the alternative origin URL to a list of country codes
 - `origin_request_headers` (Map of String) The configured type http origin request headers for the backend
 - `origin_url` (String) The configured backend type http for the distribution
 - `region` (String) The region where the bucket is hosted. Required if type is 'bucket'.

@@ -75,7 +75,7 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       ]
     }
 
-# WAF Configuration
+    # WAF Configuration
     # 
     # Precedence Hierarchy: Specific Rules > Groups > Collections
     # In this example, the entire "@builtin/crs/request" collection is ENABLED.
@@ -91,21 +91,21 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       allowed_http_versions         = ["HTTP/1.0", "HTTP/1.1"]
       allowed_http_methods          = ["GET"]
       allowed_request_content_types = ["text/plain"]
-      
+
       # Collections
-      enabled_rule_collection_ids   = ["@builtin/crs/request"]
-      disabled_rule_collection_ids  = []
-      log_only_rule_collection_ids  = ["@builtin/crs/response"]
-      
+      enabled_rule_collection_ids  = ["@builtin/crs/request"]
+      disabled_rule_collection_ids = []
+      log_only_rule_collection_ids = ["@builtin/crs/response"]
+
       # Groups
-      enabled_rule_group_ids        = []
-      disabled_rule_group_ids       = []
-      log_only_rule_group_ids       = []
-      
+      enabled_rule_group_ids  = []
+      disabled_rule_group_ids = []
+      log_only_rule_group_ids = []
+
       # Specific Rules (Highest Precedence)
-      enabled_rule_ids              = ["@builtin/crs/request/913100"]
-      disabled_rule_ids             = ["@builtin/crs/request/942151"]
-      log_only_rule_ids             = ["@builtin/crs/response/954120"]
+      enabled_rule_ids  = ["@builtin/crs/request/913100"]
+      disabled_rule_ids = ["@builtin/crs/request/942151"]
+      log_only_rule_ids = ["@builtin/crs/response/954120"]
     }
   }
 }
@@ -161,7 +161,7 @@ Optional:
 
 - `bucket_url` (String) The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.
 - `credentials` (Attributes) The credentials for the bucket. Required if type is 'bucket'. (see [below for nested schema](#nestedatt--config--backend--credentials))
-- `geofencing` (Map of List of String) The configured type http to configure countries where content is allowed. A map of URLs to a list of countries
+- `geofencing` (Map of List of String) Routes users from specific countries to alternative origins (HTTP backend required). Configure this by mapping the alternative origin URL to a list of country codes
 - `origin_request_headers` (Map of String) The configured type http origin request headers for the backend
 - `origin_url` (String) The configured backend type http for the distribution
 - `region` (String) The region where the bucket is hosted. Required if type is 'bucket'.

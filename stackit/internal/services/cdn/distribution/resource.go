@@ -64,7 +64,7 @@ var schemaDescriptions = map[string]string{
 	"config_optimizer":                             "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
 	"config_backend_origin_url":                    "The configured backend type http for the distribution",
 	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
-	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
+	"config_backend_geofencing":                    "Routes users from specific countries to alternative origins (HTTP backend required). Configure this by mapping the alternative origin URL to a list of country codes",
 	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
 	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
@@ -499,6 +499,9 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_versions"],
 								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedHttpVersions)),
+								Validators: []validator.List{
+									listvalidator.SizeAtLeast(1),
+								},
 							},
 							"allowed_request_content_types": schema.ListAttribute{
 								Optional:    true,
@@ -506,6 +509,9 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_request_content_types"],
 								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedRequestContentTypes)),
+								Validators: []validator.List{
+									listvalidator.SizeAtLeast(1),
+								},
 							},
 							"allowed_http_methods": schema.ListAttribute{
 								Optional:    true,
@@ -513,6 +519,9 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_methods"],
 								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedHttpMethods)),
+								Validators: []validator.List{
+									listvalidator.SizeAtLeast(1),
+								},
 							},
 							"enabled_rule_ids": schema.ListAttribute{
 								Optional:    true,

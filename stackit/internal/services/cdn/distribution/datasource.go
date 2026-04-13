@@ -93,7 +93,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 			},
 			"distribution_id": schema.StringAttribute{
-				Description: schemaDescriptions["project_id"],
+				Description: schemaDescriptions["distribution_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
