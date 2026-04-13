@@ -26,8 +26,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/redis"
-	"github.com/stackitcloud/stackit-sdk-go/services/redis/wait"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/redis/v1api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -56,20 +56,20 @@ type Model struct {
 // Struct corresponding to DataSourceModel.Parameters
 type parametersModel struct {
 	SgwAcl                types.String `tfsdk:"sgw_acl"`
-	DownAfterMilliseconds types.Int64  `tfsdk:"down_after_milliseconds"`
+	DownAfterMilliseconds types.Int32  `tfsdk:"down_after_milliseconds"`
 	EnableMonitoring      types.Bool   `tfsdk:"enable_monitoring"`
-	FailoverTimeout       types.Int64  `tfsdk:"failover_timeout"`
+	FailoverTimeout       types.Int32  `tfsdk:"failover_timeout"`
 	Graphite              types.String `tfsdk:"graphite"`
 	LazyfreeLazyEviction  types.String `tfsdk:"lazyfree_lazy_eviction"`
 	LazyfreeLazyExpire    types.String `tfsdk:"lazyfree_lazy_expire"`
-	LuaTimeLimit          types.Int64  `tfsdk:"lua_time_limit"`
-	MaxDiskThreshold      types.Int64  `tfsdk:"max_disk_threshold"`
-	Maxclients            types.Int64  `tfsdk:"maxclients"`
+	LuaTimeLimit          types.Int32  `tfsdk:"lua_time_limit"`
+	MaxDiskThreshold      types.Int32  `tfsdk:"max_disk_threshold"`
+	Maxclients            types.Int32  `tfsdk:"maxclients"`
 	MaxmemoryPolicy       types.String `tfsdk:"maxmemory_policy"`
-	MaxmemorySamples      types.Int64  `tfsdk:"maxmemory_samples"`
-	MetricsFrequency      types.Int64  `tfsdk:"metrics_frequency"`
+	MaxmemorySamples      types.Int32  `tfsdk:"maxmemory_samples"`
+	MetricsFrequency      types.Int32  `tfsdk:"metrics_frequency"`
 	MetricsPrefix         types.String `tfsdk:"metrics_prefix"`
-	MinReplicasMaxLag     types.Int64  `tfsdk:"min_replicas_max_lag"`
+	MinReplicasMaxLag     types.Int32  `tfsdk:"min_replicas_max_lag"`
 	MonitoringInstanceId  types.String `tfsdk:"monitoring_instance_id"`
 	NotifyKeyspaceEvents  types.String `tfsdk:"notify_keyspace_events"`
 	Snapshot              types.String `tfsdk:"snapshot"`
@@ -82,20 +82,20 @@ type parametersModel struct {
 // Types corresponding to parametersModel
 var parametersTypes = map[string]attr.Type{
 	"sgw_acl":                 basetypes.StringType{},
-	"down_after_milliseconds": basetypes.Int64Type{},
+	"down_after_milliseconds": basetypes.Int32Type{},
 	"enable_monitoring":       basetypes.BoolType{},
-	"failover_timeout":        basetypes.Int64Type{},
+	"failover_timeout":        basetypes.Int32Type{},
 	"graphite":                basetypes.StringType{},
 	"lazyfree_lazy_eviction":  basetypes.StringType{},
 	"lazyfree_lazy_expire":    basetypes.StringType{},
-	"lua_time_limit":          basetypes.Int64Type{},
-	"max_disk_threshold":      basetypes.Int64Type{},
-	"maxclients":              basetypes.Int64Type{},
+	"lua_time_limit":          basetypes.Int32Type{},
+	"max_disk_threshold":      basetypes.Int32Type{},
+	"maxclients":              basetypes.Int32Type{},
 	"maxmemory_policy":        basetypes.StringType{},
-	"maxmemory_samples":       basetypes.Int64Type{},
-	"metrics_frequency":       basetypes.Int64Type{},
+	"maxmemory_samples":       basetypes.Int32Type{},
+	"metrics_frequency":       basetypes.Int32Type{},
 	"metrics_prefix":          basetypes.StringType{},
-	"min_replicas_max_lag":    basetypes.Int64Type{},
+	"min_replicas_max_lag":    basetypes.Int32Type{},
 	"monitoring_instance_id":  basetypes.StringType{},
 	"notify_keyspace_events":  basetypes.StringType{},
 	"snapshot":                basetypes.StringType{},
@@ -238,7 +238,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"down_after_milliseconds": schema.Int64Attribute{
+					"down_after_milliseconds": schema.Int32Attribute{
 						Description: parametersDescriptions["down_after_milliseconds"],
 						Optional:    true,
 						Computed:    true,
@@ -248,7 +248,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"failover_timeout": schema.Int64Attribute{
+					"failover_timeout": schema.Int32Attribute{
 						Description: parametersDescriptions["failover_timeout"],
 						Optional:    true,
 						Computed:    true,
@@ -268,17 +268,17 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"lua_time_limit": schema.Int64Attribute{
+					"lua_time_limit": schema.Int32Attribute{
 						Description: parametersDescriptions["lua_time_limit"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"max_disk_threshold": schema.Int64Attribute{
+					"max_disk_threshold": schema.Int32Attribute{
 						Description: parametersDescriptions["max_disk_threshold"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"maxclients": schema.Int64Attribute{
+					"maxclients": schema.Int32Attribute{
 						Description: parametersDescriptions["maxclients"],
 						Optional:    true,
 						Computed:    true,
@@ -288,12 +288,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"maxmemory_samples": schema.Int64Attribute{
+					"maxmemory_samples": schema.Int32Attribute{
 						Description: parametersDescriptions["maxmemory_samples"],
 						Optional:    true,
 						Computed:    true,
 					},
-					"metrics_frequency": schema.Int64Attribute{
+					"metrics_frequency": schema.Int32Attribute{
 						Description: parametersDescriptions["metrics_frequency"],
 						Optional:    true,
 						Computed:    true,
@@ -303,7 +303,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
-					"min_replicas_max_lag": schema.Int64Attribute{
+					"min_replicas_max_lag": schema.Int32Attribute{
 						Description: parametersDescriptions["min_replicas_max_lag"],
 						Optional:    true,
 						Computed:    true,
@@ -424,7 +424,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -432,11 +432,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.InstanceId == nil {
+	if createResp.InstanceId == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
 		return
 	}
-	instanceId := *createResp.InstanceId
+	instanceId := createResp.InstanceId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
@@ -445,7 +445,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -483,7 +483,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -558,7 +558,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -566,7 +566,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -605,7 +605,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -613,7 +613,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -660,18 +660,18 @@ func mapFields(instance *redis.Instance, model *Model) error {
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
-	model.PlanId = types.StringPointerValue(instance.PlanId)
-	model.CfGuid = types.StringPointerValue(instance.CfGuid)
-	model.CfSpaceGuid = types.StringPointerValue(instance.CfSpaceGuid)
-	model.DashboardUrl = types.StringPointerValue(instance.DashboardUrl)
-	model.ImageUrl = types.StringPointerValue(instance.ImageUrl)
-	model.Name = types.StringPointerValue(instance.Name)
-	model.CfOrganizationGuid = types.StringPointerValue(instance.CfOrganizationGuid)
+	model.PlanId = types.StringValue(instance.PlanId)
+	model.CfGuid = types.StringValue(instance.CfGuid)
+	model.CfSpaceGuid = types.StringValue(instance.CfSpaceGuid)
+	model.DashboardUrl = types.StringValue(instance.DashboardUrl)
+	model.ImageUrl = types.StringValue(instance.ImageUrl)
+	model.Name = types.StringValue(instance.Name)
+	model.CfOrganizationGuid = types.StringValue(instance.CfOrganizationGuid)
 
 	if instance.Parameters == nil {
 		model.Parameters = types.ObjectNull(parametersTypes)
 	} else {
-		parameters, err := mapParameters(*instance.Parameters)
+		parameters, err := mapParameters(instance.Parameters)
 		if err != nil {
 			return fmt.Errorf("mapping parameters: %w", err)
 		}
@@ -738,26 +738,22 @@ func mapParameters(params map[string]any) (types.Object, error) {
 				}
 				value = types.BoolValue(valueBool)
 			}
-		case basetypes.Int64Type:
+		case basetypes.Int32Type:
 			if valueInterface == nil {
-				value = types.Int64Null()
+				value = types.Int32Null()
 			} else {
 				// This may be int64, int32, int or float64
 				// We try to assert all 4
-				var valueInt64 int64
+				var valueInt32 int32
 				switch temp := valueInterface.(type) {
 				default:
 					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
-				case int64:
-					valueInt64 = temp
 				case int32:
-					valueInt64 = int64(temp)
-				case int:
-					valueInt64 = int64(temp)
+					valueInt32 = temp
 				case float64:
-					valueInt64 = int64(temp)
+					valueInt32 = int32(temp)
 				}
-				value = types.Int64Value(valueInt64)
+				value = types.Int32Value(valueInt32)
 			}
 		case basetypes.ListType: // Assumed to be a list of strings
 			if valueInterface == nil {
@@ -810,9 +806,9 @@ func toCreatePayload(model *Model, parameters *parametersModel) (*redis.CreateIn
 	}
 
 	return &redis.CreateInstancePayload{
-		InstanceName: conversion.StringValueToPointer(model.Name),
+		InstanceName: model.Name.ValueString(),
 		Parameters:   payloadParams,
-		PlanId:       conversion.StringValueToPointer(model.PlanId),
+		PlanId:       model.PlanId.ValueString(),
 	}, nil
 }
 
@@ -839,33 +835,33 @@ func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, e
 	payloadParams := &redis.InstanceParameters{}
 
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
-	payloadParams.DownAfterMilliseconds = conversion.Int64ValueToPointer(parameters.DownAfterMilliseconds)
+	payloadParams.DownAfterMilliseconds = conversion.Int32ValueToPointer(parameters.DownAfterMilliseconds)
 	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
-	payloadParams.FailoverTimeout = conversion.Int64ValueToPointer(parameters.FailoverTimeout)
+	payloadParams.FailoverTimeout = conversion.Int32ValueToPointer(parameters.FailoverTimeout)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
-	payloadParams.LazyfreeLazyEviction = redis.InstanceParametersGetLazyfreeLazyEvictionAttributeType(conversion.StringValueToPointer(parameters.LazyfreeLazyEviction))
-	payloadParams.LazyfreeLazyExpire = redis.InstanceParametersGetLazyfreeLazyExpireAttributeType(conversion.StringValueToPointer(parameters.LazyfreeLazyExpire))
-	payloadParams.LuaTimeLimit = conversion.Int64ValueToPointer(parameters.LuaTimeLimit)
-	payloadParams.MaxDiskThreshold = conversion.Int64ValueToPointer(parameters.MaxDiskThreshold)
-	payloadParams.Maxclients = conversion.Int64ValueToPointer(parameters.Maxclients)
-	payloadParams.MaxmemoryPolicy = redis.InstanceParametersGetMaxmemoryPolicyAttributeType(conversion.StringValueToPointer(parameters.MaxmemoryPolicy))
-	payloadParams.MaxmemorySamples = conversion.Int64ValueToPointer(parameters.MaxmemorySamples)
-	payloadParams.MetricsFrequency = conversion.Int64ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.LazyfreeLazyEviction = conversion.StringValueToPointer(parameters.LazyfreeLazyEviction)
+	payloadParams.LazyfreeLazyExpire = conversion.StringValueToPointer(parameters.LazyfreeLazyExpire)
+	payloadParams.LuaTimeLimit = conversion.Int32ValueToPointer(parameters.LuaTimeLimit)
+	payloadParams.MaxDiskThreshold = conversion.Int32ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.Maxclients = conversion.Int32ValueToPointer(parameters.Maxclients)
+	payloadParams.MaxmemoryPolicy = conversion.StringValueToPointer(parameters.MaxmemoryPolicy)
+	payloadParams.MaxmemorySamples = conversion.Int32ValueToPointer(parameters.MaxmemorySamples)
+	payloadParams.MetricsFrequency = conversion.Int32ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
-	payloadParams.MinReplicasMaxLag = conversion.Int64ValueToPointer(parameters.MinReplicasMaxLag)
+	payloadParams.MinReplicasMaxLag = conversion.Int32ValueToPointer(parameters.MinReplicasMaxLag)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 	payloadParams.NotifyKeyspaceEvents = conversion.StringValueToPointer(parameters.NotifyKeyspaceEvents)
 	payloadParams.Snapshot = conversion.StringValueToPointer(parameters.Snapshot)
 	payloadParams.TlsCiphersuites = conversion.StringValueToPointer(parameters.TlsCiphersuites)
-	payloadParams.TlsProtocols = redis.InstanceParametersGetTlsProtocolsAttributeType(conversion.StringValueToPointer(parameters.TlsProtocols))
+	payloadParams.TlsProtocols = conversion.StringValueToPointer(parameters.TlsProtocols)
 
 	var err error
-	payloadParams.Syslog, err = conversion.StringListToPointer(parameters.Syslog)
+	payloadParams.Syslog, err = conversion.StringListToSlice(parameters.Syslog)
 	if err != nil {
 		return nil, fmt.Errorf("converting syslog: %w", err)
 	}
 
-	payloadParams.TlsCiphers, err = conversion.StringListToPointer(parameters.TlsCiphers)
+	payloadParams.TlsCiphers, err = conversion.StringListToSlice(parameters.TlsCiphers)
 	if err != nil {
 		return nil, fmt.Errorf("converting tls_ciphers: %w", err)
 	}
@@ -875,7 +871,7 @@ func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, e
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.ListOfferings(ctx, projectId).Execute()
+	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
 	}
@@ -885,22 +881,22 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	availableVersions := ""
 	availablePlanNames := ""
 	isValidVersion := false
-	for _, offer := range *res.Offerings {
-		if !strings.EqualFold(*offer.Version, version) {
-			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, *offer.Version)
+	for _, offer := range res.Offerings {
+		if !strings.EqualFold(offer.Version, version) {
+			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, offer.Version)
 			continue
 		}
 		isValidVersion = true
 
-		for _, plan := range *offer.Plans {
-			if plan.Name == nil {
+		for _, plan := range offer.Plans {
+			if plan.Name == "" {
 				continue
 			}
-			if strings.EqualFold(*plan.Name, planName) && plan.Id != nil {
-				model.PlanId = types.StringPointerValue(plan.Id)
+			if strings.EqualFold(plan.Name, planName) && plan.Id != "" {
+				model.PlanId = types.StringValue(plan.Id)
 				return nil
 			}
-			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, *plan.Name)
+			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, plan.Name)
 		}
 	}
 
@@ -913,16 +909,16 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model *Model) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.ListOfferings(ctx, projectId).Execute()
+	res, err := client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
 	}
 
-	for _, offer := range *res.Offerings {
-		for _, plan := range *offer.Plans {
-			if strings.EqualFold(*plan.Id, planId) && plan.Id != nil {
-				model.PlanName = types.StringPointerValue(plan.Name)
-				model.Version = types.StringPointerValue(offer.Version)
+	for _, offer := range res.Offerings {
+		for _, plan := range offer.Plans {
+			if strings.EqualFold(plan.Id, planId) && plan.Id != "" {
+				model.PlanName = types.StringValue(plan.Name)
+				model.Version = types.StringValue(offer.Version)
 				return nil
 			}
 		}

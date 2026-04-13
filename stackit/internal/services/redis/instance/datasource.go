@@ -17,7 +17,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/redis"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -138,7 +138,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["sgw_acl"],
 						Computed:    true,
 					},
-					"down_after_milliseconds": schema.Int64Attribute{
+					"down_after_milliseconds": schema.Int32Attribute{
 						Description: parametersDescriptions["down_after_milliseconds"],
 						Computed:    true,
 					},
@@ -146,7 +146,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["enable_monitoring"],
 						Computed:    true,
 					},
-					"failover_timeout": schema.Int64Attribute{
+					"failover_timeout": schema.Int32Attribute{
 						Description: parametersDescriptions["failover_timeout"],
 						Computed:    true,
 					},
@@ -162,15 +162,15 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["lazyfree_lazy_expire"],
 						Computed:    true,
 					},
-					"lua_time_limit": schema.Int64Attribute{
+					"lua_time_limit": schema.Int32Attribute{
 						Description: parametersDescriptions["lua_time_limit"],
 						Computed:    true,
 					},
-					"max_disk_threshold": schema.Int64Attribute{
+					"max_disk_threshold": schema.Int32Attribute{
 						Description: parametersDescriptions["max_disk_threshold"],
 						Computed:    true,
 					},
-					"maxclients": schema.Int64Attribute{
+					"maxclients": schema.Int32Attribute{
 						Description: parametersDescriptions["maxclients"],
 						Computed:    true,
 					},
@@ -178,11 +178,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["maxmemory_policy"],
 						Computed:    true,
 					},
-					"maxmemory_samples": schema.Int64Attribute{
+					"maxmemory_samples": schema.Int32Attribute{
 						Description: parametersDescriptions["maxmemory_samples"],
 						Computed:    true,
 					},
-					"metrics_frequency": schema.Int64Attribute{
+					"metrics_frequency": schema.Int32Attribute{
 						Description: parametersDescriptions["metrics_frequency"],
 						Computed:    true,
 					},
@@ -190,7 +190,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["metrics_prefix"],
 						Computed:    true,
 					},
-					"min_replicas_max_lag": schema.Int64Attribute{
+					"min_replicas_max_lag": schema.Int32Attribute{
 						Description: parametersDescriptions["min_replicas_max_lag"],
 						Computed:    true,
 					},
@@ -267,7 +267,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
