@@ -12,6 +12,9 @@ variable "private_key" {}
 variable "redirect_target_url" {}
 variable "redirect_status_code" {}
 variable "redirect_matcher_value" {}
+variable "waf_mode" {}
+variable "waf_type" {}
+variable "waf_enabled_rule_ids" {}
 
 # dns
 variable "dns_zone_name" {}
@@ -54,6 +57,11 @@ resource "stackit_cdn_distribution" "distribution" {
           ]
         }
       ]
+    }
+    waf = {
+      mode = var.waf_mode
+      type = var.waf_type
+      enabled_rule_ids = var.waf_enabled_rule_ids
     }
     backend = {
       type       = var.backend_http_type

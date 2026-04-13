@@ -84,22 +84,22 @@ var schemaDescriptions = map[string]string{
 	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
-	"config_waf":                                   "Configuration of the WAF of a distribution.",
-	"waf_mode":                                     "The WAF mode. ENABLED actively blocks, LOG_ONLY logs matches but never blocks, DISABLED completely turns off inspection.",
-	"waf_type":                                     "Enable or disable the Premium WAF. FREE or PREMIUM.",
-	"waf_paranoia_level":                           "Defines how aggressively the WAF should action on requests (L1 to L4).",
-	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted.",
-	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies.",
-	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts.",
-	"waf_enabled_rule_ids":                         "Ids of the WAF rules explicitly enabled.",
-	"waf_disabled_rule_ids":                        "Ids of WAF Rules explicitly disabled.",
-	"waf_log_only_rule_ids":                        "Ids of WAF Rules explicitly marked as Log Only.",
-	"waf_enabled_rule_group_ids":                   "Ids of WAF Rule Groups explicitly enabled.",
-	"waf_disabled_rule_group_ids":                  "Ids of WAF Rule Groups explicitly disabled.",
-	"waf_log_only_rule_group_ids":                  "Ids of WAF Rule Groups explicitly marked as log Only.",
-	"waf_enabled_rule_collection_ids":              "Ids of WAF Collections explicitly enabled.",
-	"waf_disabled_rule_collection_ids":             "Ids of WAF Collections explicitly disabled.",
-	"waf_log_only_rule_collection_ids":             "Ids of WAF Collections explicitly marked as log Only.",
+	"config_waf":                                   "Configuration of the Web Application Firewall (WAF) for the distribution. Removing this block from your configuration will completely disable the WAF.",
+	"waf_mode":                                     "The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.",
+	"waf_type":                                     "The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.",
+	"waf_paranoia_level":                           "Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Defaults to 'L1'.",
+	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.",
+	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.",
+	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.",
+	"waf_enabled_rule_ids":                         "List of WAF rule IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rules, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_ids":                        "List of WAF rule IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rules, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_ids":                        "List of WAF rule IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rules, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_group_ids":                   "List of WAF Rule Group IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rule groups, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_group_ids":                  "List of WAF Rule Group IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rule groups, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_group_ids":                  "List of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rule groups, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_collection_ids":              "List of WAF Collection IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_collection_ids":             "List of WAF Collection IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_collection_ids":             "List of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
 }
 
 type Model struct {
@@ -493,6 +493,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Optional:    true,
 								Computed:    true,
 								Description: schemaDescriptions["waf_paranoia_level"],
+								Default:     stringdefault.StaticString("L1"),
 							},
 							"allowed_http_versions": schema.ListAttribute{
 								Optional:    true,
@@ -826,8 +827,15 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
-	diags := req.Plan.Get(ctx, &model)
+	var planModel Model
+	diags := req.Plan.Get(ctx, &planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -835,23 +843,33 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectId.ValueString()
-	distributionId := model.DistributionId.ValueString()
+	projectId := planModel.ProjectId.ValueString()
+	distributionId := planModel.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	configModel := distributionConfig{}
-	diags = model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
+	configPlanModel := distributionConfig{}
+	diags = planModel.Config.As(ctx, &configPlanModel, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
 	})
 	if diags.HasError() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping config")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping plan config")
+		return
+	}
+
+	configStateModel := distributionConfig{}
+	diags = stateModel.Config.As(ctx, &configStateModel, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    false,
+		UnhandledUnknownAsEmpty: false,
+	})
+	if diags.HasError() {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping state config")
 		return
 	}
 
 	regions := []cdnSdk.Region{}
-	for _, r := range *configModel.Regions {
+	for _, r := range *configPlanModel.Regions {
 		regionEnum, err := cdnSdk.NewRegionFromValue(r)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Map regions: %v", err))
@@ -861,13 +879,10 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// blockedCountries
-	// Use a pointer to a slice to distinguish between an empty list (unblock all) and nil (no change).
 	var blockedCountries []string
-	if configModel.BlockedCountries != nil {
-		// Use a temporary slice
+	if configPlanModel.BlockedCountries != nil {
 		tempBlockedCountries := []string{}
-
-		for _, blockedCountry := range *configModel.BlockedCountries {
+		for _, blockedCountry := range *configPlanModel.BlockedCountries {
 			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked countries: %v", err))
@@ -875,17 +890,15 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			}
 			tempBlockedCountries = append(tempBlockedCountries, validatedBlockedCountry)
 		}
-
-		// Point to the populated slice
 		blockedCountries = tempBlockedCountries
 	}
 
 	// redirects
 	var redirectsConfig *cdnSdk.RedirectConfig
-	if configModel.Redirects != nil {
+	if configPlanModel.Redirects != nil {
 		sdkRules := []cdnSdk.RedirectRule{}
-		if len(configModel.Redirects.Rules) > 0 {
-			for _, rule := range configModel.Redirects.Rules {
+		if len(configPlanModel.Redirects.Rules) > 0 {
+			for _, rule := range configPlanModel.Redirects.Rules {
 				matchers := []cdnSdk.Matcher{}
 				for _, matcher := range rule.Matchers {
 					var matchCond *cdnSdk.MatchCondition
@@ -925,12 +938,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
-	switch configModel.Backend.Type {
+	switch configPlanModel.Backend.Type {
 	case "http":
 		geofencingPatch := map[string][]string{}
-		if configModel.Backend.Geofencing != nil {
+		if configPlanModel.Backend.Geofencing != nil {
 			gf := make(map[string][]string)
-			for url, countries := range *configModel.Backend.Geofencing {
+			for url, countries := range *configPlanModel.Backend.Geofencing {
 				countryStrings := make([]string, len(countries))
 				for i, countryPtr := range countries {
 					if countryPtr == nil {
@@ -945,21 +958,21 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		configPatchBackend.HttpBackendPatch = &cdnSdk.HttpBackendPatch{
-			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
-			OriginUrl:            configModel.Backend.OriginURL,
+			OriginRequestHeaders: configPlanModel.Backend.OriginRequestHeaders,
+			OriginUrl:            configPlanModel.Backend.OriginURL,
 			Type:                 "http",
 			Geofencing:           &geofencingPatch,
 		}
 	case "bucket":
 		configPatchBackend.BucketBackendPatch = &cdnSdk.BucketBackendPatch{
 			Type:      "bucket",
-			BucketUrl: configModel.Backend.BucketURL,
-			Region:    configModel.Backend.Region,
+			BucketUrl: configPlanModel.Backend.BucketURL,
+			Region:    configPlanModel.Backend.Region,
 		}
-		if configModel.Backend.Credentials != nil {
+		if configPlanModel.Backend.Credentials != nil {
 			configPatchBackend.BucketBackendPatch.Credentials = &cdnSdk.BucketCredentials{
-				AccessKeyId:     *configModel.Backend.Credentials.AccessKey,
-				SecretAccessKey: *configModel.Backend.Credentials.SecretKey,
+				AccessKeyId:     *configPlanModel.Backend.Credentials.AccessKey,
+				SecretAccessKey: *configPlanModel.Backend.Credentials.SecretKey,
 			}
 		}
 	}
@@ -971,9 +984,10 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Redirects:        redirectsConfig,
 	}
 
-	if !utils.IsUndefined(configModel.Waf) {
+	// Map WAF Update/Removal
+	if !utils.IsUndefined(configPlanModel.Waf) {
 		var wafModel wafConfig
-		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		diags := configPlanModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
 			return
@@ -1002,12 +1016,38 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		configPatch.Waf = &wafPatch
+
+	} else if !utils.IsUndefined(configStateModel.Waf) {
+		// User explicitly removed the WAF block from their terraform configuration
+		modeDisabled := cdnSdk.WafMode(cdnSdk.WAFMODE_DISABLED)
+		typeFree := cdnSdk.WafType(cdnSdk.WAFTYPE_FREE)
+
+		wafPatch := cdnSdk.WafConfigPatch{
+			Mode: &modeDisabled,
+			Type: &typeFree,
+
+			// Send empty arrays to clear rules, keeping the API happy
+			EnabledRuleIds:            []string{},
+			DisabledRuleIds:           []string{},
+			LogOnlyRuleIds:            []string{},
+			EnabledRuleGroupIds:       []string{},
+			DisabledRuleGroupIds:      []string{},
+			LogOnlyRuleGroupIds:       []string{},
+			EnabledRuleCollectionIds:  []string{},
+			DisabledRuleCollectionIds: []string{},
+			LogOnlyRuleCollectionIds:  []string{},
+
+			// Intentionally omitted (nil) to avoid the 422 Unprocessable Entity error:
+			// AllowedHttpVersions, AllowedRequestContentTypes, AllowedHttpMethods
+		}
+
+		configPatch.Waf = &wafPatch
 	}
 
-	if !utils.IsUndefined(configModel.Optimizer) {
+	if !utils.IsUndefined(configPlanModel.Optimizer) {
 		var optimizerModel optimizerConfig
 
-		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		diags = configPlanModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping optimizer config")
 			return
@@ -1037,13 +1077,13 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	err = mapFields(ctx, &waitResp.Distribution, &model)
+	err = mapFields(ctx, &waitResp.Distribution, &planModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -1394,14 +1434,13 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	wafObjAttrs["disabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleCollectionIds)
 	wafObjAttrs["log_only_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleCollectionIds)
 
-	// Prevent state drift if WAF wasn't in the config at all, but API returned default empty WAF
-	// By checking if the old config Waf block was null, we can avoid recreating a WAF block
-	// if the returned one matches the API default (FREE/DISABLED and empty lists).
-	isEmptyDefault := distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED &&
-		distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE &&
-		len(distribution.Config.Waf.EnabledRuleIds) == 0
+	// Safely determine if the API considers the WAF completely disabled
+	isWafDisabled := distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED &&
+		distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE
 
-	if isEmptyDefault && utils.IsUndefined(oldConfig.Waf) {
+	// If the WAF is disabled in the API, and there wasn't a WAF block in the user's previous state,
+	// keep it null to prevent state drift from residual backend default values.
+	if isWafDisabled && utils.IsUndefined(oldConfig.Waf) {
 		wafVal = types.ObjectNull(wafTypes)
 	} else {
 		var diagWaf diag.Diagnostics

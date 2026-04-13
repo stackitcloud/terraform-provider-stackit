@@ -115,6 +115,7 @@ Optional:
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
+- `waf` (Attributes) Configuration of the Web Application Firewall (WAF) for the distribution. Removing this block from your configuration will completely disable the WAF. (see [below for nested schema](#nestedatt--config--waf))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
@@ -184,6 +185,28 @@ Optional:
 - `value_match_condition` (String) Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.
 
 
+
+
+<a id="nestedatt--config--waf"></a>
+### Nested Schema for `config.waf`
+
+Optional:
+
+- `allowed_http_methods` (List of String) Restricts which HTTP methods the distribution accepts. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.
+- `allowed_http_versions` (List of String) Restricts which HTTP protocol versions are accepted. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.
+- `allowed_request_content_types` (List of String) Restricts which Content-Type headers are accepted in request bodies. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.
+- `disabled_rule_collection_ids` (List of String) List of WAF Collection IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `disabled_rule_group_ids` (List of String) List of WAF Rule Group IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rule groups, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `disabled_rule_ids` (List of String) List of WAF rule IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rules, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `enabled_rule_collection_ids` (List of String) List of WAF Collection IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `enabled_rule_group_ids` (List of String) List of WAF Rule Group IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rule groups, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `enabled_rule_ids` (List of String) List of WAF rule IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rules, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `log_only_rule_collection_ids` (List of String) List of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `log_only_rule_group_ids` (List of String) List of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rule groups, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `log_only_rule_ids` (List of String) List of WAF rule IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rules, please consult the API documentation: https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `mode` (String) The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.
+- `paranoia_level` (String) Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Defaults to 'L1'.
+- `type` (String) The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.
 
 
 
