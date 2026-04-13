@@ -103,6 +103,11 @@ func configVarsHttpUpdated() config.Variables {
 	updatedConfig := maps.Clone(testConfigVarsHttp)
 	updatedConfig["regions"] = config.ListVariable(config.StringVariable("EU"), config.StringVariable("US"), config.StringVariable("ASIA"))
 	updatedConfig["redirect_target_url"] = config.StringVariable("https://example.com/updated")
+
+	// Update WAF configuration to test mutation
+	updatedConfig["waf_mode"] = config.StringVariable("ENABLED")
+	updatedConfig["waf_enabled_rule_ids"] = config.ListVariable(config.StringVariable("@builtin/crs/request/941120"), config.StringVariable("@builtin/crs/request/941130"))
+
 	return updatedConfig
 }
 
@@ -183,6 +188,12 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 						"DE",
 					),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
+					// WAF Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", "@builtin/crs/request/941120"),
+
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 				),
@@ -285,6 +296,13 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.blocked_countries.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
+
+					// WAF Checks inside Data Source
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", "@builtin/crs/request/941120"),
+
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.#", "1"),
@@ -319,6 +337,14 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "1"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
+
+					// Checking WAF Mutated Configurations
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", "ENABLED"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "2"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", "@builtin/crs/request/941120"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.1", "@builtin/crs/request/941130"),
+
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 					resource.TestCheckResourceAttr(
