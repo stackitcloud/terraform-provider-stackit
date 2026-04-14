@@ -11,6 +11,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 

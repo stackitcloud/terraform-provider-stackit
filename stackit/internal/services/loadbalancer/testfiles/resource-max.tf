@@ -109,9 +109,9 @@ resource "stackit_loadbalancer" "loadbalancer" {
         timeout             = var.sni_health_timeout
         unhealthy_threshold = var.sni_unhealthy_threshold
       }
-      session_persistence = {
+      session_persistence = var.sni_use_source_ip_address ? {
         use_source_ip_address = var.sni_use_source_ip_address
-      }
+      } : null
     },
     {
       name        = var.udp_target_pool_name
@@ -130,11 +130,11 @@ resource "stackit_loadbalancer" "loadbalancer" {
       port         = var.sni_listener_port
       protocol     = var.sni_listener_protocol
       target_pool  = var.sni_target_pool_name
-      server_name_indicators = [
+      server_name_indicators = var.sni_listener_server_name_indicators != "" ? [
         {
           name = var.sni_listener_server_name_indicators
         }
-      ]
+      ] : null
       tcp = {
         idle_timeout = var.sni_idle_timeout
       }

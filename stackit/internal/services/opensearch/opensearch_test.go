@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 

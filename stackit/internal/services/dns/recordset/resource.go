@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"

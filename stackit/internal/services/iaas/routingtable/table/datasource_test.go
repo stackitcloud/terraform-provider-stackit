@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/google/go-cmp/cmp"

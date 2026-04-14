@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -25,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"

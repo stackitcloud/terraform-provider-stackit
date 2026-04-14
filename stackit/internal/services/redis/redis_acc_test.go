@@ -12,6 +12,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/redis/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
