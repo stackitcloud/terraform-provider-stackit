@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -340,7 +340,7 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 		schedulesToDestroy = append(schedulesToDestroy, scheduleId)
 	}
 
-	schedulesResp, err := client.ListUpdateSchedules(ctx, testutil.ProjectId, serverId, testutil.Region).Execute()
+	schedulesResp, err := client.DefaultAPI.ListUpdateSchedules(ctx, testutil.ProjectId, serverId, testutil.Region).Execute()
 	// The destroy functions are called after all resources are cleaned up.
 	// If the server was successfully destroyed we should see a 404 here.
 	if err != nil {
@@ -350,14 +350,14 @@ func deleteSchedule(ctx context.Context, s *terraform.State) error {
 		return fmt.Errorf("getting schedulesResp: %w", err)
 	}
 
-	schedules := *schedulesResp.Items
+	schedules := schedulesResp.Items
 	for i := range schedules {
-		if schedules[i].Id == nil {
+		if schedules[i].Id == 0 {
 			continue
 		}
-		scheduleId := strconv.FormatInt(*schedules[i].Id, 10)
+		scheduleId := strconv.FormatInt(int64(schedules[i].Id), 10)
 		if utils.Contains(schedulesToDestroy, scheduleId) {
-			err := client.DeleteUpdateScheduleExecute(ctx, testutil.ProjectId, serverId, scheduleId, testutil.Region)
+			err := client.DefaultAPI.DeleteUpdateSchedule(ctx, testutil.ProjectId, serverId, scheduleId, testutil.Region).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying server update schedule %s during CheckDestroy: %w", scheduleId, err)
 			}

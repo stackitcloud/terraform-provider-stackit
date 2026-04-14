@@ -18,7 +18,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -87,7 +87,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"update_schedule_id": schema.Int64Attribute{
+						"update_schedule_id": schema.Int32Attribute{
 							Computed: true,
 						},
 						"name": schema.StringAttribute{
@@ -102,7 +102,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 							Description: "Is the update schedule enabled or disabled.",
 							Computed:    true,
 						},
-						"maintenance_window": schema.Int64Attribute{
+						"maintenance_window": schema.Int32Attribute{
 							Description: "Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.",
 							Computed:    true,
 						},
@@ -129,11 +129,11 @@ type schedulesDataSourceModel struct {
 
 // schedulesDatasourceItemModel maps schedule schema data.
 type schedulesDatasourceItemModel struct {
-	UpdateScheduleId  types.Int64  `tfsdk:"update_schedule_id"`
+	UpdateScheduleId  types.Int32  `tfsdk:"update_schedule_id"`
 	Name              types.String `tfsdk:"name"`
 	Rrule             types.String `tfsdk:"rrule"`
 	Enabled           types.Bool   `tfsdk:"enabled"`
-	MaintenanceWindow types.Int64  `tfsdk:"maintenance_window"`
+	MaintenanceWindow types.Int32  `tfsdk:"maintenance_window"`
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -153,7 +153,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	schedules, err := r.client.ListUpdateSchedules(ctx, projectId, serverId, region).Execute()
+	schedules, err := r.client.DefaultAPI.ListUpdateSchedules(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -202,13 +202,13 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverupdate.G
 	model.ID = utils.BuildInternalTerraformId(projectId, region, serverId)
 	model.Region = types.StringValue(region)
 
-	for _, schedule := range *schedules.Items {
+	for _, schedule := range schedules.Items {
 		scheduleState := schedulesDatasourceItemModel{
-			UpdateScheduleId:  types.Int64Value(*schedule.Id),
-			Name:              types.StringValue(*schedule.Name),
-			Rrule:             types.StringValue(*schedule.Rrule),
-			Enabled:           types.BoolValue(*schedule.Enabled),
-			MaintenanceWindow: types.Int64Value(*schedule.MaintenanceWindow),
+			UpdateScheduleId:  types.Int32Value(schedule.Id),
+			Name:              types.StringValue(schedule.Name),
+			Rrule:             types.StringValue(schedule.Rrule),
+			Enabled:           types.BoolValue(schedule.Enabled),
+			MaintenanceWindow: types.Int32Value(schedule.MaintenanceWindow),
 		}
 		model.Items = append(model.Items, scheduleState)
 	}
