@@ -6,7 +6,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
 )
 
 func TestMapGetTokenFields(t *testing.T) {
@@ -27,17 +28,10 @@ func TestMapGetTokenFields(t *testing.T) {
 			isValid:     false,
 		},
 		{
-			description: "should error when token is nil in response",
-			state:       &Model{},
-			input:       &modelserving.GetTokenResponse{Token: nil},
-			expected:    Model{},
-			isValid:     false,
-		},
-		{
 			description: "should error when state is nil in response",
 			state:       nil,
 			input: &modelserving.GetTokenResponse{
-				Token: &modelserving.Token{},
+				Token: modelserving.Token{},
 			},
 			expected: Model{},
 			isValid:  false,
@@ -52,15 +46,13 @@ func TestMapGetTokenFields(t *testing.T) {
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			input: &modelserving.GetTokenResponse{
-				Token: &modelserving.Token{
-					Id: new("tid"),
-					ValidUntil: new(
-						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-					),
-					State:       modelserving.TOKENSTATE_ACTIVE.Ptr(),
-					Name:        new("name"),
-					Description: new("desc"),
-					Region:      new("eu01"),
+				Token: modelserving.Token{
+					Id:          "tid",
+					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+					State:       "active",
+					Name:        "name",
+					Description: utils.Ptr("desc"),
+					Region:      "eu01",
 				},
 			},
 			expected: Model{
@@ -70,7 +62,7 @@ func TestMapGetTokenFields(t *testing.T) {
 				TokenId:           types.StringValue("tid"),
 				Name:              types.StringValue("name"),
 				Description:       types.StringValue("desc"),
-				State:             types.StringValue(string(modelserving.TOKENSTATE_ACTIVE)),
+				State:             types.StringValue("active"),
 				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
@@ -121,10 +113,10 @@ func TestMapCreateTokenFields(t *testing.T) {
 			isValid:                  false,
 		},
 		{
-			description: "should error when token is nil in create token response",
+			description: "should error when token id is empty in create token response",
 			state:       &Model{},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
-				Token: nil,
+				Token: modelserving.TokenCreated{},
 			},
 			inputGetTokenResponse: nil,
 			expected:              Model{},
@@ -134,29 +126,29 @@ func TestMapCreateTokenFields(t *testing.T) {
 			description: "should error when get token response is nil",
 			state:       &Model{},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
-				Token: &modelserving.TokenCreated{},
+				Token: modelserving.TokenCreated{
+					Id: "tid",
+				},
 			},
 			inputGetTokenResponse: nil,
 			expected:              Model{},
 			isValid:               false,
 		},
 		{
-			description: "should error when get token response is nil",
+			description: "should error when get token response is nil with populated create response",
 			state: &Model{
 				Id:        types.StringValue("pid,eu01,tid"),
 				ProjectId: types.StringValue("pid"),
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
-				Token: &modelserving.TokenCreated{
-					Id: new("tid"),
-					ValidUntil: new(
-						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-					),
-					State:       modelserving.TOKENCREATEDSTATE_ACTIVE.Ptr(),
-					Name:        new("name"),
-					Description: new("desc"),
-					Region:      new("eu01"),
-					Content:     new("content"),
+				Token: modelserving.TokenCreated{
+					Id:          "tid",
+					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+					State:       "active",
+					Name:        "name",
+					Description: utils.Ptr("desc"),
+					Region:      "eu01",
+					Content:     "content",
 				},
 			},
 			inputGetTokenResponse: nil,
@@ -172,21 +164,19 @@ func TestMapCreateTokenFields(t *testing.T) {
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			inputCreateTokenResponse: &modelserving.CreateTokenResponse{
-				Token: &modelserving.TokenCreated{
-					Id: new("tid"),
-					ValidUntil: new(
-						time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-					),
-					State:       modelserving.TOKENCREATEDSTATE_ACTIVE.Ptr(),
-					Name:        new("name"),
-					Description: new("desc"),
-					Region:      new("eu01"),
-					Content:     new("content"),
+				Token: modelserving.TokenCreated{
+					Id:          "tid",
+					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
+					State:       "active",
+					Name:        "name",
+					Description: utils.Ptr("desc"),
+					Region:      "eu01",
+					Content:     "content",
 				},
 			},
 			inputGetTokenResponse: &modelserving.GetTokenResponse{
-				Token: &modelserving.Token{
-					State: modelserving.TOKENSTATE_ACTIVE.Ptr(),
+				Token: modelserving.Token{
+					State: "active",
 				},
 			},
 			expected: Model{
@@ -196,7 +186,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 				TokenId:           types.StringValue("tid"),
 				Name:              types.StringValue("name"),
 				Description:       types.StringValue("desc"),
-				State:             types.StringValue(string(modelserving.TOKENSTATE_ACTIVE)),
+				State:             types.StringValue("active"),
 				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
 				Token:             types.StringValue("content"),
 				RotateWhenChanged: types.MapNull(types.StringType),
@@ -256,9 +246,9 @@ func TestToCreatePayload(t *testing.T) {
 				TTLDuration: types.StringValue("1h"),
 			},
 			expected: &modelserving.CreateTokenPayload{
-				Name:        new("name"),
-				Description: new("desc"),
-				TtlDuration: new("1h"),
+				Name:        "name",
+				Description: utils.Ptr("desc"),
+				TtlDuration: utils.Ptr("1h"),
 			},
 			isValid: true,
 		},
@@ -309,8 +299,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			expected: &modelserving.PartialUpdateTokenPayload{
-				Name:        new("name"),
-				Description: new("desc"),
+				Name:        utils.Ptr("name"),
+				Description: utils.Ptr("desc"),
 			},
 			isValid: true,
 		},
