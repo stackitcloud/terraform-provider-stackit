@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 )
 
 func listValueFrom(items []string) basetypes.ListValue {
@@ -18,14 +18,14 @@ func listValueFrom(items []string) basetypes.ListValue {
 func TestMapSchedulesDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *sdk.GetBackupSchedulesResponse
+		input       *serverbackup.GetBackupSchedulesResponse
 		expected    schedulesDataSourceModel
 		isValid     bool
 	}{
 		{
 			"empty response",
-			&sdk.GetBackupSchedulesResponse{
-				Items: &[]sdk.BackupSchedule{},
+			&serverbackup.GetBackupSchedulesResponse{
+				Items: []serverbackup.BackupSchedule{},
 			},
 			schedulesDataSourceModel{
 				ID:        types.StringValue("project_uid,eu01,server_uid"),
@@ -38,17 +38,17 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&sdk.GetBackupSchedulesResponse{
-				Items: &[]sdk.BackupSchedule{
+			&serverbackup.GetBackupSchedulesResponse{
+				Items: []serverbackup.BackupSchedule{
 					{
-						Id:      new(int64(5)),
-						Enabled: new(true),
-						Name:    new("backup_schedule_name_1"),
-						Rrule:   new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-						BackupProperties: &sdk.BackupProperties{
-							Name:            new("backup_name_1"),
-							RetentionPeriod: new(int64(14)),
-							VolumeIds:       &[]string{"uuid1", "uuid2"},
+						Id:      int32(5),
+						Enabled: true,
+						Name:    "backup_schedule_name_1",
+						Rrule:   "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+						BackupProperties: &serverbackup.BackupProperties{
+							Name:            "backup_name_1",
+							RetentionPeriod: int32(14),
+							VolumeIds:       []string{"uuid1", "uuid2"},
 						},
 					},
 				},
@@ -59,13 +59,13 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue("project_uid"),
 				Items: []schedulesDatasourceItemModel{
 					{
-						BackupScheduleId: types.Int64Value(5),
+						BackupScheduleId: types.Int32Value(5),
 						Name:             types.StringValue("backup_schedule_name_1"),
 						Rrule:            types.StringValue("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 						Enabled:          types.BoolValue(true),
 						BackupProperties: &scheduleBackupPropertiesModel{
 							BackupName:      types.StringValue("backup_name_1"),
-							RetentionPeriod: types.Int64Value(14),
+							RetentionPeriod: types.Int32Value(14),
 							VolumeIds:       listValueFrom([]string{"uuid1", "uuid2"}),
 						},
 					},
