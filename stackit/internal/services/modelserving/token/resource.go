@@ -25,6 +25,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
