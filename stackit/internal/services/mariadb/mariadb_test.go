@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/mariadb"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -46,15 +46,15 @@ resource "stackit_mariadb_instance" "example" {
 	planList := testutil.MockResponse{
 		Description: "plan instance",
 		ToJsonBody: mariadb.ListOfferingsResponse{
-			Offerings: &[]mariadb.Offering{
+			Offerings: []mariadb.Offering{
 				{
-					Plans: &[]mariadb.Plan{
+					Plans: []mariadb.Plan{
 						{
-							Id:   new(planId),
-							Name: utils.Ptr(planName),
+							Id:   planId,
+							Name: planName,
 						},
 					},
-					Version: utils.Ptr(version),
+					Version: version,
 				},
 			},
 		},
@@ -70,7 +70,7 @@ resource "stackit_mariadb_instance" "example" {
 						testutil.MockResponse{
 							Description: "create instance",
 							ToJsonBody: mariadb.CreateInstanceResponse{
-								InstanceId: new(instanceId),
+								InstanceId: instanceId,
 							},
 						},
 						testutil.MockResponse{
@@ -140,7 +140,7 @@ resource "stackit_mariadb_credential" "example" {
 						testutil.MockResponse{
 							Description: "create credentials",
 							ToJsonBody: mariadb.CredentialsResponse{
-								Id: new(credentialId),
+								Id: credentialId,
 							},
 						},
 						testutil.MockResponse{

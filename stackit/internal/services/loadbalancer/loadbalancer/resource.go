@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
 	loadbalancerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/loadbalancer/utils"
 
@@ -20,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -31,8 +31,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/wait"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -67,7 +67,7 @@ type Model struct {
 // Struct corresponding to Model.Listeners[i]
 type listener struct {
 	DisplayName          types.String `tfsdk:"display_name"`
-	Port                 types.Int64  `tfsdk:"port"`
+	Port                 types.Int32  `tfsdk:"port"`
 	Protocol             types.String `tfsdk:"protocol"`
 	ServerNameIndicators types.List   `tfsdk:"server_name_indicators"`
 	TargetPool           types.String `tfsdk:"target_pool"`
@@ -78,7 +78,7 @@ type listener struct {
 // Types corresponding to listener
 var listenerTypes = map[string]attr.Type{
 	"display_name":           types.StringType,
-	"port":                   types.Int64Type,
+	"port":                   types.Int32Type,
 	"protocol":               types.StringType,
 	"server_name_indicators": types.ListType{ElemType: types.ObjectType{AttrTypes: serverNameIndicatorTypes}},
 	"target_pool":            types.StringType,
@@ -162,7 +162,7 @@ var observabilityOptionTypes = map[string]attr.Type{
 type targetPool struct {
 	ActiveHealthCheck  types.Object `tfsdk:"active_health_check"`
 	Name               types.String `tfsdk:"name"`
-	TargetPort         types.Int64  `tfsdk:"target_port"`
+	TargetPort         types.Int32  `tfsdk:"target_port"`
 	Targets            types.List   `tfsdk:"targets"`
 	SessionPersistence types.Object `tfsdk:"session_persistence"`
 }
@@ -171,27 +171,27 @@ type targetPool struct {
 var targetPoolTypes = map[string]attr.Type{
 	"active_health_check": types.ObjectType{AttrTypes: activeHealthCheckTypes},
 	"name":                types.StringType,
-	"target_port":         types.Int64Type,
+	"target_port":         types.Int32Type,
 	"targets":             types.ListType{ElemType: types.ObjectType{AttrTypes: targetTypes}},
 	"session_persistence": types.ObjectType{AttrTypes: sessionPersistenceTypes},
 }
 
 // Struct corresponding to targetPool.ActiveHealthCheck
 type activeHealthCheck struct {
-	HealthyThreshold   types.Int64  `tfsdk:"healthy_threshold"`
+	HealthyThreshold   types.Int32  `tfsdk:"healthy_threshold"`
 	Interval           types.String `tfsdk:"interval"`
 	IntervalJitter     types.String `tfsdk:"interval_jitter"`
 	Timeout            types.String `tfsdk:"timeout"`
-	UnhealthyThreshold types.Int64  `tfsdk:"unhealthy_threshold"`
+	UnhealthyThreshold types.Int32  `tfsdk:"unhealthy_threshold"`
 }
 
 // Types corresponding to activeHealthCheck
 var activeHealthCheckTypes = map[string]attr.Type{
-	"healthy_threshold":   types.Int64Type,
+	"healthy_threshold":   types.Int32Type,
 	"interval":            types.StringType,
 	"interval_jitter":     types.StringType,
 	"timeout":             types.StringType,
-	"unhealthy_threshold": types.Int64Type,
+	"unhealthy_threshold": types.Int32Type,
 }
 
 // Struct corresponding to targetPool.Targets[i]
@@ -440,12 +440,12 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
-						"port": schema.Int64Attribute{
+						"port": schema.Int32Attribute{
 							Description: descriptions["port"],
 							Required:    true,
-							PlanModifiers: []planmodifier.Int64{
-								int64planmodifier.RequiresReplace(),
-								int64planmodifier.UseStateForUnknown(),
+							PlanModifiers: []planmodifier.Int32{
+								int32planmodifier.RequiresReplace(),
+								int32planmodifier.UseStateForUnknown(),
 							},
 						},
 						"protocol": schema.StringAttribute{
@@ -460,8 +460,9 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							},
 						},
 						"server_name_indicators": schema.ListNestedAttribute{
-							Description: descriptions["server_name_indicators"],
-							Optional:    true,
+							Description:        descriptions["server_name_indicators"],
+							DeprecationMessage: "`server_name_indicators` is deprecated and will be removed after October 2026",
+							Optional:           true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"name": schema.StringAttribute{
@@ -651,7 +652,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Optional:    true,
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
-								"healthy_threshold": schema.Int64Attribute{
+								"healthy_threshold": schema.Int32Attribute{
 									Description: descriptions["healthy_threshold"],
 									Optional:    true,
 									Computed:    true,
@@ -671,7 +672,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 									Optional:    true,
 									Computed:    true,
 								},
-								"unhealthy_threshold": schema.Int64Attribute{
+								"unhealthy_threshold": schema.Int32Attribute{
 									Description: descriptions["unhealthy_threshold"],
 									Optional:    true,
 									Computed:    true,
@@ -682,7 +683,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["target_pools.name"],
 							Required:    true,
 						},
-						"target_port": schema.Int64Attribute{
+						"target_port": schema.Int32Attribute{
 							Description: descriptions["target_port"],
 							Required:    true,
 						},
@@ -765,7 +766,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create a new load balancer
-	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
+	createResp, err := r.client.DefaultAPI.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -788,7 +789,7 @@ func (r *loadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateLoadBalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Load balancer creation waiting: %v", err))
 		return
@@ -830,7 +831,7 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -897,7 +898,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		// Update target pool
-		_, err = r.client.UpdateTargetPool(ctx, projectId, region, name, targetPoolName).UpdateTargetPoolPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.UpdateTargetPool(ctx, projectId, region, name, targetPoolName).UpdateTargetPoolPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API for target pool: %v", err))
 			return
@@ -908,7 +909,7 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "target_pool_name", nil)
 
 	// Get updated load balancer
-	getResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	getResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API after update: %v", err))
 		return
@@ -950,7 +951,7 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete load balancer
-	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
+	_, err := r.client.DefaultAPI.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -958,7 +959,7 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
+	_, err = wait.DeleteLoadBalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Load balancer deleting waiting: %v", err))
 		return
@@ -1023,7 +1024,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	}, nil
 }
 
-func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.Listener, error) {
+func toListenersPayload(ctx context.Context, model *Model) ([]loadbalancer.Listener, error) {
 	if model.Listeners.IsNull() || model.Listeners.IsUnknown() {
 		return nil, nil
 	}
@@ -1055,8 +1056,8 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 		}
 		payload = append(payload, loadbalancer.Listener{
 			DisplayName:          conversion.StringValueToPointer(listenerModel.DisplayName),
-			Port:                 conversion.Int64ValueToPointer(listenerModel.Port),
-			Protocol:             loadbalancer.ListenerGetProtocolAttributeType(conversion.StringValueToPointer(listenerModel.Protocol)),
+			Port:                 conversion.Int32ValueToPointer(listenerModel.Port),
+			Protocol:             conversion.StringValueToPointer(listenerModel.Protocol),
 			ServerNameIndicators: serverNameIndicatorsPayload,
 			TargetPool:           conversion.StringValueToPointer(listenerModel.TargetPool),
 			Tcp:                  tcp,
@@ -1064,10 +1065,10 @@ func toListenersPayload(ctx context.Context, model *Model) (*[]loadbalancer.List
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
-func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbalancer.ServerNameIndicator, error) {
+func toServerNameIndicatorsPayload(ctx context.Context, l *listener) ([]loadbalancer.ServerNameIndicator, error) {
 	if l.ServerNameIndicators.IsNull() || l.ServerNameIndicators.IsUnknown() {
 		return nil, nil
 	}
@@ -1086,7 +1087,7 @@ func toServerNameIndicatorsPayload(ctx context.Context, l *listener) (*[]loadbal
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, error) {
@@ -1127,7 +1128,7 @@ func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, e
 	}, nil
 }
 
-func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Network, error) {
+func toNetworksPayload(ctx context.Context, model *Model) ([]loadbalancer.Network, error) {
 	if model.Networks.IsNull() || model.Networks.IsUnknown() {
 		return nil, nil
 	}
@@ -1147,11 +1148,11 @@ func toNetworksPayload(ctx context.Context, model *Model) (*[]loadbalancer.Netwo
 		networkModel := networksModel[i]
 		payload = append(payload, loadbalancer.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
-			Role:      loadbalancer.NetworkGetRoleAttributeType(conversion.StringValueToPointer(networkModel.Role)),
+			Role:      conversion.StringValueToPointer(networkModel.Role),
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBalancerOptions, error) {
@@ -1175,7 +1176,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
-		accessControlPayload.AllowedSourceRanges = &aclModel
+		accessControlPayload.AllowedSourceRanges = aclModel
 	}
 
 	observabilityPayload := &loadbalancer.LoadbalancerOptionObservability{}
@@ -1218,7 +1219,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	return &payload, nil
 }
 
-func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.TargetPool, error) {
+func toTargetPoolsPayload(ctx context.Context, model *Model) ([]loadbalancer.TargetPool, error) {
 	if model.TargetPools.IsNull() || model.TargetPools.IsUnknown() {
 		return nil, nil
 	}
@@ -1254,12 +1255,12 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) (*[]loadbalancer.Ta
 			ActiveHealthCheck:  activeHealthCheckPayload,
 			Name:               conversion.StringValueToPointer(targetPoolModel.Name),
 			SessionPersistence: sessionPersistencePayload,
-			TargetPort:         conversion.Int64ValueToPointer(targetPoolModel.TargetPort),
+			TargetPort:         conversion.Int32ValueToPointer(targetPoolModel.TargetPort),
 			Targets:            targetsPayload,
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 func toTargetPoolUpdatePayload(ctx context.Context, tp *targetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
@@ -1284,7 +1285,7 @@ func toTargetPoolUpdatePayload(ctx context.Context, tp *targetPool) (*loadbalanc
 		ActiveHealthCheck:  activeHealthCheckPayload,
 		Name:               conversion.StringValueToPointer(tp.Name),
 		SessionPersistence: sessionPersistencePayload,
-		TargetPort:         conversion.Int64ValueToPointer(tp.TargetPort),
+		TargetPort:         conversion.Int32ValueToPointer(tp.TargetPort),
 		Targets:            targetsPayload,
 	}, nil
 }
@@ -1317,15 +1318,15 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalan
 	}
 
 	return &loadbalancer.ActiveHealthCheck{
-		HealthyThreshold:   conversion.Int64ValueToPointer(activeHealthCheckModel.HealthyThreshold),
+		HealthyThreshold:   conversion.Int32ValueToPointer(activeHealthCheckModel.HealthyThreshold),
 		Interval:           conversion.StringValueToPointer(activeHealthCheckModel.Interval),
 		IntervalJitter:     conversion.StringValueToPointer(activeHealthCheckModel.IntervalJitter),
 		Timeout:            conversion.StringValueToPointer(activeHealthCheckModel.Timeout),
-		UnhealthyThreshold: conversion.Int64ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
+		UnhealthyThreshold: conversion.Int32ValueToPointer(activeHealthCheckModel.UnhealthyThreshold),
 	}, nil
 }
 
-func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Target, error) {
+func toTargetsPayload(ctx context.Context, tp *targetPool) ([]loadbalancer.Target, error) {
 	if tp.Targets.IsNull() || tp.Targets.IsUnknown() {
 		return nil, nil
 	}
@@ -1349,7 +1350,7 @@ func toTargetsPayload(ctx context.Context, tp *targetPool) (*[]loadbalancer.Targ
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 // mapFields and all other map functions in this file translate an API resource into a Terraform model.
@@ -1410,11 +1411,11 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	listenersList := []attr.Value{}
-	for i, listenerResp := range *loadBalancerResp.Listeners {
+	for i, listenerResp := range loadBalancerResp.Listeners {
 		listenerMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(listenerResp.DisplayName),
-			"port":         types.Int64PointerValue(listenerResp.Port),
-			"protocol":     types.StringValue(string(listenerResp.GetProtocol())),
+			"port":         types.Int32PointerValue(listenerResp.Port),
+			"protocol":     types.StringPointerValue(listenerResp.Protocol),
 			"target_pool":  types.StringPointerValue(listenerResp.TargetPool),
 		}
 
@@ -1453,14 +1454,14 @@ func mapListeners(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	return nil
 }
 
-func mapServerNameIndicators(serverNameIndicatorsResp *[]loadbalancer.ServerNameIndicator, l map[string]attr.Value) error {
-	if serverNameIndicatorsResp == nil || *serverNameIndicatorsResp == nil {
+func mapServerNameIndicators(serverNameIndicatorsResp []loadbalancer.ServerNameIndicator, l map[string]attr.Value) error {
+	if serverNameIndicatorsResp == nil {
 		l["server_name_indicators"] = types.ListNull(types.ObjectType{AttrTypes: serverNameIndicatorTypes})
 		return nil
 	}
 
 	serverNameIndicatorsList := []attr.Value{}
-	for i, serverNameIndicatorResp := range *serverNameIndicatorsResp {
+	for i, serverNameIndicatorResp := range serverNameIndicatorsResp {
 		serverNameIndicatorMap := map[string]attr.Value{
 			"name": types.StringPointerValue(serverNameIndicatorResp.Name),
 		}
@@ -1526,10 +1527,10 @@ func mapNetworks(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error {
 	}
 
 	networksList := []attr.Value{}
-	for i, networkResp := range *loadBalancerResp.Networks {
+	for i, networkResp := range loadBalancerResp.Networks {
 		networkMap := map[string]attr.Value{
 			"network_id": types.StringPointerValue(networkResp.NetworkId),
-			"role":       types.StringValue(string(networkResp.GetRole())),
+			"role":       types.StringPointerValue(networkResp.Role),
 		}
 
 		networkTF, diags := types.ObjectValue(networkTypes, networkMap)
@@ -1634,7 +1635,7 @@ func mapACL(accessControlResp *loadbalancer.LoadbalancerOptionAccessControl, o m
 	}
 
 	aclList := []attr.Value{}
-	for _, rangeResp := range *accessControlResp.AllowedSourceRanges {
+	for _, rangeResp := range accessControlResp.AllowedSourceRanges {
 		rangeTF := types.StringValue(rangeResp)
 		aclList = append(aclList, rangeTF)
 	}
@@ -1655,10 +1656,10 @@ func mapTargetPools(loadBalancerResp *loadbalancer.LoadBalancer, m *Model) error
 	}
 
 	targetPoolsList := []attr.Value{}
-	for i, targetPoolResp := range *loadBalancerResp.TargetPools {
+	for i, targetPoolResp := range loadBalancerResp.TargetPools {
 		targetPoolMap := map[string]attr.Value{
 			"name":        types.StringPointerValue(targetPoolResp.Name),
-			"target_port": types.Int64PointerValue(targetPoolResp.TargetPort),
+			"target_port": types.Int32PointerValue(targetPoolResp.TargetPort),
 		}
 
 		err := mapActiveHealthCheck(targetPoolResp.ActiveHealthCheck, targetPoolMap)
@@ -1703,11 +1704,11 @@ func mapActiveHealthCheck(activeHealthCheckResp *loadbalancer.ActiveHealthCheck,
 	}
 
 	activeHealthCheckMap := map[string]attr.Value{
-		"healthy_threshold":   types.Int64PointerValue(activeHealthCheckResp.HealthyThreshold),
+		"healthy_threshold":   types.Int32PointerValue(activeHealthCheckResp.HealthyThreshold),
 		"interval":            types.StringPointerValue(activeHealthCheckResp.Interval),
 		"interval_jitter":     types.StringPointerValue(activeHealthCheckResp.IntervalJitter),
 		"timeout":             types.StringPointerValue(activeHealthCheckResp.Timeout),
-		"unhealthy_threshold": types.Int64PointerValue(activeHealthCheckResp.UnhealthyThreshold),
+		"unhealthy_threshold": types.Int32PointerValue(activeHealthCheckResp.UnhealthyThreshold),
 	}
 
 	activeHealthCheckTF, diags := types.ObjectValue(activeHealthCheckTypes, activeHealthCheckMap)
@@ -1719,14 +1720,14 @@ func mapActiveHealthCheck(activeHealthCheckResp *loadbalancer.ActiveHealthCheck,
 	return nil
 }
 
-func mapTargets(targetsResp *[]loadbalancer.Target, tp map[string]attr.Value) error {
-	if targetsResp == nil || *targetsResp == nil {
+func mapTargets(targetsResp []loadbalancer.Target, tp map[string]attr.Value) error {
+	if targetsResp == nil {
 		tp["targets"] = types.ListNull(types.ObjectType{AttrTypes: targetTypes})
 		return nil
 	}
 
 	targetsList := []attr.Value{}
-	for i, targetResp := range *targetsResp {
+	for i, targetResp := range targetsResp {
 		targetMap := map[string]attr.Value{
 			"display_name": types.StringPointerValue(targetResp.DisplayName),
 			"ip":           types.StringPointerValue(targetResp.Ip),
