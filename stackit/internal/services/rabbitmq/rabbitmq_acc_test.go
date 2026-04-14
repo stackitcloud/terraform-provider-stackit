@@ -36,7 +36,6 @@ func parametersConfig(params map[string]string) string {
 		"plugins",
 		"roles",
 		"syslog",
-		"tls_ciphers",
 	}
 	var parameters strings.Builder
 	parameters.WriteString("parameters = {")
@@ -108,7 +107,6 @@ func TestAccRabbitMQResource(t *testing.T) {
 					"plugins":            `["rabbitmq_federation"]`,
 					"roles":              `["administrator"]`,
 					"syslog":             `["syslog.example.com:514"]`,
-					"tls_ciphers":        `["TLS_AES_128_GCM_SHA256"]`,
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -133,8 +131,6 @@ func TestAccRabbitMQResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.roles.0", "administrator"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.syslog.0", "syslog.example.com:514"),
-					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.tls_ciphers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_rabbitmq_instance.instance", "parameters.tls_ciphers.0", "TLS_AES_128_GCM_SHA256"),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
