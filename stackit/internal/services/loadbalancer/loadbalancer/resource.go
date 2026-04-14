@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
@@ -62,6 +63,7 @@ type Model struct {
 	TargetPools                    types.List   `tfsdk:"target_pools"`
 	Region                         types.String `tfsdk:"region"`
 	SecurityGroupId                types.String `tfsdk:"security_group_id"`
+	Version                        types.String `tfsdk:"version"`
 }
 
 // Struct corresponding to Model.Listeners[i]
@@ -368,6 +370,7 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 300 seconds, and the maximum value is 3600 seconds. The format is a duration and the unit must be seconds. Example: 30s",
 		"udp_options":                           "Options that are specific to the UDP protocol.",
 		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes. The format is a duration and the unit must be seconds. Example: 30s",
+		"version":                               "Load balancer resource version. This is needed to have concurrency safe updates.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -417,15 +420,12 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"listeners": schema.ListNestedAttribute{
 				Description: descriptions["listeners"],
 				Required:    true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
 				Validators: []validator.List{
 					listvalidator.SizeBetween(1, 20),
 				},
@@ -436,7 +436,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
@@ -444,7 +443,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["port"],
 							Required:    true,
 							PlanModifiers: []planmodifier.Int32{
-								int32planmodifier.RequiresReplace(),
 								int32planmodifier.UseStateForUnknown(),
 							},
 						},
@@ -452,7 +450,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["protocol"],
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
 							},
 							Validators: []validator.String{
@@ -476,7 +473,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 							Description: descriptions["target_pool"],
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
 								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
@@ -557,7 +553,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
@@ -567,7 +562,6 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Set{
-							setplanmodifier.RequiresReplace(),
 							setplanmodifier.UseStateForUnknown(),
 						},
 						Validators: []validator.Set{
@@ -590,8 +584,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.Object{
-							// API docs says observability options are not changeable after creation
-							objectplanmodifier.RequiresReplace(),
+							objectplanmodifier.UseStateForUnknown(),
 						},
 						Attributes: map[string]schema.Attribute{
 							"logs": schema.SingleNestedAttribute{
@@ -605,7 +598,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 										Computed:    true,
 									},
 									"push_url": schema.StringAttribute{
-										Description: descriptions["observability_logs_credentials_ref"],
+										Description: descriptions["observability_logs_push_url"],
 										Optional:    true,
 										Computed:    true,
 									},
@@ -622,7 +615,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 										Computed:    true,
 									},
 									"push_url": schema.StringAttribute{
-										Description: descriptions["observability_metrics_credentials_ref"],
+										Description: descriptions["observability_metrics_push_url"],
 										Optional:    true,
 										Computed:    true,
 									},
@@ -736,6 +729,10 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"version": schema.StringAttribute{
+				Description: descriptions["version"],
+				Computed:    true,
 			},
 		},
 	}
@@ -870,6 +867,14 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	// Get version from state. It's not included in the plan because it's a computed attribute
+	var stateVersion types.String
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("version"), &stateVersion)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	model.Version = stateVersion
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -879,44 +884,21 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	targetPoolsModel := []targetPool{}
-	diags = model.TargetPools.ElementsAs(ctx, &targetPoolsModel, false)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	// Generate API request body from model
+	payload, err := toUpdatePayload(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	for i := range targetPoolsModel {
-		targetPoolModel := targetPoolsModel[i]
-		targetPoolName := targetPoolModel.Name.ValueString()
-		ctx = tflog.SetField(ctx, "target_pool_name", targetPoolName)
 
-		// Generate API request body from model
-		payload, err := toTargetPoolUpdatePayload(ctx, new(targetPoolModel))
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Creating API payload for target pool: %v", err))
-			return
-		}
-
-		// Update target pool
-		_, err = r.client.DefaultAPI.UpdateTargetPool(ctx, projectId, region, name, targetPoolName).UpdateTargetPoolPayload(*payload).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API for target pool: %v", err))
-			return
-		}
-
-		ctx = core.LogResponse(ctx)
-	}
-	ctx = tflog.SetField(ctx, "target_pool_name", nil)
-
-	// Get updated load balancer
-	getResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	loadBalancer, err := r.client.DefaultAPI.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API after update: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating load balancer", fmt.Sprintf("Calling API: %v", utils.PrettyApiErr(ctx, &resp.Diagnostics, err)))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, getResp, &model, region)
+	err = mapFields(ctx, loadBalancer, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating load balancer", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -1024,8 +1006,44 @@ func toCreatePayload(ctx context.Context, model *Model) (*loadbalancer.CreateLoa
 	}, nil
 }
 
+func toUpdatePayload(ctx context.Context, model *Model) (*loadbalancer.UpdateLoadBalancerPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	listenersPayload, err := toListenersPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting listeners: %w", err)
+	}
+	networksPayload, err := toNetworksPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting networks: %w", err)
+	}
+	optionsPayload, err := toOptionsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting options: %w", err)
+	}
+	targetPoolsPayload, err := toTargetPoolsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("converting target_pools: %w", err)
+	}
+
+	return &loadbalancer.UpdateLoadBalancerPayload{
+		Listeners:   listenersPayload,
+		PlanId:      conversion.StringValueToPointer(model.PlanId),
+		Options:     optionsPayload,
+		TargetPools: targetPoolsPayload,
+		Version:     conversion.StringValueToPointer(model.Version),
+		// Not updatable but must be present
+		Name:                                 conversion.StringValueToPointer(model.Name),
+		ExternalAddress:                      conversion.StringValueToPointer(model.ExternalAddress),
+		DisableTargetSecurityGroupAssignment: conversion.BoolValueToPointer(model.DisableSecurityGroupAssignment),
+		Networks:                             networksPayload,
+	}, nil
+}
+
 func toListenersPayload(ctx context.Context, model *Model) ([]loadbalancer.Listener, error) {
-	if model.Listeners.IsNull() || model.Listeners.IsUnknown() {
+	if utils.IsUndefined(model.Listeners) {
 		return nil, nil
 	}
 
@@ -1069,7 +1087,7 @@ func toListenersPayload(ctx context.Context, model *Model) ([]loadbalancer.Liste
 }
 
 func toServerNameIndicatorsPayload(ctx context.Context, l *listener) ([]loadbalancer.ServerNameIndicator, error) {
-	if l.ServerNameIndicators.IsNull() || l.ServerNameIndicators.IsUnknown() {
+	if utils.IsUndefined(l.ServerNameIndicators) {
 		return nil, nil
 	}
 
@@ -1091,7 +1109,7 @@ func toServerNameIndicatorsPayload(ctx context.Context, l *listener) ([]loadbala
 }
 
 func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, error) {
-	if listener.TCP.IsNull() || listener.TCP.IsUnknown() {
+	if utils.IsUndefined(listener.TCP) {
 		return nil, nil
 	}
 
@@ -1100,7 +1118,7 @@ func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, e
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
-	if tcp.IdleTimeout.IsNull() || tcp.IdleTimeout.IsUnknown() {
+	if utils.IsUndefined(tcp.IdleTimeout) {
 		return nil, nil
 	}
 
@@ -1110,7 +1128,7 @@ func toTCP(ctx context.Context, listener *listener) (*loadbalancer.OptionsTCP, e
 }
 
 func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, error) {
-	if listener.UDP.IsNull() || listener.UDP.IsUnknown() {
+	if utils.IsUndefined(listener.UDP) {
 		return nil, nil
 	}
 
@@ -1119,7 +1137,7 @@ func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, e
 	if diags.HasError() {
 		return nil, core.DiagsToError(diags)
 	}
-	if udp.IdleTimeout.IsNull() || udp.IdleTimeout.IsUnknown() {
+	if utils.IsUndefined(udp.IdleTimeout) {
 		return nil, nil
 	}
 
@@ -1129,7 +1147,7 @@ func toUDP(ctx context.Context, listener *listener) (*loadbalancer.OptionsUDP, e
 }
 
 func toNetworksPayload(ctx context.Context, model *Model) ([]loadbalancer.Network, error) {
-	if model.Networks.IsNull() || model.Networks.IsUnknown() {
+	if utils.IsUndefined(model.Networks) {
 		return nil, nil
 	}
 
@@ -1156,7 +1174,7 @@ func toNetworksPayload(ctx context.Context, model *Model) ([]loadbalancer.Networ
 }
 
 func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBalancerOptions, error) {
-	if model.Options.IsNull() || model.Options.IsUnknown() {
+	if utils.IsUndefined(model.Options) {
 		return &loadbalancer.LoadBalancerOptions{
 			AccessControl: &loadbalancer.LoadbalancerOptionAccessControl{},
 			Observability: &loadbalancer.LoadbalancerOptionObservability{},
@@ -1170,7 +1188,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 	}
 
 	accessControlPayload := &loadbalancer.LoadbalancerOptionAccessControl{}
-	if !(optionsModel.ACL.IsNull() || optionsModel.ACL.IsUnknown()) {
+	if !utils.IsUndefined(optionsModel.ACL) {
 		var aclModel []string
 		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
 		if diags.HasError() {
@@ -1179,9 +1197,10 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 		accessControlPayload.AllowedSourceRanges = aclModel
 	}
 
-	observabilityPayload := &loadbalancer.LoadbalancerOptionObservability{}
-	if !(optionsModel.Observability.IsNull() || optionsModel.Observability.IsUnknown()) {
+	var observabilityPayload *loadbalancer.LoadbalancerOptionObservability
+	if !utils.IsUndefined(optionsModel.Observability) {
 		observabilityModel := observability{}
+		observabilityPayload = &loadbalancer.LoadbalancerOptionObservability{}
 		diags := optionsModel.Observability.As(ctx, &observabilityModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting observability: %w", core.DiagsToError(diags))
@@ -1220,7 +1239,7 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 }
 
 func toTargetPoolsPayload(ctx context.Context, model *Model) ([]loadbalancer.TargetPool, error) {
-	if model.TargetPools.IsNull() || model.TargetPools.IsUnknown() {
+	if utils.IsUndefined(model.TargetPools) {
 		return nil, nil
 	}
 
@@ -1263,35 +1282,8 @@ func toTargetPoolsPayload(ctx context.Context, model *Model) ([]loadbalancer.Tar
 	return payload, nil
 }
 
-func toTargetPoolUpdatePayload(ctx context.Context, tp *targetPool) (*loadbalancer.UpdateTargetPoolPayload, error) {
-	if tp == nil {
-		return nil, fmt.Errorf("nil target pool")
-	}
-
-	activeHealthCheckPayload, err := toActiveHealthCheckPayload(ctx, tp)
-	if err != nil {
-		return nil, fmt.Errorf("converting active_health_check: %w", err)
-	}
-	sessionPersistencePayload, err := toSessionPersistencePayload(ctx, tp)
-	if err != nil {
-		return nil, fmt.Errorf("converting session_persistence: %w", err)
-	}
-	targetsPayload, err := toTargetsPayload(ctx, tp)
-	if err != nil {
-		return nil, fmt.Errorf("converting targets: %w", err)
-	}
-
-	return &loadbalancer.UpdateTargetPoolPayload{
-		ActiveHealthCheck:  activeHealthCheckPayload,
-		Name:               conversion.StringValueToPointer(tp.Name),
-		SessionPersistence: sessionPersistencePayload,
-		TargetPort:         conversion.Int32ValueToPointer(tp.TargetPort),
-		Targets:            targetsPayload,
-	}, nil
-}
-
 func toSessionPersistencePayload(ctx context.Context, tp *targetPool) (*loadbalancer.SessionPersistence, error) {
-	if tp.SessionPersistence.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
+	if utils.IsUndefined(tp.SessionPersistence) {
 		return nil, nil
 	}
 
@@ -1307,7 +1299,7 @@ func toSessionPersistencePayload(ctx context.Context, tp *targetPool) (*loadbala
 }
 
 func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalancer.ActiveHealthCheck, error) {
-	if tp.ActiveHealthCheck.IsNull() || tp.ActiveHealthCheck.IsUnknown() {
+	if utils.IsUndefined(tp.ActiveHealthCheck) {
 		return nil, nil
 	}
 
@@ -1327,7 +1319,7 @@ func toActiveHealthCheckPayload(ctx context.Context, tp *targetPool) (*loadbalan
 }
 
 func toTargetsPayload(ctx context.Context, tp *targetPool) ([]loadbalancer.Target, error) {
-	if tp.Targets.IsNull() || tp.Targets.IsUnknown() {
+	if utils.IsUndefined(tp.Targets) {
 		return nil, nil
 	}
 
@@ -1378,6 +1370,7 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 	m.ExternalAddress = types.StringPointerValue(lb.ExternalAddress)
 	m.PrivateAddress = types.StringPointerValue(lb.PrivateAddress)
 	m.DisableSecurityGroupAssignment = types.BoolPointerValue(lb.DisableTargetSecurityGroupAssignment)
+	m.Version = types.StringPointerValue(lb.Version)
 
 	if lb.TargetSecurityGroup != nil {
 		m.SecurityGroupId = types.StringPointerValue(lb.TargetSecurityGroup.Id)
@@ -1563,13 +1556,13 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 
 	// If the private_network_only field is nil in the response but is explicitly set to false in the model,
 	// we set it to false in the TF state to prevent an inconsistent result after apply error
-	if !m.Options.IsNull() && !m.Options.IsUnknown() {
+	if !utils.IsUndefined(m.Options) {
 		optionsModel := options{}
 		diags := m.Options.As(ctx, &optionsModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return fmt.Errorf("convert options: %w", core.DiagsToError(diags))
 		}
-		if loadBalancerResp.Options.PrivateNetworkOnly == nil && !optionsModel.PrivateNetworkOnly.IsNull() && !optionsModel.PrivateNetworkOnly.IsUnknown() && !optionsModel.PrivateNetworkOnly.ValueBool() {
+		if loadBalancerResp.Options.PrivateNetworkOnly == nil && !utils.IsUndefined(optionsModel.PrivateNetworkOnly) && !optionsModel.PrivateNetworkOnly.ValueBool() {
 			privateNetworkOnlyTF = types.BoolValue(false)
 		}
 	}
@@ -1618,6 +1611,10 @@ func mapOptions(ctx context.Context, loadBalancerResp *loadbalancer.LoadBalancer
 		return core.DiagsToError(diags)
 	}
 	optionsMap["observability"] = observabilityTF
+
+	if loadBalancerResp.Options.Observability == nil {
+		optionsMap["observability"] = types.ObjectNull(observabilityTypes)
+	}
 
 	optionsTF, diags := types.ObjectValue(optionsTypes, optionsMap)
 	if diags.HasError() {

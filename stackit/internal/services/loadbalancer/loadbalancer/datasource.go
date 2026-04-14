@@ -112,6 +112,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 5 minutes, and the maximum value is one hour.",
 		"udp_options":                           "Options that are specific to the UDP protocol.",
 		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes.",
+		"version":                               "Load balancer resource version.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -373,6 +374,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"security_group_id": schema.StringAttribute{
 				Description: descriptions["security_group_id"],
+				Computed:    true,
+			},
+			"version": schema.StringAttribute{
+				Description: descriptions["version"],
 				Computed:    true,
 			},
 		},

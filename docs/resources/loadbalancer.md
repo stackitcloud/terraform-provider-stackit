@@ -247,6 +247,7 @@ import {
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`","region","`name`".
 - `private_address` (String) Transient private Load Balancer IP address. It can change any time.
 - `security_group_id` (String) The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.
+- `version` (String) Load balancer resource version. This is needed to have concurrency safe updates.
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
@@ -365,7 +366,7 @@ Optional:
 Optional:
 
 - `credentials_ref` (String) Credentials reference for logs. Not changeable after creation.
-- `push_url` (String) Credentials reference for logs. Not changeable after creation.
+- `push_url` (String) The ARGUS/Loki remote write Push URL to ship the logs to. Not changeable after creation.
 
 
 <a id="nestedatt--options--observability--metrics"></a>
@@ -374,4 +375,4 @@ Optional:
 Optional:
 
 - `credentials_ref` (String) Credentials reference for metrics. Not changeable after creation.
-- `push_url` (String) Credentials reference for metrics. Not changeable after creation.
+- `push_url` (String) The ARGUS/Prometheus remote write Push URL to ship the metrics to. Not changeable after creation.
