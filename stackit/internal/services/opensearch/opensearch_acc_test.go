@@ -298,8 +298,8 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["sgw_acl"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["syslog"])),
-					//resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
-					//resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_ciphers"])),
+					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
+					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_ciphers"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_protocols.#", "1"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_protocols.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_protocols"])),
 
@@ -375,8 +375,8 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["sgw_acl"])),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["syslog"])),
-					//resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
-					//resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_ciphers"])),
+					// resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
+					// resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_ciphers"])),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_protocols.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_protocols.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_protocols"])),
 
@@ -467,8 +467,8 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["sgw_acl"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["syslog"])),
-					//resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
-					//resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["tls_ciphers"])),
+					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
+					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["tls_ciphers"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_protocols.#", "1"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_protocols.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["tls_protocols"])),
 

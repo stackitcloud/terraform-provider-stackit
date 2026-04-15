@@ -24,18 +24,18 @@ resource "stackit_opensearch_instance" "instance" {
   version    = var.instance_version
   plan_name  = var.plan_name
   parameters = {
-    enable_monitoring = var.enable_monitoring
-    graphite          = var.graphite
+    enable_monitoring      = var.enable_monitoring
+    graphite               = var.graphite
     java_garbage_collector = var.java_garbage_collector
-    java_heapspace = var.java_heapspace
-    java_maxmetaspace = var.java_maxmetaspace
-    max_disk_threshold = var.max_disk_threshold
-    metrics_frequency = var.metrics_frequency
-    metrics_prefix = var.metrics_prefix
+    java_heapspace         = var.java_heapspace
+    java_maxmetaspace      = var.java_maxmetaspace
+    max_disk_threshold     = var.max_disk_threshold
+    metrics_frequency      = var.metrics_frequency
+    metrics_prefix         = var.metrics_prefix
     monitoring_instance_id = stackit_observability_instance.instance.instance_id
-    plugins = var.plugin != "" ? [var.plugin] : []
-    sgw_acl = var.sgw_acl
-    syslog = [var.syslog]
+    plugins                = var.plugin != "" ? [var.plugin] : []
+    sgw_acl                = var.sgw_acl
+    syslog                 = [var.syslog]
     # tls_ciphers = [var.tls_ciphers]
     tls_protocols = [var.tls_protocols]
   }
