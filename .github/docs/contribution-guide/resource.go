@@ -2,7 +2,9 @@ package foo
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	fooUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/foo/utils"
@@ -255,12 +258,21 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	barId := model.BarId.ValueString()
+	if barId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "bar_id", barId)
 
 	barResp, err := r.client.GetBar(ctx, projectId, region, barId).Execute()
 	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading bar", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -308,6 +320,10 @@ func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	// Delete existing bar
 	_, err := r.client.DeleteBar(ctx, projectId, region, barId).Execute()
 	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bar", fmt.Sprintf("Calling API: %v", err))
 	}
 
