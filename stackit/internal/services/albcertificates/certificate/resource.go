@@ -130,7 +130,7 @@ func (r *certificatesResource) Schema(_ context.Context, _ resource.SchemaReques
 		MarkdownDescription: `
 ## Setting up supporting infrastructure` + "\n" + `
 
-The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the the automatic creation of a TLS certificate resource.
+The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the automatic creation of a TLS certificate resource.
 `,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

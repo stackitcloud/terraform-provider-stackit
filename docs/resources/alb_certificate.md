@@ -4,7 +4,7 @@ page_title: "stackit_alb_certificate Resource - stackit"
 subcategory: ""
 description: |-
   Setting up supporting infrastructure
-  The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the the automatic creation of a TLS certificate resource.
+  The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the automatic creation of a TLS certificate resource.
 ---
 
 # stackit_alb_certificate (Resource)
@@ -12,7 +12,7 @@ description: |-
 ## Setting up supporting infrastructure
 
 
-The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the the automatic creation of a TLS certificate resource.
+The example below creates the supporting infrastructure using the STACKIT Terraform provider, including the automatic creation of a TLS certificate resource.
 
 ## Example Usage
 
