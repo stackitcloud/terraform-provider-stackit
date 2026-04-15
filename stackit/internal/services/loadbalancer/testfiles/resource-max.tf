@@ -80,7 +80,7 @@ resource "stackit_server" "server" {
   boot_volume = {
     size                  = 32
     source_type           = "image"
-    source_id             = "59838a89-51b1-4892-b57f-b3caf598ee2f"
+    source_id             = "7b10e105-295b-4369-b6e0-567ec940a02b"
     delete_on_termination = "true"
   }
   network_interfaces = [stackit_network_interface.network_interface.network_interface_id]
@@ -109,9 +109,9 @@ resource "stackit_loadbalancer" "loadbalancer" {
         timeout             = var.sni_health_timeout
         unhealthy_threshold = var.sni_unhealthy_threshold
       }
-      session_persistence = {
+      session_persistence = var.sni_use_source_ip_address ? {
         use_source_ip_address = var.sni_use_source_ip_address
-      }
+      } : null
     },
     {
       name        = var.udp_target_pool_name
@@ -130,11 +130,11 @@ resource "stackit_loadbalancer" "loadbalancer" {
       port         = var.sni_listener_port
       protocol     = var.sni_listener_protocol
       target_pool  = var.sni_target_pool_name
-      server_name_indicators = [
+      server_name_indicators = var.sni_listener_server_name_indicators != "" ? [
         {
           name = var.sni_listener_server_name_indicators
         }
-      ]
+      ] : null
       tcp = {
         idle_timeout = var.sni_idle_timeout
       }

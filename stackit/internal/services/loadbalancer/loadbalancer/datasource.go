@@ -15,12 +15,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -111,6 +112,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 5 minutes, and the maximum value is one hour.",
 		"udp_options":                           "Options that are specific to the UDP protocol.",
 		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes.",
+		"version":                               "Load balancer resource version.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -151,7 +153,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: descriptions["listeners.display_name"],
 							Computed:    true,
 						},
-						"port": schema.Int64Attribute{
+						"port": schema.Int32Attribute{
 							Description: descriptions["port"],
 							Computed:    true,
 						},
@@ -160,8 +162,9 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Computed:    true,
 						},
 						"server_name_indicators": schema.ListNestedAttribute{
-							Description: descriptions["server_name_indicators"],
-							Optional:    true,
+							Description:        descriptions["server_name_indicators"],
+							DeprecationMessage: "`server_name_indicators` is deprecated and will be removed after October 2026",
+							Optional:           true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"name": schema.StringAttribute{
@@ -326,7 +329,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Description: descriptions["target_pools.name"],
 							Computed:    true,
 						},
-						"target_port": schema.Int64Attribute{
+						"target_port": schema.Int32Attribute{
 							Description: descriptions["target_port"],
 							Computed:    true,
 						},
@@ -373,6 +376,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: descriptions["security_group_id"],
 				Computed:    true,
 			},
+			"version": schema.StringAttribute{
+				Description: descriptions["version"],
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -395,7 +402,7 @@ func (r *loadBalancerDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

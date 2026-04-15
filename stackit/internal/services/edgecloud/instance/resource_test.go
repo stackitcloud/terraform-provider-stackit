@@ -8,8 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -25,13 +24,13 @@ func TestMapFields(t *testing.T) {
 		{
 			"all_parameter_set",
 			&edge.Instance{
-				Id:          new("iid-123"),
-				Created:     &testTime,
-				DisplayName: new("test-instance"),
+				Id:          "iid-123",
+				Created:     testTime,
+				DisplayName: "test-instance",
 				Description: new("Test description"),
-				PlanId:      new(uuidString),
-				Status:      utils.Ptr(edge.InstanceStatus("CREATING")),
-				FrontendUrl: new("https://iid-123.example.com"),
+				PlanId:      uuidString,
+				Status:      "CREATING",
+				FrontendUrl: "https://iid-123.example.com",
 			},
 			&Model{
 				ProjectId: types.StringValue(uuidString),
@@ -54,13 +53,13 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty_description",
 			&edge.Instance{
-				Id:          new("iid-123"),
-				Created:     &testTime,
-				DisplayName: new("test-instance"),
+				Id:          "iid-123",
+				Created:     testTime,
+				DisplayName: "test-instance",
 				Description: new(""),
-				PlanId:      new(uuidString),
-				Status:      utils.Ptr(edge.InstanceStatus("ACTIVE")),
-				FrontendUrl: new("https://iid-123.example.com"),
+				PlanId:      uuidString,
+				Status:      "ACTIVE",
+				FrontendUrl: "https://iid-123.example.com",
 			},
 			&Model{
 				ProjectId: types.StringValue(uuidString),
@@ -132,9 +131,9 @@ func TestToCreatePayload(t *testing.T) {
 				PlanID:      types.StringValue(uuidString),
 			},
 			edge.CreateInstancePayload{
-				DisplayName: new("new-instance"),
+				DisplayName: "new-instance",
 				Description: new("A new test instance"),
-				PlanId:      new(uuidString),
+				PlanId:      uuidString,
 			},
 			true,
 		},
@@ -146,9 +145,9 @@ func TestToCreatePayload(t *testing.T) {
 				PlanID:      types.StringValue(uuidString),
 			},
 			edge.CreateInstancePayload{
-				DisplayName: new("new-instance"),
+				DisplayName: "new-instance",
 				Description: nil,
-				PlanId:      new(uuidString),
+				PlanId:      uuidString,
 			},
 			true,
 		},
