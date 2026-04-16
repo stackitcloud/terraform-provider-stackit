@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
 func TestToCreatePayload(t *testing.T) {
@@ -59,20 +60,20 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	tests := map[string]struct {
 		Input    *Model
-		Expected *cdn.CreateDistributionPayload
+		Expected *cdnSdk.CreateDistributionPayload
 		IsValid  bool
 	}{
 		"happy_path": {
 			Input: modelFixture(),
-			Expected: &cdn.CreateDistributionPayload{
-				Regions:          &[]cdn.Region{"EU", "US"},
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
-				Backend: &cdn.CreateDistributionPayloadBackend{
-					HttpBackendCreate: &cdn.HttpBackendCreate{
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
 						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
 						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
-						OriginUrl:            new("https://www.mycoolapp.com"),
-						Type:                 new("http"),
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
 					},
 				},
 			},
@@ -87,16 +88,16 @@ func TestToCreatePayload(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
-			Expected: &cdn.CreateDistributionPayload{
-				Regions:          &[]cdn.Region{"EU", "US"},
-				Optimizer:        cdn.NewOptimizer(true),
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
-				Backend: &cdn.CreateDistributionPayloadBackend{
-					HttpBackendCreate: &cdn.HttpBackendCreate{
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				Optimizer:        cdnSdk.NewOptimizer(true),
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
 						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
 						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
-						OriginUrl:            new("https://www.mycoolapp.com"),
-						Type:                 new("http"),
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
 					},
 				},
 			},
@@ -124,20 +125,20 @@ func TestToCreatePayload(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 				})
 			}),
-			Expected: &cdn.CreateDistributionPayload{
-				Backend: &cdn.CreateDistributionPayloadBackend{
-					BucketBackendCreate: &cdn.BucketBackendCreate{
-						Type:      new("bucket"),
-						BucketUrl: new("https://s3.example.com"),
-						Region:    new("eu01"),
-						Credentials: &cdn.BucketCredentials{
-							AccessKeyId:     new("my-access"),
-							SecretAccessKey: new("my-secret"),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					BucketBackendCreate: &cdnSdk.BucketBackendCreate{
+						Type:      "bucket",
+						BucketUrl: "https://s3.example.com",
+						Region:    "eu01",
+						Credentials: cdnSdk.BucketCredentials{
+							AccessKeyId:     "my-access",
+							SecretAccessKey: "my-secret",
 						},
 					},
 				},
-				Regions:          &[]cdn.Region{"EU", "US"},
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -222,27 +223,27 @@ func TestConvertConfig(t *testing.T) {
 	}
 	tests := map[string]struct {
 		Input    *Model
-		Expected *cdn.Config
+		Expected *cdnSdk.Config
 		IsValid  bool
 	}{
 		"happy_path": {
 			Input: modelFixture(),
-			Expected: &cdn.Config{
-				Backend: &cdn.ConfigBackend{
-					HttpBackend: &cdn.HttpBackend{
-						OriginRequestHeaders: &map[string]string{
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
 							"testHeader0": "testHeaderValue0",
 							"testHeader1": "testHeaderValue1",
 						},
-						OriginUrl: new("https://www.mycoolapp.com"),
-						Type:      new("http"),
-						Geofencing: &map[string][]string{
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
 							"https://de.mycoolapp.com": {"DE", "FR"},
 						},
 					},
 				},
-				Regions:          &[]cdn.Region{"EU", "US"},
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -255,23 +256,23 @@ func TestConvertConfig(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
-			Expected: &cdn.Config{
-				Backend: &cdn.ConfigBackend{
-					HttpBackend: &cdn.HttpBackend{
-						OriginRequestHeaders: &map[string]string{
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
 							"testHeader0": "testHeaderValue0",
 							"testHeader1": "testHeaderValue1",
 						},
-						OriginUrl: new("https://www.mycoolapp.com"),
-						Type:      new("http"),
-						Geofencing: &map[string][]string{
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
 							"https://de.mycoolapp.com": {"DE", "FR"},
 						},
 					},
 				},
-				Regions:          &[]cdn.Region{"EU", "US"},
-				Optimizer:        cdn.NewOptimizer(true),
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				Optimizer:        cdnSdk.NewOptimizer(true),
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -297,18 +298,18 @@ func TestConvertConfig(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 				})
 			}),
-			Expected: &cdn.Config{
-				Backend: &cdn.ConfigBackend{
-					BucketBackend: &cdn.BucketBackend{
-						Type:      new("bucket"),
-						BucketUrl: new("https://s3.example.com"),
-						Region:    new("eu01"),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					BucketBackend: &cdnSdk.BucketBackend{
+						Type:      "bucket",
+						BucketUrl: "https://s3.example.com",
+						Region:    "eu01",
 						// Note: config does not return credentials
 
 					},
 				},
-				Regions:          &[]cdn.Region{"EU", "US"},
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
 			},
 			IsValid: true,
 		},
@@ -335,7 +336,14 @@ func TestConvertConfig(t *testing.T) {
 				t.Fatalf("Should have failed")
 			}
 			if tc.IsValid {
-				diff := cmp.Diff(res, tc.Expected)
+				diff := cmp.Diff(res, tc.Expected,
+					// The struct contains now a NullableString and NullableInt64.
+					// Previously those were pointers which could be compared but the value of those
+					// are unexported and therefore cmp cannot compare them.
+					cmpopts.IgnoreUnexported(
+						cdnSdk.NullableString{},
+						cdnSdk.NullableInt64{},
+					))
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
@@ -405,35 +413,35 @@ func TestMapFields(t *testing.T) {
 		}
 		return model
 	}
-	distributionFixture := func(mods ...func(*cdn.Distribution)) *cdn.Distribution {
-		distribution := &cdn.Distribution{
-			Config: &cdn.Config{
-				Backend: &cdn.ConfigBackend{
-					HttpBackend: &cdn.HttpBackend{
-						OriginRequestHeaders: &map[string]string{
+	distributionFixture := func(mods ...func(*cdnSdk.Distribution)) *cdnSdk.Distribution {
+		distribution := &cdnSdk.Distribution{
+			Config: cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
 							"testHeader0": "testHeaderValue0",
 							"testHeader1": "testHeaderValue1",
 						},
-						OriginUrl: new("https://www.mycoolapp.com"),
-						Type:      new("http"),
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
 					},
 				},
-				Regions:          &[]cdn.Region{"EU", "US"},
-				BlockedCountries: &[]string{"XX", "YY", "ZZ"},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
 				Optimizer:        nil,
 			},
-			CreatedAt: &createdAt,
-			Domains: &[]cdn.Domain{
+			CreatedAt: createdAt,
+			Domains: []cdnSdk.Domain{
 				{
-					Name:   new("test.stackit-cdn.com"),
-					Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
-					Type:   cdn.DOMAINTYPE_MANAGED.Ptr(),
+					Name:   "test.stackit-cdn.com",
+					Status: cdnSdk.DOMAINSTATUS_ACTIVE,
+					Type:   "managed",
 				},
 			},
-			Id:        new("test-distribution-id"),
-			ProjectId: new("test-project-id"),
-			Status:    cdn.DISTRIBUTIONSTATUS_ACTIVE.Ptr(),
-			UpdatedAt: &updatedAt,
+			Id:        "test-distribution-id",
+			ProjectId: "test-project-id",
+			Status:    "ACTIVE",
+			UpdatedAt: updatedAt,
 		}
 		for _, mod := range mods {
 			mod(distribution)
@@ -461,7 +469,7 @@ func TestMapFields(t *testing.T) {
 		"optimizer":         types.ObjectNull(optimizerTypes),
 	})
 	tests := map[string]struct {
-		Input        *cdn.Distribution
+		Input        *cdnSdk.Distribution
 		Expected     *Model
 		InitialState *Model
 		IsValid      bool
@@ -480,9 +488,9 @@ func TestMapFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Config.Optimizer = &cdn.Optimizer{
-					Enabled: new(true),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Optimizer = &cdnSdk.Optimizer{
+					Enabled: true,
 				}
 			}),
 			IsValid: true,
@@ -505,8 +513,8 @@ func TestMapFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 				})
 			}),
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Config.Backend.HttpBackend.Geofencing = &geofencingInput
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Backend.HttpBackend.Geofencing = geofencingInput
 			}),
 			IsValid: true,
 		},
@@ -514,8 +522,8 @@ func TestMapFields(t *testing.T) {
 			Expected: expectedModel(func(m *Model) {
 				m.Status = types.StringValue("ERROR")
 			}),
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Status = cdn.DISTRIBUTIONSTATUS_ERROR.Ptr()
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Status = "ERROR"
 			}),
 			IsValid: true,
 		},
@@ -536,29 +544,29 @@ func TestMapFields(t *testing.T) {
 				domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain, customDomain})
 				m.Domains = domains
 			}),
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Domains = &[]cdn.Domain{
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Domains = []cdnSdk.Domain{
 					{
-						Name:   new("test.stackit-cdn.com"),
-						Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
-						Type:   cdn.DOMAINTYPE_MANAGED.Ptr(),
+						Name:   "test.stackit-cdn.com",
+						Status: cdnSdk.DOMAINSTATUS_ACTIVE,
+						Type:   "managed",
 					},
 					{
-						Name:   new("mycoolapp.info"),
-						Status: cdn.DOMAINSTATUS_ACTIVE.Ptr(),
-						Type:   cdn.DOMAINTYPE_CUSTOM.Ptr(),
+						Name:   "mycoolapp.info",
+						Status: cdnSdk.DOMAINSTATUS_ACTIVE,
+						Type:   "custom",
 					},
 				}
 			}),
 			IsValid: true,
 		},
 		"happy_path_bucket_restore_creds": {
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Config.Backend = &cdn.ConfigBackend{
-					BucketBackend: &cdn.BucketBackend{
-						Type:      new("bucket"),
-						BucketUrl: new("https://s3.example.com"),
-						Region:    new("eu01"),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Backend = cdnSdk.ConfigBackend{
+					BucketBackend: &cdnSdk.BucketBackend{
+						Type:      "bucket",
+						BucketUrl: "https://s3.example.com",
+						Region:    "eu01",
 					},
 				}
 			}),
@@ -577,15 +585,15 @@ func TestMapFields(t *testing.T) {
 		},
 		"sad_path_project_id_missing": {
 			Expected: expectedModel(),
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.ProjectId = nil
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.ProjectId = ""
 			}),
 			IsValid: false,
 		},
 		"sad_path_distribution_id_missing": {
 			Expected: expectedModel(),
-			Input: distributionFixture(func(d *cdn.Distribution) {
-				d.Id = nil
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Id = ""
 			}),
 			IsValid: false,
 		},

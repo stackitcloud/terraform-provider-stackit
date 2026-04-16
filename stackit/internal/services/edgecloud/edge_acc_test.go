@@ -15,10 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge"
-	"github.com/stackitcloud/stackit-sdk-go/services/edge/wait"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -70,7 +70,7 @@ func TestAccEdgeCloudInstanceMin(t *testing.T) {
 		Steps: []resource.TestStep{
 			// resources
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// instance
@@ -97,7 +97,7 @@ func TestAccEdgeCloudInstanceMin(t *testing.T) {
 			// data sources
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_edgecloud_instances.this", "id", fmt.Sprintf("%s,%s",
 						testutil.ProjectId,
@@ -140,7 +140,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: initialVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_edgecloud_instance.test_instance", "project_id", testutil.ProjectId),
@@ -156,7 +156,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			// Data sources
 			{
 				ConfigVariables: initialVars,
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_edgecloud_instances.this", "id", fmt.Sprintf("%s,%s",
 						testutil.ProjectId,
@@ -180,7 +180,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			},
 			// Kubeconfig
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: initialVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Kubeconfig by name
@@ -206,7 +206,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			},
 			// Token
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: initialVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Token by name
@@ -232,7 +232,7 @@ func TestAccEdgeCloudMax(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: updatedVars,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_edgecloud_instance.test_instance", "plan_id", testPlanIdUpdated),
@@ -271,19 +271,19 @@ func TestAccEdgeCloudInstance_validation(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Display Name Too Short
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMax(tooShortDisplayName, testPlanId, testDescription, testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`string length must be between 4 and 8, got: %d`, len(tooShortDisplayName))),
 			},
 			// Display Name Too Long
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMax(tooLongDisplayName, testPlanId, testDescription, testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`string length must be between 4 and 8, got: %d`, len(tooLongDisplayName))),
 			},
 			// Invalid Project ID
 			{
-				Config: testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: config.Variables{
 					"project_id":   config.StringVariable(invalidUUID),
 					"region":       config.StringVariable(testutil.Region),
@@ -294,13 +294,13 @@ func TestAccEdgeCloudInstance_validation(t *testing.T) {
 			},
 			// Invalid Plan ID
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMax(validDisplayName, invalidUUID, testDescription, testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`Attribute plan_id value must be an UUID, got: %s`, invalidUUID)),
 			},
 			// Description Too Long
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMax(validDisplayName, testPlanId, acctest.RandString(257), testExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(`Attribute description string length must be at most 256`),
 			},
@@ -318,13 +318,13 @@ func TestAccEdgeCloudKubeconfigToken_validation(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Expiration too short
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMax(displayName, testPlanId, testDescription, tooShortExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`Attribute expiration value must be between 600 and 15552000, got: %d`, tooShortExpiration)),
 			},
 			// Expiration Too Long
 			{
-				Config:          testutil.EdgeCloudProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMax(displayName, testPlanId, testDescription, tooLongExpiration, testRecreateBefore),
 				ExpectError:     regexp.MustCompile(fmt.Sprintf(`Attribute expiration value must be between 600 and 15552000, got: %d`, tooLongExpiration)),
 			},
@@ -335,14 +335,7 @@ func TestAccEdgeCloudKubeconfigToken_validation(t *testing.T) {
 // testAccCheckEdgeCloudInstanceDestroy verifies that test resources are properly destroyed
 func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *edge.APIClient
-	var err error
-
-	if testutil.EdgeCloudCustomEndpoint != "" {
-		client, err = edge.NewAPIClient(coreConfig.WithEndpoint(testutil.EdgeCloudCustomEndpoint))
-	} else {
-		client, err = edge.NewAPIClient()
-	}
+	client, err := edge.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.EdgeCloudCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -357,7 +350,7 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 		}
 		projectId, region, instanceId := idParts[0], idParts[1], idParts[2]
 
-		_, err := client.GetInstance(ctx, projectId, region, instanceId).Execute()
+		_, err := client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 		if err == nil {
 			return fmt.Errorf("edge instance %q still exists", instanceId)
 		}
@@ -366,11 +359,11 @@ func testAccCheckEdgeCloudInstanceDestroy(s *terraform.State) error {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
 		if !ok || oapiErr.StatusCode != http.StatusNotFound {
-			err := client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+			err := client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", instanceId, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client, projectId, region, instanceId).WaitWithContext(ctx)
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("waiting for instance deletion %s during CheckDestroy: %w", instanceId, err)
 			}

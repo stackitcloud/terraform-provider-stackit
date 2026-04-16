@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
 )
 
 type ResourceType string
@@ -27,6 +27,9 @@ const (
 	DatasourceRegionFallbackDocstring = "Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level."
 )
 
+var DefaultTimeoutMargin = 3 * time.Minute
+var DefaultOperationTimeout = 30 * time.Minute
+
 type EphemeralProviderData struct {
 	ProviderData
 }
@@ -37,6 +40,7 @@ type ProviderData struct {
 	// Deprecated: Use DefaultRegion instead
 	Region                          string
 	DefaultRegion                   string
+	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string

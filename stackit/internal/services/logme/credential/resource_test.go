@@ -5,46 +5,46 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *logme.CredentialsResponse
+		input       *logmeSdk.CredentialsResponse
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&logme.CredentialsResponse{
-				Id:  new("cid"),
-				Raw: &logme.RawCredentials{},
+			&logmeSdk.CredentialsResponse{
+				Id:  "cid",
+				Raw: &logmeSdk.RawCredentials{},
 			},
 			Model{
 				Id:           types.StringValue("pid,iid,cid"),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
-				Host:         types.StringNull(),
-				Password:     types.StringNull(),
-				Port:         types.Int64Null(),
+				Host:         types.StringValue(""),
+				Password:     types.StringValue(""),
+				Port:         types.Int32Null(),
 				Uri:          types.StringNull(),
-				Username:     types.StringNull(),
+				Username:     types.StringValue(""),
 			},
 			true,
 		},
 		{
 			"simple_values",
-			&logme.CredentialsResponse{
-				Id: new("cid"),
-				Raw: &logme.RawCredentials{
-					Credentials: &logme.Credentials{
-						Host:     new("host"),
-						Password: new("password"),
-						Port:     new(int64(1234)),
+			&logmeSdk.CredentialsResponse{
+				Id: "cid",
+				Raw: &logmeSdk.RawCredentials{
+					Credentials: logmeSdk.Credentials{
+						Host:     "host",
+						Password: "password",
+						Port:     new(int32(1234)),
 						Uri:      new("uri"),
-						Username: new("username"),
+						Username: "username",
 					},
 				},
 			},
@@ -55,7 +55,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:    types.StringValue("pid"),
 				Host:         types.StringValue("host"),
 				Password:     types.StringValue("password"),
-				Port:         types.Int64Value(1234),
+				Port:         types.Int32Value(1234),
 				Uri:          types.StringValue("uri"),
 				Username:     types.StringValue("username"),
 			},
@@ -63,15 +63,15 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"null_fields_and_int_conversions",
-			&logme.CredentialsResponse{
-				Id: new("cid"),
-				Raw: &logme.RawCredentials{
-					Credentials: &logme.Credentials{
-						Host:     new(""),
-						Password: new(""),
-						Port:     new(int64(2123456789)),
+			&logmeSdk.CredentialsResponse{
+				Id: "cid",
+				Raw: &logmeSdk.RawCredentials{
+					Credentials: logmeSdk.Credentials{
+						Host:     "",
+						Password: "",
+						Port:     new(int32(2123456789)),
 						Uri:      nil,
-						Username: new(""),
+						Username: "",
 					},
 				},
 			},
@@ -82,7 +82,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:    types.StringValue("pid"),
 				Host:         types.StringValue(""),
 				Password:     types.StringValue(""),
-				Port:         types.Int64Value(2123456789),
+				Port:         types.Int32Value(2123456789),
 				Uri:          types.StringNull(),
 				Username:     types.StringValue(""),
 			},
@@ -96,14 +96,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
-			&logme.CredentialsResponse{},
+			&logmeSdk.CredentialsResponse{},
 			Model{},
 			false,
 		},
 		{
 			"nil_raw_credential",
-			&logme.CredentialsResponse{
-				Id: new("cid"),
+			&logmeSdk.CredentialsResponse{
+				Id: "cid",
 			},
 			Model{},
 			false,

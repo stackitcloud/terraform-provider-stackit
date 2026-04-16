@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 type UseStateForUnknownFuncResponse struct {
@@ -67,5 +68,29 @@ func (m useStateForUnknownIf) PlanModifyInt64(ctx context.Context, req planmodif
 
 	if funcResponse.UseStateForUnknown {
 		resp.PlanValue = req.StateValue
+	}
+}
+
+// Int64Changed sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func Int64Changed(ctx context.Context, attributeName string, request planmodifier.Int64Request, response *UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
+	dependencyPath := request.Path.ParentPath().AtName(attributeName)
+
+	var attributePlan types.Int64
+	diags := request.Plan.GetAttribute(ctx, dependencyPath, &attributePlan)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	var attributeState types.Int64
+	diags = request.State.GetAttribute(ctx, dependencyPath, &attributeState)
+	response.Diagnostics.Append(diags...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if attributeState == attributePlan {
+		response.UseStateForUnknown = true
+		return
 	}
 }

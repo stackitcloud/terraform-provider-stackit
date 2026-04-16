@@ -19,7 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
+	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -205,7 +206,7 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 	}
 
 	// Create new observability credentials
-	createResp, err := r.client.CreateCredentials(ctx, projectId, region).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
+	createResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -251,7 +252,7 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Get credentials
-	credResp, err := r.client.GetCredentials(ctx, projectId, region, credentialsRef).Execute()
+	credResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -304,7 +305,7 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete credentials
-	_, err := r.client.DeleteCredentials(ctx, projectId, region, credentialsRef).Execute()
+	_, err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

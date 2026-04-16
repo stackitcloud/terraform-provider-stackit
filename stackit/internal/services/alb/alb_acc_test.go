@@ -12,12 +12,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/alb/v2api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -149,7 +150,7 @@ func TestAccALBResourceMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          testutil.ALBProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
@@ -187,7 +188,7 @@ func TestAccALBResourceMin(t *testing.T) {
 							name    = stackit_application_load_balancer.loadbalancer.name
 						}
 						`,
-					testutil.ALBProviderConfig()+resourceMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance
@@ -284,7 +285,7 @@ func TestAccALBResourceMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMinUpdated(),
-				Config:          testutil.ALBProviderConfig() + resourceMinConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMinConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "name", testutil.ConvertConfigVariable(testConfigVarsMin["loadbalancer_name"])),
@@ -325,7 +326,7 @@ func TestAccALBResourceMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          testutil.ALBProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance resource
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -420,7 +421,7 @@ func TestAccALBResourceMax(t *testing.T) {
 							name    = stackit_application_load_balancer.loadbalancer.name
 						}
 						`,
-					testutil.ALBProviderConfig()+resourceMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Load balancer instance
@@ -529,7 +530,7 @@ func TestAccALBResourceMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: configVarsMaxUpdated(),
-				Config:          testutil.ALBProviderConfig() + resourceMaxConfig,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceMaxConfig,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr("stackit_application_load_balancer.loadbalancer", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
@@ -621,15 +622,7 @@ func TestAccALBResourceMax(t *testing.T) {
 
 func testAccCheckALBDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *albSdk.APIClient
-	var err error
-	if testutil.ALBCustomEndpoint == "" {
-		client, err = albSdk.NewAPIClient()
-	} else {
-		client, err = albSdk.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ALBCustomEndpoint),
-		)
-	}
+	client, err := albSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ALBCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -638,40 +631,44 @@ func testAccCheckALBDestroy(s *terraform.State) error {
 	if testutil.Region != "" {
 		region = testutil.Region
 	}
-	loadbalancersToDestroy := []string{}
+	loadBalancersToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_loadbalancer" {
+		if rs.Type != "stackit_application_load_balancer" {
 			continue
 		}
 		// loadbalancer terraform ID: = "[project_id],[region],[name]"
-		loadbalancerName := strings.Split(rs.Primary.ID, core.Separator)[1]
-		loadbalancersToDestroy = append(loadbalancersToDestroy, loadbalancerName)
+		loadBalancerName := strings.Split(rs.Primary.ID, core.Separator)[2]
+		loadBalancersToDestroy = append(loadBalancersToDestroy, loadBalancerName)
 	}
 
-	loadbalancersResp, err := client.DefaultAPI.ListLoadBalancers(ctx, testutil.ProjectId, region).Execute()
+	loadBalancersResp, err := client.DefaultAPI.ListLoadBalancers(ctx, testutil.ProjectId, region).Execute()
 	if err != nil {
-		return fmt.Errorf("getting loadbalancersResp: %w", err)
+		return fmt.Errorf("getting loadBalancersResp: %w", err)
 	}
 
-	if loadbalancersResp.LoadBalancers == nil || (loadbalancersResp.LoadBalancers != nil && len(loadbalancersResp.LoadBalancers) == 0) {
+	if loadBalancersResp.LoadBalancers == nil || (loadBalancersResp.LoadBalancers != nil && len(loadBalancersResp.LoadBalancers) == 0) {
 		fmt.Print("No load balancers found for project \n")
 		return nil
 	}
 
-	items := loadbalancersResp.LoadBalancers
-	for i := range items {
-		if items[i].Name == nil {
-			continue
+	for i := range loadBalancersToDestroy {
+		_, err := client.DefaultAPI.DeleteLoadBalancer(ctx, testutil.ProjectId, region, loadBalancersToDestroy[i]).Execute()
+		if err != nil {
+			return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", loadBalancersToDestroy[i], err)
 		}
-		if utils.Contains(loadbalancersToDestroy, *items[i].Name) {
-			_, err := client.DefaultAPI.DeleteLoadBalancer(ctx, testutil.ProjectId, region, *items[i].Name).Execute()
-			if err != nil {
-				return fmt.Errorf("destroying load balancer %s during CheckDestroy: %w", *items[i].Name, err)
-			}
-			_, err = wait.DeleteLoadbalancerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, *items[i].Name).WaitWithContext(ctx)
-			if err != nil {
-				return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
-			}
+		_, err = wait.DeleteLoadbalancerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, loadBalancersToDestroy[i]).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying load balancer %s during CheckDestroy: waiting for deletion %w", loadBalancersToDestroy[i], err)
+		}
+	}
+
+	loadBalancersResp, err = client.DefaultAPI.ListLoadBalancers(ctx, testutil.ProjectId, region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting loadBalancersResp after destroy: %w", err)
+	}
+	for i := range loadBalancersResp.LoadBalancers {
+		if utils.Contains(loadBalancersToDestroy, *loadBalancersResp.LoadBalancers[i].Name) {
+			return fmt.Errorf("load balancer %s has not been destroyed: %w", *loadBalancersResp.LoadBalancers[i].Name, err)
 		}
 	}
 	return nil

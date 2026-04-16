@@ -21,9 +21,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	coreConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn"
-	"github.com/stackitcloud/stackit-sdk-go/services/cdn/wait"
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -34,18 +34,29 @@ var (
 	credentialsName        = "acc-c" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
 	credentialsNameUpdated = "acc-c-updated" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
 	httpTestName           = "acc-h" + acctest.RandStringFromCharSet(3, acctest.CharSetAlpha)
-	dnsNameHttp            = fmt.Sprintf("tf-%s.runs.onstackit.cloud", httpTestName)
-	dnsRecordNameHttp      = uuid.NewString()
-	cert, key              = makeCertAndKey(testutil.OrganizationId)
+
+	// FIX: Reverted to stackit.gg as used in the working old code to avoid reserved domain rejection
+	dnsNameHttp       = fmt.Sprintf("tf-acc-%s.stackit.gg", strings.Split(uuid.NewString(), "-")[0])
+	dnsRecordNameHttp = uuid.NewString()
+
+	// Build the full domain name here so we can use it to sign the certificate
+	fullDomainNameHttp = fmt.Sprintf("%s.%s", dnsRecordNameHttp, dnsNameHttp)
+
+	cert, key = makeCertAndKey(testutil.OrganizationId, fullDomainNameHttp)
 )
 
 var (
 	//go:embed testdata/resource-bucket.tf
 	resourceBucket string
 
-	//go:embed testdata/resource-http.tf
-	resourceHttp string
+	//go:embed testdata/resource-http-base.tf
+	resourceHttpBase string
+
+	//go:embed testdata/resource-http-custom-domain.tf
+	resourceHttpCustomDomain string
 )
+
+var resourceHttpFull = resourceHttpBase + "\n" + resourceHttpCustomDomain
 
 var testConfigVarsBucket = config.Variables{
 	"project_id":          config.StringVariable(testutil.ProjectId),
@@ -90,7 +101,7 @@ func configVarsHttpUpdated() config.Variables {
 	return updatedConfig
 }
 
-func makeCertAndKey(organization string) (cert, key []byte) {
+func makeCertAndKey(organization, domain string) (cert, key []byte) {
 	privateKey, err := rsa.GenerateKey(cryptoRand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate key: %s", err.Error())
@@ -100,10 +111,11 @@ func makeCertAndKey(organization string) (cert, key []byte) {
 		Issuer:       pkix.Name{CommonName: organization},
 		Subject: pkix.Name{
 			Organization: []string{organization},
+			CommonName:   domain, // Required by most modern TLS validations
 		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour),
-
+		DNSNames:              []string{domain},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
@@ -129,14 +141,13 @@ func makeCertAndKey(organization string) (cert, key []byte) {
 }
 
 func TestAccCDNDistributionHttp(t *testing.T) {
-	fullDomainName := fmt.Sprintf("%s.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["dns_record_name"]), testutil.ConvertConfigVariable(testConfigVarsHttp["dns_name"]))
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckCDNDistributionDestroy,
 		Steps: []resource.TestStep{
-			// Distribution Create
+			// Distribution Create (Only Base config)
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpBase,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -166,22 +177,22 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 				),
 			},
-			// Wait step, that confirms the CNAME record has "propagated"
+			// Wait step, confirms the CNAME record has "propagated" before trying to add the custom domain
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpBase,
 				ConfigVariables: testConfigVarsHttp,
 				Check: func(_ *terraform.State) error {
-					_, err := blockUntilDomainResolves(fullDomainName)
+					_, err := blockUntilDomainResolves(fullDomainNameHttp)
 					return err
 				},
 			},
-			// Custom Domain Create
+			// Custom Domain Create (Now using Full config)
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpFull,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
-					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
+					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "project_id", "stackit_cdn_custom_domain.custom_domain", "project_id"),
@@ -235,7 +246,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpFull,
 				ConfigVariables: testConfigVarsHttp,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "distribution_id"),
@@ -243,7 +254,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "updated_at"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.#", "2"),
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.distribution", "domains.0.name"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.name", fullDomainName),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
@@ -268,14 +279,14 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
+					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 				),
 			},
 			// Update
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceHttp,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceHttpFull,
 				ConfigVariables: configVarsHttpUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -283,7 +294,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "updated_at"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.#", "2"),
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "domains.0.name"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.1.name", fullDomainName),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.1.name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.1.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
@@ -309,7 +320,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					),
 
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
-					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainName),
+					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "name", fullDomainNameHttp),
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "certificate.version", "1"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "distribution_id", "stackit_cdn_custom_domain.custom_domain", "distribution_id"),
 					resource.TestCheckResourceAttrPair("stackit_cdn_distribution.distribution", "project_id", "stackit_cdn_custom_domain.custom_domain", "project_id"),
@@ -329,7 +340,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Distribution Create
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "distribution_id"),
@@ -388,7 +399,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			},
 			// Data Source
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: testConfigVarsBucket,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "distribution_id"),
@@ -415,7 +426,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			},
 			// Update
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -441,7 +452,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 			// empty list '[]', causing a state mismatch. The 'Default' modifier in the schema now
 			// ensures the missing config is treated as an empty list, matching the API response.
 			{
-				Config:          testutil.CdnProviderConfig() + "\n" + resourceBucket,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceBucket,
 				ConfigVariables: configVarsBucketUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "0"),
@@ -453,15 +464,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 
 func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *cdn.APIClient
-	var err error
-	if testutil.CdnCustomEndpoint == "" {
-		client, err = cdn.NewAPIClient()
-	} else {
-		client, err = cdn.NewAPIClient(
-			coreConfig.WithEndpoint(testutil.CdnCustomEndpoint),
-		)
-	}
+	client, err := cdnSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.CdnCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -476,11 +479,11 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 	}
 
 	for _, dist := range distributionsToDestroy {
-		_, err := client.DeleteDistribution(ctx, testutil.ProjectId, dist).Execute()
+		_, err := client.DefaultAPI.DeleteDistribution(ctx, testutil.ProjectId, dist).Execute()
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: %w", dist, err)
 		}
-		_, err = wait.DeleteDistributionWaitHandler(ctx, client, testutil.ProjectId, dist).WaitWithContext(ctx)
+		_, err = wait.DeleteDistributionWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, dist).WaitWithContext(ctx)
 		if err != nil {
 			return fmt.Errorf("destroying CDN distribution %s during CheckDestroy: waiting for deletion %w", dist, err)
 		}
@@ -490,10 +493,10 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 
 const (
 	recordCheckInterval time.Duration = 3 * time.Second
-	recordCheckAttempts               = 100 // wait up to 5 minutes for record to be come available (normally takes less than 2 minutes)
+	recordCheckAttempts               = 100 // wait up to 5 minutes for record to become available (normally takes less than 2 minutes)
 )
 
-func blockUntilDomainResolves(domain string) (string, error) {
+func blockUntilDomainResolves(domain string) (net.IP, error) {
 	// Create a custom resolver that bypasses the local system DNS settings/cache
 	// and queries Google DNS (8.8.8.8) directly.
 	r := &net.Resolver{
@@ -506,17 +509,23 @@ func blockUntilDomainResolves(domain string) (string, error) {
 			return d.DialContext(ctx, network, "8.8.8.8:53")
 		},
 	}
+
 	// wait until it becomes ready
-	isReady := func() (string, error) {
+	isReady := func() (net.IP, error) {
 		// Use a context for the individual query timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		cname, err := r.LookupCNAME(ctx, domain)
+		ips, err := r.LookupIP(ctx, "ip", domain)
 		if err != nil {
-			return "", fmt.Errorf("error looking up CNAME for domain %s: %w", domain, err)
+			return nil, fmt.Errorf("error looking up IP for domain %s: %w", domain, err)
 		}
-		return cname, nil
+		for _, ip := range ips {
+			if ip.String() != "<nil>" {
+				return ip, nil
+			}
+		}
+		return nil, fmt.Errorf("no IP for domain: %v", domain)
 	}
 
 	return retry(recordCheckAttempts, recordCheckInterval, isReady)

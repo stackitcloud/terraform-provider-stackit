@@ -9,10 +9,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/redis"
-	"github.com/stackitcloud/stackit-sdk-go/services/redis/wait"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/redis/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -21,9 +21,9 @@ import (
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("redis"),
-	"plan_id":         "96e24604-7a43-4ff8-9ba4-609d4235a137",
+	"plan_id":         "3849f72f-99cc-4e2c-afda-700d66ef08f2",
 	"plan_name":       "stackit-redis-1.4.10-single",
-	"version":         "6",
+	"version":         "7",
 	"sgw_acl_invalid": "1.2.3.4/4",
 	"sgw_acl_valid":   "192.168.0.0/16",
 	"sgw_acl_valid2":  "10.10.10.0/24",
@@ -70,7 +70,7 @@ func resourceConfig(params map[string]string) string {
 
 				%s
 				`,
-		testutil.RedisProviderConfig(),
+		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
 		instanceResource["name"],
 		instanceResource["plan_name"],
@@ -258,14 +258,14 @@ func TestAccRedisResource(t *testing.T) {
 }
 
 func checkInstanceDeleteSuccess(i *redis.Instance) bool {
-	if *i.LastOperation.Type != redis.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type != wait.INSTANCELASTOPERATIONTYPE_DELETE {
 		return false
 	}
 
-	if *i.LastOperation.Type == redis.INSTANCELASTOPERATIONTYPE_DELETE {
-		if *i.LastOperation.State != redis.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
+	if i.LastOperation.Type == wait.INSTANCELASTOPERATIONTYPE_DELETE {
+		if i.LastOperation.State != "succeeded" {
 			return false
-		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
+		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false
 		}
 	}
@@ -274,17 +274,7 @@ func checkInstanceDeleteSuccess(i *redis.Instance) bool {
 
 func testAccCheckRedisDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *redis.APIClient
-	var err error
-	if testutil.RedisCustomEndpoint == "" {
-		client, err = redis.NewAPIClient(
-			config.WithRegion("eu01"),
-		)
-	} else {
-		client, err = redis.NewAPIClient(
-			config.WithEndpoint(testutil.RedisCustomEndpoint),
-		)
-	}
+	client, err := redis.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RedisCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -299,23 +289,23 @@ func testAccCheckRedisDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
 		if instances[i].InstanceId == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}

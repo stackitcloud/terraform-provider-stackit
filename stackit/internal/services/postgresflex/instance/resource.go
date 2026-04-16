@@ -17,9 +17,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -210,6 +212,9 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifierCustom.CronNormalizationModifier{},
+				},
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Required: true,
@@ -663,11 +668,18 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
+	// If the API returned "0 0 * * *" but user defined "00 00 * * *" in its config,
+	// we keep the user's "00 00 * * *" in the state to satisfy Terraform.
+	backupScheduleApiResp := types.StringPointerValue(instance.BackupSchedule)
+	if utils.SimplifyCronString(model.BackupSchedule.ValueString()) != utils.SimplifyCronString(backupScheduleApiResp.ValueString()) {
+		// If the API actually changed it to something else, use the API value
+		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
+	}
+
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
-	model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
 	model.Flavor = flavorObject
 	model.Replicas = types.Int64PointerValue(instance.Replicas)
 	model.Storage = storageObject

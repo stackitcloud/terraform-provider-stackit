@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -24,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -261,7 +262,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client)
+	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
@@ -274,7 +275,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	// Create new credential
-	credentialResp, err := r.client.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute()
+	credentialResp, err := r.client.DefaultAPI.CreateAccessKey(ctx, projectId, region).CredentialsGroup(credentialsGroupId).CreateAccessKeyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -282,11 +283,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	ctx = core.LogResponse(ctx)
 
-	if credentialResp.KeyId == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credential id")
-		return
-	}
-	credentialId := *credentialResp.KeyId
+	credentialId := credentialResp.KeyId
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":           projectId,
@@ -438,7 +435,7 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credential
-	_, err := r.client.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
+	_, err := r.client.DefaultAPI.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -474,16 +471,12 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "ObjectStorage credential state imported")
 }
 
-type objectStorageClient interface {
-	EnableServiceExecute(ctx context.Context, projectId, region string) (*objectstorage.ProjectStatus, error)
-}
-
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
-func enableProject(ctx context.Context, model *Model, region string, client objectStorageClient) error {
+func enableProject(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) error {
 	projectId := model.ProjectId.ValueString()
 
 	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableServiceExecute(ctx, projectId, region)
+	_, err := client.EnableService(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create object storage project: %w", err)
 	}
@@ -523,20 +516,20 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 	var credentialId string
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
-	} else if credentialResp.KeyId != nil {
-		credentialId = *credentialResp.KeyId
+	} else if credentialResp.KeyId != "" {
+		credentialId = credentialResp.KeyId
 	} else {
 		return fmt.Errorf("credential id not present")
 	}
 
-	if credentialResp.Expires == nil {
+	if credentialResp.Expires.Get() == nil || *credentialResp.Expires.Get() == "" {
 		model.ExpirationTimestamp = types.StringNull()
 	} else {
 		// Harmonize the timestamp format
-		// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+		// E.g. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
 		expirationTimestamp, err := time.Parse(time.RFC3339, *credentialResp.Expires.Get())
 		if err != nil {
-			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires, err)
+			return fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credentialResp.Expires.Get(), err)
 		}
 		model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 	}
@@ -545,9 +538,9 @@ func mapFields(credentialResp *objectstorage.CreateAccessKeyResponse, model *Mod
 		model.ProjectId.ValueString(), region, model.CredentialsGroupId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
-	model.Name = types.StringPointerValue(credentialResp.DisplayName)
-	model.AccessKey = types.StringPointerValue(credentialResp.AccessKey)
-	model.SecretAccessKey = types.StringPointerValue(credentialResp.SecretAccessKey)
+	model.Name = types.StringValue(credentialResp.DisplayName)
+	model.AccessKey = types.StringValue(credentialResp.AccessKey)
+	model.SecretAccessKey = types.StringValue(credentialResp.SecretAccessKey)
 	model.Region = types.StringValue(region)
 	return nil
 }
@@ -560,7 +553,7 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 
-	credentialsGroupResp, err := client.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
+	credentialsGroupResp, err := client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -573,27 +566,28 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 	}
 
 	foundCredential := false
-	for _, credential := range *credentialsGroupResp.AccessKeys {
-		if credential.KeyId == nil || *credential.KeyId != credentialId {
+	for _, credential := range credentialsGroupResp.AccessKeys {
+		if credential.KeyId != credentialId {
 			continue
 		}
 
 		foundCredential = true
 
 		model.Id = utils.BuildInternalTerraformId(projectId, region, credentialsGroupId, credentialId)
-		model.Name = types.StringPointerValue(credential.DisplayName)
+		model.Name = types.StringValue(credential.DisplayName)
 
-		if credential.Expires == nil {
+		if credential.Expires == "" {
 			model.ExpirationTimestamp = types.StringNull()
 		} else {
 			// Harmonize the timestamp format
-			// Eg. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
-			expirationTimestamp, err := time.Parse(time.RFC3339, *credential.Expires)
+			// E.g. "2027-01-02T03:04:05.000Z" = "2027-01-02T03:04:05Z"
+			expirationTimestamp, err := time.Parse(time.RFC3339, credential.Expires)
 			if err != nil {
-				return foundCredential, fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", *credential.Expires, err)
+				return foundCredential, fmt.Errorf("unable to parse payload expiration timestamp '%v': %w", credential.Expires, err)
 			}
 			model.ExpirationTimestamp = types.StringValue(expirationTimestamp.Format(time.RFC3339))
 		}
+
 		break
 	}
 	model.Region = types.StringValue(region)

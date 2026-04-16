@@ -16,11 +16,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	stackitSdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -147,7 +147,7 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsProjectRoleAssignment,
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceProjectRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceProjectRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "name", testutil.ConvertConfigVariable(testConfigVarsProjectRoleAssignment["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "owner_email", testutil.ConvertConfigVariable(testConfigVarsProjectRoleAssignment["owner_email"])),
@@ -194,7 +194,7 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsProjectRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceProjectRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceProjectRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "name", testutil.ConvertConfigVariable(testConfigVarsProjectRoleAssignmentUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_project.project", "owner_email", testutil.ConvertConfigVariable(testConfigVarsProjectRoleAssignmentUpdated()["owner_email"])),
@@ -214,7 +214,7 @@ func TestAccProjectRoleAssignmentResource(t *testing.T) {
 			// Duplicate assignment should fail
 			{
 				ConfigVariables: testConfigVarsProjectRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceProjectRoleAssignmentDuplicate,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceProjectRoleAssignmentDuplicate,
 				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
 			},
 
@@ -233,7 +233,7 @@ func TestAccFolderRoleAssignmentResource(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsFolderRoleAssignment,
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceFolderRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceFolderRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.folder", "name", testutil.ConvertConfigVariable(testConfigVarsFolderRoleAssignment["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.folder", "owner_email", testutil.ConvertConfigVariable(testConfigVarsFolderRoleAssignment["owner_email"])),
@@ -280,7 +280,7 @@ func TestAccFolderRoleAssignmentResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsFolderRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceFolderRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceFolderRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.folder", "name", testutil.ConvertConfigVariable(testConfigVarsFolderRoleAssignmentUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_resourcemanager_folder.folder", "owner_email", testutil.ConvertConfigVariable(testConfigVarsFolderRoleAssignmentUpdated()["owner_email"])),
@@ -300,7 +300,7 @@ func TestAccFolderRoleAssignmentResource(t *testing.T) {
 			// Duplicate assignment should fail
 			{
 				ConfigVariables: testConfigVarsFolderRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceFolderRoleAssignmentDuplicate,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceFolderRoleAssignmentDuplicate,
 				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
 			},
 			// Deletion is done by the framework implicitly
@@ -318,7 +318,7 @@ func TestAccOrgRoleAssignmentResource(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsOrgRoleAssignment,
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceOrgRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceOrgRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_authorization_organization_role_assignment.ora", "resource_id"),
 					resource.TestCheckResourceAttrSet("stackit_authorization_organization_role_assignment.ora", "id"),
@@ -356,7 +356,7 @@ func TestAccOrgRoleAssignmentResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsOrgRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceOrgRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceOrgRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_authorization_organization_role_assignment.ora", "resource_id"),
 					resource.TestCheckResourceAttrSet("stackit_authorization_organization_role_assignment.ora", "id"),
@@ -367,7 +367,7 @@ func TestAccOrgRoleAssignmentResource(t *testing.T) {
 			// Duplicate assignment should fail
 			{
 				ConfigVariables: testConfigVarsOrgRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceOrgRoleAssignmentDuplicate,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceOrgRoleAssignmentDuplicate,
 				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
 			},
 			// Deletion is done by the framework implicitly
@@ -384,7 +384,7 @@ func TestAccServiceAccountRoleAssignmentResource(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsServiceAccountRoleAssignment,
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceServiceAccountRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceServiceAccountRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_authorization_service_account_role_assignment.sa", "resource_id"),
 					resource.TestCheckResourceAttrSet("stackit_authorization_service_account_role_assignment.sa", "id"),
@@ -412,7 +412,7 @@ func TestAccServiceAccountRoleAssignmentResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsServiceAccountRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceServiceAccountRoleAssignment,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceServiceAccountRoleAssignment,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_authorization_service_account_role_assignment.sa", "resource_id"),
 					resource.TestCheckResourceAttrSet("stackit_authorization_service_account_role_assignment.sa", "id"),
@@ -426,7 +426,7 @@ func TestAccServiceAccountRoleAssignmentResource(t *testing.T) {
 			// Duplicate assignment should fail
 			{
 				ConfigVariables: testConfigVarsServiceAccountRoleAssignmentUpdated(),
-				Config:          testutil.AuthorizationProviderConfig() + "\n" + resourceServiceAccountRoleAssignmentDuplicate,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + "\n" + resourceServiceAccountRoleAssignmentDuplicate,
 				ExpectError:     regexp.MustCompile(`Error while checking for duplicate role assignments`),
 			},
 			// Deletion is done by the framework implicitly
@@ -441,7 +441,7 @@ func TestAccProjectCustomRoleResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ConfigVariables: testConfigVarsCustomRole,
-				Config:          testutil.AuthorizationProviderConfig() + resourceCustomRole,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + resourceCustomRole,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_authorization_project_custom_role.custom_role", "resource_id", testutil.ConvertConfigVariable(testConfigVarsCustomRole["project_id"])),
 					resource.TestCheckResourceAttr("stackit_authorization_project_custom_role.custom_role", "name", testutil.ConvertConfigVariable(testConfigVarsCustomRole["role_name"])),
@@ -462,7 +462,7 @@ func TestAccProjectCustomRoleResource(t *testing.T) {
                    role_id  = stackit_authorization_project_custom_role.custom_role.role_id
                 }
                 `,
-					testutil.AuthorizationProviderConfig()+resourceCustomRole,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig()+resourceCustomRole,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_authorization_project_custom_role.custom_role", "resource_id", testutil.ConvertConfigVariable(testConfigVarsCustomRole["project_id"])),
@@ -510,7 +510,7 @@ func TestAccProjectCustomRoleResource(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsCustomRoleUpdated,
-				Config:          testutil.AuthorizationProviderConfig() + resourceCustomRole,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentIAM).BuildProviderConfig() + resourceCustomRole,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_authorization_project_custom_role.custom_role", "resource_id", testutil.ConvertConfigVariable(testConfigVarsCustomRoleUpdated["project_id"])),
 					resource.TestCheckResourceAttr("stackit_authorization_project_custom_role.custom_role", "name", testutil.ConvertConfigVariable(testConfigVarsCustomRoleUpdated["role_name"])),
@@ -553,15 +553,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -609,15 +601,7 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 
 func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *resourcemanager.APIClient
-	var err error
-	if testutil.ResourceManagerCustomEndpoint == "" {
-		client, err = resourcemanager.NewAPIClient()
-	} else {
-		client, err = resourcemanager.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.ResourceManagerCustomEndpoint),
-		)
-	}
+	client, err := resourcemanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ResourceManagerCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -658,15 +642,7 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 
 func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *authorization.APIClient
-	var err error
-	if testutil.AuthorizationCustomEndpoint == "" {
-		client, err = authorization.NewAPIClient()
-	} else {
-		client, err = authorization.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.AuthorizationCustomEndpoint),
-		)
-	}
+	client, err := authorization.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AuthorizationCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -705,15 +681,7 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 
 func testAccCheckServiceAccountRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *authorization.APIClient
-	var err error
-	if testutil.AuthorizationCustomEndpoint == "" {
-		client, err = authorization.NewAPIClient()
-	} else {
-		client, err = authorization.NewAPIClient(
-			stackitSdkConfig.WithEndpoint(testutil.AuthorizationCustomEndpoint),
-		)
-	}
+	client, err := authorization.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AuthorizationCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}

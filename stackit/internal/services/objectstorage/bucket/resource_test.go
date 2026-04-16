@@ -8,21 +8,23 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
-type objectStorageClientMocked struct {
+type mockSettings struct {
 	returnError bool
 }
 
-func (c *objectStorageClientMocked) EnableServiceExecute(_ context.Context, projectId, _ string) (*objectstorage.ProjectStatus, error) {
-	if c.returnError {
-		return nil, fmt.Errorf("create project failed")
-	}
+func newAPIMock(settings *mockSettings) objectstorage.DefaultAPI {
+	return &objectstorage.DefaultAPIServiceMock{
+		EnableServiceExecuteMock: new(func(_ objectstorage.ApiEnableServiceRequest) (*objectstorage.ProjectStatus, error) {
+			if settings.returnError {
+				return nil, fmt.Errorf("create project failed")
+			}
 
-	return &objectstorage.ProjectStatus{
-		Project: new(projectId),
-	}, nil
+			return &objectstorage.ProjectStatus{}, nil
+		}),
+	}
 }
 
 func TestMapFields(t *testing.T) {
@@ -37,25 +39,26 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&objectstorage.GetBucketResponse{
-				Bucket: &objectstorage.Bucket{},
+				Bucket: objectstorage.Bucket{},
 			},
 			Model{
 				Id:                    types.StringValue(id),
 				Name:                  types.StringValue("bname"),
 				ProjectId:             types.StringValue("pid"),
-				URLPathStyle:          types.StringNull(),
-				URLVirtualHostedStyle: types.StringNull(),
+				URLPathStyle:          types.StringValue(""),
+				URLVirtualHostedStyle: types.StringValue(""),
 				Region:                types.StringValue("eu01"),
+				ObjectLock:            types.BoolValue(false),
 			},
 			true,
 		},
 		{
 			"simple_values",
 			&objectstorage.GetBucketResponse{
-				Bucket: &objectstorage.Bucket{
-					UrlPathStyle:          new("url/path/style"),
-					UrlVirtualHostedStyle: new("url/virtual/hosted/style"),
-					ObjectLockEnabled:     new(true),
+				Bucket: objectstorage.Bucket{
+					UrlPathStyle:          "url/path/style",
+					UrlVirtualHostedStyle: "url/virtual/hosted/style",
+					ObjectLockEnabled:     true,
 				},
 			},
 			Model{
@@ -72,9 +75,9 @@ func TestMapFields(t *testing.T) {
 		{
 			"empty_strings",
 			&objectstorage.GetBucketResponse{
-				Bucket: &objectstorage.Bucket{
-					UrlPathStyle:          new(""),
-					UrlVirtualHostedStyle: new(""),
+				Bucket: objectstorage.Bucket{
+					UrlPathStyle:          "",
+					UrlVirtualHostedStyle: "",
 				},
 			},
 			Model{
@@ -84,18 +87,13 @@ func TestMapFields(t *testing.T) {
 				URLPathStyle:          types.StringValue(""),
 				URLVirtualHostedStyle: types.StringValue(""),
 				Region:                types.StringValue("eu01"),
+				ObjectLock:            types.BoolValue(false),
 			},
 			true,
 		},
 		{
 			"nil_response",
 			nil,
-			Model{},
-			false,
-		},
-		{
-			"no_bucket",
-			&objectstorage.GetBucketResponse{},
 			Model{},
 			false,
 		},
@@ -142,9 +140,10 @@ func TestEnableProject(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			client := &objectStorageClientMocked{
+			client := newAPIMock(&mockSettings{
 				returnError: tt.enableFails,
-			}
+			})
+
 			err := enableProject(context.Background(), &Model{}, "eu01", client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")

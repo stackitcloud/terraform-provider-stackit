@@ -26,6 +26,37 @@ func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _, _ st
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
+
+	fixtureModel := func(mods ...func(*Model)) Model {
+		m := Model{
+			Id:             types.StringValue("pid,region,iid"),
+			InstanceId:     types.StringValue("iid"),
+			ProjectId:      types.StringValue("pid"),
+			Name:           types.StringNull(),
+			ACL:            types.ListNull(types.StringType),
+			BackupSchedule: types.StringNull(),
+			Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
+				"id":          types.StringNull(),
+				"description": types.StringNull(),
+				"cpu":         types.Int64Null(),
+				"ram":         types.Int64Null(),
+			}),
+			Replicas: types.Int64Null(),
+			Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+				"class": types.StringNull(),
+				"size":  types.Int64Null(),
+			}),
+			Version: types.StringNull(),
+			Region:  types.StringValue(testRegion),
+		}
+
+		for _, mod := range mods {
+			mod(&m)
+		}
+
+		return m
+	}
+
 	tests := []struct {
 		description string
 		state       Model
@@ -48,27 +79,7 @@ func TestMapFields(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			testRegion,
-			Model{
-				Id:             types.StringValue("pid,region,iid"),
-				InstanceId:     types.StringValue("iid"),
-				ProjectId:      types.StringValue("pid"),
-				Name:           types.StringNull(),
-				ACL:            types.ListNull(types.StringType),
-				BackupSchedule: types.StringNull(),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringNull(),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Null(),
-					"ram":         types.Int64Null(),
-				}),
-				Replicas: types.Int64Null(),
-				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
-					"class": types.StringNull(),
-					"size":  types.Int64Null(),
-				}),
-				Version: types.StringNull(),
-				Region:  types.StringValue(testRegion),
-			},
+			fixtureModel(),
 			true,
 		},
 		{
@@ -260,6 +271,42 @@ func TestMapFields(t *testing.T) {
 				Region:  types.StringValue(testRegion),
 			},
 			true,
+		},
+		{
+			description: "backup schedule - keep state value when API strips leading zeros",
+			state: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("00 00 * * *")
+			}),
+			input: &postgresflex.InstanceResponse{
+				Item: &postgresflex.Instance{
+					BackupSchedule: new("0 0 * * *"),
+				},
+			},
+			flavor:  &flavorModel{},
+			storage: &storageModel{},
+			region:  testRegion,
+			expected: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("00 00 * * *")
+			}),
+			isValid: true,
+		},
+		{
+			description: "backup schedule - use updated value from API if cron actually changed",
+			state: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("00 01 * * *")
+			}),
+			input: &postgresflex.InstanceResponse{
+				Item: &postgresflex.Instance{
+					BackupSchedule: new("0 2 * * *"),
+				},
+			},
+			flavor:  &flavorModel{},
+			storage: &storageModel{},
+			region:  testRegion,
+			expected: fixtureModel(func(m *Model) {
+				m.BackupSchedule = types.StringValue("0 2 * * *")
+			}),
+			isValid: true,
 		},
 		{
 			"nil_response",
