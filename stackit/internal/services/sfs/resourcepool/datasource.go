@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -38,7 +38,7 @@ type dataSourceModel struct {
 	IpAcl                          types.List   `tfsdk:"ip_acl"`
 	Name                           types.String `tfsdk:"name"`
 	PerformanceClass               types.String `tfsdk:"performance_class"`
-	SizeGigabytes                  types.Int64  `tfsdk:"size_gigabytes"`
+	SizeGigabytes                  types.Int32  `tfsdk:"size_gigabytes"`
 	SizeReducibleAt                types.String `tfsdk:"size_reducible_at"`
 	PerformanceClassDowngradableAt types.String `tfsdk:"performance_class_downgradable_at"`
 	Region                         types.String `tfsdk:"region"`
@@ -97,7 +97,7 @@ func (r *resourcePoolDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.GetResourcePoolExecute(ctx, projectId, region, resourcePoolId)
+	response, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -170,7 +170,7 @@ func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 				Description: "Name of the performance class.",
 			},
-			"size_gigabytes": schema.Int64Attribute{
+			"size_gigabytes": schema.Int32Attribute{
 				CustomType:  nil,
 				Computed:    true,
 				Description: `Size of the resource pool (unit: gigabytes)`,
@@ -199,7 +199,7 @@ func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 	}
 }
 
-func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.GetResourcePoolResponseResourcePool, model *dataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.ResourcePool, model *dataSourceModel) error {
 	if resourcePool == nil {
 		return fmt.Errorf("resource pool empty in response")
 	}
@@ -236,7 +236,7 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.G
 	}
 
 	if resourcePool.Space != nil {
-		model.SizeGigabytes = types.Int64PointerValue(resourcePool.Space.SizeGigabytes)
+		model.SizeGigabytes = types.Int32PointerValue(resourcePool.Space.SizeGigabytes)
 	}
 
 	if t := resourcePool.PerformanceClassDowngradableAt; t != nil {
