@@ -329,6 +329,10 @@ func (g *gitResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	// Call API to delete the existing git instance.
 	err := g.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting git instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
