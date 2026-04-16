@@ -68,10 +68,12 @@ var testConfigExportPolicyVarsMax = config.Variables{
 	"name":       config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"rules": config.ListVariable(
 		config.ObjectVariable(map[string]config.Variable{
-			"ip_acl": config.ListVariable(config.StringVariable(exportPolicyMaxIpAcl1), config.StringVariable(exportPolicyMaxIpAcl2)),
-			"order":  config.IntegerVariable(1),
+			"description": config.StringVariable("Some description"),
+			"ip_acl":      config.ListVariable(config.StringVariable(exportPolicyMaxIpAcl1), config.StringVariable(exportPolicyMaxIpAcl2)),
+			"order":       config.IntegerVariable(1),
 		}),
 	),
+	"region": config.StringVariable(testutil.Region),
 }
 
 var testConfigExportPolicyVarsMaxUpdated = func() config.Variables {
@@ -79,12 +81,16 @@ var testConfigExportPolicyVarsMaxUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigExportPolicyVarsMax)
 	updatedConfig["rules"] = config.ListVariable(
 		config.ObjectVariable(map[string]config.Variable{
-			"ip_acl": config.ListVariable(config.StringVariable(exportPolicyMaxIpAcl1), config.StringVariable(exportPolicyMaxIpAcl2)),
-			"order":  config.IntegerVariable(1),
+			"description": config.StringVariable("Some description"),
+			"ip_acl":      config.ListVariable(config.StringVariable(exportPolicyMaxIpAcl1Update), config.StringVariable(exportPolicyMaxIpAcl2Update)),
+			"order":       config.IntegerVariable(1),
 		}),
 		config.ObjectVariable(map[string]config.Variable{
-			"ip_acl": config.ListVariable(config.StringVariable(exportPolicyMaxIpAcl1Update), config.StringVariable(exportPolicyMaxIpAcl2Update)),
-			"order":  config.IntegerVariable(2),
+			"ip_acl":     config.ListVariable(config.StringVariable(exportPolicyMaxIpAcl1Update), config.StringVariable(exportPolicyMaxIpAcl2Update)),
+			"order":      config.IntegerVariable(2),
+			"read_only":  config.BoolVariable(true),
+			"set_uuid":   config.BoolVariable(true),
+			"super_user": config.BoolVariable(false),
 		}),
 	)
 	return updatedConfig
@@ -138,6 +144,7 @@ var testConfigResourcePoolVarsMax = config.Variables{
 		config.StringVariable(resourcePoolMaxIpAcl1),
 		config.StringVariable(resourcePoolMaxIpAcl2),
 	),
+	"region":                config.StringVariable(testutil.Region),
 	"availability_zone":     config.StringVariable("eu01-m"),
 	"performance_class":     config.StringVariable("Standard"),
 	"size_gigabytes":        config.IntegerVariable(500),
@@ -161,7 +168,6 @@ var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
 var testConfigShareVarsMin = config.Variables{
 	"project_id":                 config.StringVariable(testutil.ProjectId),
 	"name":                       config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"region":                     config.StringVariable("eu01"),
 	"resource_pool_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"space_hard_limit_gigabytes": config.IntegerVariable(42),
 }
@@ -178,7 +184,7 @@ var testConfigShareVarsMinUpdated = func() config.Variables {
 var testConfigShareVarsMax = config.Variables{
 	"project_id":                 config.StringVariable(testutil.ProjectId),
 	"name":                       config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"region":                     config.StringVariable("eu01"),
+	"region":                     config.StringVariable(testutil.Region),
 	"resource_pool_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"space_hard_limit_gigabytes": config.IntegerVariable(42),
 	"export_policy_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
@@ -202,7 +208,9 @@ func TestAccExportPolicyMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "region", testutil.Region),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "policy_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMin["name"])),
 
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "0"),
@@ -223,14 +231,13 @@ func TestAccExportPolicyMin(t *testing.T) {
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMin["name"])),
-
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "0"),
-					// data source
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_export_policy.policy_data_test", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_export_policy.policy_data_test", "policy_id"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMin["name"])),
+
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.#", "0"),
 				),
 			},
 			// Import
@@ -257,7 +264,9 @@ func TestAccExportPolicyMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "region", testutil.Region),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "policy_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMinUpdated()["name"])),
 
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "0"),
@@ -279,15 +288,17 @@ func TestAccExportPolicyMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "region", testutil.Region),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "policy_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["name"])),
 
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.description", "Some description"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.order", "1"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.#", "2"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.0", exportPolicyMaxIpAcl1),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.1", exportPolicyMaxIpAcl2),
-
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.read_only", "false"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.set_uuid", "false"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.super_user", "true"),
@@ -308,22 +319,21 @@ func TestAccExportPolicyMax(t *testing.T) {
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["name"])),
-
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "1"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.order", "1"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.0", exportPolicyMaxIpAcl1),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.1", exportPolicyMaxIpAcl2),
-
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.read_only", "false"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.set_uuid", "false"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.super_user", "true"),
-
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_export_policy.policy_data_test", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_export_policy.policy_data_test", "policy_id"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["name"])),
+
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.description", "Some description"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.order", "1"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl.0", exportPolicyMaxIpAcl1),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl.1", exportPolicyMaxIpAcl2),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.read_only", "false"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.set_uuid", "false"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.super_user", "true"),
 				),
 			},
 			// Import
@@ -350,25 +360,29 @@ func TestAccExportPolicyMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "region", testutil.Region),
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "id"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "policy_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["name"])),
 
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "2"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.description", "Some description"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.order", "1"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.0", exportPolicyMaxIpAcl1),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.1", exportPolicyMaxIpAcl2),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.0", exportPolicyMaxIpAcl1Update),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.1", exportPolicyMaxIpAcl2Update),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.read_only", "false"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.set_uuid", "false"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.super_user", "true"),
 
+					resource.TestCheckNoResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.description"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.order", "2"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.#", "2"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.0", exportPolicyMaxIpAcl1Update),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.1", exportPolicyMaxIpAcl2Update),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.read_only", "false"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.set_uuid", "false"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.super_user", "true"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.read_only", "true"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.set_uuid", "true"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.super_user", "false"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -387,6 +401,8 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["availability_zone"])),
@@ -413,19 +429,18 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["name"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["availability_zone"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["performance_class"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["size_gigabytes"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", resourcePoolMinIpAcl1),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", resourcePoolMinIpAcl2),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
-
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_resource_pool.resource_pool_ds", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_resource_pool.resource_pool_ds", "resource_pool_id"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["availability_zone"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["performance_class"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["size_gigabytes"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", resourcePoolMinIpAcl1),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", resourcePoolMinIpAcl2),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", "false"),
 				),
 			},
 			// Import
@@ -452,6 +467,8 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["availability_zone"])),
@@ -479,6 +496,8 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["availability_zone"])),
@@ -505,19 +524,18 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["name"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["availability_zone"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["performance_class"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["size_gigabytes"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", resourcePoolMaxIpAcl1),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", resourcePoolMaxIpAcl2),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
-
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_resource_pool.resource_pool_ds", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_resource_pool.resource_pool_ds", "resource_pool_id"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["availability_zone"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["performance_class"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["size_gigabytes"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", resourcePoolMaxIpAcl1),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", resourcePoolMaxIpAcl2),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
 				),
 			},
 			// Import
@@ -544,6 +562,8 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "resource_pool_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "name", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["availability_zone"])),
@@ -571,11 +591,17 @@ func TestAccShareResourceMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sfs_share.share", "resource_pool_id",
+						"stackit_sfs_resource_pool.resourcepool", "resource_pool_id",
+					),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testutil.ConvertConfigVariable(testConfigShareVarsMin["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMin["space_hard_limit_gigabytes"])),
 					resource.TestCheckNoResourceAttr("stackit_sfs_share.share", "export_policy"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
 				),
 			},
 			// Data source
@@ -594,16 +620,18 @@ func TestAccShareResourceMin(t *testing.T) {
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testutil.ConvertConfigVariable(testConfigShareVarsMin["name"])),
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMin["space_hard_limit_gigabytes"])),
-					resource.TestCheckNoResourceAttr("stackit_sfs_share.share", "export_policy"),
-
 					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "resource_pool_id"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "share_id"),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sfs_share.share_ds", "resource_pool_id",
+						"stackit_sfs_resource_pool.resourcepool", "resource_pool_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "name", testutil.ConvertConfigVariable(testConfigShareVarsMin["name"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMin["space_hard_limit_gigabytes"])),
+					resource.TestCheckNoResourceAttr("data.stackit_sfs_share.share_ds", "export_policy"),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "mount_path"),
 				),
 			},
 			// Import
@@ -634,11 +662,17 @@ func TestAccShareResourceMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sfs_share.share", "resource_pool_id",
+						"stackit_sfs_resource_pool.resourcepool", "resource_pool_id",
+					),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testutil.ConvertConfigVariable(testConfigShareVarsMinUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMinUpdated()["space_hard_limit_gigabytes"])),
 					resource.TestCheckNoResourceAttr("stackit_sfs_share.share", "export_policy"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -657,12 +691,20 @@ func TestAccShareResourceMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sfs_share.share", "resource_pool_id",
+						"stackit_sfs_resource_pool.resourcepool", "resource_pool_id",
+					),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testutil.ConvertConfigVariable(testConfigShareVarsMax["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMax["space_hard_limit_gigabytes"])),
-					resource.TestCheckResourceAttrPair("stackit_sfs_share.share", "export_policy",
-						"stackit_sfs_export_policy.exportpolicy", "name"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sfs_share.share", "export_policy",
+						"stackit_sfs_export_policy.exportpolicy", "name",
+					),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
 				),
 			},
 			// Data source
@@ -681,17 +723,21 @@ func TestAccShareResourceMax(t *testing.T) {
 					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testutil.ConvertConfigVariable(testConfigShareVarsMax["name"])),
-					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMax["space_hard_limit_gigabytes"])),
-					resource.TestCheckResourceAttrPair("stackit_sfs_share.share", "export_policy",
-						"stackit_sfs_export_policy.exportpolicy", "name"),
-
 					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "resource_pool_id"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "id"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "share_id"),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sfs_share.share_ds", "resource_pool_id",
+						"stackit_sfs_resource_pool.resourcepool", "resource_pool_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "name", testutil.ConvertConfigVariable(testConfigShareVarsMax["name"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMax["space_hard_limit_gigabytes"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sfs_share.share_ds", "export_policy",
+						"stackit_sfs_export_policy.exportpolicy", "name",
+					),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "mount_path"),
 				),
 			},
 			// Import
@@ -722,12 +768,20 @@ func TestAccShareResourceMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
-					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "resource_pool_id"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "id"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "share_id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sfs_share.share", "resource_pool_id",
+						"stackit_sfs_resource_pool.resourcepool", "resource_pool_id",
+					),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "name", testutil.ConvertConfigVariable(testConfigShareVarsMaxUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMaxUpdated()["space_hard_limit_gigabytes"])),
-					resource.TestCheckResourceAttrPair("stackit_sfs_share.share", "export_policy",
-						"stackit_sfs_export_policy.exportpolicy", "name"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sfs_share.share", "export_policy",
+						"stackit_sfs_export_policy.exportpolicy", "name",
+					),
+					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
 				),
 			},
 			// Deletion is done by the framework implicitly

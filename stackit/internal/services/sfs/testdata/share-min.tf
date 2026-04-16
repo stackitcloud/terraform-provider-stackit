@@ -11,7 +11,6 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
   performance_class = "Standard"
   size_gigabytes    = 512
   ip_acl            = ["192.168.42.1/32"]
-  region            = "eu01"
 }
 
 resource "stackit_sfs_share" "share" {

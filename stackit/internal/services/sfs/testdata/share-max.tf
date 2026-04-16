@@ -12,18 +12,11 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
   performance_class = "Standard"
   size_gigabytes    = 512
   ip_acl            = ["192.168.42.1/32"]
-  region            = "eu01"
 }
 
 resource "stackit_sfs_export_policy" "exportpolicy" {
   project_id = var.project_id
   name       = var.export_policy_name
-  rules = [
-    {
-      ip_acl = ["192.168.2.0/24"]
-      order  = 1
-    }
-  ]
 }
 
 resource "stackit_sfs_share" "share" {
