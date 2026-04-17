@@ -20,7 +20,7 @@ func fixtureRulesResponse() []sfs.ShareExportPolicyRule {
 	return []sfs.ShareExportPolicyRule{
 		{
 			Description: *sfs.NewNullableString(new("description")),
-			IpAcl:       *new([]string{"172.16.0.0/24", "172.16.0.251/32"}),
+			IpAcl:       []string{"172.16.0.0/24", "172.16.0.251/32"},
 			Order:       new(int32(0)),
 			ReadOnly:    new(false),
 			SetUuid:     new(false),
@@ -28,7 +28,7 @@ func fixtureRulesResponse() []sfs.ShareExportPolicyRule {
 		},
 		{
 			Description: *sfs.NewNullableString(new("description")),
-			IpAcl:       *new([]string{"172.32.0.0/24", "172.32.0.251/32"}),
+			IpAcl:       []string{"172.32.0.0/24", "172.32.0.251/32"},
 			Order:       new(int32(1)),
 			ReadOnly:    new(false),
 			SetUuid:     new(false),
@@ -150,10 +150,10 @@ func fixtureRulesPayloadModel() []rulesModel {
 	}
 }
 
-func fixtureExportPolicyCreatePayload(rules *[]sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
+func fixtureExportPolicyCreatePayload(rules []sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
 	return &sfs.CreateShareExportPolicyPayload{
 		Name:  "createPayloadName",
-		Rules: *rules,
+		Rules: rules,
 	}
 }
 
@@ -281,7 +281,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name:      types.StringValue("createPayloadName"),
 			},
 			rules:    fixtureRulesPayloadModel(),
-			expected: fixtureExportPolicyCreatePayload(new(fixtureRulesCreatePayload())),
+			expected: fixtureExportPolicyCreatePayload(fixtureRulesCreatePayload()),
 			wantErr:  false,
 		},
 	}
