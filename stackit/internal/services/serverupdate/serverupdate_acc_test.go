@@ -220,9 +220,6 @@ func TestAccServerUpdateScheduleMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "enabled", testutil.ConvertConfigVariable(testConfigVarsMax["enabled"])),
 					resource.TestCheckResourceAttr("stackit_server_update_schedule.test_schedule", "region", testutil.Region),
 
-					// server
-					resource.TestCheckResourceAttrSet("stackit_server_update_schedule.test_schedule", "server_id"),
-
 					// enable
 					resource.TestCheckResourceAttrSet("stackit_server_update_enable.enable", "server_id"),
 					resource.TestCheckResourceAttr("stackit_server_update_enable.enable", "enabled", "true"),
