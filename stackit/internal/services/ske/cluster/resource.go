@@ -1859,7 +1859,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
-	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled
+	disabledExtensions := bool(aclDisabled && observabilityDisabled && dnsDisabled)
 
 	emptyExtensions := &ske.Extension{}
 	if *cl.Extensions == *emptyExtensions && (disabledExtensions || m.Extensions.IsNull()) {

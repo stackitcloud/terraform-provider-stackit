@@ -1,15 +1,11 @@
-# This file contains all available configuration options
-# with their default values.
-
 version: "2"
 # options for analysis running
 run:
   # default concurrency is a available CPU number
   concurrency: 4
 
-  # timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 5m
 linters:
+  # https://golangci-lint.run/usage/linters/
   enable:
     - bodyclose
     - depguard
@@ -40,7 +36,6 @@ linters:
         - typeDefFirst
         - ifElseChain
         - dupImport # https://github.com/go-critic/go-critic/issues/845
-        - rangeValCopy
       enabled-tags:
         - performance
         - style
@@ -48,11 +43,26 @@ linters:
     gosec:
       excludes:
         # Suppressions: (see https://github.com/securego/gosec#available-rules for details)
-        - G101 # "Look for hardcoded credentials" -> a lot of false positives in descriptions for resources like mariadb/credential
         - G104 # "Audit errors not checked" -> which we don't need and is a badly implemented version of errcheck
         - G102 # "Bind to all interfaces" -> since this is normal in k8s
         - G304 # "File path provided as taint input" -> too many false positives
         - G307 # "Deferring unsafe method "Close" on type "io.ReadCloser" -> false positive when calling defer resp.Body.Close()
+    staticcheck:
+      checks:
+        # Default: (from https://golangci-lint.run/docs/linters/configuration/#staticcheck)
+        - all
+        - "-ST1000" # Incorrect or missing package comment.
+        - "-ST1003" # Poorly chosen identifier.
+        - "-ST1016" # Use consistent method receiver names.
+        - "-ST1020" # The documentation of an exported function should start with the function's name.
+        - "-ST1021" # The documentation of an exported function should start with the function's name.
+        - "-ST1022" # The documentation of an exported variable or constant should start with variable's name.
+        # Custom:
+        - "-QF1001" # disable 'could apply De Morgan's law': readability of boolean expressions is subjective and should be decided on a case-by-case basis
+        - "-SA1019" # disable deprecation errors while we switch over to the SDK structure with multi API version support
+        - "-QF1012" # disable 'use fmt.Fprintf instead' Fprintf returns bytes written and an error, which we'd have to handle/ignore to appease some other linter
+        - "-ST1005" # Incorrectly formatted error string.
+        - "-QF1003" # Convert if/else-if chain to tagged switch.
     misspell:
       # Correct spellings using locale preferences for US or UK.
       # Default is to use a neutral variety of English.
@@ -75,27 +85,8 @@ linters:
         - name: atomic
         - name: empty-lines
         - name: early-return
-    staticcheck:
-      checks:
-        # default from https://golangci-lint.run/docs/linters/configuration/#staticcheck
-        - all
-        - "-ST1000"
-        - "-ST1003"
-        - "-ST1016"
-        - "-ST1020"
-        - "-ST1021"
-        - "-ST1022"
-        # customizations
-        - "-SA1019" # disable deprecation errors while we switch over to the SDK structure with multi API version support
-        - "-QF1001" # disable 'could apply De Morgan's law': readability of boolean expressions is subjective and should be decided on a case-by-case basis
-        - "-QF1012" # disable 'use fmt.Fprintf instead' Fprintf returns bytes written and an error, which we'd have to handle/ignore to appease some other linter
   exclusions:
     generated: lax
-    rules:
-      - linters:
-          - gocritic
-        text: 'dupOption'
-        path: _acc_test\.go
     paths:
       - third_party$
       - builtin$

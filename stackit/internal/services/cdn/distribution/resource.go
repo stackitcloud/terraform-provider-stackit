@@ -107,7 +107,7 @@ type backend struct {
 }
 
 type backendCredentials struct {
-	AccessKey *string `tfsdk:"access_key_id"`
+	AccessKey *string `tfsdk:"access_key_id"` //nolint:gosec // AccessKey should be exported from this struct
 	SecretKey *string `tfsdk:"secret_access_key"`
 }
 

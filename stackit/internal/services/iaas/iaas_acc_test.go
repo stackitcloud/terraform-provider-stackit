@@ -1048,7 +1048,7 @@ func TestAccNetworkAreaMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area" "network_area" {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
@@ -1151,12 +1151,12 @@ func TestAccNetworkAreaMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area" "network_area" {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
 					}
-					
+
 					data "stackit_network_area_route" "network_area_route" {
 						organization_id  	  = stackit_network_area.network_area.organization_id
 						network_area_id  	  = stackit_network_area.network_area.network_area_id
@@ -1336,7 +1336,7 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area_region" "network_area_region" {
 						organization_id  = stackit_network_area_region.network_area_region.organization_id
 						network_area_id  = stackit_network_area_region.network_area_region.network_area_id
@@ -1455,7 +1455,7 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area_region" "network_area_region" {
 						organization_id  = stackit_network_area_region.network_area_region.organization_id
 						network_area_id  = stackit_network_area_region.network_area_region.network_area_id
@@ -1583,7 +1583,7 @@ func TestAccVolumeMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_volume" "volume_size" {
 						project_id  = stackit_volume.volume_size.project_id
 						volume_id = stackit_volume.volume_size.volume_id
@@ -1836,7 +1836,7 @@ func TestAccVolumeMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_volume" "volume_size" {
 						project_id  = stackit_volume.volume_size.project_id
 						volume_id = stackit_volume.volume_size.volume_id
@@ -1846,17 +1846,17 @@ func TestAccVolumeMax(t *testing.T) {
 						project_id  = stackit_volume.volume_source.project_id
 						volume_id = stackit_volume.volume_source.volume_id
 					}
-					
+
 					data "stackit_volume" "volume_encrypted_no_key_payload" {
 						project_id  = stackit_volume.volume_encrypted_no_key_payload.project_id
 						volume_id = stackit_volume.volume_encrypted_no_key_payload.volume_id
 					}
-					
+
 					data "stackit_volume" "volume_encrypted_with_regular_key_payload" {
 						project_id  = stackit_volume.volume_encrypted_with_regular_key_payload.project_id
 						volume_id = stackit_volume.volume_encrypted_with_regular_key_payload.volume_id
 					}
-					
+
 					data "stackit_volume" "volume_encrypted_with_write_only_key_payload" {
 						project_id  = stackit_volume.volume_encrypted_with_write_only_key_payload.project_id
 						volume_id = stackit_volume.volume_encrypted_with_write_only_key_payload.volume_id
@@ -2207,7 +2207,6 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_server.server", "boot_volume.performance_class"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.size"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "image_id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "labels.%", "0"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
@@ -2250,7 +2249,6 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_id"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.size"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.performance_class"),
-					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_type"),
 					resource.TestCheckResourceAttr("data.stackit_server.server", "boot_volume.delete_on_termination", "true"),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_server.server", "boot_volume.id",
@@ -2312,7 +2310,6 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_server.server", "boot_volume.performance_class"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.size"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "image_id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "labels.%", "0"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
@@ -2966,7 +2963,7 @@ func TestAccAffinityGroupMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_affinity_group" "affinity_group" {
 						project_id  = stackit_affinity_group.affinity_group.project_id
 						affinity_group_id = stackit_affinity_group.affinity_group.affinity_group_id
@@ -3044,7 +3041,7 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_security_group" "security_group" {
 						project_id  = stackit_security_group.security_group.project_id
 						security_group_id = stackit_security_group.security_group.security_group_id
@@ -3194,10 +3191,6 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 
 					// Security Group Rule (icmp)
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule_icmp", "project_id",
-						"stackit_security_group.security_group", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
 						"stackit_security_group_rule.security_group_rule_icmp", "security_group_id",
 						"stackit_security_group.security_group", "security_group_id",
 					),
@@ -3212,19 +3205,9 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 
 					// Security Group Rule (remote)
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "project_id",
-						"stackit_security_group.security_group", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "security_group_id",
-						"stackit_security_group.security_group", "security_group_id",
-					),
-					resource.TestCheckResourceAttrPair(
 						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
 						"stackit_security_group.security_group_remote", "security_group_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
 				),
 			},
 			// Data source
@@ -3233,7 +3216,7 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_security_group" "security_group" {
 						project_id  = stackit_security_group.security_group.project_id
 						security_group_id = stackit_security_group.security_group.security_group_id
@@ -3384,8 +3367,6 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
 						"data.stackit_security_group.security_group_remote", "security_group_id",
 					),
-					resource.TestCheckResourceAttrSet("data.stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
 				),
 			},
 			// Import
@@ -3484,19 +3465,9 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 
 					// Security Group Rule (remote)
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "project_id",
-						"stackit_security_group.security_group", "project_id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "security_group_id",
-						"stackit_security_group.security_group", "security_group_id",
-					),
-					resource.TestCheckResourceAttrPair(
 						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
 						"stackit_security_group.security_group_remote", "security_group_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["direction"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -4221,8 +4192,6 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Data source
@@ -4250,8 +4219,6 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 				),
@@ -4287,8 +4254,6 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["local_file_path"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
@@ -4335,8 +4300,6 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Data source
@@ -4380,8 +4343,6 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMax["virtio_scsi"])),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 				),
@@ -4433,8 +4394,6 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["virtio_scsi"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
@@ -4717,14 +4676,14 @@ func TestAccRoutingTableMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					# single routing table
 					data "stackit_routing_table" "routing_table" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
 						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
 					}
-			
+
 					# all routing tables in network area
 					data "stackit_routing_tables" "routing_tables" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
@@ -4901,14 +4860,14 @@ func TestAccRoutingTableMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
+
 					# single routing table
 					data "stackit_routing_table" "routing_table" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
 						network_area_id  = stackit_routing_table.routing_table.network_area_id
 						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
 					}
-					
+
 					# all routing tables in network area
 					data "stackit_routing_tables" "routing_tables" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
@@ -5095,7 +5054,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
+
 					# single routing table route
 					data "stackit_routing_table_route" "route" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5103,7 +5062,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 						route_id         = stackit_routing_table_route.route.route_id
 					}
-					
+
 					# all routing table routes in routing table
 					data "stackit_routing_table_routes" "routes" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5294,7 +5253,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
+
 					# single routing table route
 					data "stackit_routing_table_route" "route" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5302,7 +5261,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 						route_id         = stackit_routing_table_route.route.route_id
 					}
-					
+
 					# all routing table routes in routing table
 					data "stackit_routing_table_routes" "routes" {
 						organization_id  = stackit_routing_table_route.route.organization_id
