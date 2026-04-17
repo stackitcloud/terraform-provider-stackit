@@ -1,5 +1,6 @@
 
 variable "project_id" {}
+variable "region" {}
 variable "resource_pool_name" {}
 variable "export_policy_name" {}
 variable "name" {}
@@ -21,6 +22,7 @@ resource "stackit_sfs_export_policy" "exportpolicy" {
 
 resource "stackit_sfs_share" "share" {
   project_id                 = var.project_id
+  region                     = var.region
   resource_pool_id           = stackit_sfs_resource_pool.resourcepool.resource_pool_id
   name                       = var.name
   export_policy              = stackit_sfs_export_policy.exportpolicy.name
