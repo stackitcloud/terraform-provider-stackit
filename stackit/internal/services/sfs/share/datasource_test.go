@@ -15,7 +15,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		name     string
 		state    *dataSourceModel
 		region   string
-		input    *sfs.GetShareResponseShare
+		input    *sfs.Share
 		expected *dataSourceModel
 		isValid  bool
 	}{
@@ -27,15 +27,15 @@ func TestMapDatasourceFields(t *testing.T) {
 				ResourcePoolId: testResourcePoolId,
 			},
 			"eu01",
-			&sfs.GetShareResponseShare{
-				ExportPolicy: sfs.NewNullableShareExportPolicy(&sfs.ShareExportPolicy{
+			&sfs.Share{
+				ExportPolicy: *sfs.NewNullableShareExportPolicy(&sfs.ShareExportPolicy{
 					Id:   testId.ValueStringPointer(),
 					Name: new("test-policy"),
 				}),
 				Id:                      testShareId.ValueStringPointer(),
 				MountPath:               new("/testmount"),
 				Name:                    new("test-name"),
-				SpaceHardLimitGigabytes: utils.Ptr[int64](42),
+				SpaceHardLimitGigabytes: utils.Ptr[int32](42),
 			},
 			&dataSourceModel{
 				Id:                      testId,
@@ -44,7 +44,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				ShareId:                 testShareId,
 				Name:                    types.StringValue("test-name"),
 				ExportPolicyName:        testPolicyName,
-				SpaceHardLimitGigabytes: types.Int64Value(42),
+				SpaceHardLimitGigabytes: types.Int32Value(42),
 				MountPath:               types.StringValue("/testmount"),
 				Region:                  testRegion,
 			},

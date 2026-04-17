@@ -46,7 +46,7 @@ func fixtureRulesModel() basetypes.ListValue {
 				types.StringValue("172.16.0.0/24"),
 				types.StringValue("172.16.0.251/32"),
 			}),
-			"order":      types.Int64Value(0),
+			"order":      types.Int32Value(0),
 			"read_only":  types.BoolValue(false),
 			"set_uuid":   types.BoolValue(false),
 			"super_user": types.BoolValue(false),
@@ -57,7 +57,7 @@ func fixtureRulesModel() basetypes.ListValue {
 				types.StringValue("172.32.0.0/24"),
 				types.StringValue("172.32.0.251/32"),
 			}),
-			"order":      types.Int64Value(1),
+			"order":      types.Int32Value(1),
 			"read_only":  types.BoolValue(false),
 			"set_uuid":   types.BoolValue(false),
 			"super_user": types.BoolValue(false),
@@ -152,7 +152,7 @@ func fixtureRulesPayloadModel() []rulesModel {
 
 func fixtureExportPolicyCreatePayload(rules *[]sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
 	return &sfs.CreateShareExportPolicyPayload{
-		Name:  *new("createPayloadName"),
+		Name:  "createPayloadName",
 		Rules: *rules,
 	}
 }
