@@ -14,12 +14,15 @@ import (
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -524,37 +527,59 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},
+				Validators: []validator.Object{
+					objectvalidator.AlsoRequires(
+						path.MatchRelative().AtName("start"),
+						path.MatchRelative().AtName("end"),
+					),
+				},
 				Attributes: map[string]schema.Attribute{
 					"enable_kubernetes_version_updates": schema.BoolAttribute{
 						Description: "Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true`. " + SKEUpdateDoc,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"enable_machine_image_version_updates": schema.BoolAttribute{
 						Description: "Flag to enable/disable auto-updates of the OS image version. Defaults to `true`. " + SKEUpdateDoc,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"start": schema.StringAttribute{
 						Description: "Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.",
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 						Validators: []validator.String{
 							stringvalidator.RegexMatches(
 								regexp.MustCompile(`^(((\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)$`),
 								"must be a full-time as defined by RFC3339, Section 5.6. E.g. `01:23:45Z`, `05:00:00+02:00`",
 							),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("end")),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"end": schema.StringAttribute{
 						Description: "Time for maintenance window end. E.g. `01:23:45Z`, `05:00:00+02:00`.",
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 						Validators: []validator.String{
 							stringvalidator.RegexMatches(
 								regexp.MustCompile(`^(((\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)$`),
 								"must be a full-time as defined by RFC3339, Section 5.6. E.g. `01:23:45Z`, `05:00:00+02:00`",
 							),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("start")),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -563,6 +588,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Network block as defined below.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Description: "ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.",
@@ -572,13 +600,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							validate.UUID(),
 						},
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.RequiresReplaceIfConfigured(),
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"control_plane": schema.SingleNestedAttribute{
 						Description: "Control plane for the cluster.",
 						Optional:    true,
 						Computed:    true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"access_scope": schema.StringAttribute{
 								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...) + " The field is immutable!",
@@ -586,6 +618,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Computed:    true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
+									stringplanmodifier.UseStateForUnknown(),
 								},
 							},
 						},
