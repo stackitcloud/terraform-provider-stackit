@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
@@ -262,6 +263,11 @@ func TestAccExportPolicyMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigExportPolicyVarsMinUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_sfs_export_policy.exportpolicy", plancheck.ResourceActionReplace),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "region", testutil.Region),
@@ -358,6 +364,11 @@ func TestAccExportPolicyMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigExportPolicyVarsMaxUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceExportPolicyMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_sfs_export_policy.exportpolicy", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "region", testutil.Region),
@@ -465,6 +476,11 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigResourcePoolVarsMinUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_sfs_resource_pool.resourcepool", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "region", testutil.Region),
@@ -560,6 +576,11 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigResourcePoolVarsMaxUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceResourcePoolMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_sfs_resource_pool.resourcepool", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "region", testutil.Region),
@@ -660,6 +681,11 @@ func TestAccShareResourceMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigShareVarsMinUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_sfs_share.share", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "region", testutil.Region),
@@ -766,6 +792,11 @@ func TestAccShareResourceMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigShareVarsMaxUpdated(),
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceShareMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_sfs_share.share", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "region", testutil.Region),
