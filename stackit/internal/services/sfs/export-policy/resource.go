@@ -481,7 +481,7 @@ func (r *exportPolicyResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "SFS export policy state import")
 }
 
-// Maps bar fields to the provider's internal model
+// mapFields maps the API response ShareExportPolicy to the provider's internal model
 func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, model *Model, region string) error {
 	if resp == nil || resp.ShareExportPolicy == nil {
 		return fmt.Errorf("response input is nil")
@@ -551,7 +551,7 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	return nil
 }
 
-// Build CreateBarPayload from provider's model
+// Build a CreateShareExportPolicyPayload from provider's model
 func toCreatePayload(model *Model, rules []rulesModel) (*sfs.CreateShareExportPolicyPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
