@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -424,20 +424,20 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 		orgsToDestroy = append(orgsToDestroy, orgId)
 	}
 
-	organizationsList, err := client.ListOrganizations(ctx, testutil.ProjectId, testutil.Region).Execute()
+	organizationsList, err := client.DefaultAPI.ListOrganizations(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting scf organizations: %w", err)
 	}
 
 	scfOrgs := organizationsList.GetResources()
 	for i := range scfOrgs {
-		if scfOrgs[i].Guid == nil {
+		if scfOrgs[i].Guid == "" {
 			continue
 		}
-		if utils.Contains(orgsToDestroy, *scfOrgs[i].Guid) {
-			_, err := client.DeleteOrganizationExecute(ctx, testutil.ProjectId, testutil.Region, *scfOrgs[i].Guid)
+		if utils.Contains(orgsToDestroy, scfOrgs[i].Guid) {
+			_, err := client.DefaultAPI.DeleteOrganization(ctx, testutil.ProjectId, testutil.Region, scfOrgs[i].Guid).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying scf organization %s during CheckDestroy: %w", *scfOrgs[i].Guid, err)
+				return fmt.Errorf("destroying scf organization %s during CheckDestroy: %w", scfOrgs[i].Guid, err)
 			}
 		}
 	}

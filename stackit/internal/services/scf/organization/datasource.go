@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -149,7 +149,7 @@ func (s *scfOrganizationDataSource) Read(ctx context.Context, request datasource
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read the current scf organization via orgId
-	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
+	scfOrgResponse, err := s.client.DefaultAPI.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
