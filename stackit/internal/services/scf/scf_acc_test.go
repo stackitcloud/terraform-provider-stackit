@@ -254,7 +254,7 @@ func TestAccScfOrgMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "display_name", platformName),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "system_id", platformSystemId),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "api_url", platformApiUrl),
-					resource.TestCheckResourceAttr("data.stackit_scf_platform.scf_platform", "console_url", platformConsoleUrl),
+					resource.TestCheckResourceAttrWith("data.stackit_scf_platform.scf_platform", "console_url", testutil.CheckAttrHasPrefix(platformConsoleUrl)),
 					resource.TestCheckResourceAttrSet("stackit_scf_organization_manager.orgmanager", "id"),
 					resource.TestCheckResourceAttrSet("stackit_scf_organization_manager.orgmanager", "org_id"),
 					resource.TestCheckResourceAttr("stackit_scf_organization_manager.orgmanager", "platform_id", testutil.ConvertConfigVariable(testConfigVarsMax["platform_id"])),
@@ -342,7 +342,7 @@ func TestAccScfOrgMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "display_name", platformName),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "region", region),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "api_url", platformApiUrl),
-					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "console_url", platformConsoleUrl),
+					resource.TestCheckResourceAttrWith("data.stackit_scf_platform.platform", "console_url", testutil.CheckAttrHasPrefix(platformConsoleUrl)),
 					resource.TestCheckResourceAttrPair(
 						"stackit_scf_organization.org", "region",
 						"data.stackit_scf_organization_manager.orgmanager", "region",

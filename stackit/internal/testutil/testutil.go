@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	sdkConf "github.com/stackitcloud/stackit-sdk-go/core/config"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
@@ -352,4 +353,15 @@ func ConvertConfigVariable(variable config.Variable) string {
 	}
 
 	return input
+}
+
+// CheckAttrHasPrefix returns a CheckResourceAttrWithFunc that validates
+// whether an attribute value starts with the given prefix.
+func CheckAttrHasPrefix(prefix string) resource.CheckResourceAttrWithFunc {
+	return func(value string) error {
+		if !strings.HasPrefix(value, prefix) {
+			return fmt.Errorf("should start with %s", prefix)
+		}
+		return nil
+	}
 }
