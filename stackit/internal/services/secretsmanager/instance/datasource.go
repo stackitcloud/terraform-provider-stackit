@@ -18,7 +18,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -146,7 +146,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -164,7 +164,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
