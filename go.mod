@@ -34,7 +34,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.27.3
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.6.1
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.12.0

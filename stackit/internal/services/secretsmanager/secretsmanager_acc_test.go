@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -465,20 +465,20 @@ func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
-		if instances[i].Id == nil {
+		if instances[i].Id == "" {
 			continue
 		}
-		if utils.Contains(instancesToDestroy, *instances[i].Id) {
-			err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].Id)
+		if utils.Contains(instancesToDestroy, instances[i].Id) {
+			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, instances[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].Id, err)
+				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", instances[i].Id, err)
 			}
 		}
 	}
