@@ -8,15 +8,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 )
 
 type postgresFlexClientMocked struct {
 	returnError    bool
 	getFlavorsResp *postgresflex.ListFlavorsResponse
+	listFlavorsReq postgresflex.ApiListFlavorsRequest
 }
 
-func (c *postgresFlexClientMocked) ListFlavorsExecute(_ context.Context, _, _ string) (*postgresflex.ListFlavorsResponse, error) {
+func (c *postgresFlexClientMocked) ListFlavors(_ context.Context, _, _ string) postgresflex.ApiListFlavorsRequest {
+	return c.listFlavorsReq
+}
+
+func (c *postgresFlexClientMocked) ListFlavorsExecute(_ postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, error) {
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -41,7 +46,7 @@ func TestMapFields(t *testing.T) {
 				"cpu":         types.Int64Null(),
 				"ram":         types.Int64Null(),
 			}),
-			Replicas: types.Int64Null(),
+			Replicas: types.Int32Null(),
 			Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 				"class": types.StringNull(),
 				"size":  types.Int64Null(),
@@ -91,7 +96,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
 					Acl: &postgresflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"ip1",
 							"ip2",
 							"",
@@ -106,7 +111,7 @@ func TestMapFields(t *testing.T) {
 					},
 					Id:       new("iid"),
 					Name:     new("name"),
-					Replicas: new(int64(56)),
+					Replicas: new(int32(56)),
 					Status:   new("status"),
 					Storage: &postgresflex.Storage{
 						Class: new("class"),
@@ -135,7 +140,7 @@ func TestMapFields(t *testing.T) {
 					"cpu":         types.Int64Value(12),
 					"ram":         types.Int64Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -154,7 +159,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
 					Acl: &postgresflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"ip1",
 							"ip2",
 							"",
@@ -164,7 +169,7 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             new("iid"),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
+					Replicas:       new(int32(56)),
 					Status:         new("status"),
 					Storage:        nil,
 					Version:        new("version"),
@@ -196,7 +201,7 @@ func TestMapFields(t *testing.T) {
 					"cpu":         types.Int64Value(12),
 					"ram":         types.Int64Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -220,7 +225,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceResponse{
 				Item: &postgresflex.Instance{
 					Acl: &postgresflex.ACL{
-						Items: &[]string{
+						Items: []string{
 							"",
 							"ip1",
 							"ip2",
@@ -230,7 +235,7 @@ func TestMapFields(t *testing.T) {
 					Flavor:         nil,
 					Id:             new("iid"),
 					Name:           new("name"),
-					Replicas:       new(int64(56)),
+					Replicas:       new(int32(56)),
 					Status:         new("status"),
 					Storage:        nil,
 					Version:        new("version"),
@@ -262,7 +267,7 @@ func TestMapFields(t *testing.T) {
 					"cpu":         types.Int64Value(12),
 					"ram":         types.Int64Value(34),
 				}),
-				Replicas: types.Int64Value(56),
+				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -371,10 +376,10 @@ func TestToCreatePayload(t *testing.T) {
 			&flavorModel{},
 			&storageModel{},
 			&postgresflex.CreateInstancePayload{
-				Acl: &postgresflex.ACL{
-					Items: &[]string{},
+				Acl: postgresflex.ACL{
+					Items: []string{},
 				},
-				Storage: &postgresflex.Storage{},
+				Storage: postgresflex.Storage{},
 			},
 			true,
 		},
@@ -383,7 +388,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
-				Replicas:       types.Int64Value(12),
+				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
 			[]string{
@@ -398,21 +403,21 @@ func TestToCreatePayload(t *testing.T) {
 				Size:  types.Int64Value(34),
 			},
 			&postgresflex.CreateInstancePayload{
-				Acl: &postgresflex.ACL{
-					Items: &[]string{
+				Acl: postgresflex.ACL{
+					Items: []string{
 						"ip_1",
 						"ip_2",
 					},
 				},
-				BackupSchedule: new("schedule"),
-				FlavorId:       new("flavor_id"),
-				Name:           new("name"),
-				Replicas:       new(int64(12)),
-				Storage: &postgresflex.Storage{
+				BackupSchedule: "schedule",
+				FlavorId:       "flavor_id",
+				Name:           "name",
+				Replicas:       int32(12),
+				Storage: postgresflex.Storage{
 					Class: new("class"),
 					Size:  new(int64(34)),
 				},
-				Version: new("version"),
+				Version: "version",
 			},
 			true,
 		},
@@ -421,7 +426,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
-				Replicas:       types.Int64Value(2123456789),
+				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
 			[]string{
@@ -435,20 +440,20 @@ func TestToCreatePayload(t *testing.T) {
 				Size:  types.Int64Null(),
 			},
 			&postgresflex.CreateInstancePayload{
-				Acl: &postgresflex.ACL{
-					Items: &[]string{
+				Acl: postgresflex.ACL{
+					Items: []string{
 						"",
 					},
 				},
-				BackupSchedule: nil,
-				FlavorId:       nil,
-				Name:           nil,
-				Replicas:       new(int64(2123456789)),
-				Storage: &postgresflex.Storage{
+				BackupSchedule: "",
+				FlavorId:       "",
+				Name:           "",
+				Replicas:       int32(2123456789),
+				Storage: postgresflex.Storage{
 					Class: nil,
 					Size:  nil,
 				},
-				Version: nil,
+				Version: "",
 			},
 			true,
 		},
@@ -526,7 +531,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&storageModel{},
 			&postgresflex.PartialUpdateInstancePayload{
 				Acl: &postgresflex.ACL{
-					Items: &[]string{},
+					Items: []string{},
 				},
 			},
 			true,
@@ -536,7 +541,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
-				Replicas:       types.Int64Value(12),
+				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
 			[]string{
@@ -552,7 +557,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&postgresflex.PartialUpdateInstancePayload{
 				Acl: &postgresflex.ACL{
-					Items: &[]string{
+					Items: []string{
 						"ip_1",
 						"ip_2",
 					},
@@ -560,7 +565,7 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: new("schedule"),
 				FlavorId:       new("flavor_id"),
 				Name:           new("name"),
-				Replicas:       new(int64(12)),
+				Replicas:       new(int32(12)),
 				Version:        new("version"),
 			},
 			true,
@@ -570,7 +575,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
-				Replicas:       types.Int64Value(2123456789),
+				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
 			[]string{
@@ -585,14 +590,14 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&postgresflex.PartialUpdateInstancePayload{
 				Acl: &postgresflex.ACL{
-					Items: &[]string{
+					Items: []string{
 						"",
 					},
 				},
 				BackupSchedule: nil,
 				FlavorId:       nil,
 				Name:           nil,
-				Replicas:       new(int64(2123456789)),
+				Replicas:       new(int32(2123456789)),
 				Version:        nil,
 			},
 			true,
@@ -669,7 +674,7 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: types.Int64Value(8),
 			},
 			&postgresflex.ListFlavorsResponse{
-				Flavors: &[]postgresflex.Flavor{
+				Flavors: []postgresflex.Flavor{
 					{
 						Id:          new("fid-1"),
 						Cpu:         new(int64(2)),
@@ -694,7 +699,7 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: types.Int64Value(8),
 			},
 			&postgresflex.ListFlavorsResponse{
-				Flavors: &[]postgresflex.Flavor{
+				Flavors: []postgresflex.Flavor{
 					{
 						Id:          new("fid-1"),
 						Cpu:         new(int64(2)),
@@ -725,7 +730,7 @@ func TestLoadFlavorId(t *testing.T) {
 				RAM: types.Int64Value(8),
 			},
 			&postgresflex.ListFlavorsResponse{
-				Flavors: &[]postgresflex.Flavor{
+				Flavors: []postgresflex.Flavor{
 					{
 						Id:          new("fid-1"),
 						Cpu:         new(int64(1)),

@@ -682,6 +682,8 @@ github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1 h1:VfszhFq/Snsd0Lnfl
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1/go.mod h1:gBv6YkB3Xf3c0ZXg2GwtWY8zExwGPF/Ag114XiiERxg=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.0 h1:lsOTEvItzrUerCzUodyyOy6pZ4QiSzwID7U20ZvZvHw=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.0/go.mod h1:CfqSEGCW0b5JlijCwtUT1kfjThmQ5jXX47TWrdD5rTU=
+github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1 h1:G21hx6vztR1Np+K+MXsK1td/CKbKHdLK89zvtH6OoKk=
+github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1/go.mod h1:qHuMB/qt7w1u5Xk3qzP3pJFXjTqPrtpM2bMhKpIvM3I=
 github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0 h1:siKBCYl7BwR5S25Y4SwUAX6eFTXSCkQ+8JIQEqyKIXo=
 github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0/go.mod h1:QKy74hhLVZKXItw3y+elF8s9QezFqpEsAUmaqvNDzYs=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5 h1:W57+XRa8wTLsi5CV9Tqa7mGgt/PvlRM//RurXSmvII8=
@@ -708,6 +710,8 @@ github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1 h1:AO5Np67/w0
 github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1/go.mod h1:Reo2Nk3yiA686quUMrk0eKwzpzaAZ7KwmzHzScNdG8Q=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5 h1:H67e3KnHQx954yI8fuQmxXwRf/myqAdLg2KvxImp00g=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5/go.mod h1:xmAWk9eom8wznvLuLfm0F4xyeiBX8LaggXsKFmos+dw=
+github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.6.2 h1:5Op07pEs6dcJxfi2UjT1645k1uMf1xMbY8/D3A797aA=
+github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.6.2/go.mod h1:AqFWa9kddt2Wqe8k1Kw5FB1mlHG30K1FGsJx8dw/r1c=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.0 h1:I8NF8Q5nRj7/7qDI8Qm4oI0KCNQcOjE6kqyBdWcUoxk=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.0/go.mod h1:wk2Oz+7pxT9YF1h6elWzdlhU6V7GSQXcGixxlXxNe+U=
 github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.1 h1:6loJq37rLpU84HY/rzmpZrBGPz2vKqhly8mUC8NcAu0=
