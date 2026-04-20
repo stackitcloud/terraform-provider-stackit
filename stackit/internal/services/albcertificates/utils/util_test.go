@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
+	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -17,7 +17,7 @@ import (
 
 const (
 	testVersion        = "1.2.3"
-	testCustomEndpoint = "https://secretsmanager-custom-endpoint.api.stackit.cloud"
+	testCustomEndpoint = "https://alb-cert-custom-endpoint.api.stackit.cloud"
 )
 
 func TestConfigureClient(t *testing.T) {
@@ -35,7 +35,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *secretsmanager.APIClient
+		expected *certSdk.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -44,9 +44,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *secretsmanager.APIClient {
-				apiClient, err := secretsmanager.NewAPIClient(
-					config.WithRegion("eu01"),
+			expected: func() *certSdk.APIClient {
+				apiClient, err := certSdk.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
@@ -60,12 +59,12 @@ func TestConfigureClient(t *testing.T) {
 			name: "custom endpoint",
 			args: args{
 				providerData: &core.ProviderData{
-					Version:                      testVersion,
-					SecretsManagerCustomEndpoint: testCustomEndpoint,
+					Version:                       testVersion,
+					ALBCertificatesCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *secretsmanager.APIClient {
-				apiClient, err := secretsmanager.NewAPIClient(
+			expected: func() *certSdk.APIClient {
+				apiClient, err := certSdk.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)

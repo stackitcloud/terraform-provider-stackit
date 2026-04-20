@@ -88,12 +88,44 @@ resource "stackit_server" "server" {
 }
 
 # Create example credentials for observability of the ALB
-# Create real credentials in your stackit observability
+# Create real credentials in your STACKIT observability
 resource "stackit_loadbalancer_observability_credential" "observability" {
   project_id   = var.project_id
   display_name = "my-cred"
   password     = "password"
   username     = "username"
+}
+
+# Create a RAS key pair
+resource "tls_private_key" "example" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+# Create a TLS certificate
+resource "tls_self_signed_cert" "example" {
+  private_key_pem = tls_private_key.example.private_key_pem
+
+  subject {
+    common_name  = "localhost"
+    organization = "STACKIT Test"
+  }
+
+  validity_period_hours = 12
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+}
+
+# Create a ALB certificate
+resource "stackit_alb_certificate" "certificate" {
+  project_id  = var.project_id
+  name        = "example-certificate"
+  private_key = tls_private_key.example.private_key_pem
+  public_key  = tls_self_signed_cert.example.cert_pem
 }
 
 # Create a Application Load Balancer
@@ -137,9 +169,7 @@ resource "stackit_application_load_balancer" "example" {
     https = {
       certificate_config = {
         certificate_ids = [
-          # Currently no TF provider available, needs to be added with API
-          # https://docs.api.stackit.cloud/documentation/certificates/version/v2
-          "name-v1-8c81bd317af8a03b8ef0851ccb074eb17d1ad589b540446244a5e593f78ef820"
+          stackit_alb_certificate.certificate.cert_id
         ]
       }
     }

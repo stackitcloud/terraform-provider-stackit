@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -204,7 +204,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -212,11 +212,11 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Id == nil {
+	if createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
 		return
 	}
-	instanceId := *createResp.Id
+	instanceId := createResp.Id
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"instance_id": instanceId,
@@ -228,7 +228,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
 	}
-	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
@@ -266,7 +266,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -279,7 +279,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
@@ -324,7 +324,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update instance
-	err = r.client.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
+	err = r.client.DefaultAPI.UpdateInstance(ctx, projectId, instanceId).UpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -348,7 +348,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance acl", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -356,7 +356,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
 		return
@@ -395,7 +395,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -436,22 +436,22 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 	var instanceId string
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
-	} else if instance.Id != nil {
-		instanceId = *instance.Id
+	} else if instance.Id != "" {
+		instanceId = instance.Id
 	} else {
 		return fmt.Errorf("instance id not present")
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
-	model.Name = types.StringPointerValue(instance.Name)
+	model.Name = types.StringValue(instance.Name)
 
 	if instance.KmsKey != nil {
 		model.KmsKey = &KmsKeyModel{
-			KeyId:               types.StringPointerValue(instance.KmsKey.KeyId),
-			KeyRingId:           types.StringPointerValue(instance.KmsKey.KeyRingId),
-			KeyVersion:          types.Int64PointerValue(instance.KmsKey.KeyVersion),
-			ServiceAccountEmail: types.StringPointerValue(instance.KmsKey.ServiceAccountEmail),
+			KeyId:               types.StringValue(instance.KmsKey.KeyId),
+			KeyRingId:           types.StringValue(instance.KmsKey.KeyRingId),
+			KeyVersion:          types.Int64Value(instance.KmsKey.KeyVersion),
+			ServiceAccountEmail: types.StringValue(instance.KmsKey.ServiceAccountEmail),
 		}
 	}
 
@@ -467,14 +467,14 @@ func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("nil ACL list")
 	}
-	if aclList.Acls == nil || len(*aclList.Acls) == 0 {
+	if len(aclList.Acls) == 0 {
 		model.ACLs = types.SetNull(types.StringType)
 		return nil
 	}
 
 	acls := []attr.Value{}
-	for _, acl := range *aclList.Acls {
-		acls = append(acls, types.StringValue(*acl.Cidr))
+	for _, acl := range aclList.Acls {
+		acls = append(acls, types.StringValue(acl.Cidr))
 	}
 	aclsList, diags := types.SetValue(types.StringType, acls)
 	if diags.HasError() {
@@ -489,15 +489,15 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateInstancePayload, error
 		return nil, fmt.Errorf("nil model")
 	}
 	payload := &secretsmanager.CreateInstancePayload{
-		Name: conversion.StringValueToPointer(model.Name),
+		Name: model.Name.ValueString(),
 	}
 
 	if model.KmsKey != nil {
 		payload.KmsKey = &secretsmanager.KmsKeyPayload{
-			KeyId:               conversion.StringValueToPointer(model.KmsKey.KeyId),
-			KeyRingId:           conversion.StringValueToPointer(model.KmsKey.KeyRingId),
-			KeyVersion:          conversion.Int64ValueToPointer(model.KmsKey.KeyVersion),
-			ServiceAccountEmail: conversion.StringValueToPointer(model.KmsKey.ServiceAccountEmail),
+			KeyId:               model.KmsKey.KeyId.ValueString(),
+			KeyRingId:           model.KmsKey.KeyRingId.ValueString(),
+			KeyVersion:          model.KmsKey.KeyVersion.ValueInt64(),
+			ServiceAccountEmail: model.KmsKey.ServiceAccountEmail.ValueString(),
 		}
 	}
 
@@ -510,15 +510,15 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error
 	}
 
 	payload := &secretsmanager.UpdateInstancePayload{
-		Name: conversion.StringValueToPointer(model.Name),
+		Name: model.Name.ValueString(),
 	}
 
 	if model.KmsKey != nil {
 		payload.KmsKey = &secretsmanager.KmsKeyPayload{
-			KeyId:               conversion.StringValueToPointer(model.KmsKey.KeyId),
-			KeyRingId:           conversion.StringValueToPointer(model.KmsKey.KeyRingId),
-			KeyVersion:          conversion.Int64ValueToPointer(model.KmsKey.KeyVersion),
-			ServiceAccountEmail: conversion.StringValueToPointer(model.KmsKey.ServiceAccountEmail),
+			KeyId:               model.KmsKey.KeyId.ValueString(),
+			KeyRingId:           model.KmsKey.KeyRingId.ValueString(),
+			KeyVersion:          model.KmsKey.KeyVersion.ValueInt64(),
+			ServiceAccountEmail: model.KmsKey.ServiceAccountEmail.ValueString(),
 		}
 	}
 
@@ -528,7 +528,7 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error
 // updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
 func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
 	// Get ACLs current state
-	currentACLsResp, err := client.ListACLs(ctx, projectId, instanceId).Execute()
+	currentACLsResp, err := client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		return fmt.Errorf("fetching current ACLs: %w", err)
 	}
@@ -544,29 +544,29 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 			isInModel: true,
 		}
 	}
-	for _, acl := range *currentACLsResp.Acls {
-		cidr := *acl.Cidr
+	for _, acl := range currentACLsResp.Acls {
+		cidr := acl.Cidr
 		if _, ok := aclsState[cidr]; !ok {
 			aclsState[cidr] = &aclState{}
 		}
 		aclsState[cidr].isCreated = true
-		aclsState[cidr].id = *acl.Id
+		aclsState[cidr].id = acl.Id
 	}
 
 	// Create/delete ACLs
 	for cidr, state := range aclsState {
 		if state.isInModel && !state.isCreated {
 			payload := secretsmanager.CreateACLPayload{
-				Cidr: new(cidr),
+				Cidr: cidr,
 			}
-			_, err := client.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
+			_, err := client.DefaultAPI.CreateACL(ctx, projectId, instanceId).CreateACLPayload(payload).Execute()
 			if err != nil {
 				return fmt.Errorf("creating ACL '%v': %w", cidr, err)
 			}
 		}
 
 		if !state.isInModel && state.isCreated {
-			err := client.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
+			err := client.DefaultAPI.DeleteACL(ctx, projectId, instanceId, state.id).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting ACL '%v': %w", cidr, err)
 			}
