@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
@@ -33,8 +35,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/wait"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -55,7 +57,7 @@ type Model struct {
 	Flavor         types.Object `tfsdk:"flavor"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
-	Replicas       types.Int64  `tfsdk:"replicas"`
+	Replicas       types.Int32  `tfsdk:"replicas"`
 	Options        types.Object `tfsdk:"options"`
 	Region         types.String `tfsdk:"region"`
 }
@@ -64,16 +66,16 @@ type Model struct {
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
-	CPU         types.Int64  `tfsdk:"cpu"`
-	RAM         types.Int64  `tfsdk:"ram"`
+	CPU         types.Int32  `tfsdk:"cpu"`
+	RAM         types.Int32  `tfsdk:"ram"`
 }
 
 // Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
-	"cpu":         basetypes.Int64Type{},
-	"ram":         basetypes.Int64Type{},
+	"cpu":         basetypes.Int32Type{},
+	"ram":         basetypes.Int32Type{},
 }
 
 // Struct corresponding to Model.Storage
@@ -252,18 +254,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"cpu": schema.Int64Attribute{
+					"cpu": schema.Int32Attribute{
 						Required: true,
 					},
-					"ram": schema.Int64Attribute{
+					"ram": schema.Int32Attribute{
 						Required: true,
 					},
 				},
 			},
-			"replicas": schema.Int64Attribute{
+			"replicas": schema.Int32Attribute{
 				Computed: true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"storage": schema.SingleNestedAttribute{
@@ -369,7 +371,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
+		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -400,7 +402,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -425,7 +427,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -496,7 +498,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -559,7 +561,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client, &model, flavor)
+		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -590,7 +592,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -598,7 +600,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -638,7 +640,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -646,7 +648,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -701,7 +703,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	if instance.Acl == nil || instance.Acl.Items == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		respACL := *instance.Acl.Items
+		respACL := instance.Acl.Items
 		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -727,8 +729,8 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		flavorValues = map[string]attr.Value{
 			"id":          types.StringValue(*instance.Flavor.Id),
 			"description": types.StringValue(*instance.Flavor.Description),
-			"cpu":         types.Int64PointerValue(instance.Flavor.Cpu),
-			"ram":         types.Int64PointerValue(instance.Flavor.Memory),
+			"cpu":         types.Int32PointerValue(instance.Flavor.Cpu),
+			"ram":         types.Int32PointerValue(instance.Flavor.Memory),
 		}
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
@@ -799,7 +801,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	model.Name = types.StringPointerValue(instance.Name)
 	model.ACL = aclList
 	model.Flavor = flavorObject
-	model.Replicas = types.Int64PointerValue(instance.Replicas)
+	model.Replicas = types.Int32PointerValue(instance.Replicas)
 	model.Storage = storageObject
 	model.Version = types.StringPointerValue(instance.Version)
 	model.Options = optionsObject
@@ -811,19 +813,19 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	aclPayload := &sqlserverflex.CreateInstancePayloadAcl{}
+	aclPayload := &sqlserverflex.InstanceDocumentationACL{}
 	if acl != nil {
-		aclPayload.Items = &acl
+		aclPayload.Items = acl
 	}
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
 	}
-	storagePayload := &sqlserverflex.CreateInstancePayloadStorage{}
+	storagePayload := &sqlserverflex.InstanceDocumentationStorage{}
 	if storage != nil {
 		storagePayload.Class = conversion.StringValueToPointer(storage.Class)
 		storagePayload.Size = conversion.Int64ValueToPointer(storage.Size)
 	}
-	optionsPayload := &sqlserverflex.CreateInstancePayloadOptions{}
+	optionsPayload := &sqlserverflex.InstanceDocumentationOptions{}
 	if options != nil {
 		optionsPayload.Edition = conversion.StringValueToPointer(options.Edition)
 		retentionDaysInt := conversion.Int64ValueToPointer(options.RetentionDays)
@@ -837,8 +839,8 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	return &sqlserverflex.CreateInstancePayload{
 		Acl:            aclPayload,
 		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       conversion.StringValueToPointer(flavor.Id),
-		Name:           conversion.StringValueToPointer(model.Name),
+		FlavorId:       flavor.Id.ValueString(),
+		Name:           model.Name.ValueString(),
 		Storage:        storagePayload,
 		Version:        conversion.StringValueToPointer(model.Version),
 		Options:        optionsPayload,
@@ -849,9 +851,9 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel) (*sqlserve
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	aclPayload := &sqlserverflex.CreateInstancePayloadAcl{}
+	aclPayload := &sqlserverflex.InstanceDocumentationACL{}
 	if acl != nil {
-		aclPayload.Items = &acl
+		aclPayload.Items = acl
 	}
 	if flavor == nil {
 		return nil, fmt.Errorf("nil flavor")
@@ -867,7 +869,8 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel) (*sqlserve
 }
 
 type sqlserverflexClient interface {
-	ListFlavorsExecute(ctx context.Context, projectId, region string) (*sqlserverflex.ListFlavorsResponse, error)
+	ListFlavors(ctx context.Context, projectId, region string) sqlserverflex.ApiListFlavorsRequest
+	ListFlavorsExecute(r sqlserverflex.ApiListFlavorsRequest) (*sqlserverflex.ListFlavorsResponse, error)
 }
 
 func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model, flavor *flavorModel) error {
@@ -877,18 +880,19 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.Int64ValueToPointer(flavor.CPU)
+	cpu := conversion.Int32ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.Int64ValueToPointer(flavor.RAM)
+	ram := conversion.Int32ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-	res, err := client.ListFlavorsExecute(ctx, projectId, region)
+	req := client.ListFlavors(ctx, projectId, region)
+	res, err := client.ListFlavorsExecute(req)
 	if err != nil {
 		return fmt.Errorf("listing sqlserverflex flavors: %w", err)
 	}
@@ -897,7 +901,7 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	if res.Flavors == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
-	for _, f := range *res.Flavors {
+	for _, f := range res.Flavors {
 		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
 			continue
 		}
