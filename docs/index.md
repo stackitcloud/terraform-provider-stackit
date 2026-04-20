@@ -163,6 +163,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 
 ### Optional
 
+- `alb_certificates_custom_endpoint` (String) Custom endpoint for the Application Load Balancer TLS Certificate service
 - `alb_custom_endpoint` (String) Custom endpoint for the Application Load Balancer service
 - `authorization_custom_endpoint` (String) Custom endpoint for the Membership service
 - `cdn_custom_endpoint` (String) Custom endpoint for the CDN service
