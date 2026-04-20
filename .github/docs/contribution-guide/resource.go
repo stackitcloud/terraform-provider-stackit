@@ -263,7 +263,7 @@ func (r *barResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	readTimeout, diags := model.Timeouts.Create(ctx, core.DefaultOperationTimeout)
+	readTimeout, diags := model.Timeouts.Read(ctx, core.DefaultOperationTimeout)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -318,7 +318,7 @@ func (r *barResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	}
 
 	waiterTimeout := wait.DeleteBarWaitHandler(ctx, r.client, projectId, region, barId).GetTimeout()
-	deleteTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
+	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
