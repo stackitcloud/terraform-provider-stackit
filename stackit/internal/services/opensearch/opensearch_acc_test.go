@@ -12,6 +12,7 @@ import (
 	legacyOpensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
