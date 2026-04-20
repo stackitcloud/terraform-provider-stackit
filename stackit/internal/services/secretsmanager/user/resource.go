@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -178,7 +178,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -186,11 +186,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	if userResp.Id == nil {
+	if userResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "Got empty user id")
 		return
 	}
-	userId := *userResp.Id
+	userId := userResp.Id
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"instance_id": instanceId,
@@ -229,7 +229,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -284,7 +284,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	// Update existing user
-	err = r.client.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	err = r.client.DefaultAPI.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
@@ -292,7 +292,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	user, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	user, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API to get user's current state: %v", err))
 		return
@@ -337,7 +337,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Delete existing user
-	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
+	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -375,8 +375,8 @@ func toCreatePayload(model *Model) (*secretsmanager.CreateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.CreateUserPayload{
-		Description: conversion.StringValueToPointer(model.Description),
-		Write:       conversion.BoolValueToPointer(model.WriteEnabled),
+		Description: model.Description.ValueString(),
+		Write:       model.WriteEnabled.ValueBool(),
 	}, nil
 }
 
@@ -400,20 +400,20 @@ func mapFields(user *secretsmanager.User, model *Model) error {
 	var userId string
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
-	} else if user.Id != nil {
-		userId = *user.Id
+	} else if user.Id != "" {
+		userId = user.Id
 	} else {
 		return fmt.Errorf("user id not present")
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
-	model.Description = types.StringPointerValue(user.Description)
-	model.WriteEnabled = types.BoolPointerValue(user.Write)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Description = types.StringValue(user.Description)
+	model.WriteEnabled = types.BoolValue(user.Write)
+	model.Username = types.StringValue(user.Username)
 	// Password only sent in creation response, responses after that have it as ""
-	if user.Password != nil && *user.Password != "" {
-		model.Password = types.StringPointerValue(user.Password)
+	if user.Password != "" {
+		model.Password = types.StringValue(user.Password)
 	}
 	return nil
 }
