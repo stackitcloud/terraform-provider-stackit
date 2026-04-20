@@ -66,13 +66,6 @@ func TestMapFields(t *testing.T) {
 			Model{},
 			false,
 		},
-		{
-			"no_resource_id",
-			&serverupdate.UpdateSchedule{},
-			testRegion,
-			Model{},
-			false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {

@@ -433,9 +433,6 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region strin
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	if schedule.Id == 0 {
-		return fmt.Errorf("response id is 0")
-	}
 
 	model.UpdateScheduleId = types.Int32Value(schedule.Id)
 	model.ID = utils.BuildInternalTerraformId(
