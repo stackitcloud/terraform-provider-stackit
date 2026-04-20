@@ -466,9 +466,6 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	if schedule.Id == 0 {
-		return fmt.Errorf("response id is nil")
-	}
 
 	model.BackupScheduleId = types.Int32Value(schedule.Id)
 	model.ID = utils.BuildInternalTerraformId(
