@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/core v0.25.0
-	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.0
+	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
@@ -24,7 +24,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.27.1
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.7.0
