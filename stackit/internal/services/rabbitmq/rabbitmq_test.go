@@ -8,8 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -40,13 +39,13 @@ resource "stackit_rabbitmq_instance" "instance" {
 `, s.Server.URL, projectId, name, planName, version)
 	offerings := testutil.MockResponse{
 		ToJsonBody: &rabbitmq.ListOfferingsResponse{
-			Offerings: &[]rabbitmq.Offering{
+			Offerings: []rabbitmq.Offering{
 				{
-					Version: utils.Ptr(version),
-					Plans: &[]rabbitmq.Plan{
+					Version: version,
+					Plans: []rabbitmq.Plan{
 						{
-							Name: utils.Ptr(planName),
-							Id:   utils.Ptr(planId),
+							Name: planName,
+							Id:   planId,
 						},
 					},
 				},
@@ -63,15 +62,10 @@ resource "stackit_rabbitmq_instance" "instance" {
 						testutil.MockResponse{
 							Description: "create",
 							ToJsonBody: rabbitmq.CreateInstanceResponse{
-								InstanceId: new(instanceId),
+								InstanceId: instanceId,
 							},
 						},
-						testutil.MockResponse{
-							Description: "create waiter",
-							ToJsonBody: rabbitmq.Instance{
-								Status: utils.Ptr(rabbitmq.INSTANCESTATUS_FAILED),
-							},
-						},
+						testutil.MockResponse{Description: "create waiter", StatusCode: http.StatusInternalServerError},
 					)
 				},
 				Config:      tfConfig,
@@ -129,7 +123,7 @@ resource "stackit_rabbitmq_credential" "credential" {
 						// initial post response
 						testutil.MockResponse{
 							ToJsonBody: rabbitmq.CredentialsResponse{
-								Id: new(credentialId),
+								Id: credentialId,
 							},
 						},
 						// failing waiter

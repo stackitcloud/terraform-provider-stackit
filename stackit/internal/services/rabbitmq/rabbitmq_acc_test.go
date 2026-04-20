@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/wait"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -21,11 +21,11 @@ import (
 var instanceResource = map[string]string{
 	"project_id":      testutil.ProjectId,
 	"name":            testutil.ResourceNameWithDateTime("rabbitmq"),
-	"plan_id":         "6af42a95-8b68-436d-907b-8ae37dfec52b",
+	"plan_id":         "d5da0d91-6854-4670-802f-8a874dabfd58",
 	"plan_name":       "stackit-rabbitmq-2.4.10-single",
-	"version":         "3.13",
+	"version":         "4.1",
 	"sgw_acl_invalid": "1.2.3.4/4",
-	"sgw_acl_valid":   "192.168.0.0/16",
+	"sgw_acl_valid":   "193.148.160.0/19",
 }
 
 func parametersConfig(params map[string]string) string {
@@ -261,23 +261,23 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
 		if instances[i].InstanceId == nil {
 			continue
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].InstanceId)
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
@@ -288,14 +288,14 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *rabbitmq.Instance) bool {
-	if *i.LastOperation.Type != rabbitmq.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type != wait.INSTANCELASTOPERATIONTYPE_DELETE {
 		return false
 	}
 
-	if *i.LastOperation.Type == rabbitmq.INSTANCELASTOPERATIONTYPE_DELETE {
-		if *i.LastOperation.State != rabbitmq.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
+	if i.LastOperation.Type == wait.INSTANCELASTOPERATIONTYPE_DELETE {
+		if i.LastOperation.State != "succeeded" {
 			return false
-		} else if strings.Contains(*i.LastOperation.Description, "DeleteFailed") || strings.Contains(*i.LastOperation.Description, "failed") {
+		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false
 		}
 	}
