@@ -16,6 +16,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )

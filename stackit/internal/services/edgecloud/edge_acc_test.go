@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
