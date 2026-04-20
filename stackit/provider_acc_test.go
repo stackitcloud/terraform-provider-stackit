@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 

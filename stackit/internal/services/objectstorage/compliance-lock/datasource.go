@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"

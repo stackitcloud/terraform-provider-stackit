@@ -22,6 +22,7 @@ import (
 	edgewait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
