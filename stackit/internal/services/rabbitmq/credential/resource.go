@@ -22,8 +22,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/wait"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -44,7 +44,7 @@ type Model struct {
 	HttpAPIURIs  types.List   `tfsdk:"http_api_uris"`
 	Management   types.String `tfsdk:"management"`
 	Password     types.String `tfsdk:"password"`
-	Port         types.Int64  `tfsdk:"port"`
+	Port         types.Int32  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
 	Uris         types.List   `tfsdk:"uris"`
 	Username     types.String `tfsdk:"username"`
@@ -156,7 +156,7 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Computed:  true,
 				Sensitive: true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				Computed: true,
 			},
 			"uri": schema.StringAttribute{
@@ -191,7 +191,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Create new recordset
-	credentialsResp, err := r.client.CreateCredentials(ctx, projectId, instanceId).Execute()
+	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -199,11 +199,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	ctx = core.LogResponse(ctx)
 
-	if credentialsResp.Id == nil {
+	if credentialsResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty credential id")
 		return
 	}
-	credentialId := *credentialsResp.Id
+	credentialId := credentialsResp.Id
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":    projectId,
 		"instance_id":   instanceId,
@@ -213,7 +213,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -251,7 +251,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -305,14 +305,14 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
 	// Delete existing record set
-	err := r.client.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client, projectId, instanceId, credentialId).WaitWithContext(ctx)
+	_, err = wait.DeleteCredentialsWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, credentialId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -358,8 +358,8 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 	var credentialId string
 	if model.CredentialId.ValueString() != "" {
 		credentialId = model.CredentialId.ValueString()
-	} else if credentialsResp.Id != nil {
-		credentialId = *credentialsResp.Id
+	} else if credentialsResp.Id != "" {
+		credentialId = credentialsResp.Id
 	} else {
 		return fmt.Errorf("credentials id not present")
 	}
@@ -385,51 +385,50 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 	model.Hosts = types.ListNull(types.StringType)
 	model.Uris = types.ListNull(types.StringType)
 	model.HttpAPIURIs = types.ListNull(types.StringType)
-	if credentials != nil {
-		if credentials.Hosts != nil {
-			respHosts := *credentials.Hosts
-			reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
+	if credentials.Hosts != nil {
+		respHosts := credentials.Hosts
+		reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
 
-			hostsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHosts)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
-			}
-
-			model.Hosts = hostsTF
-		}
-		model.Host = types.StringPointerValue(credentials.Host)
-		if credentials.HttpApiUris != nil {
-			respHttpApiUris := *credentials.HttpApiUris
-
-			reconciledHttpApiUris := utils.ReconcileStringSlices(modelHttpApiUris, respHttpApiUris)
-
-			httpApiUrisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHttpApiUris)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
-			}
-
-			model.HttpAPIURIs = httpApiUrisTF
+		hostsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHosts)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 		}
 
-		if credentials.Uris != nil {
-			respUris := *credentials.Uris
-
-			reconciledUris := utils.ReconcileStringSlices(modelUris, respUris)
-
-			urisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledUris)
-			if diags.HasError() {
-				return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
-			}
-
-			model.Uris = urisTF
-		}
-
-		model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
-		model.Management = types.StringPointerValue(credentials.Management)
-		model.Password = types.StringPointerValue(credentials.Password)
-		model.Port = types.Int64PointerValue(credentials.Port)
-		model.Uri = types.StringPointerValue(credentials.Uri)
-		model.Username = types.StringPointerValue(credentials.Username)
+		model.Hosts = hostsTF
 	}
+	model.Host = types.StringValue(credentials.Host)
+	if credentials.HttpApiUris != nil {
+		respHttpApiUris := credentials.HttpApiUris
+
+		reconciledHttpApiUris := utils.ReconcileStringSlices(modelHttpApiUris, respHttpApiUris)
+
+		httpApiUrisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHttpApiUris)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
+		}
+
+		model.HttpAPIURIs = httpApiUrisTF
+	}
+
+	if credentials.Uris != nil {
+		respUris := credentials.Uris
+
+		reconciledUris := utils.ReconcileStringSlices(modelUris, respUris)
+
+		urisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledUris)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
+		}
+
+		model.Uris = urisTF
+	}
+
+	model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
+	model.Management = types.StringPointerValue(credentials.Management)
+	model.Password = types.StringValue(credentials.Password)
+	model.Port = types.Int32PointerValue(credentials.Port)
+	model.Uri = types.StringPointerValue(credentials.Uri)
+	model.Username = types.StringValue(credentials.Username)
+
 	return nil
 }
