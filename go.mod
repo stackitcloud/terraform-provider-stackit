@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.30.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.24.1
+	github.com/stackitcloud/stackit-sdk-go/core v0.25.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.4.1
@@ -32,7 +32,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.0
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.27.3
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.1
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
