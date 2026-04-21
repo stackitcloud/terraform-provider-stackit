@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -79,7 +79,7 @@ func (d *exportPolicyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = core.InitProviderContext(ctx)
 
 	// get export policy
-	exportPolicyResp, err := d.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	exportPolicyResp, err := d.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -155,7 +155,7 @@ func (d *exportPolicyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 							Computed:    true,
 							Description: `IP access control list; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).`,
 						},
-						"order": schema.Int64Attribute{
+						"order": schema.Int32Attribute{
 							Description: "Order of the rule within a Share Export Policy. The order is used so that when a client IP matches multiple rules, the first rule is applied",
 							Computed:    true,
 						},

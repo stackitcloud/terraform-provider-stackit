@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs/wait"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -41,7 +41,7 @@ type Model struct {
 	ShareId                 types.String `tfsdk:"share_id"`
 	Name                    types.String `tfsdk:"name"`
 	ExportPolicyName        types.String `tfsdk:"export_policy"`
-	SpaceHardLimitGigabytes types.Int64  `tfsdk:"space_hard_limit_gigabytes"`
+	SpaceHardLimitGigabytes types.Int32  `tfsdk:"space_hard_limit_gigabytes"`
 	Region                  types.String `tfsdk:"region"`
 	MountPath               types.String `tfsdk:"mount_path"`
 }
@@ -183,7 +183,7 @@ clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share`,
 				Required: true,
 			},
-			"space_hard_limit_gigabytes": schema.Int64Attribute{
+			"space_hard_limit_gigabytes": schema.Int32Attribute{
 				Required: true,
 				Description: `Space hard limit for the Share. 
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
@@ -226,7 +226,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new share
-	share, err := r.client.CreateShare(ctx, projectId, region, resourcePoolId).
+	share, err := r.client.DefaultAPI.CreateShare(ctx, projectId, region, resourcePoolId).
 		CreateSharePayload(payload).
 		Execute()
 	if err != nil {
@@ -251,7 +251,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	response, err := wait.CreateShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, *share.Share.Id).
+	response, err := wait.CreateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, *share.Share.Id).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share creation waiting: %v", err))
@@ -266,7 +266,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "response did not contain an ID")
 		return
 	}
-	getResponse, err := r.client.GetShareExecute(ctx, projectId, region, resourcePoolId, *response.Share.Id)
+	getResponse, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, *response.Share.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
 		return
@@ -307,7 +307,7 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.GetShareExecute(ctx, projectId, region, resourcePoolId, shareId)
+	response, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -371,7 +371,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	response, err := r.client.UpdateShare(ctx, projectId, region, resourcePoolId, shareId).
+	response, err := r.client.DefaultAPI.UpdateShare(ctx, projectId, region, resourcePoolId, shareId).
 		UpdateSharePayload(*payload).
 		Execute()
 	if err != nil {
@@ -396,7 +396,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
+	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
 		return
@@ -436,7 +436,7 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing share
-	_, err := r.client.DeleteShareExecute(ctx, projectId, region, resourcePoolId, shareId)
+	_, err := r.client.DefaultAPI.DeleteShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -445,7 +445,7 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = core.LogResponse(ctx)
 
 	// only delete, if no error occurred
-	_, err = wait.DeleteShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
+	_, err = wait.DeleteShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("share deletion waiting: %v", err))
 		return
@@ -474,7 +474,7 @@ func (r *shareResource) ImportState(ctx context.Context, req resource.ImportStat
 	tflog.Info(ctx, "SFS share imported")
 }
 
-func mapFields(_ context.Context, share *sfs.GetShareResponseShare, region string, model *Model) error {
+func mapFields(_ context.Context, share *sfs.Share, region string, model *Model) error {
 	if share == nil {
 		return fmt.Errorf("share empty in response")
 	}
@@ -500,7 +500,7 @@ func mapFields(_ context.Context, share *sfs.GetShareResponseShare, region strin
 		model.ExportPolicyName = types.StringPointerValue(policy.Name)
 	}
 
-	model.SpaceHardLimitGigabytes = types.Int64PointerValue(share.SpaceHardLimitGigabytes)
+	model.SpaceHardLimitGigabytes = types.Int32PointerValue(share.SpaceHardLimitGigabytes)
 	model.MountPath = types.StringPointerValue(share.MountPath)
 
 	return nil
@@ -511,9 +511,9 @@ func toCreatePayload(model *Model) (ret sfs.CreateSharePayload, err error) {
 		return ret, fmt.Errorf("nil model")
 	}
 	result := sfs.CreateSharePayload{
-		ExportPolicyName:        sfs.NewNullableString(model.ExportPolicyName.ValueStringPointer()),
-		Name:                    model.Name.ValueStringPointer(),
-		SpaceHardLimitGigabytes: model.SpaceHardLimitGigabytes.ValueInt64Pointer(),
+		ExportPolicyName:        *sfs.NewNullableString(model.ExportPolicyName.ValueStringPointer()),
+		Name:                    model.Name.ValueString(),
+		SpaceHardLimitGigabytes: model.SpaceHardLimitGigabytes.ValueInt32(),
 	}
 	return result, nil
 }
@@ -524,8 +524,8 @@ func toUpdatePayload(model *Model) (*sfs.UpdateSharePayload, error) {
 	}
 
 	result := &sfs.UpdateSharePayload{
-		ExportPolicyName:        sfs.NewNullableString(model.ExportPolicyName.ValueStringPointer()),
-		SpaceHardLimitGigabytes: model.SpaceHardLimitGigabytes.ValueInt64Pointer(),
+		ExportPolicyName:        *sfs.NewNullableString(model.ExportPolicyName.ValueStringPointer()),
+		SpaceHardLimitGigabytes: *sfs.NewNullableInt32(model.SpaceHardLimitGigabytes.ValueInt32Pointer()),
 	}
 	return result, nil
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 )
 
 func TestMapFieldsDataSource(t *testing.T) {
@@ -25,12 +25,12 @@ func TestMapFieldsDataSource(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.OrgManager{
-				Guid:      new(testUserId),
-				OrgId:     new(testOrgId),
-				ProjectId: new(testProjectId),
-				Region:    new(testRegion),
-				CreatedAt: &createdTime,
-				UpdatedAt: &createdTime,
+				Guid:      testUserId,
+				OrgId:     testOrgId,
+				ProjectId: testProjectId,
+				Region:    testRegion,
+				CreatedAt: createdTime,
+				UpdatedAt: createdTime,
 			},
 			expected: &DataSourceModel{
 				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", testProjectId, testRegion, testOrgId, testUserId)),
@@ -38,8 +38,8 @@ func TestMapFieldsDataSource(t *testing.T) {
 				OrgId:      types.StringValue(testOrgId),
 				ProjectId:  types.StringValue(testProjectId),
 				Region:     types.StringValue(testRegion),
-				UserName:   types.StringNull(),
-				PlatformId: types.StringNull(),
+				UserName:   types.StringValue(""),
+				PlatformId: types.StringValue(""),
 				CreateAt:   types.StringValue("2025-01-01 00:00:00 +0000 UTC"),
 				UpdatedAt:  types.StringValue("2025-01-01 00:00:00 +0000 UTC"),
 			},
@@ -48,14 +48,14 @@ func TestMapFieldsDataSource(t *testing.T) {
 		{
 			description: "max_input",
 			input: &scf.OrgManager{
-				Guid:       new(testUserId),
-				OrgId:      new(testOrgId),
-				ProjectId:  new(testProjectId),
-				PlatformId: new(testPlatformId),
-				Region:     new(testRegion),
-				CreatedAt:  &createdTime,
-				UpdatedAt:  &createdTime,
-				Username:   new("test-user"),
+				Guid:       testUserId,
+				OrgId:      testOrgId,
+				ProjectId:  testProjectId,
+				PlatformId: testPlatformId,
+				Region:     testRegion,
+				CreatedAt:  createdTime,
+				UpdatedAt:  createdTime,
+				Username:   "test-user",
 			},
 			expected: &DataSourceModel{
 				Id:         types.StringValue(fmt.Sprintf("%s,%s,%s,%s", testProjectId, testRegion, testOrgId, testUserId)),
@@ -75,20 +75,6 @@ func TestMapFieldsDataSource(t *testing.T) {
 			input:       nil,
 			expected:    nil,
 			isValid:     false,
-		},
-		{
-			description: "empty_org",
-			input:       &scf.OrgManager{},
-			expected:    nil,
-			isValid:     false,
-		},
-		{
-			description: "missing_id",
-			input: &scf.OrgManager{
-				Username: new("scf-missing-id"),
-			},
-			expected: nil,
-			isValid:  false,
 		},
 	}
 	for _, tt := range tests {

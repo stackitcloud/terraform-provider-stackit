@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -230,7 +230,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 	}
 
 	// Create the new scf organization manager via the API client.
-	scfOrgManagerCreateResponse, err := s.client.CreateOrgManagerExecute(ctx, projectId, region, orgId)
+	scfOrgManagerCreateResponse, err := s.client.DefaultAPI.CreateOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", fmt.Sprintf("Calling API to create org manager: %v", err))
 		return
@@ -238,10 +238,7 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 
 	ctx = core.LogResponse(ctx)
 
-	if scfOrgManagerCreateResponse.Guid == nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", "API response does not contain user id")
-	}
-	userId := *scfOrgManagerCreateResponse.Guid
+	userId := scfOrgManagerCreateResponse.Guid
 	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
@@ -284,7 +281,7 @@ func (s *scfOrganizationManagerResource) Read(ctx context.Context, request resou
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read the current scf organization manager via orgId
-	scfOrgManager, err := s.client.GetOrgManagerExecute(ctx, projectId, region, orgId)
+	scfOrgManager, err := s.client.DefaultAPI.GetOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -335,7 +332,7 @@ func (s *scfOrganizationManagerResource) Delete(ctx context.Context, request res
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Call API to delete the existing scf organization manager.
-	_, err := s.client.DeleteOrgManagerExecute(ctx, projectId, region, orgId)
+	_, err := s.client.DefaultAPI.DeleteOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -387,50 +384,14 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	var projectId string
-	if response.ProjectId != nil {
-		projectId = *response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
-	}
-
-	var region string
-	if response.Region != nil {
-		region = *response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
-	var orgId string
-	if response.OrgId != nil {
-		orgId = *response.OrgId
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var userId string
-	if response.Guid != nil {
-		userId = *response.Guid
-	} else if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
-	} else {
-		return fmt.Errorf("user id is not present")
-	}
-
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
-	model.Region = types.StringValue(region)
-	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.ProjectId = types.StringValue(projectId)
-	model.OrgId = types.StringValue(orgId)
-	model.UserId = types.StringValue(userId)
-	model.UserName = types.StringPointerValue(response.Username)
-	model.Password = types.StringPointerValue(response.Password)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.OrgId, response.Guid)
+	model.Region = types.StringValue(response.Region)
+	model.PlatformId = types.StringValue(response.PlatformId)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.OrgId = types.StringValue(response.OrgId)
+	model.UserId = types.StringValue(response.Guid)
+	model.UserName = types.StringValue(response.Username)
+	model.Password = types.StringValue(response.Password)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
 	return nil
@@ -443,53 +404,17 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-
-	var projectId string
-	if response.ProjectId != nil {
-		projectId = *response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
+	if userId := model.UserId.ValueString(); userId != "" && userId != response.Guid {
+		return fmt.Errorf("user id mismatch in response and model")
 	}
 
-	var region string
-	if response.Region != nil {
-		region = *response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
-	var orgId string
-	if response.OrgId != nil {
-		orgId = *response.OrgId
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var userId string
-	if response.Guid != nil {
-		userId = *response.Guid
-		if model.UserId.ValueString() != "" && userId != model.UserId.ValueString() {
-			return fmt.Errorf("user id mismatch in response and model")
-		}
-	} else if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
-	} else {
-		return fmt.Errorf("user id is not present")
-	}
-
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
-	model.Region = types.StringValue(region)
-	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.ProjectId = types.StringValue(projectId)
-	model.OrgId = types.StringValue(orgId)
-	model.UserId = types.StringValue(userId)
-	model.UserName = types.StringPointerValue(response.Username)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.OrgId, response.Guid)
+	model.Region = types.StringValue(response.Region)
+	model.PlatformId = types.StringValue(response.PlatformId)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.OrgId = types.StringValue(response.OrgId)
+	model.UserId = types.StringValue(response.Guid)
+	model.UserName = types.StringValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
 	return nil
