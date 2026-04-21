@@ -496,7 +496,7 @@ func mapFields(_ context.Context, share *sfs.Share, region string, model *Model)
 	)
 	model.Name = types.StringPointerValue(share.Name)
 
-	if share.ExportPolicy != nil {
+	if share.ExportPolicy.IsSet() {
 		if policy := share.ExportPolicy.Get(); policy != nil {
 			model.ExportPolicyName = types.StringPointerValue(policy.Name)
 		}

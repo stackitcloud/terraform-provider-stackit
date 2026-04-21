@@ -919,7 +919,7 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 		resourcePoolsToDestroy = append(resourcePoolsToDestroy, resourcePoolId)
 	}
 
-	resourcePoolsResp, err := client.ListResourcePoolsExecute(ctx, testutil.ProjectId, testutil.Region)
+	resourcePoolsResp, err := client.DefaultAPI.ListResourcePools(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting resource pools: %w", err)
 	}
@@ -929,20 +929,20 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 		id := pool.Id
 
 		if utils.Contains(resourcePoolsToDestroy, *id) {
-			shares, err := client.ListSharesExecute(ctx, testutil.ProjectId, testutil.Region, *id)
+			shares, err := client.DefaultAPI.ListShares(ctx, testutil.ProjectId, testutil.Region, *id).Execute()
 			if err != nil {
 				return fmt.Errorf("cannot list shares: %w", err)
 			}
 			if shares.Shares != nil {
-				for _, share := range *shares.Shares {
-					_, err := client.DeleteShareExecute(ctx, testutil.ProjectId, testutil.Region, *id, *share.Id)
+				for _, share := range shares.Shares {
+					_, err := client.DefaultAPI.DeleteShare(ctx, testutil.ProjectId, testutil.Region, *id, *share.Id).Execute()
 					if err != nil {
 						return fmt.Errorf("cannot delete share %q in pool %q: %w", *share.Id, *id, err)
 					}
 				}
 			}
 
-			_, err = client.DeleteResourcePool(ctx, testutil.ProjectId, testutil.Region, *id).
+			_, err = client.DefaultAPI.DeleteResourcePool(ctx, testutil.ProjectId, testutil.Region, *id).
 				Execute()
 			if err != nil {
 				return fmt.Errorf("deleting resourcepool %s during CheckDestroy: %w", *pool.Id, err)

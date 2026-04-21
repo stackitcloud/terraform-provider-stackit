@@ -208,7 +208,7 @@ func mapDataSourceFields(_ context.Context, region string, share *sfs.Share, mod
 		utils.Coalesce(model.ShareId, types.StringPointerValue(share.Id)).ValueString(),
 	)
 	model.Name = types.StringPointerValue(share.Name)
-	if share.ExportPolicy != nil {
+	if share.ExportPolicy.IsSet() {
 		if policy := share.ExportPolicy.Get(); policy != nil {
 			model.ExportPolicyName = types.StringPointerValue(policy.Name)
 		}
