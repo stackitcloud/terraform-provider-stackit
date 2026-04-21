@@ -12,32 +12,32 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.30.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
 	github.com/hashicorp/terraform-plugin-testing v1.14.0
-	github.com/stackitcloud/stackit-sdk-go/core v0.24.1
-	github.com/stackitcloud/stackit-sdk-go/services/alb v0.12.1
-	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.13.0
+	github.com/stackitcloud/stackit-sdk-go/core v0.25.0
+	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.1
+	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
-	github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.6.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.11.1
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.27.1
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.8.1
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.1
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.26.1
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.3.5
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.0
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.27.3
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.1
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0
-	github.com/stackitcloud/stackit-sdk-go/services/scf v0.6.1
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
-	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.3.8
-	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.2.6
+	github.com/stackitcloud/stackit-sdk-go/services/scf v0.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.17.0
+	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.6.3

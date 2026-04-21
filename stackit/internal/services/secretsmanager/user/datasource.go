@@ -18,7 +18,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -144,7 +144,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
+	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -189,16 +189,16 @@ func mapDataSourceFields(user *secretsmanager.User, model *DataSourceModel) erro
 	var userId string
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
-	} else if user.Id != nil {
-		userId = *user.Id
+	} else if user.Id != "" {
+		userId = user.Id
 	} else {
 		return fmt.Errorf("user id not present")
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
-	model.Description = types.StringPointerValue(user.Description)
-	model.WriteEnabled = types.BoolPointerValue(user.Write)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Description = types.StringValue(user.Description)
+	model.WriteEnabled = types.BoolValue(user.Write)
+	model.Username = types.StringValue(user.Username)
 	return nil
 }

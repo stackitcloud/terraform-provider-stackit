@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -39,7 +39,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceDatabase{
 				Id:   new("uid"),
 				Name: new("dbname"),
-				Options: &map[string]any{
+				Options: map[string]any{
 					"owner": "username",
 				},
 			},
@@ -60,7 +60,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceDatabase{
 				Id:   new("uid"),
 				Name: new(""),
-				Options: &map[string]any{
+				Options: map[string]any{
 					"owner": "",
 				},
 			},
@@ -95,7 +95,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.InstanceDatabase{
 				Id:   new(""),
 				Name: new("dbname"),
-				Options: &map[string]any{
+				Options: map[string]any{
 					"owner": "username",
 				},
 			},
