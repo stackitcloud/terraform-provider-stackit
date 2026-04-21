@@ -20,7 +20,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&serverupdate.UpdateSchedule{
-				Id: int32(5),
+				Id:5,
 			},
 			testRegion,
 			Model{
