@@ -4,7 +4,8 @@ variable "name" {}
 variable "availability_zone" {}
 variable "performance_class" {}
 variable "size_gigabytes" {}
-variable "acl" {}
+variable "ip_acl_1" {}
+variable "ip_acl_2" {}
 
 resource "stackit_sfs_resource_pool" "resourcepool" {
   project_id        = var.project_id
@@ -12,5 +13,8 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
   availability_zone = var.availability_zone
   performance_class = var.performance_class
   size_gigabytes    = var.size_gigabytes
-  ip_acl            = var.acl
+  ip_acl = [
+    var.ip_acl_1,
+    var.ip_acl_2
+  ]
 }
