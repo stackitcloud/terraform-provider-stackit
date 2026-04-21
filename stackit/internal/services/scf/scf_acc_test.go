@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -434,7 +434,7 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 		if scfOrgs[i].Guid == "" {
 			continue
 		}
-		if utils.Contains(orgsToDestroy, scfOrgs[i].Guid) {
+		if slices.Contains(orgsToDestroy, scfOrgs[i].Guid) {
 			_, err := client.DefaultAPI.DeleteOrganization(ctx, testutil.ProjectId, testutil.Region, scfOrgs[i].Guid).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying scf organization %s during CheckDestroy: %w", scfOrgs[i].Guid, err)
