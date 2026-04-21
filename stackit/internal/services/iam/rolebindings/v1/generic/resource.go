@@ -188,6 +188,7 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 
+	// Note: The API won't return HTTP 404 errors here, at least there are no HTTP 404 errors documented for the distributed role binding API
 	roleBindingResp, err := r.ExecReadRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error reading %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
@@ -276,6 +277,7 @@ func (r *RoleBindingResource[C]) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 
+	// Note: The API won't return HTTP 404 errors here, at least there are no HTTP 404 errors documented for the distributed role binding API
 	err := r.ExecDeleteRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
