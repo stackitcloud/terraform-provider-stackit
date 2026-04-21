@@ -678,8 +678,8 @@ github.com/stackitcloud/stackit-sdk-go/services/cdn v1.14.0 h1:6pxndY7vzu4/L2dpg
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.14.0/go.mod h1:9880AP8tlxSQujlJN+txlcnHp9keC5cOP2EFzOIZjmg=
 github.com/stackitcloud/stackit-sdk-go/services/certificates v1.4.1 h1:RBY/mNR4H8Vd/7z0nky+AQNvoaZ16hvrGSuYi1YLLao=
 github.com/stackitcloud/stackit-sdk-go/services/certificates v1.4.1/go.mod h1:3R/RwYdBc1s6WZNhToWs0rBDropbNRM7okOAdjY3rpU=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1 h1:VfszhFq/Snsd0LnflS8PbM0d9cG98hOFpamfjlcTnDQ=
-github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1/go.mod h1:gBv6YkB3Xf3c0ZXg2GwtWY8zExwGPF/Ag114XiiERxg=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.1 h1:yR/JpPG6fC0UrYVdaFeM7QqUKQUQnIrcnRV1d1vCLgc=
+github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.1/go.mod h1:XU/AX9T71L9BmaPxi6UAySrCSlvUzH1zpktpwtyNexk=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1 h1:G21hx6vztR1Np+K+MXsK1td/CKbKHdLK89zvtH6OoKk=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1/go.mod h1:qHuMB/qt7w1u5Xk3qzP3pJFXjTqPrtpM2bMhKpIvM3I=
 github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0 h1:siKBCYl7BwR5S25Y4SwUAX6eFTXSCkQ+8JIQEqyKIXo=
