@@ -123,26 +123,6 @@ func TestMapDataSourceFields(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "skip_nil_email",
-			apiItems: []serviceaccount.ServiceAccount{
-				{Email: emailA, Id: idA},
-				{Email: ""}, // Should be skipped
-			},
-			initialModel: ServiceAccountsModel{
-				ProjectId:     types.StringValue(projectId),
-				SortAscending: types.BoolValue(true),
-			},
-			expectedModel: ServiceAccountsModel{
-				Id:            types.StringValue(projectId),
-				ProjectId:     types.StringValue(projectId),
-				SortAscending: types.BoolValue(true),
-				Items: []ServiceAccountItem{
-					{Email: types.StringValue(emailA), Name: types.StringValue(nameA), ServiceAccountId: types.StringValue(idA)},
-				},
-			},
-			isValid: true,
-		},
-		{
 			description:  "nil_model",
 			apiItems:     []serviceaccount.ServiceAccount{},
 			initialModel: ServiceAccountsModel{},

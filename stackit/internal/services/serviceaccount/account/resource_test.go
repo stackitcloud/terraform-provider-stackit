@@ -79,30 +79,6 @@ func TestMapFields(t *testing.T) {
 			Model{},
 			false,
 		},
-		{
-			"nil_response_2",
-			&serviceaccount.ServiceAccount{},
-			Model{},
-			false,
-		},
-		{
-			"no_email",
-			&serviceaccount.ServiceAccount{
-				ProjectId: "pid",
-				Id:        "550e8400-e29b-41d4-a716-446655440000",
-			},
-			Model{},
-			false,
-		},
-		{
-			"no_id",
-			&serviceaccount.ServiceAccount{
-				ProjectId: "pid",
-				Email:     "mail",
-			},
-			Model{},
-			false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {

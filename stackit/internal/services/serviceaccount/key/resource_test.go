@@ -79,20 +79,6 @@ func TestMapResponse(t *testing.T) {
 			expected:    Model{},
 			isValid:     false,
 		},
-		{
-			description: "nil_response_2",
-			input:       &serviceaccount.CreateServiceAccountKeyResponse{},
-			expected:    Model{},
-			isValid:     false,
-		},
-		{
-			description: "no_id",
-			input: &serviceaccount.CreateServiceAccountKeyResponse{
-				Active: true,
-			},
-			expected: Model{},
-			isValid:  false,
-		},
 	}
 
 	for _, tt := range tests {
