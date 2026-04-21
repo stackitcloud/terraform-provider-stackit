@@ -25,7 +25,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.1
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.8.1
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.17.0
@@ -35,8 +35,6 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.1
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.7.0
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.14.3
-	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.17.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.0
