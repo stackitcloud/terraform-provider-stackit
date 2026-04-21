@@ -433,7 +433,6 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	// Delete existing resource pool
 	_, err := r.client.DefaultAPI.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
-	_, err := r.client.DefaultAPI.DeleteResourcePoolExecute(deleteResourcePoolRequest)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
