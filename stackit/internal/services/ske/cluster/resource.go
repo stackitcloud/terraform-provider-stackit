@@ -13,7 +13,6 @@ import (
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -1676,8 +1675,7 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 	// If the network field is not provided, the SKE API returns an empty object.
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply error
 
-	emptyNetwork := &ske.Network{}
-	if cmp.Equal(cl.Network, emptyNetwork, utils.CmpIgnoreAdditionalProperties()) && m.Network.IsNull() {
+	if skeUtils.IsEmptyNetwork(cl.Network) && m.Network.IsNull() {
 		if m.Network.Attributes() == nil {
 			m.Network = types.ObjectNull(networkTypes)
 		}
@@ -1833,8 +1831,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	}
 	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled
 
-	emptyExtensions := &ske.Extension{}
-	if cmp.Equal(cl.Extensions, emptyExtensions, utils.CmpIgnoreAdditionalProperties()) && (disabledExtensions || m.Extensions.IsNull()) {
+	if skeUtils.IsEmptyExtension(cl.Extensions) && (disabledExtensions || m.Extensions.IsNull()) {
 		if m.Extensions.Attributes() == nil {
 			m.Extensions = types.ObjectNull(extensionsTypes)
 		}

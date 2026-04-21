@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -214,13 +213,4 @@ func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) strin
 		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
 	}
 	return err.Error()
-}
-
-func CmpIgnoreAdditionalProperties() cmp.Option {
-	return cmp.FilterPath(
-		func(path cmp.Path) bool {
-			return path.Last().String() == ".AdditionalProperties"
-		},
-		cmp.Ignore(),
-	)
 }
