@@ -11,7 +11,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
-func NewRoleBindingAccTestBuilder(tfProviderConfig, apiName, resourceType, resourceID string) *RoleBindingAccTestBuilder {
+func NewRoleBindingAccTestBuilder(tfProviderConfig, apiName, resourceType, resourceID string) RoleBindingAccTestBuilderCreateStep {
 	return &RoleBindingAccTestBuilder{
 		providerConfig:     tfProviderConfig,
 		resourceIdentifier: "stackit_" + apiName + "_" + resourceType + "_role_binding_v1." + resourceID,
@@ -25,14 +25,27 @@ type RoleBindingAccTestBuilder struct {
 	resourceIdentifier string // e.g. "stackit_secretsmanager_instance_role_binding.role_binding"
 
 	// Note: Keep these steps here in the order they are executed later
-	createStep *resource.TestStep
-	importStep *resource.TestStep
-	updateStep *resource.TestStep
+	createStep resource.TestStep  // required
+	importStep resource.TestStep  // required
+	updateStep *resource.TestStep // optional
+}
+
+type RoleBindingAccTestBuilderCreateStep interface {
+	CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderImportStep
+}
+
+type RoleBindingAccTestBuilderImportStep interface {
+	ImportStep(variables config.Variables) RoleBindingAccTestBuilderFinalStep
+}
+
+type RoleBindingAccTestBuilderFinalStep interface {
+	UpdateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderFinalStep // Optional
+	Build() resource.TestCase
 }
 
 // CreateStep is the first step in your acceptance test and creates the resources initially
-func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) *RoleBindingAccTestBuilder {
-	b.createStep = &resource.TestStep{
+func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderImportStep {
+	b.createStep = resource.TestStep{
 		Config:          b.providerConfig + "\n" + tfConfig,
 		ConfigVariables: variables,
 		Check: resource.ComposeAggregateTestCheckFunc(
@@ -48,8 +61,8 @@ func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config
 }
 
 // ImportStep adds a terraform import test to your acceptance test case
-func (b *RoleBindingAccTestBuilder) ImportStep(variables config.Variables) *RoleBindingAccTestBuilder {
-	b.importStep = &resource.TestStep{
+func (b *RoleBindingAccTestBuilder) ImportStep(variables config.Variables) RoleBindingAccTestBuilderFinalStep {
+	b.importStep = resource.TestStep{
 		ConfigVariables: variables,
 		ResourceName:    b.resourceIdentifier,
 		ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -81,9 +94,9 @@ func (b *RoleBindingAccTestBuilder) ImportStep(variables config.Variables) *Role
 	return b
 }
 
-// UpdateStep is the first step in your acceptance test and updates the resources
-func (b *RoleBindingAccTestBuilder) UpdateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) *RoleBindingAccTestBuilder {
-	b.createStep = &resource.TestStep{
+// UpdateStep adds a terraform update test to your acceptance test case
+func (b *RoleBindingAccTestBuilder) UpdateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderFinalStep {
+	b.updateStep = &resource.TestStep{
 		Config:          b.providerConfig + "\n" + tfConfig,
 		ConfigVariables: variables,
 		Check: resource.ComposeAggregateTestCheckFunc(
@@ -102,15 +115,10 @@ func (b *RoleBindingAccTestBuilder) Build() resource.TestCase {
 	tc := resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testdestroy.AccTestCheckDestroy,
-		Steps:                    []resource.TestStep{},
-	}
-
-	if b.createStep != nil {
-		tc.Steps = append(tc.Steps, *b.createStep)
-	}
-
-	if b.importStep != nil {
-		tc.Steps = append(tc.Steps, *b.importStep)
+		Steps: []resource.TestStep{
+			b.createStep,
+			b.importStep,
+		},
 	}
 
 	if b.updateStep != nil {
