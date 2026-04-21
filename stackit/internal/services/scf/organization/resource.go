@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf/wait"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/scf/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -249,7 +249,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	}
 
 	// Create the new scf organization via the API client.
-	scfOrgCreateResponse, err := s.client.CreateOrganization(ctx, projectId, region).
+	scfOrgCreateResponse, err := s.client.DefaultAPI.CreateOrganization(ctx, projectId, region).
 		CreateOrganizationPayload(payload).
 		Execute()
 	if err != nil {
@@ -259,11 +259,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 
 	ctx = core.LogResponse(ctx)
 
-	if scfOrgCreateResponse.Guid == nil {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", "API response did not include org ID")
-		return
-	}
-	orgId := *scfOrgCreateResponse.Guid
+	orgId := scfOrgCreateResponse.Guid
 
 	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
 		"project_id": projectId,
@@ -273,19 +269,19 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 
 	// Apply the org quota if provided
 	if quotaId != "" {
-		applyOrgQuota, err := s.client.ApplyOrganizationQuota(ctx, projectId, region, orgId).ApplyOrganizationQuotaPayload(
+		applyOrgQuota, err := s.client.DefaultAPI.ApplyOrganizationQuota(ctx, projectId, region, orgId).ApplyOrganizationQuotaPayload(
 			scf.ApplyOrganizationQuotaPayload{
-				QuotaId: &quotaId,
+				QuotaId: quotaId,
 			}).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to apply quota: %v", err))
 			return
 		}
-		model.QuotaId = types.StringPointerValue(applyOrgQuota.QuotaId)
+		model.QuotaId = types.StringValue(applyOrgQuota.QuotaId)
 	}
 
 	if suspended {
-		_, err := s.client.UpdateOrganization(ctx, projectId, region, orgId).UpdateOrganizationPayload(
+		_, err := s.client.DefaultAPI.UpdateOrganization(ctx, projectId, region, orgId).UpdateOrganizationPayload(
 
 			scf.UpdateOrganizationPayload{
 				Suspended: &suspended,
@@ -297,7 +293,7 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 	}
 
 	// Load the newly created scf organization
-	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
+	scfOrgResponse, err := s.client.DefaultAPI.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", fmt.Sprintf("Calling API to load created org: %v", err))
 		return
@@ -339,7 +335,7 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
 	// Read the current scf organization via guid
-	scfOrgResponse, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
+	scfOrgResponse, err := s.client.DefaultAPI.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -388,7 +384,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	org, err := s.client.GetOrganization(ctx, projectId, region, orgId).Execute()
+	org, err := s.client.DefaultAPI.GetOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error retrieving organization state", fmt.Sprintf("Getting organization state: %v", err))
 		return
@@ -396,7 +392,7 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 
 	// handle a change of the organization name or the suspended flag
 	if name != org.GetName() || suspended != org.GetSuspended() {
-		updatedOrg, err := s.client.UpdateOrganization(ctx, projectId, region, orgId).UpdateOrganizationPayload(
+		updatedOrg, err := s.client.DefaultAPI.UpdateOrganization(ctx, projectId, region, orgId).UpdateOrganizationPayload(
 			scf.UpdateOrganizationPayload{
 				Name:      &name,
 				Suspended: &suspended,
@@ -412,9 +408,9 @@ func (s *scfOrganizationResource) Update(ctx context.Context, request resource.U
 
 	// handle a quota change of the org
 	if quotaId != org.GetQuotaId() {
-		applyOrgQuota, err := s.client.ApplyOrganizationQuota(ctx, projectId, region, orgId).ApplyOrganizationQuotaPayload(
+		applyOrgQuota, err := s.client.DefaultAPI.ApplyOrganizationQuota(ctx, projectId, region, orgId).ApplyOrganizationQuotaPayload(
 			scf.ApplyOrganizationQuotaPayload{
-				QuotaId: &quotaId,
+				QuotaId: quotaId,
 			}).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &response.Diagnostics, "Error applying organization quota", fmt.Sprintf("Processing API payload: %v", err))
@@ -460,7 +456,7 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Call API to delete the existing scf organization.
-	_, err := s.client.DeleteOrganization(ctx, projectId, region, orgId).Execute()
+	_, err := s.client.DefaultAPI.DeleteOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -468,7 +464,7 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteOrganizationWaitHandler(ctx, s.client, projectId, model.Region.ValueString(), orgId).WaitWithContext(ctx)
+	_, err = wait.DeleteOrganizationWaitHandler(ctx, s.client.DefaultAPI, projectId, model.Region.ValueString(), orgId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error waiting for scf org deletion", fmt.Sprintf("SCFOrganization deleting waiting: %v", err))
 		return
@@ -511,43 +507,16 @@ func mapFields(response *scf.Organization, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	var orgId string
-	if response.Guid != nil {
-		orgId = *response.Guid
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var projectId string
-	if response.ProjectId != nil {
-		projectId = *response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
-	}
-
-	var region string
-	if response.Region != nil {
-		region = *response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
 	// Build the ID by combining the project ID and organization id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId)
-	model.ProjectId = types.StringValue(projectId)
-	model.Region = types.StringValue(region)
-	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.OrgId = types.StringValue(orgId)
-	model.Name = types.StringPointerValue(response.Name)
-	model.Status = types.StringPointerValue(response.Status)
-	model.Suspended = types.BoolPointerValue(response.Suspended)
-	model.QuotaId = types.StringPointerValue(response.QuotaId)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.Guid)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.Region = types.StringValue(response.Region)
+	model.PlatformId = types.StringValue(response.PlatformId)
+	model.OrgId = types.StringValue(response.Guid)
+	model.Name = types.StringValue(response.Name)
+	model.Status = types.StringValue(response.Status)
+	model.Suspended = types.BoolValue(response.Suspended)
+	model.QuotaId = types.StringValue(response.QuotaId)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
 	return nil
@@ -560,7 +529,7 @@ func toCreatePayload(model *Model) (scf.CreateOrganizationPayload, error) {
 	}
 
 	payload := scf.CreateOrganizationPayload{
-		Name: model.Name.ValueStringPointer(),
+		Name: model.Name.ValueString(),
 	}
 	if !model.PlatformId.IsNull() && !model.PlatformId.IsUnknown() {
 		payload.PlatformId = model.PlatformId.ValueStringPointer()

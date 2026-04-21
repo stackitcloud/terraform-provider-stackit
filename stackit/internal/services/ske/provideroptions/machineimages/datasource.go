@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -151,7 +151,7 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	listProviderOptionsReq := d.client.ListProviderOptions(ctx, region)
+	listProviderOptionsReq := d.client.DefaultAPI.ListProviderOptions(ctx, region)
 
 	if !utils.IsUndefined(model.VersionState) {
 		listProviderOptionsReq = listProviderOptionsReq.VersionState(model.VersionState.ValueString())
@@ -200,17 +200,15 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 	// Machine Images
 	miList := make([]attr.Value, 0)
 	if optionsResp.MachineImages != nil {
-		for _, img := range *optionsResp.MachineImages {
+		for _, img := range optionsResp.MachineImages {
 			versionsList := make([]attr.Value, 0)
 			if img.Versions != nil {
-				for _, ver := range *img.Versions {
+				for _, ver := range img.Versions {
 					// CRI list
 					criList := make([]types.String, 0)
-					if ver.Cri != nil {
-						for _, cri := range *ver.Cri {
-							if cri.Name != nil {
-								criList = append(criList, types.StringValue(string(*cri.Name.Ptr())))
-							}
+					for _, cri := range ver.Cri {
+						if cri.Name != nil {
+							criList = append(criList, types.StringValue(*cri.Name))
 						}
 					}
 					criVal, diags := types.ListValueFrom(ctx, types.StringType, criList)
