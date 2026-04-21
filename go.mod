@@ -20,7 +20,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
-	github.com/stackitcloud/stackit-sdk-go/services/kms v1.6.0
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.7.1
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.27.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.7.1
