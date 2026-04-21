@@ -6,22 +6,22 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 )
 
 func TestMapSchedulesDataSourceFields(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
 		description string
-		input       *sdk.GetUpdateSchedulesResponse
+		input       *serverupdate.GetUpdateSchedulesResponse
 		region      string
 		expected    schedulesDataSourceModel
 		isValid     bool
 	}{
 		{
 			"empty response",
-			&sdk.GetUpdateSchedulesResponse{
-				Items: &[]sdk.UpdateSchedule{},
+			&serverupdate.GetUpdateSchedulesResponse{
+				Items: []serverupdate.UpdateSchedule{},
 			},
 			testRegion,
 			schedulesDataSourceModel{
@@ -35,14 +35,14 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 		},
 		{
 			"simple_values",
-			&sdk.GetUpdateSchedulesResponse{
-				Items: &[]sdk.UpdateSchedule{
+			&serverupdate.GetUpdateSchedulesResponse{
+				Items: []serverupdate.UpdateSchedule{
 					{
-						Id:                new(int64(5)),
-						Enabled:           new(true),
-						Name:              new("update_schedule_name_1"),
-						Rrule:             new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-						MaintenanceWindow: new(int64(1)),
+						Id:                5,
+						Enabled:           true,
+						Name:              "update_schedule_name_1",
+						Rrule:             "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+						MaintenanceWindow: 1,
 					},
 				},
 			},
@@ -53,11 +53,11 @@ func TestMapSchedulesDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue("project_uid"),
 				Items: []schedulesDatasourceItemModel{
 					{
-						UpdateScheduleId:  types.Int64Value(5),
+						UpdateScheduleId:  types.Int32Value(5),
 						Name:              types.StringValue("update_schedule_name_1"),
 						Rrule:             types.StringValue("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 						Enabled:           types.BoolValue(true),
-						MaintenanceWindow: types.Int64Value(1),
+						MaintenanceWindow: types.Int32Value(1),
 					},
 				},
 				Region: types.StringValue(testRegion),
