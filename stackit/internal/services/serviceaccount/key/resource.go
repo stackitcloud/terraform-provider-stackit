@@ -333,10 +333,6 @@ func mapCreateResponse(resp *serviceaccount.CreateServiceAccountKeyResponse, mod
 		return fmt.Errorf("service account key response is nil")
 	}
 
-	if resp.Id == "" {
-		return fmt.Errorf("service account key id not present")
-	}
-
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), resp.Id)
 	model.KeyId = types.StringValue(resp.Id)
 

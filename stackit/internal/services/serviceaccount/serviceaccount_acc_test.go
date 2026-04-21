@@ -210,9 +210,6 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 
 	serviceAccounts := instancesResp.Items
 	for i := range serviceAccounts {
-		if serviceAccounts[i].Email == "" {
-			continue
-		}
 		if slices.Contains(instancesToDestroy, serviceAccounts[i].Email) {
 			err := client.DefaultAPI.DeleteServiceAccount(ctx, testutil.ProjectId, serviceAccounts[i].Email).Execute()
 			if err != nil {

@@ -316,14 +316,6 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if resp.Email == "" {
-		return fmt.Errorf("service account email not present")
-	}
-
-	if resp.Id == "" {
-		return fmt.Errorf("service account id not present")
-	}
-
 	// Build the ID by combining the project ID and email and assign the model's fields.
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), resp.Email)
 	model.ServiceAccountId = types.StringValue(resp.Id)

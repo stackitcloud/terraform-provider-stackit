@@ -195,9 +195,6 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 	emailSuffix := model.EmailSuffix.ValueString()
 
 	for _, sa := range apiItems {
-		if sa.Email == "" {
-			continue
-		}
 		email := sa.Email
 
 		// Apply Filters (If neither is set, these checks simply pass)
