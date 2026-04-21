@@ -3,12 +3,12 @@ package modelserving_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api/wait"
 
@@ -130,7 +130,7 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 
 	items := tokensResp.Tokens
 	for i := range items {
-		if utils.Contains(tokensToDestroy, items[i].Name) {
+		if slices.Contains(tokensToDestroy, items[i].Name) {
 			_, err := client.DefaultAPI.DeleteToken(ctx, testutil.Region, testutil.ProjectId, items[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying token %s during CheckDestroy: %w", items[i].Name, err)

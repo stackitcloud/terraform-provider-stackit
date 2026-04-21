@@ -587,17 +587,11 @@ func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) e
 		return fmt.Errorf("model input is nil")
 	}
 
-	// theoretically, should never happen, but still catch zero values
-	validUntil := types.StringNull()
-	if !tokenGetResp.Token.ValidUntil.IsZero() {
-		validUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
-	}
-
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString())
 	model.TokenId = types.StringValue(tokenGetResp.Token.Id)
 	model.Name = types.StringValue(tokenGetResp.Token.Name)
 	model.State = types.StringValue(tokenGetResp.Token.State)
-	model.ValidUntil = validUntil
+	model.ValidUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
 	model.Description = types.StringPointerValue(tokenGetResp.Token.Description)
 
 	return nil

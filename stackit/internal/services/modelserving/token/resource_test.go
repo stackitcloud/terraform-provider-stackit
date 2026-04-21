@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
 )
 
@@ -51,7 +50,7 @@ func TestMapGetTokenFields(t *testing.T) {
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					State:       "active",
 					Name:        "name",
-					Description: utils.Ptr("desc"),
+					Description: new("desc"),
 					Region:      "eu01",
 				},
 			},
@@ -146,7 +145,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					State:       "active",
 					Name:        "name",
-					Description: utils.Ptr("desc"),
+					Description: new("desc"),
 					Region:      "eu01",
 					Content:     "content",
 				},
@@ -169,7 +168,7 @@ func TestMapCreateTokenFields(t *testing.T) {
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 					State:       "active",
 					Name:        "name",
-					Description: utils.Ptr("desc"),
+					Description: new("desc"),
 					Region:      "eu01",
 					Content:     "content",
 				},
@@ -247,8 +246,8 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &modelserving.CreateTokenPayload{
 				Name:        "name",
-				Description: utils.Ptr("desc"),
-				TtlDuration: utils.Ptr("1h"),
+				Description: new("desc"),
+				TtlDuration: new("1h"),
 			},
 			isValid: true,
 		},
@@ -299,8 +298,8 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			expected: &modelserving.PartialUpdateTokenPayload{
-				Name:        utils.Ptr("name"),
-				Description: utils.Ptr("desc"),
+				Name:        new("name"),
+				Description: new("desc"),
 			},
 			isValid: true,
 		},
