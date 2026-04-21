@@ -904,6 +904,11 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
+	if configModel.ProjectId.IsUnknown() {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Validating plan: project ID not yet known", "The resource references a project ID, which is not yet known but needed for plan validation. Skipping plan validation, apply may fail.")
+		return
+	}
+
 	plan, err := loadPlanId(ctx, *r.client, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error validating plan", fmt.Sprintf("Loading service plan: %v", err))
