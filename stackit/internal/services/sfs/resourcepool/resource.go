@@ -19,8 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs/wait"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -46,7 +46,7 @@ type Model struct {
 	IpAcl               types.List   `tfsdk:"ip_acl"`
 	Name                types.String `tfsdk:"name"`
 	PerformanceClass    types.String `tfsdk:"performance_class"`
-	SizeGigabytes       types.Int64  `tfsdk:"size_gigabytes"`
+	SizeGigabytes       types.Int32  `tfsdk:"size_gigabytes"`
 	Region              types.String `tfsdk:"region"`
 	SnapshotsAreVisible types.Bool   `tfsdk:"snapshots_are_visible"`
 }
@@ -182,7 +182,7 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 				Required:    true,
 				Description: "Name of the performance class.",
 			},
-			"size_gigabytes": schema.Int64Attribute{
+			"size_gigabytes": schema.Int32Attribute{
 				Required:    true,
 				Description: `Size of the resource pool (unit: gigabytes)`,
 			},
@@ -228,7 +228,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create new resourcepool
-	resourcePool, err := r.client.CreateResourcePool(ctx, projectId, region).
+	resourcePool, err := r.client.DefaultAPI.CreateResourcePool(ctx, projectId, region).
 		CreateResourcePoolPayload(*payload).
 		Execute()
 	if err != nil {
@@ -253,7 +253,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	response, err := wait.CreateResourcePoolWaitHandler(ctx, r.client, projectId, region, *resourcePool.ResourcePool.Id).
+	response, err := wait.CreateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *resourcePool.ResourcePool.Id).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool creation waiting: %v", err))
@@ -268,7 +268,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "response did not contain an ID")
 		return
 	}
-	getResponse, err := r.client.GetResourcePoolExecute(ctx, projectId, region, *response.ResourcePool.Id)
+	getResponse, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, *response.ResourcePool.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
 		return
@@ -307,7 +307,7 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.GetResourcePoolExecute(ctx, projectId, region, resourcePoolId)
+	response, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -369,7 +369,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	response, err := r.client.UpdateResourcePool(ctx, projectId, region, resourcePoolId).
+	response, err := r.client.DefaultAPI.UpdateResourcePool(ctx, projectId, region, resourcePoolId).
 		UpdateResourcePoolPayload(*payload).
 		Execute()
 	if err != nil {
@@ -394,7 +394,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client, projectId, region, resourcePoolId).WaitWithContext(ctx)
+	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
 		return
@@ -432,7 +432,7 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing resource pool
-	_, err := r.client.DeleteResourcePoolExecute(ctx, projectId, region, resourcePoolId)
+	_, err := r.client.DefaultAPI.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -441,7 +441,7 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = core.LogResponse(ctx)
 
 	// only delete, if no error occurred
-	_, err = wait.DeleteResourcePoolWaitHandler(ctx, r.client, projectId, region, resourcePoolId).WaitWithContext(ctx)
+	_, err = wait.DeleteResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("resource pool deletion waiting: %v", err))
 		return
@@ -469,7 +469,7 @@ func (r *resourcePoolResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "SFS resource pool imported")
 }
 
-func mapFields(ctx context.Context, region string, resourcePool *sfs.GetResourcePoolResponseResourcePool, model *Model) error {
+func mapFields(ctx context.Context, region string, resourcePool *sfs.ResourcePool, model *Model) error {
 	if resourcePool == nil {
 		return fmt.Errorf("resource pool empty in response")
 	}
@@ -506,7 +506,7 @@ func mapFields(ctx context.Context, region string, resourcePool *sfs.GetResource
 	}
 
 	if resourcePool.Space != nil {
-		model.SizeGigabytes = types.Int64PointerValue(resourcePool.Space.SizeGigabytes)
+		model.SizeGigabytes = types.Int32PointerValue(resourcePool.Space.SizeGigabytes)
 	}
 
 	return nil
@@ -517,22 +517,22 @@ func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	var (
-		aclList *[]string
+		aclList []string
 	)
 	if !utils.IsUndefined(model.IpAcl) {
 		tmp, err := utils.ListValuetoStringSlice(model.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}
-		aclList = &tmp
+		aclList = tmp
 	}
 
 	result := &sfs.CreateResourcePoolPayload{
-		AvailabilityZone:    model.AvailabilityZone.ValueStringPointer(),
+		AvailabilityZone:    model.AvailabilityZone.ValueString(),
 		IpAcl:               aclList,
-		Name:                model.Name.ValueStringPointer(),
-		PerformanceClass:    model.PerformanceClass.ValueStringPointer(),
-		SizeGigabytes:       model.SizeGigabytes.ValueInt64Pointer(),
+		Name:                model.Name.ValueString(),
+		PerformanceClass:    model.PerformanceClass.ValueString(),
+		SizeGigabytes:       model.SizeGigabytes.ValueInt32(),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
 	}
 	return result, nil
@@ -543,20 +543,20 @@ func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	var (
-		aclList *[]string
+		aclList []string
 	)
 	if !utils.IsUndefined(model.IpAcl) {
 		tmp, err := utils.ListValuetoStringSlice(model.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}
-		aclList = &tmp
+		aclList = tmp
 	}
 
 	result := &sfs.UpdateResourcePoolPayload{
 		IpAcl:               aclList,
 		PerformanceClass:    model.PerformanceClass.ValueStringPointer(),
-		SizeGigabytes:       model.SizeGigabytes.ValueInt64Pointer(),
+		SizeGigabytes:       *sfs.NewNullableInt32(model.SizeGigabytes.ValueInt32Pointer()),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
 	}
 	return result, nil

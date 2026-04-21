@@ -6,6 +6,9 @@ bin/
 *.so
 *.dylib
 
+# OS generated files
+.DS_Store
+
 ## IDE
 *.idea/
 *.vscode/
