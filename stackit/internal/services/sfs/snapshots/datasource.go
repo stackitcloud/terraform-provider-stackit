@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -35,8 +35,8 @@ var snapshotModelType = types.ObjectType{
 		"created_at":             types.StringType,
 		"resource_pool_id":       types.StringType,
 		"snapshot_name":          types.StringType,
-		"logical_size_gigabytes": types.Int64Type,
-		"size_gigabytes":         types.Int64Type,
+		"logical_size_gigabytes": types.Int32Type,
+		"size_gigabytes":         types.Int32Type,
 	},
 }
 
@@ -45,8 +45,8 @@ type snapshotModel struct {
 	CreatedAt            types.String `tfsdk:"created_at"`
 	ResourcePoolId       types.String `tfsdk:"resource_pool_id"`
 	SnapshotName         types.String `tfsdk:"snapshot_name"`
-	SizeGigabytes        types.Int64  `tfsdk:"size_gigabytes"`
-	LogicalSizeGigabytes types.Int64  `tfsdk:"logical_size_gigabytes"`
+	SizeGigabytes        types.Int32  `tfsdk:"size_gigabytes"`
+	LogicalSizeGigabytes types.Int32  `tfsdk:"logical_size_gigabytes"`
 }
 
 type dataSourceModel struct {
@@ -109,7 +109,7 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.ListResourcePoolSnapshotsExecute(ctx, projectId, region, resourcePoolId)
+	response, err := r.client.DefaultAPI.ListResourcePoolSnapshots(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -125,7 +125,7 @@ func (r *resourcePoolSnapshotDataSource) Read(ctx context.Context, req datasourc
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapDataSourceFields(ctx, region, response.ResourcePoolSnapshots, &model)
+	err = mapDataSourceFields(ctx, region, &response.ResourcePoolSnapshots, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "error reading resource pool snapshot", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -189,11 +189,11 @@ func (r *resourcePoolSnapshotDataSource) Schema(_ context.Context, _ datasource.
 							Computed:    true,
 							Description: "Name of the Resource Pool Snapshot",
 						},
-						"size_gigabytes": schema.Int64Attribute{
+						"size_gigabytes": schema.Int32Attribute{
 							Computed:    true,
 							Description: "Reflects the actual storage footprint in the backend at snapshot time (e.g. how much storage from the Resource Pool does it use)",
 						},
-						"logical_size_gigabytes": schema.Int64Attribute{
+						"logical_size_gigabytes": schema.Int32Attribute{
 							Computed:    true,
 							Description: "Represents the user-visible data size at the time of the snapshot (e.g. what’s in the snapshot)",
 						},
@@ -234,11 +234,11 @@ func mapDataSourceFields(ctx context.Context, region string, snapshots *[]sfs.Re
 		elem := snapshotModel{
 			ResourcePoolId:       types.StringPointerValue(snapshot.ResourcePoolId),
 			SnapshotName:         types.StringPointerValue(snapshot.SnapshotName),
-			SizeGigabytes:        types.Int64PointerValue(snapshot.SizeGigabytes),
-			LogicalSizeGigabytes: types.Int64PointerValue(snapshot.LogicalSizeGigabytes),
+			SizeGigabytes:        types.Int32PointerValue(snapshot.SizeGigabytes),
+			LogicalSizeGigabytes: types.Int32PointerValue(snapshot.LogicalSizeGigabytes),
 		}
-		if val := snapshot.Comment; val != nil {
-			elem.Comment = types.StringPointerValue(val.Get())
+		if commentPtr, ok := snapshot.GetCommentOk(); ok {
+			elem.Comment = types.StringPointerValue(commentPtr)
 		}
 		if val := snapshot.CreatedAt; val != nil {
 			elem.CreatedAt = types.StringValue(val.Format(time.RFC3339))

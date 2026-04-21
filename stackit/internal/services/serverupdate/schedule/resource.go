@@ -7,14 +7,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+
 	serverupdateUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -28,7 +29,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -43,11 +44,11 @@ type Model struct {
 	ID                types.String `tfsdk:"id"`
 	ProjectId         types.String `tfsdk:"project_id"`
 	ServerId          types.String `tfsdk:"server_id"`
-	UpdateScheduleId  types.Int64  `tfsdk:"update_schedule_id"`
+	UpdateScheduleId  types.Int32  `tfsdk:"update_schedule_id"`
 	Name              types.String `tfsdk:"name"`
 	Rrule             types.String `tfsdk:"rrule"`
 	Enabled           types.Bool   `tfsdk:"enabled"`
-	MaintenanceWindow types.Int64  `tfsdk:"maintenance_window"`
+	MaintenanceWindow types.Int32  `tfsdk:"maintenance_window"`
 	Region            types.String `tfsdk:"region"`
 }
 
@@ -136,14 +137,14 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthBetween(1, 255),
 				},
 			},
-			"update_schedule_id": schema.Int64Attribute{
+			"update_schedule_id": schema.Int32Attribute{
 				Description: "Update schedule ID.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -186,12 +187,12 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Is the update schedule enabled or disabled.",
 				Required:    true,
 			},
-			"maintenance_window": schema.Int64Attribute{
+			"maintenance_window": schema.Int32Attribute{
 				Description: "Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.",
 				Required:    true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
-					int64validator.AtMost(24),
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
+					int32validator.AtMost(24),
 				},
 			},
 			"region": schema.StringAttribute{
@@ -244,7 +245,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	scheduleResp, err := r.client.CreateUpdateSchedule(ctx, projectId, serverId, region).CreateUpdateSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.DefaultAPI.CreateUpdateSchedule(ctx, projectId, serverId, region).CreateUpdateSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -252,7 +253,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	ctx = tflog.SetField(ctx, "update_schedule_id", *scheduleResp.Id)
+	ctx = tflog.SetField(ctx, "update_schedule_id", scheduleResp.Id)
 
 	// Map response body to schema
 	err = mapFields(scheduleResp, &model, region)
@@ -281,14 +282,14 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	updateScheduleId := model.UpdateScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
-	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).Execute()
+	scheduleResp, err := r.client.DefaultAPI.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -330,7 +331,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	updateScheduleId := model.UpdateScheduleId.ValueInt32()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
@@ -344,7 +345,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	scheduleResp, err := r.client.UpdateUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).UpdateUpdateSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.DefaultAPI.UpdateUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).UpdateUpdateSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -379,14 +380,14 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	updateScheduleId := model.UpdateScheduleId.ValueInt32()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 
-	err := r.client.DeleteUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).Execute()
+	err := r.client.DefaultAPI.DeleteUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server update schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -432,19 +433,16 @@ func mapFields(schedule *serverupdate.UpdateSchedule, model *Model, region strin
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	if schedule.Id == nil {
-		return fmt.Errorf("response id is nil")
-	}
 
-	model.UpdateScheduleId = types.Int64PointerValue(schedule.Id)
+	model.UpdateScheduleId = types.Int32Value(schedule.Id)
 	model.ID = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.ServerId.ValueString(),
-		strconv.FormatInt(model.UpdateScheduleId.ValueInt64(), 10),
+		strconv.FormatInt(int64(model.UpdateScheduleId.ValueInt32()), 10),
 	)
-	model.Name = types.StringPointerValue(schedule.Name)
-	model.Rrule = types.StringPointerValue(schedule.Rrule)
-	model.Enabled = types.BoolPointerValue(schedule.Enabled)
-	model.MaintenanceWindow = types.Int64PointerValue(schedule.MaintenanceWindow)
+	model.Name = types.StringValue(schedule.Name)
+	model.Rrule = types.StringValue(schedule.Rrule)
+	model.Enabled = types.BoolValue(schedule.Enabled)
+	model.MaintenanceWindow = types.Int32Value(schedule.MaintenanceWindow)
 	model.Region = types.StringValue(region)
 	return nil
 }
@@ -458,7 +456,7 @@ func enableUpdatesService(ctx context.Context, model *Model, client *serverupdat
 	payload := serverupdate.EnableServiceResourcePayload{}
 
 	tflog.Debug(ctx, "Enabling server update service")
-	err := client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(payload).Execute()
+	err := client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(payload).Execute()
 	if err != nil {
 		if strings.Contains(err.Error(), "Tried to activate already active service") {
 			tflog.Debug(ctx, "Service for server update already enabled")
@@ -476,10 +474,10 @@ func toCreatePayload(model *Model) (*serverupdate.CreateUpdateSchedulePayload, e
 	}
 
 	return &serverupdate.CreateUpdateSchedulePayload{
-		Enabled:           conversion.BoolValueToPointer(model.Enabled),
-		Name:              conversion.StringValueToPointer(model.Name),
-		Rrule:             conversion.StringValueToPointer(model.Rrule),
-		MaintenanceWindow: conversion.Int64ValueToPointer(model.MaintenanceWindow),
+		Enabled:           model.Enabled.ValueBool(),
+		Name:              model.Name.ValueString(),
+		Rrule:             model.Rrule.ValueString(),
+		MaintenanceWindow: model.MaintenanceWindow.ValueInt32(),
 	}, nil
 }
 
@@ -489,9 +487,9 @@ func toUpdatePayload(model *Model) (*serverupdate.UpdateUpdateSchedulePayload, e
 	}
 
 	return &serverupdate.UpdateUpdateSchedulePayload{
-		Enabled:           conversion.BoolValueToPointer(model.Enabled),
-		Name:              conversion.StringValueToPointer(model.Name),
-		Rrule:             conversion.StringValueToPointer(model.Rrule),
-		MaintenanceWindow: conversion.Int64ValueToPointer(model.MaintenanceWindow),
+		Enabled:           model.Enabled.ValueBool(),
+		Name:              model.Name.ValueString(),
+		Rrule:             model.Rrule.ValueString(),
+		MaintenanceWindow: model.MaintenanceWindow.ValueInt32(),
 	}, nil
 }

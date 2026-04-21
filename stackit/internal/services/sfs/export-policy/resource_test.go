@@ -10,26 +10,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 )
 
 // global stuff
 var project_id = "project_id"
 
-func fixtureRulesResponse() *[]sfs.ShareExportPolicyRule {
-	return &[]sfs.ShareExportPolicyRule{
+func fixtureRulesResponse() []sfs.ShareExportPolicyRule {
+	return []sfs.ShareExportPolicyRule{
 		{
-			Description: sfs.NewNullableString(new("description")),
-			IpAcl:       new([]string{"172.16.0.0/24", "172.16.0.251/32"}),
-			Order:       new(int64(0)),
+			Description: *sfs.NewNullableString(new("description")),
+			IpAcl:       []string{"172.16.0.0/24", "172.16.0.251/32"},
+			Order:       new(int32(0)),
 			ReadOnly:    new(false),
 			SetUuid:     new(false),
 			SuperUser:   new(false),
 		},
 		{
-			Description: sfs.NewNullableString(new("description")),
-			IpAcl:       new([]string{"172.32.0.0/24", "172.32.0.251/32"}),
-			Order:       new(int64(1)),
+			Description: *sfs.NewNullableString(new("description")),
+			IpAcl:       []string{"172.32.0.0/24", "172.32.0.251/32"},
+			Order:       new(int32(1)),
 			ReadOnly:    new(false),
 			SetUuid:     new(false),
 			SuperUser:   new(false),
@@ -46,7 +46,7 @@ func fixtureRulesModel() basetypes.ListValue {
 				types.StringValue("172.16.0.0/24"),
 				types.StringValue("172.16.0.251/32"),
 			}),
-			"order":      types.Int64Value(0),
+			"order":      types.Int32Value(0),
 			"read_only":  types.BoolValue(false),
 			"set_uuid":   types.BoolValue(false),
 			"super_user": types.BoolValue(false),
@@ -57,7 +57,7 @@ func fixtureRulesModel() basetypes.ListValue {
 				types.StringValue("172.32.0.0/24"),
 				types.StringValue("172.32.0.251/32"),
 			}),
-			"order":      types.Int64Value(1),
+			"order":      types.Int32Value(1),
 			"read_only":  types.BoolValue(false),
 			"set_uuid":   types.BoolValue(false),
 			"super_user": types.BoolValue(false),
@@ -78,23 +78,23 @@ func fixtureResponseModel(rulesModel basetypes.ListValue) *Model {
 func fixtureRulesCreatePayload() []sfs.CreateShareExportPolicyRequestRule {
 	return []sfs.CreateShareExportPolicyRequestRule{
 		{
-			Description: sfs.NewNullableString(new("description")),
-			IpAcl: &[]string{
+			Description: *sfs.NewNullableString(new("description")),
+			IpAcl: []string{
 				"172.32.0.0/24",
 				"172.32.0.251/32",
 			},
-			Order:     new(int64(0)),
+			Order:     new(int32(0)),
 			ReadOnly:  new(false),
 			SetUuid:   new(false),
 			SuperUser: new(false),
 		},
 		{
-			Description: sfs.NewNullableString(new("description")),
-			IpAcl: &[]string{
+			Description: *sfs.NewNullableString(new("description")),
+			IpAcl: []string{
 				"172.16.0.0/24",
 				"172.16.0.251/32",
 			},
-			Order:     new(int64(1)),
+			Order:     new(int32(1)),
 			ReadOnly:  new(false),
 			SetUuid:   new(false),
 			SuperUser: new(false),
@@ -105,23 +105,23 @@ func fixtureRulesCreatePayload() []sfs.CreateShareExportPolicyRequestRule {
 func fixtureRulesUpdatePayload() []sfs.UpdateShareExportPolicyBodyRule {
 	return []sfs.UpdateShareExportPolicyBodyRule{
 		{
-			Description: sfs.NewNullableString(new("description")),
-			IpAcl: &[]string{
+			Description: *sfs.NewNullableString(new("description")),
+			IpAcl: []string{
 				"172.32.0.0/24",
 				"172.32.0.251/32",
 			},
-			Order:     new(int64(0)),
+			Order:     new(int32(0)),
 			ReadOnly:  new(false),
 			SetUuid:   new(false),
 			SuperUser: new(false),
 		},
 		{
-			Description: sfs.NewNullableString(new("description")),
-			IpAcl: &[]string{
+			Description: *sfs.NewNullableString(new("description")),
+			IpAcl: []string{
 				"172.16.0.0/24",
 				"172.16.0.251/32",
 			},
-			Order:     new(int64(1)),
+			Order:     new(int32(1)),
 			ReadOnly:  new(false),
 			SetUuid:   new(false),
 			SuperUser: new(false),
@@ -134,7 +134,7 @@ func fixtureRulesPayloadModel() []rulesModel {
 		{
 			Description: types.StringValue("description"),
 			IpAcl:       types.ListValueMust(types.StringType, []attr.Value{types.StringValue("172.32.0.0/24"), types.StringValue("172.32.0.251/32")}),
-			Order:       types.Int64Value(0),
+			Order:       types.Int32Value(0),
 			ReadOnly:    types.BoolValue(false),
 			SetUuid:     types.BoolValue(false),
 			SuperUser:   types.BoolValue(false),
@@ -142,7 +142,7 @@ func fixtureRulesPayloadModel() []rulesModel {
 		{
 			Description: types.StringValue("description"),
 			IpAcl:       types.ListValueMust(types.StringType, []attr.Value{types.StringValue("172.16.0.0/24"), types.StringValue("172.16.0.251/32")}),
-			Order:       types.Int64Value(1),
+			Order:       types.Int32Value(1),
 			ReadOnly:    types.BoolValue(false),
 			SetUuid:     types.BoolValue(false),
 			SuperUser:   types.BoolValue(false),
@@ -150,16 +150,16 @@ func fixtureRulesPayloadModel() []rulesModel {
 	}
 }
 
-func fixtureExportPolicyCreatePayload(rules *[]sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
+func fixtureExportPolicyCreatePayload(rules []sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
 	return &sfs.CreateShareExportPolicyPayload{
-		Name:  new("createPayloadName"),
+		Name:  "createPayloadName",
 		Rules: rules,
 	}
 }
 
 func fixtureExportPolicyUpdatePayload(rules []sfs.UpdateShareExportPolicyBodyRule) *sfs.UpdateShareExportPolicyPayload {
 	return &sfs.UpdateShareExportPolicyPayload{
-		Rules: &rules,
+		Rules: rules,
 	}
 }
 
@@ -197,9 +197,9 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(project_id),
 			},
 			input: &sfs.GetShareExportPolicyResponse{
-				ShareExportPolicy: &sfs.GetShareExportPolicyResponseShareExportPolicy{
+				ShareExportPolicy: &sfs.ShareExportPolicy{
 					Id:    new("uuid1"),
-					Rules: &[]sfs.ShareExportPolicyRule{},
+					Rules: []sfs.ShareExportPolicyRule{},
 				},
 			},
 			expectedModel: fixtureResponseModel(types.ListValueMust(types.ObjectType{AttrTypes: rulesTypes}, []attr.Value{})),
@@ -212,7 +212,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: types.StringValue(project_id),
 			},
 			input: &sfs.GetShareExportPolicyResponse{
-				ShareExportPolicy: &sfs.GetShareExportPolicyResponseShareExportPolicy{
+				ShareExportPolicy: &sfs.ShareExportPolicy{
 					Id:    new("uuid1"),
 					Rules: fixtureRulesResponse(),
 				},
@@ -281,7 +281,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name:      types.StringValue("createPayloadName"),
 			},
 			rules:    fixtureRulesPayloadModel(),
-			expected: fixtureExportPolicyCreatePayload(new(fixtureRulesCreatePayload())),
+			expected: fixtureExportPolicyCreatePayload(fixtureRulesCreatePayload()),
 			wantErr:  false,
 		},
 	}

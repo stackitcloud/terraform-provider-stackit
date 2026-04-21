@@ -7,17 +7,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
 	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -30,7 +30,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -45,7 +45,7 @@ type Model struct {
 	ID               types.String                   `tfsdk:"id"`
 	ProjectId        types.String                   `tfsdk:"project_id"`
 	ServerId         types.String                   `tfsdk:"server_id"`
-	BackupScheduleId types.Int64                    `tfsdk:"backup_schedule_id"`
+	BackupScheduleId types.Int32                    `tfsdk:"backup_schedule_id"`
 	Name             types.String                   `tfsdk:"name"`
 	Rrule            types.String                   `tfsdk:"rrule"`
 	Enabled          types.Bool                     `tfsdk:"enabled"`
@@ -56,7 +56,7 @@ type Model struct {
 // scheduleBackupPropertiesModel maps schedule backup_properties data
 type scheduleBackupPropertiesModel struct {
 	BackupName      types.String `tfsdk:"name"`
-	RetentionPeriod types.Int64  `tfsdk:"retention_period"`
+	RetentionPeriod types.Int32  `tfsdk:"retention_period"`
 	VolumeIds       types.List   `tfsdk:"volume_ids"`
 }
 
@@ -145,14 +145,14 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthBetween(1, 255),
 				},
 			},
-			"backup_schedule_id": schema.Int64Attribute{
+			"backup_schedule_id": schema.Int32Attribute{
 				Description: "Backup schedule ID.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -209,10 +209,10 @@ func (r *scheduleResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"name": schema.StringAttribute{
 						Required: true,
 					},
-					"retention_period": schema.Int64Attribute{
+					"retention_period": schema.Int32Attribute{
 						Required: true,
-						Validators: []validator.Int64{
-							int64validator.AtLeast(1),
+						Validators: []validator.Int32{
+							int32validator.AtLeast(1),
 						},
 					},
 				},
@@ -268,7 +268,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	scheduleResp, err := r.client.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.DefaultAPI.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -276,7 +276,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	ctx = tflog.SetField(ctx, "backup_schedule_id", *scheduleResp.Id)
+	ctx = tflog.SetField(ctx, "backup_schedule_id", scheduleResp.Id)
 
 	// Map response body to schema
 	err = mapFields(ctx, scheduleResp, &model, region)
@@ -305,7 +305,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	backupScheduleId := model.BackupScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -313,7 +313,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.DefaultAPI.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -355,7 +355,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	backupScheduleId := model.BackupScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -370,7 +370,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	scheduleResp, err := r.client.UpdateBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).UpdateBackupSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.DefaultAPI.UpdateBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).UpdateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -405,7 +405,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	backupScheduleId := model.BackupScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -413,7 +413,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	err := r.client.DefaultAPI.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -466,18 +466,15 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	if schedule.Id == nil {
-		return fmt.Errorf("response id is nil")
-	}
 
-	model.BackupScheduleId = types.Int64PointerValue(schedule.Id)
+	model.BackupScheduleId = types.Int32Value(schedule.Id)
 	model.ID = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.ServerId.ValueString(),
-		strconv.FormatInt(model.BackupScheduleId.ValueInt64(), 10),
+		strconv.FormatInt(int64(model.BackupScheduleId.ValueInt32()), 10),
 	)
-	model.Name = types.StringPointerValue(schedule.Name)
-	model.Rrule = types.StringPointerValue(schedule.Rrule)
-	model.Enabled = types.BoolPointerValue(schedule.Enabled)
+	model.Name = types.StringValue(schedule.Name)
+	model.Rrule = types.StringValue(schedule.Rrule)
+	model.Enabled = types.BoolValue(schedule.Enabled)
 	if schedule.BackupProperties == nil {
 		model.BackupProperties = nil
 		return nil
@@ -494,7 +491,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 			}
 		}
 
-		respVolIds := *schedule.BackupProperties.VolumeIds
+		respVolIds := schedule.BackupProperties.VolumeIds
 		reconciledVolIds := utils.ReconcileStringSlices(modelVolIds, respVolIds)
 
 		var diags diag.Diagnostics
@@ -504,8 +501,8 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		}
 	}
 	model.BackupProperties = &scheduleBackupPropertiesModel{
-		BackupName:      types.StringValue(*schedule.BackupProperties.Name),
-		RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
+		BackupName:      types.StringValue(schedule.BackupProperties.Name),
+		RetentionPeriod: types.Int32Value(schedule.BackupProperties.RetentionPeriod),
 		VolumeIds:       volIds,
 	}
 	model.Region = types.StringValue(region)
@@ -521,7 +518,7 @@ func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Mode
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Enabling server backup service")
-	request := r.client.EnableServiceResource(ctx, projectId, serverId, region).
+	request := r.client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).
 		EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{})
 
 	if err := request.Execute(); err != nil {
@@ -546,16 +543,16 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Checking for existing backups")
-	backups, err := r.client.ListBackups(ctx, projectId, serverId, region).Execute()
+	backups, err := r.client.DefaultAPI.ListBackups(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
-	if len(*backups.Items) > 0 {
+	if len(backups.Items) > 0 {
 		tflog.Debug(ctx, "Backups found - will not disable server backup service")
 		return nil
 	}
 
-	err = r.client.DisableServiceResourceExecute(ctx, projectId, serverId, region)
+	err = r.client.DefaultAPI.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("disable server backup service: %w", err)
 	}
@@ -583,15 +580,15 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 			ids = nil
 		}
 		backupProperties = serverbackup.BackupProperties{
-			Name:            conversion.StringValueToPointer(model.BackupProperties.BackupName),
-			RetentionPeriod: conversion.Int64ValueToPointer(model.BackupProperties.RetentionPeriod),
-			VolumeIds:       &ids,
+			Name:            model.BackupProperties.BackupName.ValueString(),
+			RetentionPeriod: model.BackupProperties.RetentionPeriod.ValueInt32(),
+			VolumeIds:       ids,
 		}
 	}
 	return &serverbackup.CreateBackupSchedulePayload{
-		Enabled:          conversion.BoolValueToPointer(model.Enabled),
-		Name:             conversion.StringValueToPointer(model.Name),
-		Rrule:            conversion.StringValueToPointer(model.Rrule),
+		Enabled:          model.Enabled.ValueBool(),
+		Name:             model.Name.ValueString(),
+		Rrule:            model.Rrule.ValueString(),
 		BackupProperties: &backupProperties,
 	}, nil
 }
@@ -616,16 +613,16 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 			ids = nil
 		}
 		backupProperties = serverbackup.BackupProperties{
-			Name:            conversion.StringValueToPointer(model.BackupProperties.BackupName),
-			RetentionPeriod: conversion.Int64ValueToPointer(model.BackupProperties.RetentionPeriod),
-			VolumeIds:       &ids,
+			Name:            model.BackupProperties.BackupName.ValueString(),
+			RetentionPeriod: model.BackupProperties.RetentionPeriod.ValueInt32(),
+			VolumeIds:       ids,
 		}
 	}
 
 	return &serverbackup.UpdateBackupSchedulePayload{
-		Enabled:          conversion.BoolValueToPointer(model.Enabled),
-		Name:             conversion.StringValueToPointer(model.Name),
-		Rrule:            conversion.StringValueToPointer(model.Rrule),
+		Enabled:          model.Enabled.ValueBool(),
+		Name:             model.Name.ValueString(),
+		Rrule:            model.Rrule.ValueString(),
 		BackupProperties: &backupProperties,
 	}, nil
 }

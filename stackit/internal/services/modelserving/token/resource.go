@@ -21,8 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
-	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
+	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
 
@@ -288,7 +288,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new AI model serving auth token
-	createTokenResp, err := r.client.CreateToken(ctx, region, projectId).
+	createTokenResp, err := r.client.DefaultAPI.CreateToken(ctx, region, projectId).
 		CreateTokenPayload(*payload).
 		Execute()
 	if err != nil {
@@ -303,12 +303,12 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	if createTokenResp.Token.Id == nil {
+	if createTokenResp.Token.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", "Got empty token id")
 		return
 	}
 
-	tokenId := *createTokenResp.Token.Id
+	tokenId := createTokenResp.Token.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
@@ -319,7 +319,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateModelServingWaitHandler(ctx, r.client.DefaultAPI, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model serving auth token", fmt.Sprintf("Waiting for token to be active: %v", err))
 		return
@@ -361,7 +361,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getTokenResp, err := r.client.GetToken(ctx, region, projectId, tokenId).
+	getTokenResp, err := r.client.DefaultAPI.GetToken(ctx, region, projectId, tokenId).
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -379,8 +379,7 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	ctx = core.LogResponse(ctx)
 
-	if getTokenResp != nil && getTokenResp.Token.State != nil &&
-		*getTokenResp.Token.State == inactiveState {
+	if getTokenResp != nil && getTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error reading AI model serving auth token", "AI model serving auth token has expired")
 		return
@@ -440,7 +439,7 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Update AI model serving auth token
-	updateTokenResp, err := r.client.PartialUpdateToken(ctx, region, projectId, tokenId).PartialUpdateTokenPayload(*payload).Execute()
+	updateTokenResp, err := r.client.DefaultAPI.PartialUpdateToken(ctx, region, projectId, tokenId).PartialUpdateTokenPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -468,14 +467,13 @@ func (r *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	if updateTokenResp != nil && updateTokenResp.Token.State != nil &&
-		*updateTokenResp.Token.State == inactiveState {
+	if updateTokenResp != nil && updateTokenResp.Token.State == inactiveState {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", "AI model serving auth token has expired")
 		return
 	}
 
-	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateModelServingWaitHandler(ctx, r.client.DefaultAPI, region, projectId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model serving auth token", fmt.Sprintf("Waiting for token to be updated: %v", err))
 		return
@@ -520,7 +518,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing AI model serving auth token. We will ignore the state 'deleting' for now.
-	_, err := r.client.DeleteToken(ctx, region, projectId, tokenId).Execute()
+	_, err := r.client.DefaultAPI.DeleteToken(ctx, region, projectId, tokenId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -536,7 +534,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client, region, projectId, tokenId).
+	_, err = wait.DeleteModelServingWaitHandler(ctx, r.client.DefaultAPI, region, projectId, tokenId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model serving auth token", fmt.Sprintf("Waiting for token to be deleted: %v", err))
@@ -547,7 +545,7 @@ func (r *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitResp *modelserving.GetTokenResponse, model *Model, region string) error {
-	if tokenCreateResp == nil || tokenCreateResp.Token == nil {
+	if tokenCreateResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
 	if model == nil {
@@ -556,25 +554,25 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 
 	token := tokenCreateResp.Token
 
-	if token.Id == nil {
+	if token.Id == "" {
 		return fmt.Errorf("token id not present")
 	}
 
 	validUntil := types.StringNull()
-	if token.ValidUntil != nil {
+	if !token.ValidUntil.IsZero() {
 		validUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
 	}
 
-	if waitResp == nil || waitResp.Token == nil || waitResp.Token.State == nil {
+	if waitResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, *tokenCreateResp.Token.Id)
-	model.TokenId = types.StringPointerValue(token.Id)
-	model.Name = types.StringPointerValue(token.Name)
-	model.State = types.StringValue(string(waitResp.Token.GetState()))
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, tokenCreateResp.Token.Id)
+	model.TokenId = types.StringValue(token.Id)
+	model.Name = types.StringValue(token.Name)
+	model.State = types.StringValue(waitResp.Token.State)
 	model.ValidUntil = validUntil
-	model.Token = types.StringPointerValue(token.Content)
+	model.Token = types.StringValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
 
 	return nil
@@ -585,24 +583,15 @@ func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) e
 		return fmt.Errorf("response input is nil")
 	}
 
-	if tokenGetResp.Token == nil {
-		return fmt.Errorf("response input is nil")
-	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
-	// theoretically, should never happen, but still catch null pointers
-	validUntil := types.StringNull()
-	if tokenGetResp.Token.ValidUntil != nil {
-		validUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
-	}
-
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString())
-	model.TokenId = types.StringPointerValue(tokenGetResp.Token.Id)
-	model.Name = types.StringPointerValue(tokenGetResp.Token.Name)
-	model.State = types.StringValue(string(tokenGetResp.Token.GetState()))
-	model.ValidUntil = validUntil
+	model.TokenId = types.StringValue(tokenGetResp.Token.Id)
+	model.Name = types.StringValue(tokenGetResp.Token.Name)
+	model.State = types.StringValue(tokenGetResp.Token.State)
+	model.ValidUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
 	model.Description = types.StringPointerValue(tokenGetResp.Token.Description)
 
 	return nil
@@ -614,7 +603,7 @@ func toCreatePayload(model *Model) (*modelserving.CreateTokenPayload, error) {
 	}
 
 	return &modelserving.CreateTokenPayload{
-		Name:        conversion.StringValueToPointer(model.Name),
+		Name:        model.Name.ValueString(),
 		Description: conversion.StringValueToPointer(model.Description),
 		TtlDuration: conversion.StringValueToPointer(model.TTLDuration),
 	}, nil

@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -189,7 +189,7 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{}).Execute()
+	err := r.client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{}).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -201,7 +201,7 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 		tflog.Info(ctx, "Server backup is already enabled for this server. Please check duplicate resources.")
 	}
 
-	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := r.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup enable", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -243,7 +243,7 @@ func (r *serverBackupEnableResource) Read(ctx context.Context, req resource.Read
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := r.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -297,7 +297,7 @@ func (r *serverBackupEnableResource) Delete(ctx context.Context, req resource.De
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DisableServiceResource(ctx, projectId, serverId, region).Execute()
+	err := r.client.DefaultAPI.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup enable", fmt.Sprintf("Calling API: %v", err))
 		return

@@ -19,7 +19,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/serverupdate"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -72,7 +72,7 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "The schedule name.",
 				Computed:    true,
 			},
-			"update_schedule_id": schema.Int64Attribute{
+			"update_schedule_id": schema.Int32Attribute{
 				Description: "Update schedule ID.",
 				Required:    true,
 			},
@@ -100,7 +100,7 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "Is the update schedule enabled or disabled.",
 				Computed:    true,
 			},
-			"maintenance_window": schema.Int64Attribute{
+			"maintenance_window": schema.Int32Attribute{
 				Description: "Maintenance window [1..24]. Updates start within the defined hourly window. Depending on the updates, the process may exceed this timeframe and require an automatic restart.",
 				Computed:    true,
 			},
@@ -126,21 +126,21 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	updateScheduleId := model.UpdateScheduleId.ValueInt64()
+	updateScheduleId := model.UpdateScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "update_schedule_id", updateScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(updateScheduleId, 10), region).Execute()
+	scheduleResp, err := r.client.DefaultAPI.GetUpdateSchedule(ctx, projectId, serverId, strconv.FormatInt(int64(updateScheduleId), 10), region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading server update schedule",
-			fmt.Sprintf("Update schedule with ID %q or server with ID %q does not exist in project %q.", strconv.FormatInt(updateScheduleId, 10), serverId, projectId),
+			fmt.Sprintf("Update schedule with ID %q or server with ID %q does not exist in project %q.", strconv.FormatInt(int64(updateScheduleId), 10), serverId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

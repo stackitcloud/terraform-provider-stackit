@@ -3,14 +3,14 @@ package modelserving_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/modelserving"
-	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/wait"
+	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -118,29 +118,26 @@ func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
 		return nil
 	}
 
-	tokensResp, err := client.ListTokens(ctx, testutil.Region, testutil.ProjectId).Execute()
+	tokensResp, err := client.DefaultAPI.ListTokens(ctx, testutil.Region, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting tokensResp: %w", err)
 	}
 
-	if tokensResp.Tokens == nil || (tokensResp.Tokens != nil && len(*tokensResp.Tokens) == 0) {
+	if len(tokensResp.Tokens) == 0 {
 		fmt.Print("No tokens found for project \n")
 		return nil
 	}
 
-	items := *tokensResp.Tokens
+	items := tokensResp.Tokens
 	for i := range items {
-		if items[i].Name == nil {
-			continue
-		}
-		if utils.Contains(tokensToDestroy, *items[i].Name) {
-			_, err := client.DeleteToken(ctx, testutil.Region, testutil.ProjectId, *items[i].Id).Execute()
+		if slices.Contains(tokensToDestroy, items[i].Name) {
+			_, err := client.DefaultAPI.DeleteToken(ctx, testutil.Region, testutil.ProjectId, items[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying token %s during CheckDestroy: %w", *items[i].Name, err)
+				return fmt.Errorf("destroying token %s during CheckDestroy: %w", items[i].Name, err)
 			}
-			_, err = wait.DeleteModelServingWaitHandler(ctx, client, testutil.Region, testutil.ProjectId, *items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteModelServingWaitHandler(ctx, client.DefaultAPI, testutil.Region, testutil.ProjectId, items[i].Id).WaitWithContext(ctx)
 			if err != nil {
-				return fmt.Errorf("destroying token %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
+				return fmt.Errorf("destroying token %s during CheckDestroy: waiting for deletion %w", items[i].Name, err)
 			}
 		}
 	}
