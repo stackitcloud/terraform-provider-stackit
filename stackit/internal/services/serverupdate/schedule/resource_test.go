@@ -43,7 +43,7 @@ func TestMapFields(t *testing.T) {
 				Enabled:           true,
 				Name:              "update_schedule_name_1",
 				Rrule:             "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
-				MaintenanceWindow: int32(1),
+				MaintenanceWindow: 1,
 			},
 			testRegion,
 			Model{
