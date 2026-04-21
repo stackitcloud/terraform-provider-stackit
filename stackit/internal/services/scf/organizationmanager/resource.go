@@ -238,9 +238,6 @@ func (s *scfOrganizationManagerResource) Create(ctx context.Context, request res
 
 	ctx = core.LogResponse(ctx)
 
-	if scfOrgManagerCreateResponse.Guid == "" {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization manager", "API response does not contain user id")
-	}
 	userId := scfOrgManagerCreateResponse.Guid
 	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
 		"project_id": projectId,
@@ -387,48 +384,12 @@ func mapFieldsCreate(response *scf.OrgManagerResponse, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	var projectId string
-	if response.ProjectId != "" {
-		projectId = response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
-	}
-
-	var region string
-	if response.Region != "" {
-		region = response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
-	var orgId string
-	if response.OrgId != "" {
-		orgId = response.OrgId
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var userId string
-	if response.Guid != "" {
-		userId = response.Guid
-	} else if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
-	} else {
-		return fmt.Errorf("user id is not present")
-	}
-
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
-	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.OrgId, response.Guid)
+	model.Region = types.StringValue(response.Region)
 	model.PlatformId = types.StringValue(response.PlatformId)
-	model.ProjectId = types.StringValue(projectId)
-	model.OrgId = types.StringValue(orgId)
-	model.UserId = types.StringValue(userId)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.OrgId = types.StringValue(response.OrgId)
+	model.UserId = types.StringValue(response.Guid)
 	model.UserName = types.StringValue(response.Username)
 	model.Password = types.StringValue(response.Password)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
@@ -443,52 +404,16 @@ func mapFieldsRead(response *scf.OrgManager, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-
-	var projectId string
-	if response.ProjectId != "" {
-		projectId = response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
+	if response.Guid != model.UserId.ValueString() {
+		return fmt.Errorf("user id mismatch in response and model")
 	}
 
-	var region string
-	if response.Region != "" {
-		region = response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
-	var orgId string
-	if response.OrgId != "" {
-		orgId = response.OrgId
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var userId string
-	if response.Guid != "" {
-		userId = response.Guid
-		if model.UserId.ValueString() != "" && userId != model.UserId.ValueString() {
-			return fmt.Errorf("user id mismatch in response and model")
-		}
-	} else if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
-	} else {
-		return fmt.Errorf("user id is not present")
-	}
-
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
-	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.OrgId, response.Guid)
+	model.Region = types.StringValue(response.Region)
 	model.PlatformId = types.StringValue(response.PlatformId)
-	model.ProjectId = types.StringValue(projectId)
-	model.OrgId = types.StringValue(orgId)
-	model.UserId = types.StringValue(userId)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.OrgId = types.StringValue(response.OrgId)
+	model.UserId = types.StringValue(response.Guid)
 	model.UserName = types.StringValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())

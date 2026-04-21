@@ -259,10 +259,6 @@ func (s *scfOrganizationResource) Create(ctx context.Context, request resource.C
 
 	ctx = core.LogResponse(ctx)
 
-	if scfOrgCreateResponse.Guid == "" {
-		core.LogAndAddError(ctx, &response.Diagnostics, "Error creating scf organization", "API response did not include org ID")
-		return
-	}
 	orgId := scfOrgCreateResponse.Guid
 
 	ctx = utils.SetAndLogStateFields(ctx, &response.Diagnostics, &response.State, map[string]any{
@@ -511,39 +507,12 @@ func mapFields(response *scf.Organization, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	var orgId string
-	if response.Guid != "" {
-		orgId = response.Guid
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var projectId string
-	if response.ProjectId != "" {
-		projectId = response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
-	}
-
-	var region string
-	if response.Region != "" {
-		region = response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
 	// Build the ID by combining the project ID and organization id and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId)
-	model.ProjectId = types.StringValue(projectId)
-	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.Guid)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.Region = types.StringValue(response.Region)
 	model.PlatformId = types.StringValue(response.PlatformId)
-	model.OrgId = types.StringValue(orgId)
+	model.OrgId = types.StringValue(response.Guid)
 	model.Name = types.StringValue(response.Name)
 	model.Status = types.StringValue(response.Status)
 	model.Suspended = types.BoolValue(response.Suspended)

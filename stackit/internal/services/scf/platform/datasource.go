@@ -186,37 +186,12 @@ func mapFields(response *scf.Platforms, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	var projectId string
-	if model.ProjectId.ValueString() == "" {
-		return fmt.Errorf("project id is not present")
-	}
-	projectId = model.ProjectId.ValueString()
-
-	var region string
-	if response.Region != "" {
-		region = response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
-	var platformId string
-	if response.Guid != "" {
-		platformId = response.Guid
-	} else if model.PlatformId.ValueString() != "" {
-		platformId = model.PlatformId.ValueString()
-	} else {
-		return fmt.Errorf("platform id is not present")
-	}
-
 	// Build the ID
-	model.Id = utils.BuildInternalTerraformId(projectId, region, platformId)
-	model.PlatformId = types.StringValue(platformId)
-	model.ProjectId = types.StringValue(projectId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), response.Region, response.Guid)
+	model.PlatformId = types.StringValue(response.Guid)
 	model.SystemId = types.StringValue(response.SystemId)
 	model.DisplayName = types.StringValue(response.DisplayName)
-	model.Region = types.StringValue(region)
+	model.Region = types.StringValue(response.Region)
 	model.ApiUrl = types.StringValue(response.ApiUrl)
 	model.ConsoleUrl = types.StringPointerValue(response.ConsoleUrl)
 	return nil
