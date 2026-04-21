@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/secretsmanager"
+	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -19,7 +19,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_values",
 			&secretsmanager.User{
-				Id: new("uid"),
+				Id: "uid",
 			},
 			nil,
 			Model{
@@ -27,9 +27,9 @@ func TestMapFields(t *testing.T) {
 				UserId:       types.StringValue("uid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
-				Description:  types.StringNull(),
-				WriteEnabled: types.BoolNull(),
-				Username:     types.StringNull(),
+				Description:  types.StringValue(""),
+				WriteEnabled: types.BoolValue(false),
+				Username:     types.StringValue(""),
 				Password:     types.StringNull(),
 			},
 			true,
@@ -37,11 +37,11 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&secretsmanager.User{
-				Id:          new("uid"),
-				Description: new("description"),
-				Write:       new(false),
-				Username:    new("username"),
-				Password:    new("password"),
+				Id:          "uid",
+				Description: "description",
+				Write:       false,
+				Username:    "username",
+				Password:    "password",
 			},
 			nil,
 			Model{
@@ -73,10 +73,10 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_password_in_response_1",
 			&secretsmanager.User{
-				Id:          new("uid"),
-				Description: new("description"),
-				Write:       new(false),
-				Username:    new("username"),
+				Id:          "uid",
+				Description: "description",
+				Write:       false,
+				Username:    "username",
 			},
 			new("password"),
 			Model{
@@ -94,11 +94,11 @@ func TestMapFields(t *testing.T) {
 		{
 			"no_password_in_response_2",
 			&secretsmanager.User{
-				Id:          new("uid"),
-				Description: new("description"),
-				Write:       new(false),
-				Username:    new("username"),
-				Password:    new(""),
+				Id:          "uid",
+				Description: "description",
+				Write:       false,
+				Username:    "username",
+				Password:    "",
 			},
 			new("password"),
 			Model{
@@ -151,8 +151,8 @@ func TestToCreatePayload(t *testing.T) {
 			"default_values",
 			&Model{},
 			&secretsmanager.CreateUserPayload{
-				Description: nil,
-				Write:       nil,
+				Description: "",
+				Write:       false,
 			},
 			true,
 		},
@@ -163,8 +163,8 @@ func TestToCreatePayload(t *testing.T) {
 				WriteEnabled: types.BoolValue(false),
 			},
 			&secretsmanager.CreateUserPayload{
-				Description: new("description"),
-				Write:       new(false),
+				Description: "description",
+				Write:       false,
 			},
 			true,
 		},
@@ -175,8 +175,8 @@ func TestToCreatePayload(t *testing.T) {
 				WriteEnabled: types.BoolNull(),
 			},
 			&secretsmanager.CreateUserPayload{
-				Description: nil,
-				Write:       nil,
+				Description: "",
+				Write:       false,
 			},
 			true,
 		},
@@ -187,8 +187,8 @@ func TestToCreatePayload(t *testing.T) {
 				WriteEnabled: types.BoolNull(),
 			},
 			&secretsmanager.CreateUserPayload{
-				Description: new(""),
-				Write:       nil,
+				Description: "",
+				Write:       false,
 			},
 			true,
 		},

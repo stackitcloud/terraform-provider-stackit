@@ -19,7 +19,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -118,15 +118,15 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"description": schema.StringAttribute{
 						Computed: true,
 					},
-					"cpu": schema.Int64Attribute{
+					"cpu": schema.Int32Attribute{
 						Computed: true,
 					},
-					"ram": schema.Int64Attribute{
+					"ram": schema.Int32Attribute{
 						Computed: true,
 					},
 				},
 			},
-			"replicas": schema.Int64Attribute{
+			"replicas": schema.Int32Attribute{
 				Computed: true,
 			},
 			"storage": schema.SingleNestedAttribute{
@@ -181,7 +181,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
-	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

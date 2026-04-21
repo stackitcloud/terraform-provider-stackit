@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -41,7 +41,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			"simple_values",
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -74,7 +74,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			&sqlserverflex.GetUserResponse{
 				Item: &sqlserverflex.UserResponseUser{
 					Id:       new("uid"),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Host:     nil,
 					Port:     new(int64(2123456789)),

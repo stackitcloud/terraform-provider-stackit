@@ -24,8 +24,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -240,7 +240,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -290,7 +290,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -365,7 +365,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Update existing instance
-	err = r.client.UpdateUser(ctx, projectId, region, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	err = r.client.DefaultAPI.UpdateUser(ctx, projectId, region, instanceId, userId).UpdateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
@@ -373,7 +373,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	userResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -417,14 +417,14 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing record set
-	err := r.client.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
+	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -483,7 +483,7 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model, re
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range *user.Roles {
+		for _, role := range user.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -526,7 +526,7 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region stri
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range *user.Roles {
+		for _, role := range user.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -550,7 +550,7 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 	}
 
 	return &postgresflex.CreateUserPayload{
-		Roles:    &roles,
+		Roles:    roles,
 		Username: conversion.StringValueToPointer(model.Username),
 	}, nil
 }
@@ -564,6 +564,6 @@ func toUpdatePayload(model *Model, roles []string) (*postgresflex.UpdateUserPayl
 	}
 
 	return &postgresflex.UpdateUserPayload{
-		Roles: &roles,
+		Roles: roles,
 	}, nil
 }

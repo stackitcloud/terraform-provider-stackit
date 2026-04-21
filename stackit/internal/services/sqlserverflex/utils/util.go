@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -20,8 +20,6 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 	if providerData.SQLServerFlexCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.SQLServerFlexCustomEndpoint))
-	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
 	}
 	apiClient, err := sqlserverflex.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {

@@ -19,7 +19,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -72,7 +72,7 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "The schedule name.",
 				Computed:    true,
 			},
-			"backup_schedule_id": schema.Int64Attribute{
+			"backup_schedule_id": schema.Int32Attribute{
 				Description: "Backup schedule ID.",
 				Required:    true,
 			},
@@ -111,7 +111,7 @@ func (r *scheduleDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"name": schema.StringAttribute{
 						Computed: true,
 					},
-					"retention_period": schema.Int64Attribute{
+					"retention_period": schema.Int32Attribute{
 						Computed: true,
 					},
 				},
@@ -138,7 +138,7 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
-	backupScheduleId := model.BackupScheduleId.ValueInt64()
+	backupScheduleId := model.BackupScheduleId.ValueInt32()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -146,14 +146,14 @@ func (r *scheduleDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(backupScheduleId, 10)).Execute()
+	scheduleResp, err := r.client.DefaultAPI.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading server backup schedule",
-			fmt.Sprintf("Backup schedule with ID %q or server with ID %q does not exist in project %q.", strconv.FormatInt(backupScheduleId, 10), serverId, projectId),
+			fmt.Sprintf("Backup schedule with ID %q or server with ID %q does not exist in project %q.", strconv.FormatInt(int64(backupScheduleId), 10), serverId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
 )
 
 func TestMapFieldsCreate(t *testing.T) {
@@ -47,7 +47,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{
 					Id: new("uid"),
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -84,7 +84,7 @@ func TestMapFieldsCreate(t *testing.T) {
 			&postgresflex.CreateUserResponse{
 				Item: &postgresflex.User{
 					Id:       new("uid"),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Password: new(""),
 					Host:     nil,
@@ -198,7 +198,7 @@ func TestMapFields(t *testing.T) {
 			"simple_values",
 			&postgresflex.GetUserResponse{
 				Item: &postgresflex.UserResponse{
-					Roles: &[]string{
+					Roles: []string{
 						"role_1",
 						"role_2",
 						"",
@@ -231,7 +231,7 @@ func TestMapFields(t *testing.T) {
 			&postgresflex.GetUserResponse{
 				Item: &postgresflex.UserResponse{
 					Id:       new("uid"),
-					Roles:    &[]string{},
+					Roles:    []string{},
 					Username: nil,
 					Host:     nil,
 					Port:     new(int64(2123456789)),
@@ -312,7 +312,7 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&postgresflex.CreateUserPayload{
-				Roles:    &[]string{},
+				Roles:    []string{},
 				Username: nil,
 			},
 			true,
@@ -327,7 +327,7 @@ func TestToCreatePayload(t *testing.T) {
 				"role_2",
 			},
 			&postgresflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
@@ -344,7 +344,7 @@ func TestToCreatePayload(t *testing.T) {
 				"",
 			},
 			&postgresflex.CreateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
 				Username: nil,
@@ -398,7 +398,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&postgresflex.UpdateUserPayload{
-				Roles: &[]string{},
+				Roles: []string{},
 			},
 			true,
 		},
@@ -412,7 +412,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"role_2",
 			},
 			&postgresflex.UpdateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"role_1",
 					"role_2",
 				},
@@ -428,7 +428,7 @@ func TestToUpdatePayload(t *testing.T) {
 				"",
 			},
 			&postgresflex.UpdateUserPayload{
-				Roles: &[]string{
+				Roles: []string{
 					"",
 				},
 			},
