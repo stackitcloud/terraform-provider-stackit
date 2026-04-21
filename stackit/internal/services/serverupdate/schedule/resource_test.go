@@ -39,7 +39,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"simple_values",
 			&serverupdate.UpdateSchedule{
-				Id:                int32(5),
+				Id:               5,
 				Enabled:           true,
 				Name:              "update_schedule_name_1",
 				Rrule:             "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
