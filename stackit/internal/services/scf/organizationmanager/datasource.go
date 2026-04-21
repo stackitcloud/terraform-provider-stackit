@@ -189,7 +189,7 @@ func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	if response.Guid != model.UserId.ValueString() {
+	if userId := model.UserId.ValueString(); userId != "" && userId != response.Guid {
 		return fmt.Errorf("user id mismatch in response and model")
 	}
 
