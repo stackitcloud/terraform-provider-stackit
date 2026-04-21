@@ -115,7 +115,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name:              "name",
 				Enabled:           true,
 				Rrule:             "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
-				MaintenanceWindow: int32(1),
+				MaintenanceWindow: 1,
 			},
 			true,
 		},
