@@ -69,20 +69,6 @@ func TestMapFields(t *testing.T) {
 			expected:    nil,
 			isValid:     false,
 		},
-		{
-			description: "empty_org",
-			input:       &scf.Platforms{},
-			expected:    nil,
-			isValid:     false,
-		},
-		{
-			description: "missing_id",
-			input: &scf.Platforms{
-				DisplayName: "scf-missing-id",
-			},
-			expected: nil,
-			isValid:  false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {

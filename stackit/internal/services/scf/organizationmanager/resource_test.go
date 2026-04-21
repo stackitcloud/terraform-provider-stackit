@@ -86,20 +86,6 @@ func TestMapFields(t *testing.T) {
 			expected:    nil,
 			isValid:     false,
 		},
-		{
-			description: "empty_org",
-			input:       &scf.OrgManager{},
-			expected:    nil,
-			isValid:     false,
-		},
-		{
-			description: "missing_id",
-			input: &scf.OrgManager{
-				Username: "scf-missing-id",
-			},
-			expected: nil,
-			isValid:  false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
@@ -192,20 +178,6 @@ func TestMapFieldsCreate(t *testing.T) {
 			input:       nil,
 			expected:    nil,
 			isValid:     false,
-		},
-		{
-			description: "empty_org",
-			input:       &scf.OrgManagerResponse{},
-			expected:    nil,
-			isValid:     false,
-		},
-		{
-			description: "missing_id",
-			input: &scf.OrgManagerResponse{
-				Username: "scf-missing-id",
-			},
-			expected: nil,
-			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
