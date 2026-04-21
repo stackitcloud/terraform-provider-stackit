@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 )
 
 var (
@@ -30,7 +30,7 @@ func TestMapFields(t *testing.T) {
 		name     string
 		state    *Model
 		region   string
-		input    *sfs.GetResourcePoolResponseResourcePool
+		input    *sfs.ResourcePool
 		expected *Model
 		isValid  bool
 	}{
@@ -41,7 +41,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId: testProjectId,
 			},
 			testRegion.ValueString(),
-			&sfs.GetResourcePoolResponseResourcePool{
+			&sfs.ResourcePool{
 				Id: testResourcePoolId.ValueStringPointer(),
 			},
 			&Model{
@@ -52,7 +52,7 @@ func TestMapFields(t *testing.T) {
 				IpAcl:            types.ListNull(types.StringType),
 				Name:             types.StringNull(),
 				PerformanceClass: types.StringNull(),
-				SizeGigabytes:    types.Int64Null(),
+				SizeGigabytes:    types.Int32Null(),
 				Region:           testRegion,
 			},
 			true,
@@ -64,23 +64,23 @@ func TestMapFields(t *testing.T) {
 				ProjectId: testProjectId,
 			},
 			region: testRegion.ValueString(),
-			input: &sfs.GetResourcePoolResponseResourcePool{
+			input: &sfs.ResourcePool{
 				AvailabilityZone: testAvailabilityZone.ValueStringPointer(),
-				CountShares:      utils.Ptr[int64](42),
+				CountShares:      utils.Ptr[int32](42),
 				CreatedAt:        &testTime,
 				Id:               testResourcePoolId.ValueStringPointer(),
-				IpAcl:            &[]string{"foo", "bar", "baz"},
+				IpAcl:            []string{"foo", "bar", "baz"},
 				MountPath:        new("mountpoint"),
 				Name:             new("testname"),
 				PerformanceClass: &sfs.ResourcePoolPerformanceClass{
 					Name:       new("performance"),
-					PeakIops:   utils.Ptr[int64](42),
-					Throughput: utils.Ptr[int64](54),
+					PeakIops:   utils.Ptr[int32](42),
+					Throughput: utils.Ptr[int32](54),
 				},
 				PerformanceClassDowngradableAt: &testTime,
 				SizeReducibleAt:                &testTime,
 				Space: &sfs.ResourcePoolSpace{
-					SizeGigabytes: utils.Ptr[int64](42),
+					SizeGigabytes: utils.Ptr[int32](42),
 				},
 				State: new("state"),
 			},
@@ -96,7 +96,7 @@ func TestMapFields(t *testing.T) {
 				}),
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
-				SizeGigabytes:    types.Int64Value(42),
+				SizeGigabytes:    types.Int32Value(42),
 				Region:           testRegion,
 			},
 			isValid: true,
@@ -134,14 +134,14 @@ func TestToCreatePayload(t *testing.T) {
 				IpAcl:            testIpAcl,
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
-				SizeGigabytes:    types.Int64Value(42),
+				SizeGigabytes:    types.Int32Value(42),
 			},
 			&sfs.CreateResourcePoolPayload{
-				AvailabilityZone: testAvailabilityZone.ValueStringPointer(),
-				IpAcl:            new([]string{"foo", "bar", "baz"}),
-				Name:             new("testname"),
-				PerformanceClass: new("performance"),
-				SizeGigabytes:    utils.Ptr[int64](42),
+				AvailabilityZone: testAvailabilityZone.ValueString(),
+				IpAcl:            []string{"foo", "bar", "baz"},
+				Name:             "testname",
+				PerformanceClass: "performance",
+				SizeGigabytes:    42,
 			},
 			false,
 		},
@@ -155,14 +155,14 @@ func TestToCreatePayload(t *testing.T) {
 				IpAcl:            types.ListNull(types.StringType),
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
-				SizeGigabytes:    types.Int64Value(42),
+				SizeGigabytes:    types.Int32Value(42),
 			},
 			&sfs.CreateResourcePoolPayload{
-				AvailabilityZone: testAvailabilityZone.ValueStringPointer(),
+				AvailabilityZone: testAvailabilityZone.ValueString(),
 				IpAcl:            nil,
-				Name:             new("testname"),
-				PerformanceClass: new("performance"),
-				SizeGigabytes:    utils.Ptr[int64](42),
+				Name:             "testname",
+				PerformanceClass: "performance",
+				SizeGigabytes:    42,
 			},
 			false,
 		},
@@ -198,13 +198,13 @@ func TestToUpdatePayload(t *testing.T) {
 				IpAcl:               testIpAcl,
 				Name:                types.StringValue("testname"),
 				PerformanceClass:    types.StringValue("performance"),
-				SizeGigabytes:       types.Int64Value(42),
+				SizeGigabytes:       types.Int32Value(42),
 				SnapshotsAreVisible: types.BoolValue(true),
 			},
 			&sfs.UpdateResourcePoolPayload{
-				IpAcl:               new([]string{"foo", "bar", "baz"}),
+				IpAcl:               []string{"foo", "bar", "baz"},
 				PerformanceClass:    new("performance"),
-				SizeGigabytes:       utils.Ptr[int64](42),
+				SizeGigabytes:       *sfs.NewNullableInt32(utils.Ptr[int32](42)),
 				SnapshotsAreVisible: new(true),
 			},
 			false,
@@ -219,12 +219,12 @@ func TestToUpdatePayload(t *testing.T) {
 				IpAcl:            types.ListNull(types.StringType),
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
-				SizeGigabytes:    types.Int64Value(42),
+				SizeGigabytes:    types.Int32Value(42),
 			},
 			&sfs.UpdateResourcePoolPayload{
 				IpAcl:            nil,
 				PerformanceClass: new("performance"),
-				SizeGigabytes:    utils.Ptr[int64](42),
+				SizeGigabytes:    *sfs.NewNullableInt32(utils.Ptr[int32](42)),
 			},
 			false,
 		},
@@ -238,12 +238,12 @@ func TestToUpdatePayload(t *testing.T) {
 				IpAcl:            types.ListValueMust(types.StringType, []attr.Value{}),
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
-				SizeGigabytes:    types.Int64Value(42),
+				SizeGigabytes:    types.Int32Value(42),
 			},
 			&sfs.UpdateResourcePoolPayload{
-				IpAcl:            new([]string{}),
+				IpAcl:            []string{},
 				PerformanceClass: new("performance"),
-				SizeGigabytes:    utils.Ptr[int64](42),
+				SizeGigabytes:    *sfs.NewNullableInt32(utils.Ptr[int32](42)),
 			},
 			false,
 		},

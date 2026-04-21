@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -34,7 +34,7 @@ type dataSourceModel struct {
 	ShareId                 types.String `tfsdk:"share_id"`
 	Name                    types.String `tfsdk:"name"`
 	MountPath               types.String `tfsdk:"mount_path"`
-	SpaceHardLimitGigabytes types.Int64  `tfsdk:"space_hard_limit_gigabytes"`
+	SpaceHardLimitGigabytes types.Int32  `tfsdk:"space_hard_limit_gigabytes"`
 	ExportPolicyName        types.String `tfsdk:"export_policy"`
 	Region                  types.String `tfsdk:"region"`
 }
@@ -92,7 +92,7 @@ func (r *shareDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.GetShareExecute(ctx, projectId, region, resourcePoolId, shareId)
+	response, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -164,7 +164,7 @@ clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share`,
 				Computed: true,
 			},
-			"space_hard_limit_gigabytes": schema.Int64Attribute{
+			"space_hard_limit_gigabytes": schema.Int32Attribute{
 				Computed: true,
 				Description: `Space hard limit for the Share. 
 				If zero, the Share will have access to the full space of the Resource Pool it lives in.
@@ -187,7 +187,7 @@ You can also assign a Share Export Policy after creating the Share`,
 	}
 }
 
-func mapDataSourceFields(_ context.Context, region string, share *sfs.GetShareResponseShare, model *dataSourceModel) error {
+func mapDataSourceFields(_ context.Context, region string, share *sfs.Share, model *dataSourceModel) error {
 	if share == nil {
 		return fmt.Errorf("share empty in response")
 	}
@@ -212,7 +212,7 @@ func mapDataSourceFields(_ context.Context, region string, share *sfs.GetShareRe
 		model.ExportPolicyName = types.StringPointerValue(policy.Name)
 	}
 
-	model.SpaceHardLimitGigabytes = types.Int64PointerValue(share.SpaceHardLimitGigabytes)
+	model.SpaceHardLimitGigabytes = types.Int32PointerValue(share.SpaceHardLimitGigabytes)
 	if share.HasExportPolicy() {
 		model.ExportPolicyName = types.StringPointerValue(share.ExportPolicy.Get().Name)
 	}

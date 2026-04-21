@@ -31,7 +31,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -54,7 +54,7 @@ type Model struct {
 type rulesModel struct {
 	Description types.String `tfsdk:"description"`
 	IpAcl       types.List   `tfsdk:"ip_acl"`
-	Order       types.Int64  `tfsdk:"order"`
+	Order       types.Int32  `tfsdk:"order"`
 	ReadOnly    types.Bool   `tfsdk:"read_only"`
 	SetUuid     types.Bool   `tfsdk:"set_uuid"`
 	SuperUser   types.Bool   `tfsdk:"super_user"`
@@ -64,7 +64,7 @@ type rulesModel struct {
 var rulesTypes = map[string]attr.Type{
 	"description": types.StringType,
 	"ip_acl":      types.ListType{ElemType: types.StringType},
-	"order":       types.Int64Type,
+	"order":       types.Int32Type,
 	"read_only":   types.BoolType,
 	"set_uuid":    types.BoolType,
 	"super_user":  types.BoolType,
@@ -206,7 +206,7 @@ func (r *exportPolicyResource) Schema(_ context.Context, _ resource.SchemaReques
 								listvalidator.ValueStringsAre(validate.CIDR()),
 							},
 						},
-						"order": schema.Int64Attribute{
+						"order": schema.Int32Attribute{
 							Description: "Order of the rule within a Share Export Policy. The order is used so that when a client IP matches multiple rules, the first rule is applied",
 							Required:    true,
 						},
@@ -275,7 +275,7 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	createResp, err := r.client.CreateShareExportPolicy(ctx, projectId, region).CreateShareExportPolicyPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateShareExportPolicy(ctx, projectId, region).CreateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -298,7 +298,7 @@ func (r *exportPolicyResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// get export policy
-	getResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, *createResp.ShareExportPolicy.Id).Execute()
+	getResp, err := r.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, *createResp.ShareExportPolicy.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
 		return
@@ -337,7 +337,7 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	// get export policy
-	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	exportPolicyResp, err := r.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -401,7 +401,7 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	_, err = r.client.UpdateShareExportPolicy(ctx, projectId, region, exportPolicyId).UpdateShareExportPolicyPayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.UpdateShareExportPolicy(ctx, projectId, region, exportPolicyId).UpdateShareExportPolicyPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
 		return
@@ -410,7 +410,7 @@ func (r *exportPolicyResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = core.LogResponse(ctx)
 
 	// get export policy
-	exportPolicyResp, err := r.client.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	exportPolicyResp, err := r.client.DefaultAPI.GetShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to get export policy: %v", err))
 		return
@@ -450,7 +450,7 @@ func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	_, err := r.client.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
+	_, err := r.client.DefaultAPI.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting export policy", fmt.Sprintf("Calling API: %v", err))
 	}
@@ -481,7 +481,7 @@ func (r *exportPolicyResource) ImportState(ctx context.Context, req resource.Imp
 	tflog.Info(ctx, "SFS export policy state import")
 }
 
-// Maps bar fields to the provider's internal model
+// mapFields maps the API response ShareExportPolicy to the provider's internal model
 func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, model *Model, region string) error {
 	if resp == nil || resp.ShareExportPolicy == nil {
 		return fmt.Errorf("response input is nil")
@@ -502,7 +502,7 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	// iterate over Rules from response
 	if resp.ShareExportPolicy.Rules != nil {
 		rulesList := []attr.Value{}
-		for _, rule := range *resp.ShareExportPolicy.Rules {
+		for _, rule := range resp.ShareExportPolicy.Rules {
 			var ipAcl basetypes.ListValue
 			if rule.IpAcl != nil {
 				var diags diag.Diagnostics
@@ -515,9 +515,9 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 			}
 
 			rulesValues := map[string]attr.Value{
-				"description": types.StringPointerValue(rule.GetDescription()),
+				"description": types.StringPointerValue(rule.Description.Get()),
 				"ip_acl":      ipAcl,
-				"order":       types.Int64PointerValue(rule.Order),
+				"order":       types.Int32PointerValue(rule.Order),
 				"read_only":   types.BoolPointerValue(rule.ReadOnly),
 				"set_uuid":    types.BoolPointerValue(rule.SetUuid),
 				"super_user":  types.BoolPointerValue(rule.SuperUser),
@@ -551,7 +551,7 @@ func mapFields(ctx context.Context, resp *sfs.GetShareExportPolicyResponse, mode
 	return nil
 }
 
-// Build CreateBarPayload from provider's model
+// Build a CreateShareExportPolicyPayload from provider's model
 func toCreatePayload(model *Model, rules []rulesModel) (*sfs.CreateShareExportPolicyPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -564,14 +564,14 @@ func toCreatePayload(model *Model, rules []rulesModel) (*sfs.CreateShareExportPo
 	var tempRules []sfs.CreateShareExportPolicyRequestRule
 	for _, rule := range rules {
 		// convert list
-		convertedList, err := conversion.StringListToPointer(rule.IpAcl)
+		convertedList, err := conversion.StringListToSlice(rule.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("conversion of rule failed")
 		}
 		tempRule := sfs.CreateShareExportPolicyRequestRule{
-			Description: sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
+			Description: *sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
 			IpAcl:       convertedList,
-			Order:       conversion.Int64ValueToPointer(rule.Order),
+			Order:       conversion.Int32ValueToPointer(rule.Order),
 			ReadOnly:    conversion.BoolValueToPointer(rule.ReadOnly),
 			SetUuid:     conversion.BoolValueToPointer(rule.SetUuid),
 			SuperUser:   conversion.BoolValueToPointer(rule.SuperUser),
@@ -581,12 +581,12 @@ func toCreatePayload(model *Model, rules []rulesModel) (*sfs.CreateShareExportPo
 
 	// name and rules
 	result := &sfs.CreateShareExportPolicyPayload{
-		Name: model.Name.ValueStringPointer(),
+		Name: model.Name.ValueString(),
 	}
 
 	// Rules should only be set if tempRules has value. Otherwise, the payload would contain `{ "rules": null }` what should be prevented
 	if tempRules != nil {
-		result.Rules = &tempRules
+		result.Rules = tempRules
 	}
 
 	return result, nil
@@ -604,14 +604,14 @@ func toUpdatePayload(model *Model, rules []rulesModel) (*sfs.UpdateShareExportPo
 	tempRules := make([]sfs.UpdateShareExportPolicyBodyRule, len(rules))
 	for i, rule := range rules {
 		// convert list
-		convertedList, err := conversion.StringListToPointer(rule.IpAcl)
+		convertedList, err := conversion.StringListToSlice(rule.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("conversion of rule failed")
 		}
 		tempRule := sfs.UpdateShareExportPolicyBodyRule{
-			Description: sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
+			Description: *sfs.NewNullableString(conversion.StringValueToPointer(rule.Description)),
 			IpAcl:       convertedList,
-			Order:       conversion.Int64ValueToPointer(rule.Order),
+			Order:       conversion.Int32ValueToPointer(rule.Order),
 			ReadOnly:    conversion.BoolValueToPointer(rule.ReadOnly),
 			SetUuid:     conversion.BoolValueToPointer(rule.SetUuid),
 			SuperUser:   conversion.BoolValueToPointer(rule.SuperUser),
@@ -623,7 +623,7 @@ func toUpdatePayload(model *Model, rules []rulesModel) (*sfs.UpdateShareExportPo
 	result := &sfs.UpdateShareExportPolicyPayload{
 		// Rules should *+never** result in a payload where they are defined as null, e.g. `{ "rules": null }`. Instead,
 		// they should either be set to an array (with values or empty) or they shouldn't be present in the payload.
-		Rules: &tempRules,
+		Rules: tempRules,
 	}
 	return result, nil
 }

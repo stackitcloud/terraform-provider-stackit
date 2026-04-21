@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -456,17 +456,17 @@ func testAccExportPolicyDestroy(s *terraform.State) error {
 		policyToDestroy = append(policyToDestroy, policyId)
 	}
 
-	policiesResp, err := client.ListShareExportPoliciesExecute(ctx, testutil.ProjectId, exportPolicyResource["region"])
+	policiesResp, err := client.DefaultAPI.ListShareExportPolicies(ctx, testutil.ProjectId, exportPolicyResource["region"]).Execute()
 	if err != nil {
 		return fmt.Errorf("getting policiesResp: %w", err)
 	}
 
 	// iterate over policiesResp
-	policies := *policiesResp.ShareExportPolicies
+	policies := policiesResp.ShareExportPolicies
 	for i := range policies {
 		id := *policies[i].Id
 		if utils.Contains(policyToDestroy, id) {
-			_, err := client.DeleteShareExportPolicy(ctx, testutil.ProjectId, exportPolicyResource["region"], id).Execute()
+			_, err := client.DefaultAPI.DeleteShareExportPolicy(ctx, testutil.ProjectId, exportPolicyResource["region"], id).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting policy %s during CheckDestroy: %w", *policies[i].Id, err)
 			}
@@ -493,7 +493,7 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 	}
 
 	region := testutil.Region
-	resourcePoolsResp, err := client.ListResourcePoolsExecute(ctx, testutil.ProjectId, region)
+	resourcePoolsResp, err := client.DefaultAPI.ListResourcePools(ctx, testutil.ProjectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting resource pools: %w", err)
 	}
@@ -503,20 +503,20 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 		id := pool.Id
 
 		if utils.Contains(resourcePoolsToDestroy, *id) {
-			shares, err := client.ListSharesExecute(ctx, testutil.ProjectId, region, *id)
+			shares, err := client.DefaultAPI.ListShares(ctx, testutil.ProjectId, region, *id).Execute()
 			if err != nil {
 				return fmt.Errorf("cannot list shares: %w", err)
 			}
 			if shares.Shares != nil {
-				for _, share := range *shares.Shares {
-					_, err := client.DeleteShareExecute(ctx, testutil.ProjectId, region, *id, *share.Id)
+				for _, share := range shares.Shares {
+					_, err := client.DefaultAPI.DeleteShare(ctx, testutil.ProjectId, region, *id, *share.Id).Execute()
 					if err != nil {
 						return fmt.Errorf("cannot delete share %q in pool %q: %w", *share.Id, *id, err)
 					}
 				}
 			}
 
-			_, err = client.DeleteResourcePool(ctx, testutil.ProjectId, region, *id).
+			_, err = client.DefaultAPI.DeleteResourcePool(ctx, testutil.ProjectId, region, *id).
 				Execute()
 			if err != nil {
 				return fmt.Errorf("deleting resourcepool %s during CheckDestroy: %w", *pool.Id, err)
