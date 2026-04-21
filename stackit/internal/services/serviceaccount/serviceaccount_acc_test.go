@@ -5,13 +5,13 @@ import (
 	_ "embed"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -213,7 +213,7 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 		if serviceAccounts[i].Email == "" {
 			continue
 		}
-		if utils.Contains(instancesToDestroy, serviceAccounts[i].Email) {
+		if slices.Contains(instancesToDestroy, serviceAccounts[i].Email) {
 			err := client.DefaultAPI.DeleteServiceAccount(ctx, testutil.ProjectId, serviceAccounts[i].Email).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", serviceAccounts[i].Email, err)
