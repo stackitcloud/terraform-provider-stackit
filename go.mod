@@ -33,16 +33,16 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.1
-	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.20.0
+	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.22.1
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.4.1
-	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.6.3
+	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.12.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.6.1
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.9.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.35.0
 )
@@ -280,7 +280,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/run v1.2.0 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect

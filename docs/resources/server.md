@@ -73,7 +73,7 @@ description: |-
   resource "stackit_network" "network" {
     project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name               = "example-network"
-    nameservers        = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
+    ipv4_nameservers   = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
     ipv4_prefix_length = 24
   }
   
@@ -108,7 +108,7 @@ description: |-
     keypair_name = stackit_key_pair.keypair.name
     network_interfaces = [
       stackit_network_interface.nic.network_interface_id
-    ]	
+    ]
   }
   
   resource "stackit_public_ip" "public-ip" {
@@ -254,7 +254,7 @@ resource "stackit_server" "boot-from-volume" {
 resource "stackit_network" "network" {
   project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name               = "example-network"
-  nameservers        = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
+  ipv4_nameservers   = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
   ipv4_prefix_length = 24
 }
 
@@ -289,7 +289,7 @@ resource "stackit_server" "server-with-network" {
   keypair_name = stackit_key_pair.keypair.name
   network_interfaces = [
     stackit_network_interface.nic.network_interface_id
-  ]	
+  ]
 }
 
 resource "stackit_public_ip" "public-ip" {
