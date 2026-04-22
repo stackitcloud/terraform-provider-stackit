@@ -73,7 +73,7 @@ description: |-
   resource "stackit_network" "network" {
     project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     name               = "example-network"
-    nameservers        = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
+    ipv4_nameservers   = ["192.0.2.0", "198.51.100.0", "203.0.113.0"]
     ipv4_prefix_length = 24
   }
   
