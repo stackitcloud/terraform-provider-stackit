@@ -298,6 +298,7 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["sgw_acl"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["syslog"])),
+					// api throws an error when tls_ciphers is set (STACKITTPR-616)
 					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
 					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_ciphers"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_protocols.#", "1"),
@@ -375,6 +376,7 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["sgw_acl"])),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["syslog"])),
+					// api throws an error when tls_ciphers is set (STACKITTPR-616)
 					// resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
 					// resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["tls_ciphers"])),
 					resource.TestCheckResourceAttr("data.stackit_opensearch_instance.instance", "parameters.tls_protocols.#", "1"),
@@ -467,6 +469,7 @@ func TestAccOpenSearchResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["sgw_acl"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["syslog"])),
+					// api throws an error when tls_ciphers is set (STACKITTPR-616)
 					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.#", "1"),
 					// resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated["tls_ciphers"])),
 					resource.TestCheckResourceAttr("stackit_opensearch_instance.instance", "parameters.tls_protocols.#", "1"),

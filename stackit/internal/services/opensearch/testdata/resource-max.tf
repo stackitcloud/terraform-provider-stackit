@@ -36,6 +36,7 @@ resource "stackit_opensearch_instance" "instance" {
     plugins                = var.plugin != "" ? [var.plugin] : []
     sgw_acl                = var.sgw_acl
     syslog                 = [var.syslog]
+    // api throws an error when tls_ciphers is set (STACKITTPR-616)
     # tls_ciphers = [var.tls_ciphers]
     tls_protocols = [var.tls_protocols]
   }
