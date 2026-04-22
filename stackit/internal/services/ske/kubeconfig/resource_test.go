@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 )
 
 func TestMapFields(t *testing.T) {

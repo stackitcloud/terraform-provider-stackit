@@ -16,7 +16,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.4.1
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.19.1
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.1
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.3.5
@@ -41,7 +41,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.4.1
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.6.3
-	github.com/stackitcloud/stackit-sdk-go/services/ske v1.7.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.6.1
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.35.0

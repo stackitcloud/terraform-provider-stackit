@@ -3,6 +3,7 @@ package ske
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -12,26 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
-type skeClientMocked struct {
-	returnError    bool
-	getClusterResp *ske.Cluster
-}
-
 const testRegion = "region"
-
-func (c *skeClientMocked) GetClusterExecute(_ context.Context, _, _, _ string) (*ske.Cluster, error) {
-	if c.returnError {
-		return nil, fmt.Errorf("get cluster failed")
-	}
-
-	return c.getClusterResp, nil
-}
 
 func TestMapFields(t *testing.T) {
 	cs := ske.ClusterStatusState("OK")
@@ -53,17 +42,18 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                  types.StringValue("pid,region,name"),
-				ProjectId:           types.StringValue("pid"),
-				Name:                types.StringValue("name"),
-				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:         types.ObjectNull(maintenanceTypes),
-				Network:             types.ObjectNull(networkTypes),
-				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:          types.ObjectNull(extensionsTypes),
-				EgressAddressRanges: types.ListNull(types.StringType),
-				PodAddressRanges:    types.ListNull(types.StringType),
-				Region:              types.StringValue(testRegion),
+				Id:                    types.StringValue("pid,region,name"),
+				ProjectId:             types.StringValue("pid"),
+				Name:                  types.StringValue("name"),
+				NodePools:             types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:           types.ObjectNull(maintenanceTypes),
+				Network:               types.ObjectNull(networkTypes),
+				Hibernations:          types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:            types.ObjectNull(extensionsTypes),
+				EgressAddressRanges:   types.ListNull(types.StringType),
+				PodAddressRanges:      types.ListNull(types.StringType),
+				Region:                types.StringValue(testRegion),
+				KubernetesVersionUsed: types.StringValue(""),
 			},
 			true,
 		},
@@ -74,76 +64,76 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
-						AllowedCidrs: &[]string{"cidr1"},
-						Enabled:      new(true),
+						AllowedCidrs: []string{"cidr1"},
+						Enabled:      true,
 					},
 					Observability: &ske.Observability{
-						InstanceId: new("aid"),
-						Enabled:    new(true),
+						InstanceId: "aid",
+						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   &[]string{"foo.onstackit.cloud"},
-						Enabled: new(true),
+						Zones:   []string{"foo.onstackit.cloud"},
+						Enabled: true,
 					},
 				},
 				Hibernation: &ske.Hibernation{
-					Schedules: &[]ske.HibernationSchedule{
+					Schedules: []ske.HibernationSchedule{
 						{
-							End:      new("2"),
-							Start:    new("1"),
+							End:      "2",
+							Start:    "1",
 							Timezone: new("CET"),
 						},
 					},
 				},
-				Kubernetes: &ske.Kubernetes{
-					Version: new("1.2.3"),
+				Kubernetes: ske.Kubernetes{
+					Version: "1.2.3",
 				},
 				Maintenance: &ske.Maintenance{
-					AutoUpdate: &ske.MaintenanceAutoUpdate{
+					AutoUpdate: ske.MaintenanceAutoUpdate{
 						KubernetesVersion:   new(true),
 						MachineImageVersion: new(true),
 					},
-					TimeWindow: &ske.TimeWindow{
-						Start: new(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
-						End:   new(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
+					TimeWindow: ske.TimeWindow{
+						Start: time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60)),
+						End:   time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC),
 					},
 				},
 				Network: &ske.Network{
 					Id: new("nid"),
 					ControlPlane: &ske.V2ControlPlaneNetwork{
-						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(new("SNA")),
+						AccessScope: ske.ACCESSSCOPE_SNA.Ptr(),
 					},
 				},
 				Name: new("name"),
-				Nodepools: &[]ske.Nodepool{
+				Nodepools: []ske.Nodepool{
 					{
 						AllowSystemComponents: new(true),
-						AvailabilityZones:     &[]string{"z1", "z2"},
+						AvailabilityZones:     []string{"z1", "z2"},
 						Cri: &ske.CRI{
-							Name: ske.CRINAME_DOCKER.Ptr(),
+							Name: new("containerd"),
 						},
 						Labels: &map[string]string{"k": "v"},
-						Machine: &ske.Machine{
-							Image: &ske.Image{
-								Name:    new("os"),
-								Version: new("os-ver"),
+						Machine: ske.Machine{
+							Image: ske.Image{
+								Name:    "os",
+								Version: "os-ver",
 							},
-							Type: new("B"),
+							Type: "B",
 						},
-						MaxSurge:       new(int64(3)),
+						MaxSurge:       new(int32(3)),
 						MaxUnavailable: nil,
-						Maximum:        new(int64(5)),
-						Minimum:        new(int64(1)),
-						Name:           new("node"),
-						Taints: &[]ske.Taint{
+						Maximum:        5,
+						Minimum:        1,
+						Name:           "node",
+						Taints: []ske.Taint{
 							{
-								Effect: ske.TAINTEFFECT_NO_EXECUTE.Ptr(),
-								Key:    new("key"),
+								Effect: "NoExecute",
+								Key:    "key",
 								Value:  new("value"),
 							},
 						},
-						Volume: &ske.Volume{
-							Size: new(int64(3)),
+						Volume: ske.Volume{
+							Size: 3,
 							Type: new("type"),
 						},
 					},
@@ -152,8 +142,8 @@ func TestMapFields(t *testing.T) {
 					Aggregated:          &cs,
 					Error:               nil,
 					Hibernated:          nil,
-					EgressAddressRanges: &[]string{"0.0.0.0/32", "1.1.1.1/32"},
-					PodAddressRanges:    &[]string{"0.0.0.0/32", "1.1.1.1/32"},
+					EgressAddressRanges: []string{"0.0.0.0/32", "1.1.1.1/32"},
+					PodAddressRanges:    []string{"0.0.0.0/32", "1.1.1.1/32"},
 				},
 			},
 			testRegion,
@@ -188,12 +178,12 @@ func TestMapFields(t *testing.T) {
 								"os_version":      types.StringNull(),
 								"os_version_min":  types.StringNull(),
 								"os_version_used": types.StringValue("os-ver"),
-								"minimum":         types.Int64Value(1),
-								"maximum":         types.Int64Value(5),
-								"max_surge":       types.Int64Value(3),
-								"max_unavailable": types.Int64Null(),
+								"minimum":         types.Int32Value(1),
+								"maximum":         types.Int32Value(5),
+								"max_surge":       types.Int32Value(3),
+								"max_unavailable": types.Int32Null(),
 								"volume_type":     types.StringValue("type"),
-								"volume_size":     types.Int64Value(3),
+								"volume_size":     types.Int32Value(3),
 								"labels": types.MapValueMust(
 									types.StringType,
 									map[string]attr.Value{
@@ -206,14 +196,14 @@ func TestMapFields(t *testing.T) {
 										types.ObjectValueMust(
 											taintTypes,
 											map[string]attr.Value{
-												"effect": types.StringValue(string(ske.TAINTEFFECT_NO_EXECUTE)),
+												"effect": types.StringValue("NoExecute"),
 												"key":    types.StringValue("key"),
 												"value":  types.StringValue("value"),
 											},
 										),
 									},
 								),
-								"cri": types.StringValue(string(ske.CRINAME_DOCKER)),
+								"cri": types.StringValue("containerd"),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -284,17 +274,18 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                  types.StringValue("pid,region,name"),
-				ProjectId:           types.StringValue("pid"),
-				Name:                types.StringValue("name"),
-				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:         types.ObjectNull(maintenanceTypes),
-				Network:             types.ObjectNull(networkTypes),
-				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:          types.ObjectNull(extensionsTypes),
-				EgressAddressRanges: types.ListNull(types.StringType),
-				PodAddressRanges:    types.ListNull(types.StringType),
-				Region:              types.StringValue(testRegion),
+				Id:                    types.StringValue("pid,region,name"),
+				ProjectId:             types.StringValue("pid"),
+				Name:                  types.StringValue("name"),
+				NodePools:             types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:           types.ObjectNull(maintenanceTypes),
+				Network:               types.ObjectNull(networkTypes),
+				Hibernations:          types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:            types.ObjectNull(extensionsTypes),
+				EgressAddressRanges:   types.ListNull(types.StringType),
+				PodAddressRanges:      types.ListNull(types.StringType),
+				KubernetesVersionUsed: types.StringValue(""),
+				Region:                types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -306,15 +297,15 @@ func TestMapFields(t *testing.T) {
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
 						AllowedCidrs: nil,
-						Enabled:      new(true),
+						Enabled:      true,
 					},
 					Observability: &ske.Observability{
-						InstanceId: nil,
-						Enabled:    new(true),
+						InstanceId: "",
+						Enabled:    true,
 					},
 					Dns: &ske.DNS{
 						Zones:   nil,
-						Enabled: new(true),
+						Enabled: true,
 					},
 				},
 				Name: new("name"),
@@ -337,14 +328,15 @@ func TestMapFields(t *testing.T) {
 					"argus": types.ObjectNull(argusTypes),
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(true),
-						"instance_id": types.StringNull(),
+						"instance_id": types.StringValue(""),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
-				Region: types.StringValue(testRegion),
+				KubernetesVersionUsed: types.StringValue(""),
+				Region:                types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -395,7 +387,8 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
-				Region: types.StringValue(testRegion),
+				KubernetesVersionUsed: types.StringValue(""),
+				Region:                types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -422,12 +415,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
-						AllowedCidrs: &[]string{"cidr1"},
-						Enabled:      new(true),
+						AllowedCidrs: []string{"cidr1"},
+						Enabled:      true,
 					},
 					Dns: &ske.DNS{
 						Zones:   nil,
-						Enabled: new(true),
+						Enabled: true,
 					},
 				},
 				Name: new("name"),
@@ -459,7 +452,8 @@ func TestMapFields(t *testing.T) {
 						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
-				Region: types.StringValue(testRegion),
+				KubernetesVersionUsed: types.StringValue(""),
+				Region:                types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -473,16 +467,17 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                  types.StringValue("pid,region,name"),
-				ProjectId:           types.StringValue("pid"),
-				Name:                types.StringValue("name"),
-				NodePools:           types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:         types.ObjectNull(maintenanceTypes),
-				Hibernations:        types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:          types.ObjectNull(extensionsTypes),
-				EgressAddressRanges: types.ListNull(types.StringType),
-				PodAddressRanges:    types.ListNull(types.StringType),
-				Region:              types.StringValue(testRegion),
+				Id:                    types.StringValue("pid,region,name"),
+				ProjectId:             types.StringValue("pid"),
+				Name:                  types.StringValue("name"),
+				NodePools:             types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:           types.ObjectNull(maintenanceTypes),
+				Hibernations:          types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions:            types.ObjectNull(extensionsTypes),
+				EgressAddressRanges:   types.ListNull(types.StringType),
+				PodAddressRanges:      types.ListNull(types.StringType),
+				KubernetesVersionUsed: types.StringValue(""),
+				Region:                types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -501,12 +496,12 @@ func TestMapFields(t *testing.T) {
 							"os_version":      types.StringNull(),
 							"os_version_min":  types.StringNull(),
 							"os_version_used": types.StringValue("os-ver"),
-							"minimum":         types.Int64Value(1),
-							"maximum":         types.Int64Value(5),
-							"max_surge":       types.Int64Value(3),
-							"max_unavailable": types.Int64Null(),
+							"minimum":         types.Int32Value(1),
+							"maximum":         types.Int32Value(5),
+							"max_surge":       types.Int32Value(3),
+							"max_unavailable": types.Int32Null(),
 							"volume_type":     types.StringValue("type"),
-							"volume_size":     types.Int64Value(3),
+							"volume_size":     types.Int32Value(3),
 							"labels": types.MapValueMust(
 								types.StringType,
 								map[string]attr.Value{
@@ -514,7 +509,7 @@ func TestMapFields(t *testing.T) {
 								},
 							),
 							"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
-							"cri":    types.StringValue(string(ske.CRINAME_DOCKER)),
+							"cri":    types.StringValue("containerd"),
 							"availability_zones": types.ListValueMust(
 								types.StringType,
 								[]attr.Value{
@@ -530,69 +525,69 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{
 					Acl: &ske.ACL{
-						AllowedCidrs: &[]string{"cidr1"},
-						Enabled:      new(true),
+						AllowedCidrs: []string{"cidr1"},
+						Enabled:      true,
 					},
 					Observability: &ske.Observability{
-						InstanceId: new("aid"),
-						Enabled:    new(true),
+						InstanceId: "aid",
+						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   &[]string{"zone1"},
-						Enabled: new(true),
+						Zones:   []string{"zone1"},
+						Enabled: true,
 					},
 				},
 				Hibernation: &ske.Hibernation{
-					Schedules: &[]ske.HibernationSchedule{
+					Schedules: []ske.HibernationSchedule{
 						{
-							End:      new("2"),
-							Start:    new("1"),
+							End:      "2",
+							Start:    "1",
 							Timezone: new("CET"),
 						},
 					},
 				},
-				Kubernetes: &ske.Kubernetes{
-					Version: new("1.2.3"),
+				Kubernetes: ske.Kubernetes{
+					Version: "1.2.3",
 				},
 				Maintenance: &ske.Maintenance{
-					AutoUpdate: &ske.MaintenanceAutoUpdate{
+					AutoUpdate: ske.MaintenanceAutoUpdate{
 						KubernetesVersion:   new(true),
 						MachineImageVersion: new(true),
 					},
-					TimeWindow: &ske.TimeWindow{
-						Start: new(time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60))),
-						End:   new(time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC)),
+					TimeWindow: ske.TimeWindow{
+						Start: time.Date(0, 1, 2, 3, 4, 5, 6, time.FixedZone("UTC+6:00", 6*60*60)),
+						End:   time.Date(10, 11, 12, 13, 14, 15, 0, time.UTC),
 					},
 				},
 				Network: &ske.Network{
 					Id: new("nid"),
 					ControlPlane: &ske.V2ControlPlaneNetwork{
-						AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(new("SNA")),
+						AccessScope: ske.ACCESSSCOPE_SNA.Ptr(),
 					},
 				},
 				Name: new("name"),
-				Nodepools: &[]ske.Nodepool{
+				Nodepools: []ske.Nodepool{
 					{
-						AvailabilityZones: &[]string{"z1", "z2"},
+						AvailabilityZones: []string{"z1", "z2"},
 						Cri: &ske.CRI{
-							Name: ske.CRINAME_DOCKER.Ptr(),
+							Name: new("containerd"),
 						},
 						Labels: &map[string]string{"k": "v"},
-						Machine: &ske.Machine{
-							Image: &ske.Image{
-								Name:    new("os"),
-								Version: new("os-ver"),
+						Machine: ske.Machine{
+							Image: ske.Image{
+								Name:    "os",
+								Version: "os-ver",
 							},
-							Type: new("B"),
+							Type: "B",
 						},
-						MaxSurge:       new(int64(3)),
+						MaxSurge:       new(int32(3)),
 						MaxUnavailable: nil,
-						Maximum:        new(int64(5)),
-						Minimum:        new(int64(1)),
-						Name:           new("node"),
+						Maximum:        5,
+						Minimum:        1,
+						Name:           "node",
 						Taints:         nil,
-						Volume: &ske.Volume{
-							Size: new(int64(3)),
+						Volume: ske.Volume{
+							Size: 3,
 							Type: new("type"),
 						},
 					},
@@ -623,12 +618,12 @@ func TestMapFields(t *testing.T) {
 								"os_version":      types.StringNull(),
 								"os_version_min":  types.StringNull(),
 								"os_version_used": types.StringValue("os-ver"),
-								"minimum":         types.Int64Value(1),
-								"maximum":         types.Int64Value(5),
-								"max_surge":       types.Int64Value(3),
-								"max_unavailable": types.Int64Null(),
+								"minimum":         types.Int32Value(1),
+								"maximum":         types.Int32Value(5),
+								"max_surge":       types.Int32Value(3),
+								"max_unavailable": types.Int32Null(),
 								"volume_type":     types.StringValue("type"),
-								"volume_size":     types.Int64Value(3),
+								"volume_size":     types.Int32Value(3),
 								"labels": types.MapValueMust(
 									types.StringType,
 									map[string]attr.Value{
@@ -636,7 +631,7 @@ func TestMapFields(t *testing.T) {
 									},
 								),
 								"taints": types.ListValueMust(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{}),
-								"cri":    types.StringValue(string(ske.CRINAME_DOCKER)),
+								"cri":    types.StringValue("containerd"),
 								"availability_zones": types.ListValueMust(
 									types.StringType,
 									[]attr.Value{
@@ -1258,7 +1253,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1290,7 +1285,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1322,7 +1317,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1354,7 +1349,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1386,7 +1381,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1410,7 +1405,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1434,7 +1429,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStatePreview),
@@ -1458,7 +1453,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1482,7 +1477,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1497,8 +1492,8 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			nil,
 			"foo",
 			&ske.Image{
-				Name:    new("foo"),
-				Version: new("1.19.0"),
+				Name:    "foo",
+				Version: "1.19.0",
 			},
 			new("1.19.0"),
 			false,
@@ -1509,7 +1504,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1524,8 +1519,8 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			nil,
 			"foo",
 			&ske.Image{
-				Name:    new("bar"),
-				Version: new("1.19.0"),
+				Name:    "bar",
+				Version: "1.19.0",
 			},
 			new("1.20.0"),
 			false,
@@ -1536,7 +1531,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1551,8 +1546,8 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			new("1.19"),
 			"foo",
 			&ske.Image{
-				Name:    new("foo"),
-				Version: new("1.20.0"),
+				Name:    "foo",
+				Version: "1.20.0",
 			},
 			new("1.20.0"),
 			false,
@@ -1563,7 +1558,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.21.0"),
 							State:   new(VersionStateSupported),
@@ -1582,8 +1577,8 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			new("1.19"),
 			"foo",
 			&ske.Image{
-				Name:    new("foo"),
-				Version: new("1.20.0"),
+				Name:    "foo",
+				Version: "1.20.0",
 			},
 			new("1.20.0"),
 			true,
@@ -1594,7 +1589,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1609,8 +1604,8 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			new("1.20"),
 			"foo",
 			&ske.Image{
-				Name:    new("foo"),
-				Version: new("1.19.0"),
+				Name:    "foo",
+				Version: "1.19.0",
 			},
 			new("1.20.0"),
 			false,
@@ -1621,7 +1616,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1645,7 +1640,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name:     new("foo"),
-					Versions: &[]ske.MachineImageVersion{},
+					Versions: []ske.MachineImageVersion{},
 				},
 			},
 			new("1.20"),
@@ -1675,7 +1670,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: nil,
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1695,7 +1690,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("bar"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1715,7 +1710,7 @@ func TestLatestMatchingMachineVersion(t *testing.T) {
 			[]ske.MachineImage{
 				{
 					Name: new("foo"),
-					Versions: &[]ske.MachineImageVersion{
+					Versions: []ske.MachineImageVersion{
 						{
 							Version: new("1.20.0"),
 							State:   new(VersionStateSupported),
@@ -1854,9 +1849,9 @@ func TestGetMaintenanceTimes(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 			apiResponse := &ske.Cluster{
 				Maintenance: &ske.Maintenance{
-					TimeWindow: &ske.TimeWindow{
-						Start: new(tt.startAPI),
-						End:   new(tt.endAPI),
+					TimeWindow: ske.TimeWindow{
+						Start: tt.startAPI,
+						End:   tt.endAPI,
 					},
 				},
 			}
@@ -1907,25 +1902,25 @@ func TestGetCurrentVersion(t *testing.T) {
 		{
 			"ok",
 			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: new("v1.0.0"),
+				Kubernetes: ske.Kubernetes{
+					Version: "v1.0.0",
 				},
-				Nodepools: &[]ske.Nodepool{
+				Nodepools: []ske.Nodepool{
 					{
-						Name: new("foo"),
-						Machine: &ske.Machine{
-							Image: &ske.Image{
-								Name:    new("foo"),
-								Version: new("v1.0.0"),
+						Name: "foo",
+						Machine: ske.Machine{
+							Image: ske.Image{
+								Name:    "foo",
+								Version: "v1.0.0",
 							},
 						},
 					},
 					{
-						Name: new("bar"),
-						Machine: &ske.Machine{
-							Image: &ske.Image{
-								Name:    new("bar"),
-								Version: new("v2.0.0"),
+						Name: "bar",
+						Machine: ske.Machine{
+							Image: ske.Image{
+								Name:    "bar",
+								Version: "v2.0.0",
 							},
 						},
 					},
@@ -1934,12 +1929,12 @@ func TestGetCurrentVersion(t *testing.T) {
 			new("v1.0.0"),
 			map[string]*ske.Image{
 				"foo": {
-					Name:    new("foo"),
-					Version: new("v1.0.0"),
+					Name:    "foo",
+					Version: "v1.0.0",
 				},
 				"bar": {
-					Name:    new("bar"),
-					Version: new("v2.0.0"),
+					Name:    "bar",
+					Version: "v2.0.0",
 				},
 			},
 			false,
@@ -1952,30 +1947,30 @@ func TestGetCurrentVersion(t *testing.T) {
 			true,
 		},
 		{
-			"nil kubernetes",
+			"kubernetes empty",
 			&ske.Cluster{
-				Kubernetes: nil,
+				Kubernetes: ske.Kubernetes{},
 			},
-			nil,
+			new(""),
 			nil,
 			false,
 		},
 		{
-			"nil kubernetes version",
+			"kubernetes version empty",
 			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: nil,
+				Kubernetes: ske.Kubernetes{
+					Version: "",
 				},
 			},
-			nil,
+			new(""),
 			nil,
 			false,
 		},
 		{
 			"nil nodepools",
 			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: new("v1.0.0"),
+				Kubernetes: ske.Kubernetes{
+					Version: "v1.0.0",
 				},
 				Nodepools: nil,
 			},
@@ -1984,75 +1979,59 @@ func TestGetCurrentVersion(t *testing.T) {
 			false,
 		},
 		{
-			"nil nodepools machine",
+			"empty nodepools machine",
 			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: new("v1.0.0"),
+				Kubernetes: ske.Kubernetes{
+					Version: "v1.0.0",
 				},
-				Nodepools: &[]ske.Nodepool{
+				Nodepools: []ske.Nodepool{
 					{
-						Name:    new("foo"),
-						Machine: nil,
+						Name:    "foo",
+						Machine: ske.Machine{},
 					},
 				},
 			},
 			new("v1.0.0"),
-			map[string]*ske.Image{},
+			map[string]*ske.Image{
+				"foo": {
+					Name: "",
+				},
+			},
 			false,
 		},
 		{
-			"nil nodepools machine image",
+			"empty nodepools machine image",
 			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: new("v1.0.0"),
+				Kubernetes: ske.Kubernetes{
+					Version: "v1.0.0",
 				},
-				Nodepools: &[]ske.Nodepool{
+				Nodepools: []ske.Nodepool{
 					{
-						Name: new("foo"),
-						Machine: &ske.Machine{
-							Image: nil,
+						Name: "foo",
+						Machine: ske.Machine{
+							Image: ske.Image{},
 						},
 					},
 				},
 			},
 			new("v1.0.0"),
-			map[string]*ske.Image{},
-			false,
-		},
-		{
-			"nil nodepools machine image name",
-			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: new("v1.0.0"),
-				},
-				Nodepools: &[]ske.Nodepool{
-					{
-						Name: new("foo"),
-						Machine: &ske.Machine{
-							Image: &ske.Image{
-								Name: nil,
-							},
-						},
-					},
-				},
+			map[string]*ske.Image{
+				"foo": {},
 			},
-			new("v1.0.0"),
-			map[string]*ske.Image{},
 			false,
 		},
 		{
-			"nil nodepools machine image version",
+			"empty nodepools machine image name",
 			&ske.Cluster{
-				Kubernetes: &ske.Kubernetes{
-					Version: new("v1.0.0"),
+				Kubernetes: ske.Kubernetes{
+					Version: "v1.0.0",
 				},
-				Nodepools: &[]ske.Nodepool{
+				Nodepools: []ske.Nodepool{
 					{
-						Name: new("foo"),
-						Machine: &ske.Machine{
-							Image: &ske.Image{
-								Name:    new("foo"),
-								Version: nil,
+						Name: "foo",
+						Machine: ske.Machine{
+							Image: ske.Image{
+								Name: "",
 							},
 						},
 					},
@@ -2061,8 +2040,34 @@ func TestGetCurrentVersion(t *testing.T) {
 			new("v1.0.0"),
 			map[string]*ske.Image{
 				"foo": {
-					Name:    new("foo"),
-					Version: nil,
+					Name: "",
+				},
+			},
+			false,
+		},
+		{
+			"nil nodepools machine image version",
+			&ske.Cluster{
+				Kubernetes: ske.Kubernetes{
+					Version: "v1.0.0",
+				},
+				Nodepools: []ske.Nodepool{
+					{
+						Name: "foo",
+						Machine: ske.Machine{
+							Image: ske.Image{
+								Name:    "foo",
+								Version: "",
+							},
+						},
+					},
+				},
+			},
+			new("v1.0.0"),
+			map[string]*ske.Image{
+				"foo": {
+					Name:    "foo",
+					Version: "",
 				},
 			},
 			false,
@@ -2077,9 +2082,15 @@ func TestGetCurrentVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			client := &skeClientMocked{
-				returnError:    tt.getClusterFails,
-				getClusterResp: tt.mockedResp,
+			client := &ske.DefaultAPIServiceMock{
+				GetClusterExecuteMock: new(func(_ ske.ApiGetClusterRequest) (*ske.Cluster, error) {
+					if tt.getClusterFails {
+						return nil, &oapierror.GenericOpenAPIError{
+							StatusCode: http.StatusInternalServerError,
+						}
+					}
+					return tt.mockedResp, nil
+				}),
 			}
 			model := &Model{
 				ProjectId: types.StringValue("pid"),
@@ -2259,7 +2270,7 @@ func TestToNetworkPayload(t *testing.T) {
 			&ske.Network{
 				Id: new("nid"),
 				ControlPlane: &ske.V2ControlPlaneNetwork{
-					AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(new("SNA")),
+					AccessScope: ske.ACCESSSCOPE_SNA.Ptr(),
 				},
 			},
 			true,
@@ -2425,10 +2436,10 @@ func TestMaintenanceWindow(t *testing.T) {
 				t.Fatalf("cannot parse end date %q: %v", tt.wantEnd, err)
 			}
 
-			if expected, actual := wantStart.In(startLocation), *maintenance.TimeWindow.Start; expected != actual {
+			if expected, actual := wantStart.In(startLocation), maintenance.TimeWindow.Start; expected != actual {
 				t.Errorf("invalid start date. expected %s but got %s", expected, actual)
 			}
-			if expected, actual := wantEnd.In(endLocation), (*maintenance.TimeWindow.End); expected != actual {
+			if expected, actual := wantEnd.In(endLocation), (maintenance.TimeWindow.End); expected != actual {
 				t.Errorf("invalid End date. expected %s but got %s", expected, actual)
 			}
 		})
