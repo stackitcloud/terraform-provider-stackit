@@ -1242,8 +1242,8 @@ func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.Redirect
 	var redirectsConfig *cdnSdk.RedirectConfig
 	if redirectConfigModel != nil {
 		sdkRules := []cdnSdk.RedirectRule{}
-		if len(redirectsConfig.Rules) > 0 {
-			for _, rule := range redirectsConfig.Rules {
+		if len(redirectConfigModel.Rules) > 0 {
+			for _, rule := range redirectConfigModel.Rules {
 				matchers := []cdnSdk.Matcher{}
 				for _, matcher := range rule.Matchers {
 					var matchCond *cdnSdk.MatchCondition

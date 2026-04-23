@@ -113,7 +113,7 @@ func TestToCreatePayload(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Expected: &cdnSdk.CreateDistributionPayload{
@@ -192,7 +192,7 @@ func TestToCreatePayload(t *testing.T) {
 					"regions":           regionsFixture, // reusing the existing one
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Expected: &cdnSdk.CreateDistributionPayload{
@@ -275,18 +275,12 @@ func TestConvertConfig(t *testing.T) {
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 
-	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
-	if !ok {
-		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
-	}
-	redirectsAttrTypes := redirectsObjType.AttrTypes
-
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"blocked_countries": blockedCountriesFixture,
-		"redirects":         types.ObjectNull(redirectsAttrTypes),
+		"redirects":         types.ObjectNull(redirectsTypes),
 	})
 
 	matcherValues := types.ListValueMust(types.StringType, []attr.Value{
@@ -357,7 +351,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Expected: &cdnSdk.Config{
@@ -446,7 +440,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Expected: &cdnSdk.Config{
