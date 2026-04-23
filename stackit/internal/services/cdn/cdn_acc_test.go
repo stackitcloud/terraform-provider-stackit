@@ -343,7 +343,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.target_url", "https://example.com/updated"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.target_url", testutil.ConvertConfigVariable(configVarsHttpUpdated()["redirect_target_url"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.status_code", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_status_code"])),
 
 					resource.TestCheckResourceAttr("stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
