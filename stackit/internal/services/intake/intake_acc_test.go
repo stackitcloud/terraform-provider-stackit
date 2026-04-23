@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	sdkConfig "github.com/stackitcloud/stackit-sdk-go/core/config"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -66,7 +65,7 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 			// Create the minimum runner from the HCL file
 			{
 				ConfigVariables: testIntakeRunnerConfigVarsMin,
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceIntakeRunnerMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["name"])),
@@ -89,7 +88,7 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					project_id = %s.project_id
 					runner_id  = %s.runner_id
 					region     = %s.region
-				}`, testutil.IntakeProviderConfig(), resourceIntakeRunnerMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
+				}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceIntakeRunnerMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Make sure it's correctly found resource by comparing runner_id attribute
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
@@ -104,7 +103,7 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 			// Simulate terraform import
 			{
 				ConfigVariables:   testIntakeRunnerConfigVarsMin,
-				Config:            testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMin,
+				Config:            testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				ResourceName:      intakeRunnerResource,
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -121,7 +120,7 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 			// Update check: verifies API updated resource name without crashing
 			{
 				ConfigVariables: testIntakeRunnerConfigVarsMinUpdated(),
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMin,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMinUpdated()["name"])),
@@ -146,7 +145,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 			// Create the max intake runner from HCL files and verify comparison
 			{
 				ConfigVariables: testIntakeRunnerConfigVarsMax,
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["name"])),
@@ -169,7 +168,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 				data "stackit_intake_runner" "example" {
 					project_id = %s.project_id
 					runner_id  = %s.runner_id
-				}`, testutil.IntakeProviderConfig(), resourceIntakeRunnerMax, intakeRunnerResource, intakeRunnerResource),
+				}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceIntakeRunnerMax, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "runner_id", "data.stackit_intake_runner.example", "runner_id"),
@@ -183,7 +182,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 			// Simulate terraform import
 			{
 				ConfigVariables:   testIntakeRunnerConfigVarsMax,
-				Config:            testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMax,
+				Config:            testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				ResourceName:      intakeRunnerResource,
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -200,7 +199,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 			// Update and verify changes are reflected
 			{
 				ConfigVariables: testIntakeRunnerConfigVarsMaxUpdated(),
-				Config:          testutil.IntakeProviderConfig() + "\n" + resourceIntakeRunnerMax,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMaxUpdated()["name"])),
@@ -222,16 +221,11 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 // testAccCheckIntakeRunnerDestroy act as independent auditor to verify destroy operation
 func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	var client *intake.APIClient
-	var err error
-
-	if testutil.IntakeCustomEndpoint == "" {
-		client, err = intake.NewAPIClient()
-	} else {
-		client, err = intake.NewAPIClient(
-			sdkConfig.WithEndpoint(testutil.IntakeCustomEndpoint),
-		)
+	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
 	}
+
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
