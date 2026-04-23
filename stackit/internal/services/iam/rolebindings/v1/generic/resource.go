@@ -138,9 +138,6 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 
-	// TODO: remove
-	time.Sleep(10 * time.Second)
-
 	roleBindingResp, err := r.ExecCreateRequest(ctx, r.apiClient, region, resourceId, model.Role.ValueString(), model.Subject.ValueString())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s %s role binding", r.ApiName, r.ResourceType), fmt.Sprintf("Calling API: %v", err))
