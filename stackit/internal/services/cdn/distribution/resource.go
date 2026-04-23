@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -245,7 +246,6 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	backendOptions := []string{"http", "bucket"}
-	matchCondition := []string{"ANY", "ALL", "NONE"}
 	statusCode := []int32{301, 302, 303, 307, 308}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
@@ -369,7 +369,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 											Computed:    true,
 											Description: schemaDescriptions["config_redirects_rule_match_condition"],
 											Default:     stringdefault.StaticString("ANY"),
-											Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(matchCondition...)},
+											Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
 										},
 										"matchers": schema.ListNestedAttribute{
 											Description: schemaDescriptions["config_redirects_rule_matchers"],
@@ -392,7 +392,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 														Description: schemaDescriptions["config_redirects_rule_match_condition"],
 														Default:     stringdefault.StaticString("ANY"),
 														Computed:    true,
-														Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(matchCondition...)},
+														Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
 													},
 												},
 											},
