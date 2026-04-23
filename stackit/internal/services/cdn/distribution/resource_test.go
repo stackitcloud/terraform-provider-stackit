@@ -165,11 +165,11 @@ func TestToCreatePayload(t *testing.T) {
 							Enabled:            cdnSdk.PtrBool(true),
 							TargetUrl:          "https://example.com/redirect",
 							StatusCode:         301,
-							RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+							RuleMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
 							Matchers: []cdnSdk.Matcher{
 								{
 									Values:              []string{"/shop/*"},
-									ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+									ValueMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
 								},
 							},
 						},
@@ -419,11 +419,11 @@ func TestConvertConfig(t *testing.T) {
 							Enabled:            cdnSdk.PtrBool(true),
 							TargetUrl:          "https://example.com/redirect",
 							StatusCode:         301,
-							RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+							RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 							Matchers: []cdnSdk.Matcher{
 								{
 									Values:              []string{"/shop/*"},
-									ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+									ValueMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
 								},
 							},
 						},
@@ -561,11 +561,11 @@ func TestMapFields(t *testing.T) {
 				Enabled:            cdnSdk.PtrBool(true),
 				TargetUrl:          "https://example.com/redirect",
 				StatusCode:         301,
-				RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+				RuleMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
 				Matchers: []cdnSdk.Matcher{
 					{
 						Values:              []string{"/shop/*"},
-						ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+						ValueMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
 					},
 				},
 			},
