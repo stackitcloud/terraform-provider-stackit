@@ -702,47 +702,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// redirects
-	var redirectsConfig *cdnSdk.RedirectConfig
-	if configModel.Redirects != nil {
-		sdkRules := []cdnSdk.RedirectRule{}
-		if len(configModel.Redirects.Rules) > 0 {
-			for _, rule := range configModel.Redirects.Rules {
-				matchers := []cdnSdk.Matcher{}
-				for _, matcher := range rule.Matchers {
-					var matchCond *cdnSdk.MatchCondition
-					if matcher.ValueMatchCondition != nil {
-						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
-						matchCond = &cond
-					}
-
-					matchers = append(matchers, cdnSdk.Matcher{
-						Values:              matcher.Values,
-						ValueMatchCondition: matchCond,
-					})
-				}
-
-				var ruleMatchCond *cdnSdk.MatchCondition
-				if rule.RuleMatchCondition != nil {
-					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
-					ruleMatchCond = &cond
-				}
-				targetUrl := rule.TargetUrl
-
-				sdkConfigRule := cdnSdk.RedirectRule{
-					Description:        rule.Description,
-					Enabled:            rule.Enabled,
-					Matchers:           matchers,
-					RuleMatchCondition: ruleMatchCond,
-					StatusCode:         rule.StatusCode,
-					TargetUrl:          targetUrl,
-				}
-				sdkRules = append(sdkRules, sdkConfigRule)
-			}
-		}
-		redirectsConfig = &cdnSdk.RedirectConfig{
-			Rules: sdkRules,
-		}
-	}
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
 
 	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
@@ -1284,6 +1244,52 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	return payload, nil
 }
 
+func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.RedirectConfig {
+	var redirectsConfig *cdnSdk.RedirectConfig
+	if redirectConfigModel != nil {
+		sdkRules := []cdnSdk.RedirectRule{}
+		if len(redirectsConfig.Rules) > 0 {
+			for _, rule := range redirectsConfig.Rules {
+				matchers := []cdnSdk.Matcher{}
+				for _, matcher := range rule.Matchers {
+					var matchCond *cdnSdk.MatchCondition
+					if matcher.ValueMatchCondition != nil {
+						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
+						matchCond = &cond
+					}
+
+					matchers = append(matchers, cdnSdk.Matcher{
+						Values:              matcher.Values,
+						ValueMatchCondition: matchCond,
+					})
+				}
+
+				var ruleMatchCond *cdnSdk.MatchCondition
+				if rule.RuleMatchCondition != nil {
+					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
+					ruleMatchCond = &cond
+				}
+				targetUrl := rule.TargetUrl
+
+				sdkConfigRule := cdnSdk.RedirectRule{
+					Description:        rule.Description,
+					Enabled:            rule.Enabled,
+					Matchers:           matchers,
+					RuleMatchCondition: ruleMatchCond,
+					StatusCode:         rule.StatusCode,
+					TargetUrl:          targetUrl,
+				}
+				sdkRules = append(sdkRules, sdkConfigRule)
+			}
+		}
+		redirectsConfig = &cdnSdk.RedirectConfig{
+			Rules: sdkRules,
+		}
+	}
+	return redirectsConfig
+
+}
+
 func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	if model == nil {
 		return nil, errors.New("model cannot be nil")
@@ -1324,7 +1330,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	}
 
 	// redirects
-	var redirectsConfig *cdnSdk.RedirectConfig
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
 
 	if configModel.Redirects != nil {
 		sdkRules := []cdnSdk.RedirectRule{}
