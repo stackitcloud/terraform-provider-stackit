@@ -335,13 +335,11 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 						"session_persistence": schema.SingleNestedAttribute{
 							Description: descriptions["session_persistence"],
-							Optional:    true,
-							Computed:    false,
+							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"use_source_ip_address": schema.BoolAttribute{
 									Description: descriptions["use_source_ip_address"],
-									Optional:    true,
-									Computed:    false,
+									Computed:    true,
 								},
 							},
 						},

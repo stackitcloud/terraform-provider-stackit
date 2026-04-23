@@ -683,12 +683,13 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						"session_persistence": schema.SingleNestedAttribute{
 							Description: descriptions["session_persistence"],
 							Optional:    true,
-							Computed:    false,
+							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"use_source_ip_address": schema.BoolAttribute{
 									Description: descriptions["use_source_ip_address"],
 									Optional:    true,
-									Computed:    false,
+									Computed:    true,
+									Default:     booldefault.StaticBool(false),
 								},
 							},
 						},
@@ -1751,13 +1752,13 @@ func mapTargets(targetsResp []loadbalancer.Target, tp map[string]attr.Value) err
 }
 
 func mapSessionPersistence(sessionPersistenceResp *loadbalancer.SessionPersistence, tp map[string]attr.Value) error {
-	if sessionPersistenceResp == nil {
-		tp["session_persistence"] = types.ObjectNull(sessionPersistenceTypes)
-		return nil
+	useSourceIpAddress := false
+	if sessionPersistenceResp != nil && sessionPersistenceResp.UseSourceIpAddress != nil {
+		useSourceIpAddress = *sessionPersistenceResp.UseSourceIpAddress
 	}
 
 	sessionPersistenceMap := map[string]attr.Value{
-		"use_source_ip_address": types.BoolPointerValue(sessionPersistenceResp.UseSourceIpAddress),
+		"use_source_ip_address": types.BoolValue(useSourceIpAddress),
 	}
 
 	sessionPersistenceTF, diags := types.ObjectValue(sessionPersistenceTypes, sessionPersistenceMap)
