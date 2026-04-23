@@ -15,6 +15,8 @@ func NewRoleBindingAccTestBuilder(tfProviderConfig, apiName, resourceType, resou
 	return &RoleBindingAccTestBuilder{
 		providerConfig:     tfProviderConfig,
 		resourceIdentifier: "stackit_" + apiName + "_" + resourceType + "_role_binding_v1." + resourceID,
+		apiName:            apiName,
+		resourceType:       resourceType,
 	}
 }
 
@@ -23,15 +25,22 @@ type RoleBindingAccTestBuilder struct {
 	providerConfig string
 
 	resourceIdentifier string // e.g. "stackit_secretsmanager_instance_role_binding.role_binding"
+	apiName            string // e.g. "secretsmanager"
+	resourceType       string // e.g. "instance"
 
 	// Note: Keep these steps here in the order they are executed later
-	createStep resource.TestStep  // required
-	importStep resource.TestStep  // required
-	updateStep *resource.TestStep // optional
+	createStep     resource.TestStep  // required
+	datasourceStep resource.TestStep  // required
+	importStep     resource.TestStep  // required
+	updateStep     *resource.TestStep // optional
 }
 
 type RoleBindingAccTestBuilderCreateStep interface {
-	CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderImportStep
+	CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderDatasourceStep
+}
+
+type RoleBindingAccTestBuilderDatasourceStep interface {
+	DatasourceStep(tfConfig string, variables config.Variables) RoleBindingAccTestBuilderImportStep
 }
 
 type RoleBindingAccTestBuilderImportStep interface {
@@ -44,7 +53,7 @@ type RoleBindingAccTestBuilderFinalStep interface {
 }
 
 // CreateStep is the first step in your acceptance test and creates the resources initially
-func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderImportStep {
+func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config.Variables, resourceIdResourceID, resourceIdField string) RoleBindingAccTestBuilderDatasourceStep {
 	b.createStep = resource.TestStep{
 		Config:          b.providerConfig + "\n" + tfConfig,
 		ConfigVariables: variables,
@@ -55,12 +64,38 @@ func (b *RoleBindingAccTestBuilder) CreateStep(tfConfig string, variables config
 			),
 			resource.TestCheckResourceAttr(b.resourceIdentifier, "role", testutil.ConvertConfigVariable(variables["role"])),
 			resource.TestCheckResourceAttr(b.resourceIdentifier, "subject", testutil.ConvertConfigVariable(variables["subject"])),
+			resource.TestCheckResourceAttr(b.resourceIdentifier, "region", testutil.Region),
 		),
 	}
 	return b
 }
 
-// ImportStep adds a terraform import test to your acceptance test case
+// DatasourceStep is the second step in your acceptance test and verifies the output of the datasource
+func (b *RoleBindingAccTestBuilder) DatasourceStep(tfConfig string, variables config.Variables) RoleBindingAccTestBuilderImportStep {
+	datasourceIdentifier := "data.stackit_" + b.apiName + "_" + b.resourceType + "_role_bindings_v1.role_bindings"
+
+	b.datasourceStep = resource.TestStep{
+		Config: fmt.Sprintf(`%s
+			
+			%s
+
+			data "stackit_%s_%s_role_bindings_v1" "role_bindings" {
+				resource_id = %s.resource_id
+			}
+		`, b.providerConfig, tfConfig, b.apiName, b.resourceType, b.resourceIdentifier),
+		ConfigVariables: variables,
+		Check: resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttrPair(b.resourceIdentifier, "resource_id", datasourceIdentifier, "resource_id"),
+			resource.TestCheckResourceAttr(datasourceIdentifier, "role_bindings.#", "1"),
+			resource.TestCheckResourceAttr(datasourceIdentifier, "role_bindings.0.role", testutil.ConvertConfigVariable(variables["role"])),
+			resource.TestCheckResourceAttr(datasourceIdentifier, "role_bindings.0.subject", testutil.ConvertConfigVariable(variables["subject"])),
+			resource.TestCheckResourceAttr(datasourceIdentifier, "region", testutil.Region),
+		),
+	}
+	return b
+}
+
+// ImportStep is the third step in your acceptance test and verifies the terraform import is working properly
 func (b *RoleBindingAccTestBuilder) ImportStep(variables config.Variables) RoleBindingAccTestBuilderFinalStep {
 	b.importStep = resource.TestStep{
 		ConfigVariables: variables,
@@ -106,6 +141,7 @@ func (b *RoleBindingAccTestBuilder) UpdateStep(tfConfig string, variables config
 			),
 			resource.TestCheckResourceAttr(b.resourceIdentifier, "role", testutil.ConvertConfigVariable(variables["role"])),
 			resource.TestCheckResourceAttr(b.resourceIdentifier, "subject", testutil.ConvertConfigVariable(variables["subject"])),
+			resource.TestCheckResourceAttr(b.resourceIdentifier, "region", testutil.Region),
 		),
 	}
 	return b
@@ -117,6 +153,7 @@ func (b *RoleBindingAccTestBuilder) Build() resource.TestCase {
 		CheckDestroy:             testdestroy.AccTestCheckDestroy,
 		Steps: []resource.TestStep{
 			b.createStep,
+			b.datasourceStep,
 			b.importStep,
 		},
 	}

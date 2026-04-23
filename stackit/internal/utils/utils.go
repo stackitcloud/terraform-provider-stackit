@@ -214,3 +214,11 @@ func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) strin
 	}
 	return err.Error()
 }
+
+func Map[T, U any](input []T, mapFn func(T) U) []U {
+	values := make([]U, len(input))
+	for i := range input {
+		values[i] = mapFn(input[i])
+	}
+	return values
+}

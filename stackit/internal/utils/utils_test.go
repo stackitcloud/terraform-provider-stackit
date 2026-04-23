@@ -628,3 +628,44 @@ func TestPrettyApiErr(t *testing.T) {
 		})
 	}
 }
+
+func TestMap(t *testing.T) {
+	type args[T any, U any] struct {
+		input []T
+		mapFn func(T) U
+	}
+	type testCase[T any, U any] struct {
+		name string
+		args args[T, U]
+		want []U
+	}
+	tests := []testCase[string, *string]{
+		{
+			name: "default",
+			args: args[string, *string]{
+				input: []string{"foo", "bar"},
+				mapFn: func(s string) *string {
+					return new(s)
+				},
+			},
+			want: []*string{new("foo"), new("bar")},
+		},
+		{
+			name: "input slice is nil",
+			args: args[string, *string]{
+				input: nil,
+				mapFn: func(s string) *string {
+					return new(s)
+				},
+			},
+			want: []*string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Map(tt.args.input, tt.args.mapFn); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Map() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

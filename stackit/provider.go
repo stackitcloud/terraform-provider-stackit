@@ -701,6 +701,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateEnable.NewServerUpdateEnableDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
+	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
 
 	return dataSources
 }
