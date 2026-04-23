@@ -912,13 +912,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			var tfMatchers []attr.Value
 			if r.Matchers != nil {
 				for _, m := range r.Matchers {
-					var tfValues []attr.Value
-					if m.Values != nil {
-						for _, v := range m.Values {
-							tfValues = append(tfValues, types.StringValue(v))
-						}
-					}
-					tfValuesList, diags := types.ListValue(types.StringType, tfValues)
+					tfValuesList, diags := types.ListValueFrom(ctx, types.StringType, m.Values)
 					if diags.HasError() {
 						return core.DiagsToError(diags)
 					}
@@ -961,7 +955,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 			tfStatusCode := types.Int32Null()
 			if r.StatusCode > 0 {
-				tfStatusCode = types.Int32Value(int32(r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
+				tfStatusCode = types.Int32Value(r.StatusCode)
 			}
 
 			tfRuleMatchCond := types.StringValue("ANY")
@@ -1266,8 +1260,7 @@ func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.Redirect
 
 				var ruleMatchCond *cdnSdk.MatchCondition
 				if rule.RuleMatchCondition != nil {
-					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
-					ruleMatchCond = &cond
+					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
 				}
 				targetUrl := rule.TargetUrl
 
@@ -1353,8 +1346,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 				var ruleMatchCond *cdnSdk.MatchCondition
 				if rule.RuleMatchCondition != nil {
-					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
-					ruleMatchCond = &cond
+					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
 				}
 
 				sdkConfigRule := cdnSdk.RedirectRule{
