@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -152,7 +152,7 @@ func (s *scfOrganizationManagerDataSource) Read(ctx context.Context, request dat
 	ctx = tflog.SetField(ctx, "org_id", orgId)
 	ctx = tflog.SetField(ctx, "region", region)
 	// Read the current scf organization manager via orgId
-	ScfOrgManager, err := s.client.GetOrgManagerExecute(ctx, projectId, region, orgId)
+	ScfOrgManager, err := s.client.DefaultAPI.GetOrgManager(ctx, projectId, region, orgId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -189,53 +189,17 @@ func mapFieldsDataSource(response *scf.OrgManager, model *DataSourceModel) error
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-
-	var projectId string
-	if response.ProjectId != nil {
-		projectId = *response.ProjectId
-	} else if model.ProjectId.ValueString() != "" {
-		projectId = model.ProjectId.ValueString()
-	} else {
-		return fmt.Errorf("project id is not present")
+	if userId := model.UserId.ValueString(); userId != "" && userId != response.Guid {
+		return fmt.Errorf("user id mismatch in response and model")
 	}
 
-	var region string
-	if response.Region != nil {
-		region = *response.Region
-	} else if model.Region.ValueString() != "" {
-		region = model.Region.ValueString()
-	} else {
-		return fmt.Errorf("region is not present")
-	}
-
-	var orgId string
-	if response.OrgId != nil {
-		orgId = *response.OrgId
-	} else if model.OrgId.ValueString() != "" {
-		orgId = model.OrgId.ValueString()
-	} else {
-		return fmt.Errorf("org id is not present")
-	}
-
-	var userId string
-	if response.Guid != nil {
-		userId = *response.Guid
-		if model.UserId.ValueString() != "" && userId != model.UserId.ValueString() {
-			return fmt.Errorf("user id mismatch in response and model")
-		}
-	} else if model.UserId.ValueString() != "" {
-		userId = model.UserId.ValueString()
-	} else {
-		return fmt.Errorf("user id is not present")
-	}
-
-	model.Id = utils.BuildInternalTerraformId(projectId, region, orgId, userId)
-	model.Region = types.StringValue(region)
-	model.PlatformId = types.StringPointerValue(response.PlatformId)
-	model.ProjectId = types.StringValue(projectId)
-	model.OrgId = types.StringValue(orgId)
-	model.UserId = types.StringValue(userId)
-	model.UserName = types.StringPointerValue(response.Username)
+	model.Id = utils.BuildInternalTerraformId(response.ProjectId, response.Region, response.OrgId, response.Guid)
+	model.Region = types.StringValue(response.Region)
+	model.PlatformId = types.StringValue(response.PlatformId)
+	model.ProjectId = types.StringValue(response.ProjectId)
+	model.OrgId = types.StringValue(response.OrgId)
+	model.UserId = types.StringValue(response.Guid)
+	model.UserName = types.StringValue(response.Username)
 	model.CreateAt = types.StringValue(response.CreatedAt.String())
 	model.UpdatedAt = types.StringValue(response.UpdatedAt.String())
 	return nil

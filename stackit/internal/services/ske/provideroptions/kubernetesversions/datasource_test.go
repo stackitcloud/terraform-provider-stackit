@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -35,7 +35,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "multiple versions realistic payload",
 			input: &ske.ProviderOptions{
-				KubernetesVersions: &[]ske.KubernetesVersion{
+				KubernetesVersions: []ske.KubernetesVersion{
 					{
 						Version:        new("1.31.14"),
 						State:          new("deprecated"),
@@ -156,7 +156,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "mixed fields with nil feature gates and nil state",
 			input: &ske.ProviderOptions{
-				KubernetesVersions: &[]ske.KubernetesVersion{
+				KubernetesVersions: []ske.KubernetesVersion{
 					{
 						Version:        new("1.32.11"),
 						State:          new("supported"),
@@ -221,7 +221,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "empty kubernetes versions slice",
 			input: &ske.ProviderOptions{
-				KubernetesVersions: &[]ske.KubernetesVersion{},
+				KubernetesVersions: []ske.KubernetesVersion{},
 			},
 			model: &Model{},
 			expected: &Model{
@@ -235,7 +235,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "feature gates empty map",
 			input: &ske.ProviderOptions{
-				KubernetesVersions: &[]ske.KubernetesVersion{
+				KubernetesVersions: []ske.KubernetesVersion{
 					{
 						Version:        new("1.33.7"),
 						State:          new("supported"),
@@ -267,7 +267,7 @@ func TestMapFields(t *testing.T) {
 		{
 			name: "nil model",
 			input: &ske.ProviderOptions{
-				KubernetesVersions: &[]ske.KubernetesVersion{
+				KubernetesVersions: []ske.KubernetesVersion{
 					{
 						Version:        new("1.32.11"),
 						State:          new("supported"),

@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 )
 
 var (
@@ -26,17 +26,17 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "minimal_input",
 			input: &scf.Platforms{
-				Guid:   new(testPlatformId),
-				Region: new(testRegion),
+				Guid:   testPlatformId,
+				Region: testRegion,
 			},
 			expected: &Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testPlatformId)),
 				PlatformId:  types.StringValue(testPlatformId),
 				ProjectId:   types.StringValue(testProjectId),
 				Region:      types.StringValue(testRegion),
-				SystemId:    types.StringNull(),
-				DisplayName: types.StringNull(),
-				ApiUrl:      types.StringNull(),
+				SystemId:    types.StringValue(""),
+				DisplayName: types.StringValue(""),
+				ApiUrl:      types.StringValue(""),
 				ConsoleUrl:  types.StringNull(),
 			},
 			isValid: true,
@@ -44,11 +44,11 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "max_input",
 			input: &scf.Platforms{
-				Guid:        new(testPlatformId),
-				SystemId:    new("eu01.01"),
-				DisplayName: new("scf-full-org"),
-				Region:      new(testRegion),
-				ApiUrl:      new("https://example.scf.stackit.cloud"),
+				Guid:        testPlatformId,
+				SystemId:    "eu01.01",
+				DisplayName: "scf-full-org",
+				Region:      testRegion,
+				ApiUrl:      "https://example.scf.stackit.cloud",
 				ConsoleUrl:  new("https://example.console.scf.stackit.cloud"),
 			},
 			expected: &Model{
@@ -68,20 +68,6 @@ func TestMapFields(t *testing.T) {
 			input:       nil,
 			expected:    nil,
 			isValid:     false,
-		},
-		{
-			description: "empty_org",
-			input:       &scf.Platforms{},
-			expected:    nil,
-			isValid:     false,
-		},
-		{
-			description: "missing_id",
-			input: &scf.Platforms{
-				DisplayName: new("scf-missing-id"),
-			},
-			expected: nil,
-			isValid:  false,
 		},
 	}
 	for _, tt := range tests {

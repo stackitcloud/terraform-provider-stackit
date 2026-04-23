@@ -8,7 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/services/scf"
+	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -42,7 +43,7 @@ resource "stackit_scf_organization" "org" {
 						testutil.MockResponse{
 							Description: "create",
 							ToJsonBody: &scf.OrganizationCreateResponse{
-								Guid: new(guid),
+								Guid: guid,
 							},
 						},
 						testutil.MockResponse{Description: "create waiter", StatusCode: http.StatusNotFound},

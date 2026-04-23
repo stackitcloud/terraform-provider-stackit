@@ -12,12 +12,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -87,7 +88,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"backup_schedule_id": schema.Int64Attribute{
+						"backup_schedule_id": schema.Int32Attribute{
 							Computed: true,
 						},
 						"name": schema.StringAttribute{
@@ -113,7 +114,7 @@ func (r *schedulesDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 								"name": schema.StringAttribute{
 									Computed: true,
 								},
-								"retention_period": schema.Int64Attribute{
+								"retention_period": schema.Int32Attribute{
 									Computed: true,
 								},
 							},
@@ -141,7 +142,7 @@ type schedulesDataSourceModel struct {
 
 // schedulesDatasourceItemModel maps schedule schema data.
 type schedulesDatasourceItemModel struct {
-	BackupScheduleId types.Int64                    `tfsdk:"backup_schedule_id"`
+	BackupScheduleId types.Int32                    `tfsdk:"backup_schedule_id"`
 	Name             types.String                   `tfsdk:"name"`
 	Rrule            types.String                   `tfsdk:"rrule"`
 	Enabled          types.Bool                     `tfsdk:"enabled"`
@@ -166,7 +167,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	schedules, err := r.client.ListBackupSchedules(ctx, projectId, serverId, region).Execute()
+	schedules, err := r.client.DefaultAPI.ListBackupSchedules(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -215,20 +216,20 @@ func mapSchedulesDatasourceFields(ctx context.Context, schedules *serverbackup.G
 	model.ID = utils.BuildInternalTerraformId(projectId, region, serverId)
 	model.Region = types.StringValue(region)
 
-	for _, schedule := range *schedules.Items {
+	for _, schedule := range schedules.Items {
 		scheduleState := schedulesDatasourceItemModel{
-			BackupScheduleId: types.Int64Value(*schedule.Id),
-			Name:             types.StringValue(*schedule.Name),
-			Rrule:            types.StringValue(*schedule.Rrule),
-			Enabled:          types.BoolValue(*schedule.Enabled),
+			BackupScheduleId: types.Int32Value(schedule.Id),
+			Name:             types.StringValue(schedule.Name),
+			Rrule:            types.StringValue(schedule.Rrule),
+			Enabled:          types.BoolValue(schedule.Enabled),
 		}
 		ids, diags := types.ListValueFrom(ctx, types.StringType, schedule.BackupProperties.VolumeIds)
 		if diags.HasError() {
 			return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
 		}
 		scheduleState.BackupProperties = &scheduleBackupPropertiesModel{
-			BackupName:      types.StringValue(*schedule.BackupProperties.Name),
-			RetentionPeriod: types.Int64Value(*schedule.BackupProperties.RetentionPeriod),
+			BackupName:      types.StringValue(schedule.BackupProperties.Name),
+			RetentionPeriod: types.Int32Value(schedule.BackupProperties.RetentionPeriod),
 			VolumeIds:       ids,
 		}
 		model.Items = append(model.Items, scheduleState)
