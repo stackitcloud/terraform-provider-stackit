@@ -21,10 +21,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
+
+	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
 var (

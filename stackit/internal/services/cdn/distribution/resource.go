@@ -1281,7 +1281,6 @@ func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.Redirect
 		}
 	}
 	return redirectsConfig
-
 }
 
 func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
