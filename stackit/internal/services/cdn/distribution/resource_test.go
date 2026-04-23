@@ -43,18 +43,12 @@ func TestToCreatePayload(t *testing.T) {
 		"enabled": types.BoolValue(true),
 	})
 
-	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
-	if !ok {
-		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
-	}
-	redirectsAttrTypes := redirectsObjType.AttrTypes
-
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
-		"redirects":         types.ObjectNull(redirectsAttrTypes),
+		"redirects":         types.ObjectNull(redirectsTypes),
 	})
 
 	matcherValues := types.ListValueMust(types.StringType, []attr.Value{
