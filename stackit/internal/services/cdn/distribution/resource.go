@@ -393,7 +393,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 														Description: schemaDescriptions["config_redirects_rule_match_condition"],
 														Default:     stringdefault.StaticString("ANY"),
 														Computed:    true,
-														Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
+														Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
 													},
 												},
 											},
