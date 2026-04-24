@@ -386,6 +386,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 														ElementType: types.StringType,
 														Validators: []validator.List{
 															listvalidator.SizeAtLeast(1),
+															listvalidator.NoNullValues(),
 														},
 													},
 													"value_match_condition": schema.StringAttribute{
