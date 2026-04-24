@@ -8,11 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi/wait"
 
@@ -76,6 +75,8 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_message_size_kib"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_messages_per_hour"])),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
 				),
 			},
@@ -98,6 +99,8 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "region", "data.stackit_intake_runner.example", "region"),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "description"),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "labels"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "uri", "data.stackit_intake_runner.example", "uri"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "create_time", "data.stackit_intake_runner.example", "create_time"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "max_messages_per_hour", "data.stackit_intake_runner.example", "max_messages_per_hour"),
 				),
 			},
@@ -131,6 +134,8 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "description"),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "labels"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
 				),
 			},
@@ -158,6 +163,8 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["region"])),
 				),
 			},
@@ -176,6 +183,8 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "name", "data.stackit_intake_runner.example", "name"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "description", "data.stackit_intake_runner.example", "description"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "region", "data.stackit_intake_runner.example", "region"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "uri", "data.stackit_intake_runner.example", "uri"),
+					resource.TestCheckResourceAttrPair(intakeRunnerResource, "create_time", "data.stackit_intake_runner.example", "create_time"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "labels.env", "data.stackit_intake_runner.example", "labels.env"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "max_messages_per_hour", "data.stackit_intake_runner.example", "max_messages_per_hour"),
 				),
@@ -212,6 +221,8 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
+					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["region"])),
 				),
 			},

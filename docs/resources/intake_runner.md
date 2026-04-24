@@ -44,5 +44,7 @@ resource "stackit_intake_runner" "example" {
 
 ### Read-Only
 
+- `create_time` (String) The creation time of the runner.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`runner_id`".
 - `runner_id` (String) The runner ID.
+- `uri` (String) The URI of the runner.

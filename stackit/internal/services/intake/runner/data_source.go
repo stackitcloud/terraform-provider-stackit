@@ -12,13 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
-	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 )
 
 // Ensure the implementation satisfies the expected interfaces
@@ -68,6 +67,8 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"uri":                   "The URI of the runner.",
+		"create_time":           "The creation time of the runner.",
 		"region":                "The resource region. If not defined, the provider region is used.",
 	}
 
@@ -113,6 +114,14 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"max_messages_per_hour": schema.Int32Attribute{
 				Description: descriptions["max_messages_per_hour"],
+				Computed:    true,
+			},
+			"uri": schema.StringAttribute{
+				Description: descriptions["uri"],
+				Computed:    true,
+			},
+			"create_time": schema.StringAttribute{
+				Description: descriptions["create_time"],
 				Computed:    true,
 			},
 			"region": schema.StringAttribute{

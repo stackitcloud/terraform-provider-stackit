@@ -33,9 +33,11 @@ data "stackit_intake_runner" "example" {
 
 ### Read-Only
 
+- `create_time` (String) The creation time of the runner.
 - `description` (String) The description of the runner.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`runner_id`".
 - `labels` (Map of String) User-defined labels.
 - `max_message_size_kib` (Number) The maximum message size in KiB.
 - `max_messages_per_hour` (Number) The maximum number of messages per hour.
 - `name` (String) The name of the runner.
+- `uri` (String) The URI of the runner.

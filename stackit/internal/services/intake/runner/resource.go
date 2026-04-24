@@ -47,6 +47,8 @@ type Model struct {
 	MaxMessageSizeKiB  types.Int32  `tfsdk:"max_message_size_kib"`
 	MaxMessagesPerHour types.Int32  `tfsdk:"max_messages_per_hour"`
 	Region             types.String `tfsdk:"region"`
+	Uri                types.String `tfsdk:"uri"`
+	CreateTime         types.String `tfsdk:"create_time"`
 }
 
 // NewRunnerResource is a helper function to simplify the provider implementation.
@@ -123,6 +125,8 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"uri":                   "The URI of the runner.",
+		"create_time":           "The creation time of the runner.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -180,6 +184,20 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"max_messages_per_hour": schema.Int32Attribute{
 				Description: descriptions["max_messages_per_hour"],
 				Required:    true,
+			},
+			"uri": schema.StringAttribute{
+				Description: descriptions["uri"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: descriptions["create_time"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region": schema.StringAttribute{
 				Optional:    true,
@@ -467,6 +485,9 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 	} else {
 		model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
 	}
+
+	model.Uri = types.StringValue(runnerResp.Uri)
+	model.CreateTime = types.StringValue(runnerResp.CreateTime.String())
 
 	return nil
 }
