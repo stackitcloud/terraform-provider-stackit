@@ -53,11 +53,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				Enabled:            cdnSdk.PtrBool(true),
 				TargetUrl:          "https://example.com/redirect",
 				StatusCode:         301,
-				RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+				RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 				Matchers: []cdnSdk.Matcher{
 					{
 						Values:              []string{"/shop/*"},
-						ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+						ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 					},
 				},
 			},
@@ -68,7 +68,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	})
 	matcherValExpected := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValuesExpected,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersListExpected := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherValExpected})
 
@@ -77,7 +77,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersListExpected,
 	})
 	rulesListExpected := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleValExpected})
