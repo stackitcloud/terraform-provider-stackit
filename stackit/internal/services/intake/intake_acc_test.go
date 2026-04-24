@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )

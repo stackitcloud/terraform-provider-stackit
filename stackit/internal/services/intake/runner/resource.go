@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	coreUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	intakeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/utils"
@@ -436,7 +437,7 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		model.RunnerId = types.StringValue(runnerResp.Id)
 	}
 
-	if runnerResp.Labels == nil || len(runnerResp.Labels) == 0 {
+	if len(runnerResp.Labels) == 0 {
 		model.Labels = types.MapNull(types.StringType)
 	} else {
 		labels, diags := types.MapValueFrom(context.Background(), types.StringType, runnerResp.Labels)
