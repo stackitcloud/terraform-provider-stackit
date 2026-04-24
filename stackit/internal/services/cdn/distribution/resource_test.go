@@ -381,7 +381,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         redirectsConfigVal, // Injetando o mock aqui
+					"redirects":         redirectsConfigVal,
 				})
 			}),
 			Expected: &cdnSdk.Config{
