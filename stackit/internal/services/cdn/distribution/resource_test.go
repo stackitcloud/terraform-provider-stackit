@@ -56,7 +56,7 @@ func TestToCreatePayload(t *testing.T) {
 	})
 	matcherVal := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValues,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersList := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherVal})
 
@@ -65,7 +65,7 @@ func TestToCreatePayload(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersList,
 	})
 	rulesList := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleVal})
@@ -159,11 +159,11 @@ func TestToCreatePayload(t *testing.T) {
 							Enabled:            cdnSdk.PtrBool(true),
 							TargetUrl:          "https://example.com/redirect",
 							StatusCode:         301,
-							RuleMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
+							RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 							Matchers: []cdnSdk.Matcher{
 								{
 									Values:              []string{"/shop/*"},
-									ValueMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
+									ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 								},
 							},
 						},
@@ -288,7 +288,7 @@ func TestConvertConfig(t *testing.T) {
 	})
 	matcherVal := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValues,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersList := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherVal})
 
@@ -297,7 +297,7 @@ func TestConvertConfig(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersList,
 	})
 	rulesList := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleVal})
@@ -411,7 +411,7 @@ func TestConvertConfig(t *testing.T) {
 							Matchers: []cdnSdk.Matcher{
 								{
 									Values:              []string{"/shop/*"},
-									ValueMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
+									ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 								},
 							},
 						},
@@ -549,11 +549,11 @@ func TestMapFields(t *testing.T) {
 				Enabled:            cdnSdk.PtrBool(true),
 				TargetUrl:          "https://example.com/redirect",
 				StatusCode:         301,
-				RuleMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
+				RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 				Matchers: []cdnSdk.Matcher{
 					{
 						Values:              []string{"/shop/*"},
-						ValueMatchCondition: cdnSdk.MATCHCONDITION_ANY.Ptr(),
+						ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 					},
 				},
 			},
@@ -565,7 +565,7 @@ func TestMapFields(t *testing.T) {
 	})
 	matcherValExpected := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValuesExpected,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersListExpected := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherValExpected})
 
@@ -574,7 +574,7 @@ func TestMapFields(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersListExpected,
 	})
 	rulesListExpected := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleValExpected})
