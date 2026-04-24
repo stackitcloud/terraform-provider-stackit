@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
@@ -40,18 +39,12 @@ func TestMapDataSourceFields(t *testing.T) {
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
-	// Safely assert the type
-	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
-	if !ok {
-		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
-	}
-	redirectsAttrTypes := redirectsObjType.AttrTypes
 	config := types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
-		"redirects":         types.ObjectNull(redirectsAttrTypes),
+		"redirects":         types.ObjectNull(redirectsTypes),
 	})
 	redirectsInput := cdnSdk.RedirectConfig{
 		Rules: []cdnSdk.RedirectRule{
