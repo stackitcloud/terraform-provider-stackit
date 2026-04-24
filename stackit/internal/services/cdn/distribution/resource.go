@@ -370,7 +370,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 											Computed:    true,
 											Description: schemaDescriptions["config_redirects_rule_match_condition"],
 											Default:     stringdefault.StaticString("ANY"),
-											Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
+											Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
 										},
 										"matchers": schema.ListNestedAttribute{
 											Description: schemaDescriptions["config_redirects_rule_matchers"],
