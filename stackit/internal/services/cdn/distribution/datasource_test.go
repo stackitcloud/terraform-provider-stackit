@@ -171,7 +171,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -197,7 +197,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			IsValid: true,
@@ -217,7 +217,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
