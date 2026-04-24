@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 )
 
