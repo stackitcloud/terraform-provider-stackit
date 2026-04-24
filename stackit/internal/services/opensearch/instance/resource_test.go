@@ -342,6 +342,57 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			true,
 		},
+		{
+			"plugins empty slice",
+			&Model{
+				PlanId: types.StringValue("plan"),
+				Parameters: types.ObjectValueMust(parametersTypes, map[string]attr.Value{
+					"sgw_acl":                types.StringValue("acl"),
+					"enable_monitoring":      types.BoolValue(true),
+					"graphite":               types.StringValue("graphite"),
+					"java_garbage_collector": types.StringValue(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+					"java_heapspace":         types.Int32Value(10),
+					"java_maxmetaspace":      types.Int32Value(10),
+					"max_disk_threshold":     types.Int32Value(10),
+					"metrics_frequency":      types.Int32Value(10),
+					"metrics_prefix":         types.StringValue("prefix"),
+					"monitoring_instance_id": types.StringValue("mid"),
+					"plugins":                types.ListValueMust(types.StringType, []attr.Value{}),
+					"syslog": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("syslog"),
+						types.StringValue("syslog2"),
+					}),
+					"tls_ciphers": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("cipher"),
+						types.StringValue("cipher2"),
+					}),
+					"tls_protocols": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("TLSv1.2"),
+						types.StringValue("TLSv1.3"),
+					}),
+				}),
+			},
+			&opensearch.PartialUpdateInstancePayload{
+				Parameters: &opensearch.InstanceParameters{
+					SgwAcl:               new("acl"),
+					EnableMonitoring:     new(true),
+					Graphite:             new("graphite"),
+					JavaGarbageCollector: new(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+					JavaHeapspace:        new(int32(10)),
+					JavaMaxmetaspace:     new(int32(10)),
+					MaxDiskThreshold:     new(int32(10)),
+					MetricsFrequency:     new(int32(10)),
+					MetricsPrefix:        new("prefix"),
+					MonitoringInstanceId: new("mid"),
+					Plugins:              []string{},
+					Syslog:               []string{"syslog", "syslog2"},
+					TlsCiphers:           []string{"cipher", "cipher2"},
+					TlsProtocols:         []string{"TLSv1.2", "TLSv1.3"},
+				},
+				PlanId: new("plan"),
+			},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {

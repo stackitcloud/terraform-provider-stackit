@@ -30,7 +30,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -314,7 +314,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	cluster, err := r.client.GetClusterExecute(ctx, projectId, region, clusterName)
+	cluster, err := r.client.DefaultAPI.GetCluster(ctx, projectId, region, clusterName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -379,7 +379,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 		return fmt.Errorf("creating API payload: %w", err)
 	}
 	// Create new kubeconfig
-	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
+	kubeconfigResp, err := r.client.DefaultAPI.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
 	if err != nil {
 		return fmt.Errorf("calling API: %w", err)
 	}

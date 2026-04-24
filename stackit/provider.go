@@ -61,6 +61,7 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
+	iamRoleBindingsV1 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1"
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
 	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
 	kmsWrappingKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/wrapping-key"
@@ -790,6 +791,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
+	resources = append(resources, iamRoleBindingsV1.NewRoleBindingResources()...)
 
 	return resources
 }

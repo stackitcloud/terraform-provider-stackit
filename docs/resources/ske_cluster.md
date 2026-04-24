@@ -193,15 +193,12 @@ Optional:
 <a id="nestedatt--maintenance"></a>
 ### Nested Schema for `maintenance`
 
-Required:
-
-- `end` (String) Time for maintenance window end. E.g. `01:23:45Z`, `05:00:00+02:00`.
-- `start` (String) Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.
-
 Optional:
 
 - `enable_kubernetes_version_updates` (Boolean) Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true`. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/).
 - `enable_machine_image_version_updates` (Boolean) Flag to enable/disable auto-updates of the OS image version. Defaults to `true`. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/).
+- `end` (String) Time for maintenance window end. E.g. `01:23:45Z`, `05:00:00+02:00`.
+- `start` (String) Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.
 
 
 <a id="nestedatt--network"></a>

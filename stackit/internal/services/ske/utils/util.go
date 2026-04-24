@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -27,4 +27,18 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 
 	return apiClient
+}
+
+func IsEmptyNetwork(network *ske.Network) bool {
+	if !network.HasId() && !network.HasControlPlane() {
+		return true
+	}
+	return false
+}
+
+func IsEmptyExtension(extension *ske.Extension) bool {
+	if !extension.HasDns() && !extension.HasAcl() && !extension.HasObservability() {
+		return true
+	}
+	return false
 }

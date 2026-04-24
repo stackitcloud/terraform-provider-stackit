@@ -5,14 +5,14 @@ import (
 	_ "embed"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -203,20 +203,17 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, serviceAccountEmail)
 	}
 
-	instancesResp, err := client.ListServiceAccounts(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListServiceAccounts(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting service accounts: %w", err)
 	}
 
-	serviceAccounts := *instancesResp.Items
+	serviceAccounts := instancesResp.Items
 	for i := range serviceAccounts {
-		if serviceAccounts[i].Email == nil {
-			continue
-		}
-		if utils.Contains(instancesToDestroy, *serviceAccounts[i].Email) {
-			err := client.DeleteServiceAccount(ctx, testutil.ProjectId, *serviceAccounts[i].Email).Execute()
+		if slices.Contains(instancesToDestroy, serviceAccounts[i].Email) {
+			err := client.DefaultAPI.DeleteServiceAccount(ctx, testutil.ProjectId, serviceAccounts[i].Email).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *serviceAccounts[i].Email, err)
+				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", serviceAccounts[i].Email, err)
 			}
 		}
 	}

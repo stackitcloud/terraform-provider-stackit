@@ -29,6 +29,8 @@ import (
 
 // List of resource types which can have custom roles.
 var resourceTypes = []string{
+	"organization",
+	"folder",
 	"project",
 }
 

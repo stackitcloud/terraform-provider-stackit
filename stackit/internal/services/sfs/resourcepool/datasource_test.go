@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 )
 
 func TestMapDatasourceFields(t *testing.T) {
@@ -20,7 +20,7 @@ func TestMapDatasourceFields(t *testing.T) {
 		name     string
 		state    *dataSourceModel
 		region   string
-		input    *sfs.GetResourcePoolResponseResourcePool
+		input    *sfs.ResourcePool
 		expected *dataSourceModel
 		isValid  bool
 	}{
@@ -31,7 +31,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				ProjectId: testProjectId,
 			},
 			"eu01",
-			&sfs.GetResourcePoolResponseResourcePool{
+			&sfs.ResourcePool{
 				Id: testResourcePoolId.ValueStringPointer(),
 			},
 			&dataSourceModel{
@@ -42,7 +42,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				IpAcl:                          types.ListNull(types.StringType),
 				Name:                           types.StringNull(),
 				PerformanceClass:               types.StringNull(),
-				SizeGigabytes:                  types.Int64Null(),
+				SizeGigabytes:                  types.Int32Null(),
 				Region:                         testRegion,
 				SizeReducibleAt:                types.StringNull(),
 				PerformanceClassDowngradableAt: types.StringNull(),
@@ -56,23 +56,23 @@ func TestMapDatasourceFields(t *testing.T) {
 				ProjectId: testProjectId,
 			},
 			region: "eu01",
-			input: &sfs.GetResourcePoolResponseResourcePool{
+			input: &sfs.ResourcePool{
 				AvailabilityZone: testAvailabilityZone.ValueStringPointer(),
-				CountShares:      utils.Ptr[int64](42),
+				CountShares:      utils.Ptr[int32](42),
 				CreatedAt:        &now,
 				Id:               testResourcePoolId.ValueStringPointer(),
-				IpAcl:            &[]string{"foo", "bar", "baz"},
+				IpAcl:            []string{"foo", "bar", "baz"},
 				MountPath:        new("mountpoint"),
 				Name:             new("testname"),
 				PerformanceClass: &sfs.ResourcePoolPerformanceClass{
 					Name:       new("performance"),
-					PeakIops:   utils.Ptr[int64](42),
-					Throughput: utils.Ptr[int64](54),
+					PeakIops:   utils.Ptr[int32](42),
+					Throughput: utils.Ptr[int32](54),
 				},
 				PerformanceClassDowngradableAt: new(now),
 				SizeReducibleAt:                new(now.Add(1 * time.Hour)),
 				Space: &sfs.ResourcePoolSpace{
-					SizeGigabytes: utils.Ptr[int64](42),
+					SizeGigabytes: utils.Ptr[int32](42),
 				},
 				State: new("state"),
 			},
@@ -88,7 +88,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				}),
 				Name:                           types.StringValue("testname"),
 				PerformanceClass:               types.StringValue("performance"),
-				SizeGigabytes:                  types.Int64Value(42),
+				SizeGigabytes:                  types.Int32Value(42),
 				Region:                         testRegion,
 				SizeReducibleAt:                testTimePlus1h,
 				PerformanceClassDowngradableAt: testTime,

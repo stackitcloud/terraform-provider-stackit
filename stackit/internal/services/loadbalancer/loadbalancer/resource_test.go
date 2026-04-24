@@ -1240,3 +1240,68 @@ func Test_toUpdatePayload(t *testing.T) {
 		})
 	}
 }
+
+func Test_mapSessionPersistence(t *testing.T) {
+	tests := []struct {
+		name                   string
+		sessionPersistenceResp *loadbalancer.SessionPersistence
+		wantTp                 map[string]attr.Value
+		wantErr                bool
+	}{
+		{
+			name:                   "session persistence is nil",
+			sessionPersistenceResp: nil,
+			wantTp: map[string]attr.Value{
+				"session_persistence": types.ObjectValueMust(sessionPersistenceTypes,
+					map[string]attr.Value{
+						"use_source_ip_address": types.BoolValue(false),
+					},
+				),
+			},
+		},
+		{
+			name: "use source ip address is false",
+			sessionPersistenceResp: &loadbalancer.SessionPersistence{
+				UseSourceIpAddress: new(false),
+			},
+			wantTp: map[string]attr.Value{
+				"session_persistence": types.ObjectValueMust(sessionPersistenceTypes,
+					map[string]attr.Value{
+						"use_source_ip_address": types.BoolValue(false),
+					},
+				),
+			},
+		},
+		{
+			name: "use source ip address is true",
+			sessionPersistenceResp: &loadbalancer.SessionPersistence{
+				UseSourceIpAddress: new(true),
+			},
+			wantTp: map[string]attr.Value{
+				"session_persistence": types.ObjectValueMust(sessionPersistenceTypes,
+					map[string]attr.Value{
+						"use_source_ip_address": types.BoolValue(true),
+					},
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resultTp := map[string]attr.Value{}
+			gotErr := mapSessionPersistence(tt.sessionPersistenceResp, resultTp)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("mapSessionPersistence() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("mapSessionPersistence() succeeded unexpectedly")
+			}
+			if diff := cmp.Diff(tt.wantTp, resultTp); diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
