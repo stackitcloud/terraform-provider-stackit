@@ -62,12 +62,12 @@ const (
 
 	NodePoolsPlanTitle = "Plan for node_pools might look incorrect"
 	NodePoolsPlanDesc  = "When updating the node_pools of a stackit_ske_cluster, the Terraform plan might appear incorrect " +
-		"and show a diff indicating that existing pools will be destroyed and recreated.\n\n" +
+		"and shows a diff indicating that existing pools will be destroyed and recreated.\n\n" +
 		"This happens because Terraform matches list elements by their index rather than by name. " +
 		"Adding, removing, or reordering items in the list shifts these indices, causing cascading diffs.\n\n" +
 		"However, the SKE API correctly identifies node pools by name and applies the intended changes safely. " +
 		"Please review your changes carefully to ensure the correct configuration will be applied.\n\n" +
-		"To prevent index shifting and keep your Terraform plans clean, always append new node pools to the end of the node_pools list."
+		"Always append new node pools to the end of the node_pools list, to prevent index shifting and keep your Terraform plans clean."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
