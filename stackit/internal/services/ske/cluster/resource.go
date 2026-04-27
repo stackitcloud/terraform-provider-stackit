@@ -59,14 +59,24 @@ const (
 	VersionStateDeprecated = "deprecated"
 
 	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/)."
+
+	NodePoolsPlanTitle = "Plan for node_pools might look incorrect"
+	NodePoolsPlanDesc  = "When updating the node_pools of a stackit_ske_cluster, the Terraform plan might appear incorrect " +
+		"and shows a diff indicating that existing pools will be destroyed and recreated.\n\n" +
+		"This happens because Terraform matches list elements by their index rather than by name. " +
+		"Adding, removing, or reordering items in the list shifts these indices, causing cascading diffs.\n\n" +
+		"However, the SKE API correctly identifies node pools by name and applies the intended changes safely. " +
+		"Please review your changes carefully to ensure the correct configuration will be applied.\n\n" +
+		"Always append new node pools to the end of the node_pools list, to prevent index shifting and keep your Terraform plans clean."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &clusterResource{}
-	_ resource.ResourceWithConfigure   = &clusterResource{}
-	_ resource.ResourceWithImportState = &clusterResource{}
-	_ resource.ResourceWithModifyPlan  = &clusterResource{}
+	_ resource.Resource                   = &clusterResource{}
+	_ resource.ResourceWithConfigure      = &clusterResource{}
+	_ resource.ResourceWithImportState    = &clusterResource{}
+	_ resource.ResourceWithModifyPlan     = &clusterResource{}
+	_ resource.ResourceWithValidateConfig = &clusterResource{}
 )
 
 type Model struct {
@@ -296,6 +306,50 @@ func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	if req.State.Raw.IsNull() {
+		return
+	}
+	var stateModel Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	checkNodePoolShift(ctx, &planModel, &stateModel, resp)
+}
+
+func checkNodePoolShift(ctx context.Context, planModel, stateModel *Model, resp *resource.ModifyPlanResponse) {
+	if planModel == nil || stateModel == nil || utils.IsUndefined(planModel.NodePools) || utils.IsUndefined(stateModel.NodePools) {
+		return
+	}
+
+	var planPools, statePools []nodePool
+	resp.Diagnostics.Append(planModel.NodePools.ElementsAs(ctx, &planPools, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(stateModel.NodePools.ElementsAs(ctx, &statePools, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if len(planPools) != len(statePools) {
+		resp.Diagnostics.AddWarning(NodePoolsPlanTitle, NodePoolsPlanDesc)
+		return
+	}
+
+	// check if names at the same index still match
+	for i := range planPools {
+		planName := planPools[i].Name.ValueString()
+		stateName := statePools[i].Name.ValueString()
+
+		if planName != stateName {
+			resp.Diagnostics.AddWarning(NodePoolsPlanTitle, NodePoolsPlanDesc)
+			return
+		}
+	}
 }
 
 // Metadata returns the resource type name.
@@ -400,8 +454,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"node_pools": schema.ListNestedAttribute{
-				Description: "One or more `node_pool` block as defined below.",
-				Required:    true,
+				Description: "One or more `node_pool` block as defined below.\n" +
+					"To keep your Terraform plans clean and readable, always append new node pools to the end of the list.",
+				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
