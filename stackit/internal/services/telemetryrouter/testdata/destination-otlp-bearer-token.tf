@@ -12,25 +12,25 @@ variable "config_opentelemetry_bearer_token" {}
 variable "config_opentelemetry_uri" {}
 
 resource "stackit_telemetryrouter_instance" "router" {
-  project_id     = var.project_id
-  region         = var.region
-  display_name   = var.display_name
+  project_id   = var.project_id
+  region       = var.region
+  display_name = var.display_name
 }
 
 resource "stackit_telemetryrouter_destination" "destination" {
-  project_id     = var.project_id
-  region         = var.region
+  project_id   = var.project_id
+  region       = var.region
   instance_id  = stackit_telemetryrouter_instance.router.instance_id
-  display_name   = var.display_name
-  description    = var.description
+  display_name = var.display_name
+  description  = var.description
   config = {
-    filter         = {
-      attributes   = [
+    filter = {
+      attributes = [
         {
           key     = var.config_filter_key
           level   = var.config_filter_level
           matcher = var.config_filter_matcher
-          values  = [
+          values = [
             var.config_filter_value0,
             var.config_filter_value1
           ]
@@ -40,7 +40,7 @@ resource "stackit_telemetryrouter_destination" "destination" {
     config_type = "OpenTelemetry"
     opentelemetry = {
       bearer_token = var.config_opentelemetry_bearer_token
-      uri = var.config_opentelemetry_uri
+      uri          = var.config_opentelemetry_uri
     }
   }
 }

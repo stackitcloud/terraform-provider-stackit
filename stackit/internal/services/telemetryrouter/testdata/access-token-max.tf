@@ -6,10 +6,10 @@ variable "description" {}
 variable "ttl" {}
 
 resource "stackit_telemetryrouter_instance" "router" {
-  project_id     = var.project_id
-  region         = var.region
-  display_name   = var.display_name
-  description = var.description
+  project_id   = var.project_id
+  region       = var.region
+  display_name = var.display_name
+  description  = var.description
 }
 
 resource "stackit_telemetryrouter_access_token" "accessToken" {
