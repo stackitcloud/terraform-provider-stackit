@@ -431,7 +431,7 @@ func toCreatePayload(_ context.Context, _ diag.Diagnostics, model *Model) (*tele
 	}, nil
 }
 
-func mapCreateFields(ctx context.Context, accessToken *telemetryrouter.CreateAccessTokenResponse, model *Model) error {
+func mapCreateFields(_ context.Context, accessToken *telemetryrouter.CreateAccessTokenResponse, model *Model) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
@@ -468,7 +468,7 @@ func mapCreateFields(ctx context.Context, accessToken *telemetryrouter.CreateAcc
 	return nil
 }
 
-func mapGetFields(ctx context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *Model) error {
+func mapGetFields(_ context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *Model) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
@@ -501,7 +501,7 @@ func mapGetFields(ctx context.Context, accessToken *telemetryrouter.GetAccessTok
 	return nil
 }
 
-func mapUpdateFields(ctx context.Context, accessToken *telemetryrouter.UpdateAccessTokenResponse, model *Model) error {
+func mapUpdateFields(_ context.Context, accessToken *telemetryrouter.UpdateAccessTokenResponse, model *Model) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}

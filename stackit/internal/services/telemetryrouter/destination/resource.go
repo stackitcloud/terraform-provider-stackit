@@ -107,9 +107,9 @@ type config struct {
 // Types corresponding to config
 var configTypes = map[string]attr.Type{
 	"config_type":   basetypes.StringType{},
-	"filter":        basetypes.ObjectType{filterTypes},
-	"opentelemetry": basetypes.ObjectType{openTelemetryTypes},
-	"s3":            basetypes.ObjectType{s3Types},
+	"filter":        basetypes.ObjectType{AttrTypes: filterTypes},
+	"opentelemetry": basetypes.ObjectType{AttrTypes: openTelemetryTypes},
+	"s3":            basetypes.ObjectType{AttrTypes: s3Types},
 }
 
 // Struct corresponding to filter
@@ -147,7 +147,7 @@ type openTelemetry struct {
 
 // Types corresponding to opentelemetry
 var openTelemetryTypes = map[string]attr.Type{
-	"basic_auth":   basetypes.ObjectType{basicAuthTypes},
+	"basic_auth":   basetypes.ObjectType{AttrTypes: basicAuthTypes},
 	"bearer_token": basetypes.StringType{},
 	"uri":          basetypes.StringType{},
 }
@@ -161,7 +161,7 @@ type s3 struct {
 
 // Types corresponding to s3
 var s3Types = map[string]attr.Type{
-	"access_key": basetypes.ObjectType{accessKeyTypes},
+	"access_key": basetypes.ObjectType{AttrTypes: accessKeyTypes},
 	"bucket":     basetypes.StringType{},
 	"endpoint":   basetypes.StringType{},
 }
@@ -554,7 +554,7 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 	tflog.Info(ctx, "TelemetryRouter destination created")
 }
 
-func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -603,7 +603,7 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 	})
 }
 
-func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)

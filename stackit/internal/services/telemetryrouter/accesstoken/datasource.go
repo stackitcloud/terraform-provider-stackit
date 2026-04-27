@@ -181,7 +181,7 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 	})
 }
 
-func mapDataSourceFields(ctx context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *DataSourceModel) error {
+func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *DataSourceModel) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}

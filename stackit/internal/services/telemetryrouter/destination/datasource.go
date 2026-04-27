@@ -59,9 +59,9 @@ type datasourceConfig struct {
 // Types corresponding to datasourceConfig
 var datasourceConfigTypes = map[string]attr.Type{
 	"config_type":   basetypes.StringType{},
-	"filter":        basetypes.ObjectType{datasourceFilterTypes},
-	"opentelemetry": basetypes.ObjectType{datasourceOpenTelemetryTypes},
-	"s3":            basetypes.ObjectType{datasourceS3Types},
+	"filter":        basetypes.ObjectType{AttrTypes: datasourceFilterTypes},
+	"opentelemetry": basetypes.ObjectType{AttrTypes: datasourceOpenTelemetryTypes},
+	"s3":            basetypes.ObjectType{AttrTypes: datasourceS3Types},
 }
 
 // Struct corresponding to datasourceFilter

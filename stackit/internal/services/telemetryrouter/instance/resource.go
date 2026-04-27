@@ -302,7 +302,7 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 	tflog.Info(ctx, "TelemetryRouter instance created")
 }
 
-func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -348,7 +348,7 @@ func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource
 	})
 }
 
-func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
