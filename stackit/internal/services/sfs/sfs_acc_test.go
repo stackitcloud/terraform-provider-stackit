@@ -893,7 +893,7 @@ func TestAccProjectLockMin(t *testing.T) {
 			{
 				ConfigVariables: testConfigProjectLockVarsMin,
 				ResourceName:    "stackit_sfs_project_lock.project_lock",
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
 					return testutil.ProjectId + "," + testutil.Region, nil
 				},
 				ImportState:       true,
