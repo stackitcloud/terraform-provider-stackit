@@ -16,33 +16,33 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.1
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.6.1
-	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.1
+	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/git v0.12.1
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.10.1
-	github.com/stackitcloud/stackit-sdk-go/services/kms v1.7.1
+	github.com/stackitcloud/stackit-sdk-go/services/git v0.12.2
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.10.2
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.7.2
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.12.1
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.28.1
-	github.com/stackitcloud/stackit-sdk-go/services/logs v0.8.1
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.1
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.9.1
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.2
-	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.8.1
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.21.1
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.27.1
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.1
-	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.1
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.28.2
+	github.com/stackitcloud/stackit-sdk-go/services/logs v0.8.2
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.2
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.3
+	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.8.2
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.21.2
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.27.2
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.7.2
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.2
+	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.2
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.22.1
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.7.1
-	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.0
-	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.1
-	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.1
+	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.1
+	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.2
+	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.2
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.5.1
-	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.13.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.9.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.9.1
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.35.0
 )
