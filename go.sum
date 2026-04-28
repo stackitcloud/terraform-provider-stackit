@@ -732,6 +732,8 @@ github.com/stackitcloud/stackit-sdk-go/services/ske v1.14.0 h1:Zy3yxmHzW+ydu1nae
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.14.0/go.mod h1:TbqmZhLMofmfl+HhVl6oHYcI3zvXTm1vRjN3A/fOkM4=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.10.0 h1:angvO3z0TGqZtdwTDsG/tgTw9hxB76A6leUsiUXQtME=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.10.0/go.mod h1:AiUoMAqQcOlMgDtkVJlqI7P/VGD5xjN3dYjERGnwN/M=
+github.com/stackitcloud/stackit-sdk-go/services/vpn v0.5.1 h1:qmfgch4YCMMstSgzDysCLhvaAhHpTf+EPy0wUUmxN70=
+github.com/stackitcloud/stackit-sdk-go/services/vpn v0.5.1/go.mod h1:zcCQlA79aWlv2Voc34EgerEFgPGxkO7CE8Ilm+nG9Yw=
 github.com/stbenjam/no-sprintf-host-port v0.3.1 h1:AyX7+dxI4IdLBPtDbsGAyqiTSLpCP9hWRrXQDU4Cm/g=
 github.com/stbenjam/no-sprintf-host-port v0.3.1/go.mod h1:ODbZesTCHMVKthBHskvUUexdcNHAQRXk9NpSsL8p/HQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
