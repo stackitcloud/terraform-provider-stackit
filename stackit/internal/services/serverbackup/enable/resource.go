@@ -299,6 +299,10 @@ func (r *serverBackupEnableResource) Delete(ctx context.Context, req resource.De
 
 	err := r.client.DefaultAPI.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup enable", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

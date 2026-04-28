@@ -322,6 +322,11 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	keyRingId := model.KeyRingId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	wrappingKeyId := model.WrappingKeyId.ValueString()
+	if wrappingKeyId == "" {
+		// Resource not yet created; ID is unknown.
+		response.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = tflog.SetField(ctx, "keyring_id", keyRingId)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -331,8 +336,7 @@ func (r *wrappingKeyResource) Read(ctx context.Context, request resource.ReadReq
 	wrappingKeyResponse, err := r.client.DefaultAPI.GetWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			response.State.RemoveResource(ctx)
 			return
 		}
@@ -377,7 +381,12 @@ func (r *wrappingKeyResource) Delete(ctx context.Context, request resource.Delet
 
 	err := r.client.DefaultAPI.DeleteWrappingKey(ctx, projectId, region, keyRingId, wrappingKeyId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting wrapping key", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)

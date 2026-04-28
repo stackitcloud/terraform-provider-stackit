@@ -444,6 +444,11 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 
 	organizationId := model.OrganizationId.ValueString()
 	networkAreaId := model.NetworkAreaId.ValueString()
+	if networkAreaId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -453,8 +458,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	networkAreaResp, err := r.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -479,8 +483,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 		networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-			ok := errors.As(err, &oapiErr)
-			if !(ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest)) { // TODO: iaas api returns http 400 in case network area region is not found
+			if !(errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest)) { // TODO: iaas api returns http 400 in case network area region is not found
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
 				return
 			}
@@ -606,8 +609,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-			ok := errors.As(err, &oapiErr)
-			if ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
+			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
 				return
 			}
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
@@ -657,6 +659,11 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return
 	}
@@ -664,6 +671,11 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	// Get all configured regions so we can delete them one by one before deleting the network area
 	regionsListResp, err := r.client.ListNetworkAreaRegions(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API to list configured regions: %v", err))
 		return
 	}
@@ -672,6 +684,10 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	for region := range *regionsListResp.Regions {
 		err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
+				continue
+			}
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
@@ -686,6 +702,11 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	// Delete existing network area
 	err = r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
