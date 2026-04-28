@@ -109,6 +109,7 @@ import (
 	serviceAccounts "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/accounts"
 	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
 	exportpolicy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/export-policy"
+	projectLock "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/project-lock"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/resourcepool"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/share"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshots"
@@ -696,6 +697,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		share.NewShareDataSource,
 		exportpolicy.NewExportPolicyDataSource,
 		snapshots.NewResourcePoolSnapshotDataSource,
+		projectLock.NewProjectLockDatasource,
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
 		serverUpdateEnable.NewServerUpdateEnableDataSource,
@@ -785,6 +787,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resourcepool.NewResourcePoolResource,
 		share.NewShareResource,
 		exportpolicy.NewExportPolicyResource,
+		projectLock.NewProjectLockResource,
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
 		serverUpdateEnable.NewServerUpdateEnableResource,
