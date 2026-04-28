@@ -135,6 +135,10 @@ func TestToCreatePayload(t *testing.T) {
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
 				SizeGigabytes:    types.Int32Value(42),
+				SnapshotPolicy: types.ObjectValueMust(snapshotPolicyTypes, map[string]attr.Value{
+					"id":   types.StringValue("snapshot-id"),
+					"name": types.StringNull(),
+				}),
 			},
 			&sfs.CreateResourcePoolPayload{
 				AvailabilityZone: testAvailabilityZone.ValueString(),
@@ -142,6 +146,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name:             "testname",
 				PerformanceClass: "performance",
 				SizeGigabytes:    42,
+				SnapshotPolicyId: new("snapshot-id"),
 			},
 			false,
 		},
@@ -169,7 +174,8 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toCreatePayload(tt.model)
+			ctx := context.Background()
+			got, err := toCreatePayload(ctx, tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -250,7 +256,8 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toUpdatePayload(tt.model)
+			ctx := context.Background()
+			got, err := toUpdatePayload(ctx, tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return

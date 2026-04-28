@@ -51,9 +51,21 @@ import {
 ### Optional
 
 - `region` (String) The resource region. If not defined, the provider region is used.
+- `snapshot_policy` (Attributes) Name of the snapshot policy. (see [below for nested schema](#nestedatt--snapshot_policy))
 - `snapshots_are_visible` (Boolean) If set to true, snapshots are visible and accessible to users. (default: false)
 
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`resource_pool_id`".
 - `resource_pool_id` (String) Resource pool ID
+
+<a id="nestedatt--snapshot_policy"></a>
+### Nested Schema for `snapshot_policy`
+
+Optional:
+
+- `id` (String) ID of the snapshot policy.
+
+Read-Only:
+
+- `name` (String) Name of the snapshot policy.

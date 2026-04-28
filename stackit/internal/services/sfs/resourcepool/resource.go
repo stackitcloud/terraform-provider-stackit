@@ -9,14 +9,19 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
@@ -27,6 +32,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -38,6 +44,9 @@ var (
 	_ resource.ResourceWithModifyPlan  = &resourcePoolResource{}
 )
 
+// defaultSnapshotPolicyId is an empty string, which removes any snapshot policy within updates
+const defaultSnapshotPolicyId = ""
+
 type Model struct {
 	Id                  types.String `tfsdk:"id"` // needed by TF
 	ProjectId           types.String `tfsdk:"project_id"`
@@ -47,8 +56,19 @@ type Model struct {
 	Name                types.String `tfsdk:"name"`
 	PerformanceClass    types.String `tfsdk:"performance_class"`
 	SizeGigabytes       types.Int32  `tfsdk:"size_gigabytes"`
+	SnapshotPolicy      types.Object `tfsdk:"snapshot_policy"`
 	Region              types.String `tfsdk:"region"`
 	SnapshotsAreVisible types.Bool   `tfsdk:"snapshots_are_visible"`
+}
+
+type SnapshotPolicyModel struct {
+	Id   types.String `tfsdk:"id"`
+	Name types.String `tfsdk:"name"`
+}
+
+var snapshotPolicyTypes = map[string]attr.Type{
+	"id":   basetypes.StringType{},
+	"name": basetypes.StringType{},
 }
 
 // NewResourcePoolResource is a helper function to simplify the provider implementation.
@@ -200,6 +220,39 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 			},
+			"snapshot_policy": schema.SingleNestedAttribute{
+				Description: `Name of the snapshot policy.`,
+				Computed:    true,
+				Optional:    true,
+				Default: objectdefault.StaticValue(
+					types.ObjectValueMust(snapshotPolicyTypes, map[string]attr.Value{
+						"id":   types.StringValue(defaultSnapshotPolicyId),
+						"name": types.StringUnknown(),
+					}),
+				),
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "ID of the snapshot policy.",
+						Optional:    true,
+						Computed:    true,
+						// ID can be either an empty string or a UUID
+						Validators: []validator.String{
+							stringvalidator.Any(
+								stringvalidator.OneOf(""),
+								validate.UUID(),
+							),
+						},
+						Default: stringdefault.StaticString(defaultSnapshotPolicyId),
+					},
+					"name": schema.StringAttribute{
+						Description: "Name of the snapshot policy.",
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "id", "sets `UseStateForUnknown` only if `id` has not changed"),
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -221,7 +274,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Cannot create payload: %v", err))
 		return
@@ -314,9 +367,8 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 
 	response, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
-		var openapiError *oapierror.GenericOpenAPIError
-		if errors.As(err, &openapiError) {
-			if openapiError.StatusCode == http.StatusNotFound {
+		if openapiError, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
+			if openapiError.StatusCode == http.StatusNotFound || openapiError.StatusCode == http.StatusGone {
 				resp.State.RemoveResource(ctx)
 				return
 			}
@@ -368,7 +420,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update resource pool", fmt.Sprintf("cannot create payload: %v", err))
 		return
@@ -520,10 +572,22 @@ func mapFields(ctx context.Context, region string, resourcePool *sfs.ResourcePoo
 		model.SizeGigabytes = types.Int32PointerValue(resourcePool.Space.SizeGigabytes)
 	}
 
+	model.SnapshotPolicy = types.ObjectNull(snapshotPolicyTypes)
+	if snapshotPolicy := resourcePool.SnapshotPolicy.Get(); snapshotPolicy != nil {
+		snapshotPolicyTf, diags := types.ObjectValue(snapshotPolicyTypes, map[string]attr.Value{
+			"id":   types.StringPointerValue(snapshotPolicy.Id),
+			"name": types.StringPointerValue(snapshotPolicy.Name),
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map snapshot policy: %w", core.DiagsToError(diags))
+		}
+		model.SnapshotPolicy = snapshotPolicyTf
+	}
+
 	return nil
 }
 
-func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*sfs.CreateResourcePoolPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -536,6 +600,14 @@ func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}
 		aclList = tmp
+	}
+
+	snapshotPolicy := &SnapshotPolicyModel{}
+	if !utils.IsUndefined(model.SnapshotPolicy) {
+		diags := model.SnapshotPolicy.As(ctx, snapshotPolicy, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("cannot convert snapshot policy: %w", core.DiagsToError(diags))
+		}
 	}
 
 	result := &sfs.CreateResourcePoolPayload{
@@ -545,11 +617,13 @@ func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
 		PerformanceClass:    model.PerformanceClass.ValueString(),
 		SizeGigabytes:       model.SizeGigabytes.ValueInt32(),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
+		SnapshotPolicyId:    snapshotPolicy.Id.ValueStringPointer(),
 	}
+
 	return result, nil
 }
 
-func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -564,11 +638,20 @@ func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 		aclList = tmp
 	}
 
+	snapshotPolicy := &SnapshotPolicyModel{}
+	if !utils.IsUndefined(model.SnapshotPolicy) {
+		diags := model.SnapshotPolicy.As(ctx, snapshotPolicy, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("cannot convert snapshot policy: %w", core.DiagsToError(diags))
+		}
+	}
+
 	result := &sfs.UpdateResourcePoolPayload{
 		IpAcl:               aclList,
 		PerformanceClass:    model.PerformanceClass.ValueStringPointer(),
 		SizeGigabytes:       *sfs.NewNullableInt32(model.SizeGigabytes.ValueInt32Pointer()),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
+		SnapshotPolicyId:    snapshotPolicy.Id.ValueStringPointer(),
 	}
 	return result, nil
 }
