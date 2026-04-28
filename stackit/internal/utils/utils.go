@@ -214,3 +214,12 @@ func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) strin
 	}
 	return err.Error()
 }
+
+// Map applies mapFn to each element in input and collects the results in a new slice
+func Map[T, U any](input []T, mapFn func(T) U) []U {
+	values := make([]U, len(input))
+	for i := range input {
+		values[i] = mapFn(input[i])
+	}
+	return values
+}

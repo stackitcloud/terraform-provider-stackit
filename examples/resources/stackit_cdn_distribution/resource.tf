@@ -38,6 +38,24 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
     optimizer = {
       enabled = false
     }
+
+    redirects = {
+      rules = [
+        {
+          description          = "test redirect"
+          enabled              = true
+          rule_match_condition = "ANY"
+          status_code          = 302
+          target_url           = "https://stackit.de/"
+          matchers = [
+            {
+              values                = ["*/otherPath/"]
+              value_match_condition = "ANY"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 

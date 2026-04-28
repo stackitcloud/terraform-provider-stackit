@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
@@ -66,6 +67,15 @@ func Test_mapFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mapFields(tt.args.resp, tt.args.model, tt.args.region); (err != nil) != tt.wantErr {
 				t.Errorf("mapFields() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			diff := cmp.Diff(tt.args.model, tt.wantModel)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
 			}
 		})
 	}
