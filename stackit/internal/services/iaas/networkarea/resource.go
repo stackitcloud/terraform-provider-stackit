@@ -685,7 +685,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 		err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
-			if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
 				continue
 			}
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Calling API: %v", err))

@@ -402,6 +402,10 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	err := r.client.DefaultAPI.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

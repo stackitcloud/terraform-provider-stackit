@@ -313,7 +313,12 @@ func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	_, err := r.client.DeleteRoleExecute(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString())
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting custom role", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)

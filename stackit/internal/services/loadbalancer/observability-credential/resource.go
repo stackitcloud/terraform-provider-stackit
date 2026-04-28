@@ -251,6 +251,12 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	ctx = tflog.SetField(ctx, "credentials_ref", credentialsRef)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	if credentialsRef == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	// Get credentials
 	credResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {

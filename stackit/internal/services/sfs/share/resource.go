@@ -443,6 +443,12 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// Delete existing share
 	_, err := r.client.DefaultAPI.DeleteShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
+		var openapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &openapiError) {
+			if openapiError.StatusCode == http.StatusNotFound {
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

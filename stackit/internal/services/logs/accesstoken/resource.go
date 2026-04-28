@@ -414,6 +414,10 @@ func (r *logsAccessTokenResource) Delete(ctx context.Context, req resource.Delet
 
 	err := r.client.DefaultAPI.DeleteAccessToken(ctx, projectID, region, instanceID, accessTokenID).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs access token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

@@ -463,6 +463,10 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 	// Call API to delete the existing scf organization.
 	_, err := s.client.DefaultAPI.DeleteOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
