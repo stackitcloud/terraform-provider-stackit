@@ -22,6 +22,15 @@ var (
 	//go:embed testdata/resource-service-account.tf
 	resourceServiceAccount string
 
+	//go:embed testdata/resource-service-account-federated-identity-provider-without-assertions.tf
+	resourceServiceAccountFederatedIdentityProviderWithoutAssertions string
+
+	//go:embed testdata/resource-service-account-federated-identity-provider-without-aud.tf
+	resourceServiceAccountFederatedIdentityProviderWithoutAud string
+
+	//go:embed testdata/resource-service-account-federated-identity-provider.tf
+	resourceServiceAccountFederatedIdentityProvider string
+
 	//go:embed testdata/datasource-service-account.tf
 	datasourceServiceAccount string
 
@@ -64,6 +73,28 @@ var testConfigVarsExactNotFound = config.Variables{
 	"project_id":      config.StringVariable(testutil.ProjectId),
 	"name":            config.StringVariable("satest02"),
 	"not_found_email": config.StringVariable("does-not-exist-123@sa.stackit.cloud"),
+}
+
+var testConfigVarsFederatedIdentityProviderWithoutAssertions = config.Variables{
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"provider_name": config.StringVariable("provider-no-assertions"),
+}
+
+var testConfigVarsFederatedIdentityProviderWithoutAud = config.Variables{
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"provider_name": config.StringVariable("provider-no-aud"),
+}
+
+var testConfigVarsFederatedIdentityProviderCreate = config.Variables{
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"provider_name": config.StringVariable("provider1"),
+	"sub":           config.StringVariable("user@mail.com"),
+}
+
+var testConfigVarsFederatedIdentityProviderUpdate = config.Variables{
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"provider_name": config.StringVariable("provider1-updated"),
+	"sub":           config.StringVariable("other@mail.com"),
 }
 
 func TestServiceAccount(t *testing.T) {
@@ -181,6 +212,62 @@ func TestServiceAccount(t *testing.T) {
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+			// Federated identity provider - Attempt without assertions (should fail)
+			{
+				ConfigVariables: testConfigVarsFederatedIdentityProviderWithoutAssertions,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceServiceAccountFederatedIdentityProviderWithoutAssertions,
+				ExpectError:     regexp.MustCompile(`The argument "assertions" is required`),
+			},
+			// Federated identity provider - Attempt without aud assertion (should fail)
+			{
+				ConfigVariables: testConfigVarsFederatedIdentityProviderWithoutAud,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceServiceAccountFederatedIdentityProviderWithoutAud,
+				ExpectError:     regexp.MustCompile(`Missing Required Assertion`),
+			},
+			// Federated identity provider - Creation with assertions
+			{
+				ConfigVariables: testConfigVarsFederatedIdentityProviderCreate,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceServiceAccountFederatedIdentityProvider,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "name", "provider1"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "issuer", "https://accounts.stackit.cloud"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.#", "3"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.item", "iss"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.operator", "equals"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.value", "https://accounts.stackit.cloud"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.item", "sub"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.operator", "equals"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.value", "user@mail.com"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.item", "aud"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.operator", "equals"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.value", "sts.accounts.stackit.cloud"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "id"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "service_account_email"),
+				),
+			},
+			// Federated identity provider - Update with assertions
+			{
+				ConfigVariables: testConfigVarsFederatedIdentityProviderUpdate,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceServiceAccountFederatedIdentityProvider,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "name", "provider1-updated"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "issuer", "https://accounts.stackit.cloud"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.#", "3"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.item", "iss"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.operator", "equals"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.0.value", "https://accounts.stackit.cloud"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.item", "sub"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.operator", "equals"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.1.value", "other@mail.com"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.item", "aud"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.operator", "equals"),
+					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.value", "sts.accounts.stackit.cloud"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "id"),
+					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "service_account_email"),
+				),
 			},
 			// Deletion is done by the framework implicitly
 		},
