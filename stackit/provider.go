@@ -197,6 +197,7 @@ type providerModel struct {
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
@@ -253,6 +254,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_enablement_custom_endpoint":   "Custom endpoint for the Service Enablement API",
 		"sfs_custom_endpoint":                  "Custom endpoint for the Stackit Filestorage API",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
 	}
@@ -458,6 +460,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["sfs_custom_endpoint"],
 			},
+			"vpn_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["vpn_custom_endpoint"],
+			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
@@ -544,6 +550,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { providerData.SfsCustomEndpoint = v })
 	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
