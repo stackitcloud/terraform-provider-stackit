@@ -44,8 +44,47 @@ func TestMapDataSourceFields(t *testing.T) {
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
+		"redirects":         types.ObjectNull(redirectsTypes),
 	})
+	redirectsInput := cdnSdk.RedirectConfig{
+		Rules: []cdnSdk.RedirectRule{
+			{
+				Description:        cdnSdk.PtrString("Test redirect"),
+				Enabled:            cdnSdk.PtrBool(true),
+				TargetUrl:          "https://example.com/redirect",
+				StatusCode:         301,
+				RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
+				Matchers: []cdnSdk.Matcher{
+					{
+						Values:              []string{"/shop/*"},
+						ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
+					},
+				},
+			},
+		},
+	}
+	matcherValuesExpected := types.ListValueMust(types.StringType, []attr.Value{
+		types.StringValue("/shop/*"),
+	})
+	matcherValExpected := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
+		"values":                matcherValuesExpected,
+		"value_match_condition": types.StringValue("ALL"),
+	})
+	matchersListExpected := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherValExpected})
 
+	ruleValExpected := types.ObjectValueMust(redirectRuleTypes, map[string]attr.Value{
+		"description":          types.StringValue("Test redirect"),
+		"enabled":              types.BoolValue(true),
+		"target_url":           types.StringValue("https://example.com/redirect"),
+		"status_code":          types.Int32Value(301),
+		"rule_match_condition": types.StringValue("ALL"),
+		"matchers":             matchersListExpected,
+	})
+	rulesListExpected := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleValExpected})
+
+	redirectsConfigExpected := types.ObjectValueMust(redirectsTypes, map[string]attr.Value{
+		"rules": rulesListExpected,
+	})
 	emtpyErrorsList := types.ListValueMust(types.StringType, []attr.Value{})
 	managedDomain := types.ObjectValueMust(domainTypes, map[string]attr.Value{
 		"name":   types.StringValue("test.stackit-cdn.com"),
@@ -132,6 +171,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -157,6 +197,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			IsValid: true,
@@ -176,6 +217,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsTypes),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -189,6 +231,21 @@ func TestMapDataSourceFields(t *testing.T) {
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
 				d.Status = string(cdnSdk.DOMAINSTATUS_ERROR)
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_redirects": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         redirectsConfigExpected,
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Redirects = &redirectsInput
 			}),
 			IsValid: true,
 		},

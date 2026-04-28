@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
@@ -39,6 +41,9 @@ var (
 
 	//go:embed testdata/share-max.tf
 	resourceShareMaxConfig string
+
+	//go:embed testdata/project-lock-min.tf
+	resourceProjectLockConfig string
 )
 
 // EXPORT POLICY - MIN
@@ -161,6 +166,12 @@ var testConfigShareVarsMaxUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigShareVarsMax)
 	updatedConfig["space_hard_limit_gigabytes"] = config.IntegerVariable(50)
 	return updatedConfig
+}
+
+// Project lock - MIN
+
+var testConfigProjectLockVarsMin = config.Variables{
+	"project_id": config.StringVariable(testutil.ProjectId),
 }
 
 func TestAccExportPolicyMin(t *testing.T) {
@@ -839,6 +850,60 @@ func TestAccShareResourceMax(t *testing.T) {
 	})
 }
 
+func TestAccProjectLockMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccProjectLockDestroyed,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigProjectLockVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceProjectLockConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_sfs_project_lock.project_lock", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_sfs_project_lock.project_lock", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_sfs_project_lock.project_lock", "id"),
+					resource.TestCheckResourceAttrSet("stackit_sfs_project_lock.project_lock", "lock_id"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigProjectLockVarsMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_sfs_project_lock" "project_lock" {
+					  project_id = stackit_sfs_project_lock.project_lock.project_id
+					}
+					`,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceProjectLockConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_project_lock.project_lock", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_project_lock.project_lock", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("data.stackit_sfs_project_lock.project_lock", "id"),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sfs_project_lock.project_lock", "lock_id",
+						"stackit_sfs_project_lock.project_lock", "lock_id",
+					),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigProjectLockVarsMin,
+				ResourceName:    "stackit_sfs_project_lock.project_lock",
+				ImportStateIdFunc: func(_ *terraform.State) (string, error) {
+					return testutil.ProjectId + "," + testutil.Region, nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func createClient() (*sfs.APIClient, error) {
 	client, err := sfs.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SFSCustomEndpoint, false)...)
 	if err != nil {
@@ -950,4 +1015,53 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAccProjectLockDestroyed(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := createClient()
+	if err != nil {
+		return err
+	}
+
+	var errs []error
+
+	type projectLock struct {
+		ProjectId string
+		Region    string
+	}
+
+	var projectLocksToDestroy []projectLock
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_sfs_project_lock" {
+			continue
+		}
+		// transform id: "[projectId],[region]"
+		projectId := rs.Primary.Attributes["project_id"]
+		region := rs.Primary.Attributes["region"]
+		projectLocksToDestroy = append(projectLocksToDestroy,
+			projectLock{
+				ProjectId: projectId,
+				Region:    region,
+			},
+		)
+	}
+
+	for _, lock := range projectLocksToDestroy {
+		_, err := client.DefaultAPI.GetLock(ctx, lock.Region, lock.ProjectId).Execute()
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			ok := errors.As(err, &oapiErr)
+			if !(ok && oapiErr.StatusCode == http.StatusNotFound) {
+				errs = append(errs, err)
+			}
+			continue
+		}
+
+		_, err = client.DefaultAPI.DisableLock(ctx, lock.Region, lock.ProjectId).Execute()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
