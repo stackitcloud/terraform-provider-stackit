@@ -161,7 +161,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Configure(ctx context.
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureV2Client(ctx, &providerData, &resp.Diagnostics)
+	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

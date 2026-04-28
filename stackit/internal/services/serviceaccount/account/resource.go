@@ -63,7 +63,7 @@ func (r *serviceAccountResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureV2Client(ctx, &providerData, &resp.Diagnostics)
+	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
