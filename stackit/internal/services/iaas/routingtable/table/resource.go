@@ -2,6 +2,7 @@ package table
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -284,6 +286,11 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 
 	organizationId := model.OrganizationId.ValueString()
 	routingTableId := model.RoutingTableId.ValueString()
+	if routingTableId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	networkAreaId := model.NetworkAreaId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
@@ -409,6 +416,11 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Delete existing routing table
 	err := r.client.DeleteRoutingTableFromArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting routing table", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

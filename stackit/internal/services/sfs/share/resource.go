@@ -299,6 +299,11 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	shareId := model.ShareId.ValueString()
+	if shareId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
@@ -438,6 +443,12 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// Delete existing share
 	_, err := r.client.DefaultAPI.DeleteShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
+		var openapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &openapiError) {
+			if openapiError.StatusCode == http.StatusNotFound {
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

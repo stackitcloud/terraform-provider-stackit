@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -220,19 +222,28 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
+	if userName == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	_, err := r.client.GetCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading credential",
-			fmt.Sprintf("Credential with username %q or instance with ID %q does not exist in project %q.", userName, instanceId, projectId),
+			fmt.Sprintf("Error reading credential with username %q for instance %q in project %q.", userName, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
-		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -268,6 +279,10 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	userName := model.Username.ValueString()
 	_, err := r.client.DeleteCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
