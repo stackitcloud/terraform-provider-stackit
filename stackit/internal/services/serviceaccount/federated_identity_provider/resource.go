@@ -29,9 +29,9 @@ import (
 )
 
 var (
-	_ resource.Resource                = &ServiceAccountFederatedIdentityProviderResource{}
-	_ resource.ResourceWithConfigure   = &ServiceAccountFederatedIdentityProviderResource{}
-	_ resource.ResourceWithImportState = &ServiceAccountFederatedIdentityProviderResource{}
+	_ resource.Resource                = &serviceAccountFederatedIdentityProviderResource{}
+	_ resource.ResourceWithConfigure   = &serviceAccountFederatedIdentityProviderResource{}
+	_ resource.ResourceWithImportState = &serviceAccountFederatedIdentityProviderResource{}
 )
 
 // Model describes the resource data model.
@@ -53,18 +53,18 @@ type AssertionModel struct {
 }
 
 func NewServiceAccountFederatedIdentityProviderResource() resource.Resource {
-	return &ServiceAccountFederatedIdentityProviderResource{}
+	return &serviceAccountFederatedIdentityProviderResource{}
 }
 
-type ServiceAccountFederatedIdentityProviderResource struct {
+type serviceAccountFederatedIdentityProviderResource struct {
 	client *serviceaccount.APIClient
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *serviceAccountFederatedIdentityProviderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_service_account_federated_identity_provider"
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *serviceAccountFederatedIdentityProviderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`federation_id`\".",
 		"main":                  "Service account federated identity provider schema.",
@@ -155,7 +155,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Schema(_ context.Conte
 	}
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *serviceAccountFederatedIdentityProviderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -169,7 +169,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Configure(ctx context.
 	tflog.Info(ctx, "Service Account client configured")
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -206,7 +206,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -261,7 +261,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocritic // function signature required by Terraform
 	// Read the plan to get the desired configuration
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
@@ -307,7 +307,7 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
+func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { //nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -329,13 +329,16 @@ func (r *ServiceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 	}
 }
 
-func (r *ServiceAccountFederatedIdentityProviderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *serviceAccountFederatedIdentityProviderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityProvider, model *Model, projectId, serviceAccountEmail string) error {
 	if apiResp == nil {
 		return fmt.Errorf("apiResp is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
 	}
 
 	federationId := ""
@@ -424,7 +427,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*serviceaccount.CreateF
 
 func toUpdatePayload(ctx context.Context, model *Model) (*serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload, error) {
 	payload := &serviceaccount.PartialUpdateServiceAccountFederatedIdentityProviderPayload{}
-
+	if model == nil {
+		return nil, fmt.Errorf("model input is nil")
+	}
 	if !model.Issuer.IsNull() {
 		payload.Issuer = model.Issuer.ValueString()
 	}
