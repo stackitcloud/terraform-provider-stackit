@@ -10,7 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	serviceenablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -60,14 +61,14 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "service enablement request",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 							},
 							StatusCode: http.StatusOK,
 						},
 						testutil.MockResponse{
 							Description: "service enablement wait handler",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 								Error: nil,
 							},
 							StatusCode: http.StatusOK,
@@ -255,14 +256,14 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "service enablement request",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 							},
 							StatusCode: http.StatusOK,
 						},
 						testutil.MockResponse{
 							Description: "service enablement wait handler",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 								Error: nil,
 							},
 							StatusCode: http.StatusOK,
