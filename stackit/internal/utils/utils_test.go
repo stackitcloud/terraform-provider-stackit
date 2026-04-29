@@ -250,6 +250,13 @@ func TestFormatPossibleValues(t *testing.T) {
 			},
 			want: fmt.Sprintf("%s `foo`, `bar`, `trololol`.", gotPrefix),
 		},
+		{
+			name: "filter out default openapi generator value",
+			args: args{
+				values: []string{"foo", "unknown_default_open_api", "bar"},
+			},
+			want: fmt.Sprintf("%s `foo`, `bar`.", gotPrefix),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

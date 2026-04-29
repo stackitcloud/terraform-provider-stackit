@@ -142,6 +142,10 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 func FormatPossibleValues(values ...string) string {
 	var formattedValues []string
 	for _, value := range values {
+		if value == "unknown_default_open_api" {
+			continue
+		}
+
 		formattedValues = append(formattedValues, fmt.Sprintf("`%v`", value))
 	}
 	return fmt.Sprintf("Possible values are: %s.", strings.Join(formattedValues, ", "))
