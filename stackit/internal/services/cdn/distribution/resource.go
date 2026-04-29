@@ -1381,18 +1381,18 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		wafObjAttrs["paranoia_level"] = types.StringNull()
 	}
 
-	wafObjAttrs["allowed_http_versions"] = mapWafListToHCL(distribution.Config.Waf.AllowedHttpVersions)
-	wafObjAttrs["allowed_request_content_types"] = mapWafListToHCL(distribution.Config.Waf.AllowedRequestContentTypes)
-	wafObjAttrs["allowed_http_methods"] = mapWafListToHCL(distribution.Config.Waf.AllowedHttpMethods)
-	wafObjAttrs["enabled_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleIds)
-	wafObjAttrs["disabled_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleIds)
-	wafObjAttrs["log_only_rule_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleIds)
-	wafObjAttrs["enabled_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleGroupIds)
-	wafObjAttrs["disabled_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleGroupIds)
-	wafObjAttrs["log_only_rule_group_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleGroupIds)
-	wafObjAttrs["enabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.EnabledRuleCollectionIds)
-	wafObjAttrs["disabled_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.DisabledRuleCollectionIds)
-	wafObjAttrs["log_only_rule_collection_ids"] = mapWafListToHCL(distribution.Config.Waf.LogOnlyRuleCollectionIds)
+	wafObjAttrs["allowed_http_versions"] = conversion.SortedStringsToListValue(distribution.Config.Waf.AllowedHttpVersions)
+	wafObjAttrs["allowed_request_content_types"] = conversion.SortedStringsToListValue(distribution.Config.Waf.AllowedRequestContentTypes)
+	wafObjAttrs["allowed_http_methods"] = conversion.SortedStringsToListValue(distribution.Config.Waf.AllowedHttpMethods)
+	wafObjAttrs["enabled_rule_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.EnabledRuleIds)
+	wafObjAttrs["disabled_rule_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.DisabledRuleIds)
+	wafObjAttrs["log_only_rule_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.LogOnlyRuleIds)
+	wafObjAttrs["enabled_rule_group_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.EnabledRuleGroupIds)
+	wafObjAttrs["disabled_rule_group_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.DisabledRuleGroupIds)
+	wafObjAttrs["log_only_rule_group_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.LogOnlyRuleGroupIds)
+	wafObjAttrs["enabled_rule_collection_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.EnabledRuleCollectionIds)
+	wafObjAttrs["disabled_rule_collection_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.DisabledRuleCollectionIds)
+	wafObjAttrs["log_only_rule_collection_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.LogOnlyRuleCollectionIds)
 
 	// Safely determine if the API considers the WAF completely disabled
 	isWafDisabled := distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED &&
@@ -1801,21 +1801,6 @@ func getSortedWafList(ctx context.Context, tfList basetypes.ListValue) []string 
 	}
 	sort.Strings(elements)
 	return elements
-}
-
-// mapWafListToHCL guarantees the returned HCL List is sorted
-func mapWafListToHCL(apiList []string) basetypes.ListValue {
-	if len(apiList) == 0 {
-		return types.ListValueMust(types.StringType, []attr.Value{})
-	}
-	sorted := make([]string, len(apiList))
-	copy(sorted, apiList)
-	sort.Strings(sorted)
-	var elements []attr.Value
-	for _, val := range sorted {
-		elements = append(elements, types.StringValue(val))
-	}
-	return types.ListValueMust(types.StringType, elements)
 }
 
 // sortedStringListToAttrValueList sorts a slice of strings and converts it

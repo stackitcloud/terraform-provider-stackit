@@ -263,3 +263,18 @@ func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *di
 	}
 	return stackitProviderData, true
 }
+
+// SortedStringsToListValue guarantees the returned HCL List is sorted
+func SortedStringsToListValue(items []string) basetypes.ListValue {
+	if len(items) == 0 {
+		return types.ListValueMust(types.StringType, []attr.Value{})
+	}
+	sorted := make([]string, len(items))
+	copy(sorted, items)
+	sort.Strings(sorted)
+	elements := make([]attr.Value, len(sorted))
+	for i, val := range sorted {
+		elements[i] = types.StringValue(val)
+	}
+	return types.ListValueMust(types.StringType, elements)
+}

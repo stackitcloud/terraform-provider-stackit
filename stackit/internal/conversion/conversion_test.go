@@ -511,3 +511,71 @@ func TestStringListToSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestSortedStringsToListValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		items    []string
+		expected basetypes.ListValue
+	}{
+		{
+			name:     "empty slice",
+			items:    []string{},
+			expected: types.ListValueMust(types.StringType, []attr.Value{}),
+		},
+		{
+			name:     "nil slice",
+			items:    nil,
+			expected: types.ListValueMust(types.StringType, []attr.Value{}),
+		},
+		{
+			name:  "unsorted slice",
+			items: []string{"c", "a", "b"},
+			expected: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("a"),
+				types.StringValue("b"),
+				types.StringValue("c"),
+			}),
+		},
+		{
+			name:  "already sorted slice",
+			items: []string{"a", "b", "c"},
+			expected: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("a"),
+				types.StringValue("b"),
+				types.StringValue("c"),
+			}),
+		},
+		{
+			name:  "with duplicates",
+			items: []string{"b", "a", "b"},
+			expected: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("a"),
+				types.StringValue("b"),
+				types.StringValue("b"),
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Keep a copy of original to ensure it's not mutated by the function
+			var original []string
+			if tt.items != nil {
+				original = make([]string, len(tt.items))
+				copy(original, tt.items)
+			}
+
+			actual := SortedStringsToListValue(tt.items)
+
+			if !actual.Equal(tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, actual)
+			}
+
+			// Verify original slice was not mutated
+			if !reflect.DeepEqual(original, tt.items) {
+				t.Errorf("original slice was mutated: expected %v, got %v", original, tt.items)
+			}
+		})
+	}
+}
