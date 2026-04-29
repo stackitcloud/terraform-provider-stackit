@@ -66,7 +66,7 @@ var schemaDescriptions = map[string]string{
 	"config_optimizer":                             "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
 	"config_backend_origin_url":                    "The configured backend type http for the distribution",
 	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
-	"config_backend_geofencing":                    "Routes users from specific countries to alternative origins (HTTP backend required). Configure this by mapping the alternative origin URL to a list of country codes",
+	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
 	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
 	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
@@ -802,6 +802,11 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
+	if distributionId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 

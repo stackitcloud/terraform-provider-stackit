@@ -8,7 +8,7 @@ description: |-
 {{/* Check whether this is a iam role binding resource. The check looks cursed because there's no hasSuffix function available here */}}
 {{- $isRoleBinding := false -}}
 
-{{- $parts := split .Name "_role_binding" -}}
+{{- $parts := split .Name "_role_binding_v1" -}}
 {{- $lastItem := "" -}}
 
 {{- range $parts -}}
@@ -50,9 +50,9 @@ resource "{{.Name}}" "role_binding" {
 ## Import
 
 ```terraform
-# Only use the import statement, if you want to import an existing folder role assignment
+# Only use the import statement if you want to import an existing role binding
 import {
-  to = {{.Name}}.import-example
+  to = {{.Name}}.import_example
   id = "${var.region},${var.resource_id},${var.role},${var.subject}"
 }
 ```

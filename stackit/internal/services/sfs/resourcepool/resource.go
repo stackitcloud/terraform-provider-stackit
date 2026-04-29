@@ -300,6 +300,11 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
+	if resourcePoolId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
@@ -434,6 +439,12 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Delete existing resource pool
 	_, err := r.client.DefaultAPI.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
+		var openapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &openapiError) {
+			if openapiError.StatusCode == http.StatusNotFound {
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

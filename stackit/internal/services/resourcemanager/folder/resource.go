@@ -2,6 +2,7 @@ package folder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -259,14 +260,19 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
+	if containerId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	folderName := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusForbidden {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -360,6 +366,11 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	// Delete existing folder
 	err := r.client.DefaultAPI.DeleteFolder(ctx, containerId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,

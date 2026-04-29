@@ -420,6 +420,10 @@ func TestConvertConfig(t *testing.T) {
 		types.StringValue("rule1"),
 		types.StringValue("rule2"),
 	})
+
+	redirectsConfigVal := types.ObjectValueMust(redirectsTypes, map[string]attr.Value{
+		"rules": rulesList,
+	})
 	populatedWaf := types.ObjectValueMust(wafTypes, map[string]attr.Value{
 		"mode":                          types.StringValue("ENABLED"),
 		"type":                          types.StringValue("PREMIUM"),
@@ -456,9 +460,6 @@ func TestConvertConfig(t *testing.T) {
 		DisabledRuleCollectionIds:  []string{"rule1", "rule2"},
 		LogOnlyRuleCollectionIds:   []string{"rule1", "rule2"},
 	}
-	redirectsConfigVal := types.ObjectValueMust(redirectsTypes, map[string]attr.Value{
-		"rules": rulesList,
-	})
 
 	modelFixture := func(mods ...func(*Model)) *Model {
 		model := &Model{
@@ -566,7 +567,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         redirectsConfigVal, // Injetando o mock aqui
+					"redirects":         redirectsConfigVal,
 					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
