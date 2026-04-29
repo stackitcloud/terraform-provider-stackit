@@ -2,6 +2,7 @@ package loadbalancer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -683,12 +684,13 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 						"session_persistence": schema.SingleNestedAttribute{
 							Description: descriptions["session_persistence"],
 							Optional:    true,
-							Computed:    false,
+							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"use_source_ip_address": schema.BoolAttribute{
 									Description: descriptions["use_source_ip_address"],
 									Optional:    true,
-									Computed:    false,
+									Computed:    true,
+									Default:     booldefault.StaticBool(false),
 								},
 							},
 						},
@@ -830,8 +832,8 @@ func (r *loadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 
 	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -935,6 +937,11 @@ func (r *loadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Delete load balancer
 	_, err := r.client.DefaultAPI.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting load balancer", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -1751,13 +1758,13 @@ func mapTargets(targetsResp []loadbalancer.Target, tp map[string]attr.Value) err
 }
 
 func mapSessionPersistence(sessionPersistenceResp *loadbalancer.SessionPersistence, tp map[string]attr.Value) error {
-	if sessionPersistenceResp == nil {
-		tp["session_persistence"] = types.ObjectNull(sessionPersistenceTypes)
-		return nil
+	useSourceIpAddress := false
+	if sessionPersistenceResp != nil && sessionPersistenceResp.UseSourceIpAddress != nil {
+		useSourceIpAddress = *sessionPersistenceResp.UseSourceIpAddress
 	}
 
 	sessionPersistenceMap := map[string]attr.Value{
-		"use_source_ip_address": types.BoolPointerValue(sessionPersistenceResp.UseSourceIpAddress),
+		"use_source_ip_address": types.BoolValue(useSourceIpAddress),
 	}
 
 	sessionPersistenceTF, diags := types.ObjectValue(sessionPersistenceTypes, sessionPersistenceMap)

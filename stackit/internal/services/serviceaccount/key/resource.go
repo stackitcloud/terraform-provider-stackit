@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -183,7 +183,7 @@ func (r *serviceAccountKeyResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Initialize the API request with the required parameters.
-	saAccountKeyResp, err := r.client.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
+	saAccountKeyResp, err := r.client.DefaultAPI.CreateServiceAccountKey(ctx, projectId, serviceAccountEmail).CreateServiceAccountKeyPayload(*payload).Execute()
 
 	ctx = core.LogResponse(ctx)
 
@@ -223,13 +223,17 @@ func (r *serviceAccountKeyResource) Read(ctx context.Context, req resource.ReadR
 	projectId := model.ProjectId.ValueString()
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	keyId := model.KeyId.ValueString()
+	if keyId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
-	_, err := r.client.GetServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
+	_, err := r.client.DefaultAPI.GetServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
 		// due to security purposes, attempting to get access key for a non-existent Service Account will return 403.
-		if ok && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusForbidden || oapiErr.StatusCode == http.StatusBadRequest {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -279,8 +283,12 @@ func (r *serviceAccountKeyResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "key_id", keyId)
 
 	// Call API to delete the existing service account key.
-	err := r.client.DeleteServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
+	err := r.client.DefaultAPI.DeleteServiceAccountKey(ctx, projectId, serviceAccountEmail, keyId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account key", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -333,12 +341,8 @@ func mapCreateResponse(resp *serviceaccount.CreateServiceAccountKeyResponse, mod
 		return fmt.Errorf("service account key response is nil")
 	}
 
-	if resp.Id == nil {
-		return fmt.Errorf("service account key id not present")
-	}
-
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), *resp.Id)
-	model.KeyId = types.StringPointerValue(resp.Id)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.ServiceAccountEmail.ValueString(), resp.Id)
+	model.KeyId = types.StringValue(resp.Id)
 
 	jsonData, err := json.Marshal(resp)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -115,7 +115,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	projectId := model.ProjectId.ValueString()
 
 	// Call the API to list service accounts in the specified project
-	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
+	listSaResp, err := r.client.DefaultAPI.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -132,10 +132,10 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	ctx = core.LogResponse(ctx)
 
 	// Iterate over the service accounts returned by the API to find the one matching the email
-	serviceAccounts := *listSaResp.Items
+	serviceAccounts := listSaResp.Items
 	for i := range serviceAccounts {
 		// Skip if the service account email does not match
-		if *serviceAccounts[i].Email != model.Email.ValueString() {
+		if serviceAccounts[i].Email != model.Email.ValueString() {
 			continue
 		}
 

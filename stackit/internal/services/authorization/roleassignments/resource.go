@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -234,8 +236,8 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// safety sleep due to api cache
-	time.Sleep(1 * time.Second)
+	// sleep to ensure that cache window has passed
+	time.Sleep(10 * time.Second)
 
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment created", r.apiName))
 }
@@ -316,10 +318,19 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	// Delete existing project role assignment
 	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error deleting %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	// sleep to ensure that cache window has passed
+	time.Sleep(10 * time.Second)
+
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment deleted", r.apiName))
 }
 

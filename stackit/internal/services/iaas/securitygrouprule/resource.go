@@ -2,6 +2,7 @@ package securitygrouprule
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -518,6 +519,11 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	securityGroupId := model.SecurityGroupId.ValueString()
 	securityGroupRuleId := model.SecurityGroupRuleId.ValueString()
+	if securityGroupRuleId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -528,8 +534,8 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 
 	securityGroupRuleResp, err := r.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -585,6 +591,11 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	// Delete existing security group rule
 	err := r.client.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

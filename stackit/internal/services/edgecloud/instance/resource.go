@@ -321,6 +321,11 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	region := i.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+	if instanceId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -412,6 +417,10 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	err := i.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

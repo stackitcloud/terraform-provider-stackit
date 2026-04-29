@@ -250,6 +250,13 @@ func TestFormatPossibleValues(t *testing.T) {
 			},
 			want: fmt.Sprintf("%s `foo`, `bar`, `trololol`.", gotPrefix),
 		},
+		{
+			name: "filter out default openapi generator value",
+			args: args{
+				values: []string{"foo", "unknown_default_open_api", "bar"},
+			},
+			want: fmt.Sprintf("%s `foo`, `bar`.", gotPrefix),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -624,6 +631,47 @@ func TestPrettyApiErr(t *testing.T) {
 			got := PrettyApiErr(context.Background(), &diag.Diagnostics{}, tt.err)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PrettyApiErr() = %v, want = %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMap(t *testing.T) {
+	type args[T any, U any] struct {
+		input []T
+		mapFn func(T) U
+	}
+	type testCase[T any, U any] struct {
+		name string
+		args args[T, U]
+		want []U
+	}
+	tests := []testCase[string, *string]{
+		{
+			name: "default",
+			args: args[string, *string]{
+				input: []string{"foo", "bar"},
+				mapFn: func(s string) *string {
+					return new(s)
+				},
+			},
+			want: []*string{new("foo"), new("bar")},
+		},
+		{
+			name: "input slice is nil",
+			args: args[string, *string]{
+				input: nil,
+				mapFn: func(s string) *string {
+					return new(s)
+				},
+			},
+			want: []*string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Map(tt.args.input, tt.args.mapFn); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Map() = %v, want %v", got, tt.want)
 			}
 		})
 	}

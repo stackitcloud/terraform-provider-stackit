@@ -56,6 +56,24 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
     optimizer = {
       enabled = false
     }
+
+    redirects = {
+      rules = [
+        {
+          description          = "test redirect"
+          enabled              = true
+          rule_match_condition = "ANY"
+          status_code          = 302
+          target_url           = "https://stackit.de/"
+          matchers = [
+            {
+              values                = ["*/otherPath/"]
+              value_match_condition = "ANY"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 
@@ -96,6 +114,7 @@ Optional:
 
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
+- `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
@@ -129,6 +148,42 @@ Required:
 Optional:
 
 - `enabled` (Boolean)
+
+
+<a id="nestedatt--config--redirects"></a>
+### Nested Schema for `config.redirects`
+
+Required:
+
+- `rules` (Attributes List) A list of redirect rules. The order of rules matters for evaluation (see [below for nested schema](#nestedatt--config--redirects--rules))
+
+<a id="nestedatt--config--redirects--rules"></a>
+### Nested Schema for `config.redirects.rules`
+
+Required:
+
+- `matchers` (Attributes List) A list of matchers that define when this rule should apply. At least one matcher is required (see [below for nested schema](#nestedatt--config--redirects--rules--matchers))
+- `status_code` (Number) The HTTP status code for the redirect. Must be one of 301, 302, 303, 307, or 308.
+- `target_url` (String) The target URL to redirect to. Must be a valid URI
+
+Optional:
+
+- `description` (String) An optional description for the redirect rule
+- `enabled` (Boolean) A toggle to enable or disable the redirect rule. Default to true
+- `rule_match_condition` (String) Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.
+
+<a id="nestedatt--config--redirects--rules--matchers"></a>
+### Nested Schema for `config.redirects.rules.matchers`
+
+Required:
+
+- `values` (List of String) A list of glob patterns to match against the request path. At least one value is required. Examples: "/shop/*" or "*/img/*"
+
+Optional:
+
+- `value_match_condition` (String) Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.
+
+
 
 
 

@@ -2,6 +2,7 @@ package ske
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -14,13 +15,16 @@ import (
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -33,10 +37,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
+	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
+	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
+  
 	"golang.org/x/mod/semver"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -46,28 +53,34 @@ import (
 )
 
 const (
-	DefaultOSName                = "flatcar"
-	DefaultCRI                   = "containerd"
-	DefaultVolumeType            = "storage_premium_perf1"
-	DefaultVolumeSizeGB    int64 = 20
-	VersionStateSupported        = "supported"
-	VersionStatePreview          = "preview"
-	VersionStateDeprecated       = "deprecated"
+	DefaultOSName          = "flatcar"
+	DefaultCRI             = "containerd"
+	DefaultVolumeType      = "storage_premium_perf1"
+	DefaultVolumeSizeGB    = 20
+	VersionStateSupported  = "supported"
+	VersionStatePreview    = "preview"
+	VersionStateDeprecated = "deprecated"
 
 	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/)."
+
+	NodePoolsPlanTitle = "Plan for node_pools might look incorrect"
+	NodePoolsPlanDesc  = "When updating the node_pools of a stackit_ske_cluster, the Terraform plan might appear incorrect " +
+		"and shows a diff indicating that existing pools will be destroyed and recreated.\n\n" +
+		"This happens because Terraform matches list elements by their index rather than by name. " +
+		"Adding, removing, or reordering items in the list shifts these indices, causing cascading diffs.\n\n" +
+		"However, the SKE API correctly identifies node pools by name and applies the intended changes safely. " +
+		"Please review your changes carefully to ensure the correct configuration will be applied.\n\n" +
+		"Always append new node pools to the end of the node_pools list, to prevent index shifting and keep your Terraform plans clean."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &clusterResource{}
-	_ resource.ResourceWithConfigure   = &clusterResource{}
-	_ resource.ResourceWithImportState = &clusterResource{}
-	_ resource.ResourceWithModifyPlan  = &clusterResource{}
+	_ resource.Resource                   = &clusterResource{}
+	_ resource.ResourceWithConfigure      = &clusterResource{}
+	_ resource.ResourceWithImportState    = &clusterResource{}
+	_ resource.ResourceWithModifyPlan     = &clusterResource{}
+	_ resource.ResourceWithValidateConfig = &clusterResource{}
 )
-
-type skeClient interface {
-	GetClusterExecute(ctx context.Context, projectId, region, clusterName string) (*ske.Cluster, error)
-}
 
 type Model struct {
 	Id                    types.String `tfsdk:"id"` // needed by TF
@@ -93,12 +106,12 @@ type nodePool struct {
 	OSVersionMin          types.String `tfsdk:"os_version_min"`
 	OSVersion             types.String `tfsdk:"os_version"`
 	OSVersionUsed         types.String `tfsdk:"os_version_used"`
-	Minimum               types.Int64  `tfsdk:"minimum"`
-	Maximum               types.Int64  `tfsdk:"maximum"`
-	MaxSurge              types.Int64  `tfsdk:"max_surge"`
-	MaxUnavailable        types.Int64  `tfsdk:"max_unavailable"`
+	Minimum               types.Int32  `tfsdk:"minimum"`
+	Maximum               types.Int32  `tfsdk:"maximum"`
+	MaxSurge              types.Int32  `tfsdk:"max_surge"`
+	MaxUnavailable        types.Int32  `tfsdk:"max_unavailable"`
 	VolumeType            types.String `tfsdk:"volume_type"`
-	VolumeSize            types.Int64  `tfsdk:"volume_size"`
+	VolumeSize            types.Int32  `tfsdk:"volume_size"`
 	Labels                types.Map    `tfsdk:"labels"`
 	Taints                types.List   `tfsdk:"taints"`
 	CRI                   types.String `tfsdk:"cri"`
@@ -114,12 +127,12 @@ var nodePoolTypes = map[string]attr.Type{
 	"os_version_min":          basetypes.StringType{},
 	"os_version":              basetypes.StringType{},
 	"os_version_used":         basetypes.StringType{},
-	"minimum":                 basetypes.Int64Type{},
-	"maximum":                 basetypes.Int64Type{},
-	"max_surge":               basetypes.Int64Type{},
-	"max_unavailable":         basetypes.Int64Type{},
+	"minimum":                 basetypes.Int32Type{},
+	"maximum":                 basetypes.Int32Type{},
+	"max_surge":               basetypes.Int32Type{},
+	"max_unavailable":         basetypes.Int32Type{},
 	"volume_type":             basetypes.StringType{},
-	"volume_size":             basetypes.Int64Type{},
+	"volume_size":             basetypes.Int32Type{},
 	"labels":                  basetypes.MapType{ElemType: types.StringType},
 	"taints":                  basetypes.ListType{ElemType: types.ObjectType{AttrTypes: taintTypes}},
 	"cri":                     basetypes.StringType{},
@@ -296,6 +309,50 @@ func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	if req.State.Raw.IsNull() {
+		return
+	}
+	var stateModel Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	checkNodePoolShift(ctx, &planModel, &stateModel, resp)
+}
+
+func checkNodePoolShift(ctx context.Context, planModel, stateModel *Model, resp *resource.ModifyPlanResponse) {
+	if planModel == nil || stateModel == nil || utils.IsUndefined(planModel.NodePools) || utils.IsUndefined(stateModel.NodePools) {
+		return
+	}
+
+	var planPools, statePools []nodePool
+	resp.Diagnostics.Append(planModel.NodePools.ElementsAs(ctx, &planPools, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(stateModel.NodePools.ElementsAs(ctx, &statePools, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if len(planPools) != len(statePools) {
+		resp.Diagnostics.AddWarning(NodePoolsPlanTitle, NodePoolsPlanDesc)
+		return
+	}
+
+	// check if names at the same index still match
+	for i := range planPools {
+		planName := planPools[i].Name.ValueString()
+		stateName := statePools[i].Name.ValueString()
+
+		if planName != stateName {
+			resp.Diagnostics.AddWarning(NodePoolsPlanTitle, NodePoolsPlanDesc)
+			return
+		}
+	}
 }
 
 // Metadata returns the resource type name.
@@ -400,8 +457,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"node_pools": schema.ListNestedAttribute{
-				Description: "One or more `node_pool` block as defined below.",
-				Required:    true,
+				Description: "One or more `node_pool` block as defined below.\n" +
+					"To keep your Terraform plans clean and readable, always append new node pools to the end of the list.",
+				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -423,20 +481,20 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							Default:     booldefault.StaticBool(true),
 						},
-						"minimum": schema.Int64Attribute{
+						"minimum": schema.Int32Attribute{
 							Description: "Minimum number of nodes in the pool.",
 							Required:    true,
 						},
-						"maximum": schema.Int64Attribute{
+						"maximum": schema.Int32Attribute{
 							Description: "Maximum number of nodes in the pool.",
 							Required:    true,
 						},
-						"max_surge": schema.Int64Attribute{
+						"max_surge": schema.Int32Attribute{
 							Description: fmt.Sprintf("%s %s", descriptions["max_surge"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
 						},
-						"max_unavailable": schema.Int64Attribute{
+						"max_unavailable": schema.Int32Attribute{
 							Description: fmt.Sprintf("%s %s", descriptions["max_unavailable"], descriptions["nodepool_validators"]),
 							Optional:    true,
 							Computed:    true,
@@ -472,11 +530,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							Default:     stringdefault.StaticString(DefaultVolumeType),
 						},
-						"volume_size": schema.Int64Attribute{
+						"volume_size": schema.Int32Attribute{
 							Description: "The volume size in GB. Defaults to `20`",
 							Optional:    true,
 							Computed:    true,
-							Default:     int64default.StaticInt64(DefaultVolumeSizeGB),
+							Default:     int32default.StaticInt32(DefaultVolumeSizeGB),
 						},
 						"labels": schema.MapAttribute{
 							Description: "Labels to add to each node.",
@@ -527,37 +585,59 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},
+				Validators: []validator.Object{
+					objectvalidator.AlsoRequires(
+						path.MatchRelative().AtName("start"),
+						path.MatchRelative().AtName("end"),
+					),
+				},
 				Attributes: map[string]schema.Attribute{
 					"enable_kubernetes_version_updates": schema.BoolAttribute{
 						Description: "Flag to enable/disable auto-updates of the Kubernetes version. Defaults to `true`. " + SKEUpdateDoc,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"enable_machine_image_version_updates": schema.BoolAttribute{
 						Description: "Flag to enable/disable auto-updates of the OS image version. Defaults to `true`. " + SKEUpdateDoc,
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
 					},
 					"start": schema.StringAttribute{
 						Description: "Time for maintenance window start. E.g. `01:23:45Z`, `05:00:00+02:00`.",
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 						Validators: []validator.String{
 							stringvalidator.RegexMatches(
 								regexp.MustCompile(`^(((\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)$`),
 								"must be a full-time as defined by RFC3339, Section 5.6. E.g. `01:23:45Z`, `05:00:00+02:00`",
 							),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("end")),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"end": schema.StringAttribute{
 						Description: "Time for maintenance window end. E.g. `01:23:45Z`, `05:00:00+02:00`.",
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 						Validators: []validator.String{
 							stringvalidator.RegexMatches(
 								regexp.MustCompile(`^(((\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)$`),
 								"must be a full-time as defined by RFC3339, Section 5.6. E.g. `01:23:45Z`, `05:00:00+02:00`",
 							),
+							stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("start")),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -566,6 +646,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Network block as defined below.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Description: "ID of the STACKIT Network Area (SNA) network into which the cluster will be deployed.",
@@ -575,13 +658,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							validate.UUID(),
 						},
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.RequiresReplaceIfConfigured(),
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"control_plane": schema.SingleNestedAttribute{
 						Description: "Control plane for the cluster.",
 						Optional:    true,
 						Computed:    true,
+						PlanModifiers: []planmodifier.Object{
+							objectplanmodifier.UseStateForUnknown(),
+						},
 						Attributes: map[string]schema.Attribute{
 							"access_scope": schema.StringAttribute{
 								Description: "Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area." + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(ske.AllowedAccessScopeEnumValues)...) + " The field is immutable!",
@@ -589,6 +676,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								Computed:    true,
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
+									stringplanmodifier.UseStateForUnknown(),
 								},
 							},
 						},
@@ -828,8 +916,7 @@ func sortK8sVersions(versions []ske.KubernetesVersion) {
 // The k8s versions are sorted  descending order, i.e. the latest versions (including previews)
 // are listed first
 func (r *clusterResource) loadAvailableVersions(ctx context.Context, region string) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
-	c := r.skeClient
-	res, err := c.ListProviderOptions(ctx, region).Execute()
+	res, err := r.skeClient.DefaultAPI.ListProviderOptions(ctx, region).Execute()
 	if err != nil {
 		return nil, nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -842,32 +929,27 @@ func (r *clusterResource) loadAvailableVersions(ctx context.Context, region stri
 		return nil, nil, fmt.Errorf("API response has nil machine images")
 	}
 
-	return *res.KubernetesVersions, *res.MachineImages, nil
+	return res.KubernetesVersions, res.MachineImages, nil
 }
 
 // getCurrentVersions makes a call to get the details of a cluster and returns the current kubernetes version and a
 // a map with the machine image for each nodepool, which can be used to check the current machine image versions.
 // if the cluster doesn't exist or some error occurs, returns nil for both
-func getCurrentVersions(ctx context.Context, c skeClient, m *Model) (kubernetesVersion *string, nodePoolMachineImages map[string]*ske.Image) {
-	res, err := c.GetClusterExecute(ctx, m.ProjectId.ValueString(), m.Region.ValueString(), m.Name.ValueString())
+func getCurrentVersions(ctx context.Context, c ske.DefaultAPI, m *Model) (kubernetesVersion *string, nodePoolMachineImages map[string]*ske.Image) {
+	res, err := c.GetCluster(ctx, m.ProjectId.ValueString(), m.Region.ValueString(), m.Name.ValueString()).Execute()
 	if err != nil || res == nil {
 		return nil, nil
 	}
 
-	if res.Kubernetes != nil {
-		kubernetesVersion = res.Kubernetes.Version
-	}
+	kubernetesVersion = new(res.Kubernetes.Version)
 
 	if res.Nodepools == nil {
 		return kubernetesVersion, nil
 	}
 
 	nodePoolMachineImages = map[string]*ske.Image{}
-	for _, nodePool := range *res.Nodepools {
-		if nodePool.Name == nil || nodePool.Machine == nil || nodePool.Machine.Image == nil || nodePool.Machine.Image.Name == nil {
-			continue
-		}
-		nodePoolMachineImages[*nodePool.Name] = nodePool.Machine.Image
+	for _, nodePool := range res.Nodepools {
+		nodePoolMachineImages[nodePool.Name] = &nodePool.Machine.Image
 	}
 
 	return kubernetesVersion, nodePoolMachineImages
@@ -884,7 +966,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		return
 	}
 	if hasDeprecatedVersion {
-		diags.AddWarning("Deprecated Kubernetes version", fmt.Sprintf("Version %s of Kubernetes is deprecated, please update it", *kubernetes.Version))
+		diags.AddWarning("Deprecated Kubernetes version", fmt.Sprintf("Version %s of Kubernetes is deprecated, please update it", kubernetes.Version))
 	}
 	nodePools, deprecatedVersionsUsed, err := toNodepoolsPayload(ctx, model, availableMachineVersions, currentMachineImages)
 	if err != nil {
@@ -918,12 +1000,12 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	payload := ske.CreateOrUpdateClusterPayload{
 		Extensions:  extensions,
 		Hibernation: hibernations,
-		Kubernetes:  kubernetes,
+		Kubernetes:  *kubernetes,
 		Maintenance: maintenance,
 		Network:     network,
-		Nodepools:   &nodePools,
+		Nodepools:   nodePools,
 	}
-	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, region, name).CreateOrUpdateClusterPayload(payload).Execute()
+	_, err = r.skeClient.DefaultAPI.CreateOrUpdateCluster(ctx, projectId, region, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -935,12 +1017,12 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	// Call tflog.Info here, to log the information of the updated context
 	tflog.Info(ctx, "Triggered create/update cluster")
 
-	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
+	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND {
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == string(legacySke.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND) {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid observability instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
@@ -963,10 +1045,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 	for i := range nodePools {
 		nodePool := nodePools[i]
 
-		name := conversion.StringValueToPointer(nodePool.Name)
-		if name == nil {
-			return nil, nil, fmt.Errorf("found nil node pool name for node_pool[%d]", i)
-		}
+		name := nodePool.Name.ValueString()
 
 		// taints
 		taintsModel := []taint{}
@@ -978,8 +1057,8 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		ts := []ske.Taint{}
 		for _, v := range taintsModel {
 			t := ske.Taint{
-				Effect: ske.TaintGetEffectAttributeType(conversion.StringValueToPointer(v.Effect)),
-				Key:    conversion.StringValueToPointer(v.Key),
+				Effect: v.Effect.ValueString(),
+				Key:    v.Key.ValueString(),
 				Value:  conversion.StringValueToPointer(v.Value),
 			}
 			ts = append(ts, t)
@@ -1015,14 +1094,14 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 			zs = append(zs, s)
 		}
 
-		cn := ske.CRI{
-			Name: ske.CRIGetNameAttributeType(conversion.StringValueToPointer(nodePool.CRI)),
+		cn := &ske.CRI{
+			Name: conversion.StringValueToPointer(nodePool.CRI),
 		}
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
 		if !nodePool.OSVersion.IsNull() {
 			if providedVersionMin != nil {
-				return nil, nil, fmt.Errorf("both `os_version` and `os_version_min` are set for for node_pool %q. Please use `os_version_min` only, `os_version` is deprecated", *name)
+				return nil, nil, fmt.Errorf("both `os_version` and `os_version_min` are set for for node_pool %q. Please use `os_version_min` only, `os_version` is deprecated", name)
 			}
 			// os_version field deprecation
 			// this if clause should be removed once os_version field is completely removed
@@ -1030,14 +1109,11 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 			providedVersionMin = conversion.StringValueToPointer(nodePool.OSVersion)
 		}
 
-		machineOSName := conversion.StringValueToPointer(nodePool.OSName)
-		if machineOSName == nil {
-			return nil, nil, fmt.Errorf("found nil machine name for node_pool %q", *name)
-		}
+		machineOSName := nodePool.OSName.ValueString()
 
-		currentMachineImage := currentMachineImages[*name]
+		currentMachineImage := currentMachineImages[name]
 
-		machineVersion, hasDeprecatedVersion, err := latestMatchingMachineVersion(availableMachineVersions, providedVersionMin, *machineOSName, currentMachineImage)
+		machineVersion, hasDeprecatedVersion, err := latestMatchingMachineVersion(availableMachineVersions, providedVersionMin, machineOSName, currentMachineImage)
 		if err != nil {
 			return nil, nil, fmt.Errorf("getting latest matching machine image version: %w", err)
 		}
@@ -1047,25 +1123,25 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 
 		cnp := ske.Nodepool{
 			Name:           name,
-			Minimum:        conversion.Int64ValueToPointer(nodePool.Minimum),
-			Maximum:        conversion.Int64ValueToPointer(nodePool.Maximum),
-			MaxSurge:       conversion.Int64ValueToPointer(nodePool.MaxSurge),
-			MaxUnavailable: conversion.Int64ValueToPointer(nodePool.MaxUnavailable),
-			Machine: &ske.Machine{
-				Type: conversion.StringValueToPointer(nodePool.MachineType),
-				Image: &ske.Image{
+			Minimum:        nodePool.Minimum.ValueInt32(),
+			Maximum:        nodePool.Maximum.ValueInt32(),
+			MaxSurge:       conversion.Int32ValueToPointer(nodePool.MaxSurge),
+			MaxUnavailable: conversion.Int32ValueToPointer(nodePool.MaxUnavailable),
+			Machine: ske.Machine{
+				Type: nodePool.MachineType.ValueString(),
+				Image: ske.Image{
 					Name:    machineOSName,
-					Version: machineVersion,
+					Version: *machineVersion,
 				},
 			},
-			Volume: &ske.Volume{
+			Volume: ske.Volume{
 				Type: conversion.StringValueToPointer(nodePool.VolumeType),
-				Size: conversion.Int64ValueToPointer(nodePool.VolumeSize),
+				Size: int32(nodePool.VolumeSize.ValueInt32()),
 			},
-			Taints:                &ts,
-			Cri:                   &cn,
+			Taints:                ts,
+			Cri:                   cn,
 			Labels:                ls,
-			AvailabilityZones:     &zs,
+			AvailabilityZones:     zs,
 			AllowSystemComponents: conversion.BoolValueToPointer(nodePool.AllowSystemComponents),
 		}
 		cnps = append(cnps, cnp)
@@ -1111,7 +1187,7 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 	var availableMachineVersions []ske.MachineImageVersion
 	for _, machine := range availableImages {
 		if machine.Name != nil && *machine.Name == osName && machine.Versions != nil {
-			availableMachineVersions = *machine.Versions
+			availableMachineVersions = machine.Versions
 		}
 	}
 
@@ -1123,22 +1199,22 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 		// Different machine OSes have different versions.
 		// If the current machine image is nil or the machine image name has been updated,
 		// retrieve the latest supported version. Otherwise, use the current machine version.
-		if currentImage == nil || currentImage.Name == nil || *currentImage.Name != osName {
+		if currentImage == nil || currentImage.Name != osName {
 			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
 			if err != nil {
 				return nil, false, fmt.Errorf("get latest supported machine image version: %w", err)
 			}
 			return latestVersion, false, nil
 		}
-		versionMin = currentImage.Version
-	} else if currentImage != nil && currentImage.Name != nil && *currentImage.Name == osName {
+		versionMin = &currentImage.Version
+	} else if currentImage != nil && currentImage.Name == osName {
 		// If the os_version_min is set but is lower than the current version used in the cluster,
 		// retain the current version to avoid downgrading.
 		minimumVersion := "v" + *versionMin
-		currentVersion := "v" + *currentImage.Version
+		currentVersion := "v" + currentImage.Version
 
 		if semver.Compare(minimumVersion, currentVersion) == -1 {
-			versionMin = currentImage.Version
+			versionMin = &currentImage.Version
 		}
 	}
 
@@ -1235,8 +1311,8 @@ func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, err
 	scs := []ske.HibernationSchedule{}
 	for _, h := range hibernation {
 		sc := ske.HibernationSchedule{
-			Start: conversion.StringValueToPointer(h.Start),
-			End:   conversion.StringValueToPointer(h.End),
+			Start: h.Start.ValueString(),
+			End:   h.End.ValueString(),
 		}
 		if !h.Timezone.IsNull() && !h.Timezone.IsUnknown() {
 			tz := h.Timezone.ValueString()
@@ -1246,7 +1322,7 @@ func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, err
 	}
 
 	return &ske.Hibernation{
-		Schedules: &scs,
+		Schedules: scs,
 	}, nil
 }
 
@@ -1267,7 +1343,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
-		aclEnabled := conversion.BoolValueToPointer(acl.Enabled)
+		aclEnabled := acl.Enabled.ValueBool()
 
 		cidrs := []string{}
 		diags = acl.AllowedCIDRs.ElementsAs(ctx, &cidrs, true)
@@ -1276,7 +1352,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		}
 		skeAcl = &ske.ACL{
 			Enabled:      aclEnabled,
-			AllowedCidrs: &cidrs,
+			AllowedCidrs: cidrs,
 		}
 	}
 
@@ -1287,8 +1363,8 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting extensions.observability object: %v", diags.Errors())
 		}
-		observabilityEnabled := conversion.BoolValueToPointer(observability.Enabled)
-		observabilityInstanceId := conversion.StringValueToPointer(observability.InstanceId)
+		observabilityEnabled := observability.Enabled.ValueBool()
+		observabilityInstanceId := observability.InstanceId.ValueString()
 		skeObservability = &ske.Observability{
 			Enabled:    observabilityEnabled,
 			InstanceId: observabilityInstanceId,
@@ -1299,8 +1375,8 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
-		argusEnabled := conversion.BoolValueToPointer(argus.Enabled)
-		argusInstanceId := conversion.StringValueToPointer(argus.ArgusInstanceId)
+		argusEnabled := argus.Enabled.ValueBool()
+		argusInstanceId := argus.ArgusInstanceId.ValueString()
 		skeObservability = &ske.Observability{
 			Enabled:    argusEnabled,
 			InstanceId: argusInstanceId,
@@ -1314,7 +1390,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
 		}
-		dnsEnabled := conversion.BoolValueToPointer(dns.Enabled)
+		dnsEnabled := dns.Enabled.ValueBool()
 
 		zones := []string{}
 		diags = dns.Zones.ElementsAs(ctx, &zones, true)
@@ -1323,7 +1399,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		}
 		skeDNS = &ske.DNS{
 			Enabled: dnsEnabled,
-			Zones:   &zones,
+			Zones:   zones,
 		}
 	}
 
@@ -1353,30 +1429,30 @@ func toMaintenancePayload(ctx context.Context, m *Model) (*ske.Maintenance, erro
 		return nil, fmt.Errorf("converting maintenance object: %v", diags.Errors())
 	}
 
-	var timeWindowStart *time.Time
+	var timeWindowStart time.Time
 	if !(maintenance.Start.IsNull() || maintenance.Start.IsUnknown()) {
 		tempTime, err := parseMaintenanceWindowTime(maintenance.Start.ValueString())
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
-		timeWindowStart = new(tempTime)
+		timeWindowStart = tempTime
 	}
 
-	var timeWindowEnd *time.Time
+	var timeWindowEnd time.Time
 	if !(maintenance.End.IsNull() || maintenance.End.IsUnknown()) {
 		tempTime, err := parseMaintenanceWindowTime(maintenance.End.ValueString())
 		if err != nil {
 			return nil, fmt.Errorf("converting maintenance object: %w", err)
 		}
-		timeWindowEnd = new(tempTime)
+		timeWindowEnd = tempTime
 	}
 
 	return &ske.Maintenance{
-		AutoUpdate: &ske.MaintenanceAutoUpdate{
+		AutoUpdate: ske.MaintenanceAutoUpdate{
 			KubernetesVersion:   conversion.BoolValueToPointer(maintenance.EnableKubernetesVersionUpdates),
 			MachineImageVersion: conversion.BoolValueToPointer(maintenance.EnableMachineImageVersionUpdates),
 		},
-		TimeWindow: &ske.TimeWindow{
+		TimeWindow: ske.TimeWindow{
 			Start: timeWindowStart,
 			End:   timeWindowEnd,
 		},
@@ -1402,7 +1478,7 @@ func toNetworkPayload(ctx context.Context, m *Model) (*ske.Network, error) {
 			return nil, fmt.Errorf("converting network control plane: %w", core.DiagsToError(diags))
 		}
 		networkControlPlane = &ske.V2ControlPlaneNetwork{
-			AccessScope: ske.V2ControlPlaneNetworkGetAccessScopeAttributeType(conversion.StringValueToPointer(networkControlPlaneModel.AccessScope)),
+			AccessScope: new(ske.AccessScope(networkControlPlaneModel.AccessScope.ValueString())),
 		}
 	}
 
@@ -1433,9 +1509,7 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 	m.Id = utils.BuildInternalTerraformId(m.ProjectId.ValueString(), region, name)
 	m.Region = types.StringValue(region)
 
-	if cl.Kubernetes != nil {
-		m.KubernetesVersionUsed = types.StringPointerValue(cl.Kubernetes.Version)
-	}
+	m.KubernetesVersionUsed = types.StringValue(cl.Kubernetes.Version)
 
 	m.EgressAddressRanges = types.ListNull(types.StringType)
 	if cl.Status != nil {
@@ -1504,36 +1578,24 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	}
 
 	nodePools := []attr.Value{}
-	for i, nodePoolResp := range *cl.Nodepools {
+	for i, nodePoolResp := range cl.Nodepools {
 		nodePool := map[string]attr.Value{
-			"name":                    types.StringPointerValue(nodePoolResp.Name),
-			"machine_type":            types.StringPointerValue(nodePoolResp.Machine.Type),
-			"os_name":                 types.StringNull(),
-			"os_version_min":          modelNodePoolOSVersionMin[*nodePoolResp.Name],
-			"os_version":              modelNodePoolOSVersion[*nodePoolResp.Name],
-			"minimum":                 types.Int64PointerValue(nodePoolResp.Minimum),
-			"maximum":                 types.Int64PointerValue(nodePoolResp.Maximum),
-			"max_surge":               types.Int64PointerValue(nodePoolResp.MaxSurge),
-			"max_unavailable":         types.Int64PointerValue(nodePoolResp.MaxUnavailable),
-			"volume_type":             types.StringNull(),
-			"volume_size":             types.Int64PointerValue(nodePoolResp.Volume.Size),
+			"name":                    types.StringValue(nodePoolResp.Name),
+			"machine_type":            types.StringValue(nodePoolResp.Machine.Type),
+			"os_name":                 types.StringValue(nodePoolResp.Machine.Image.Name),
+			"os_version_min":          modelNodePoolOSVersionMin[nodePoolResp.Name],
+			"os_version":              modelNodePoolOSVersion[nodePoolResp.Name],
+			"os_version_used":         types.StringValue(nodePoolResp.Machine.Image.Version),
+			"minimum":                 types.Int32Value(nodePoolResp.Minimum),
+			"maximum":                 types.Int32Value(nodePoolResp.Maximum),
+			"max_surge":               types.Int32PointerValue(nodePoolResp.MaxSurge),
+			"max_unavailable":         types.Int32PointerValue(nodePoolResp.MaxUnavailable),
+			"volume_type":             types.StringPointerValue(nodePoolResp.Volume.Type),
+			"volume_size":             types.Int32Value(nodePoolResp.Volume.Size),
 			"labels":                  types.MapNull(types.StringType),
-			"cri":                     types.StringNull(),
+			"cri":                     types.StringPointerValue(nodePoolResp.Cri.Name),
 			"availability_zones":      types.ListNull(types.StringType),
 			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
-		}
-
-		if nodePoolResp.Machine != nil && nodePoolResp.Machine.Image != nil {
-			nodePool["os_name"] = types.StringPointerValue(nodePoolResp.Machine.Image.Name)
-			nodePool["os_version_used"] = types.StringPointerValue(nodePoolResp.Machine.Image.Version)
-		}
-
-		if nodePoolResp.Volume != nil {
-			nodePool["volume_type"] = types.StringPointerValue(nodePoolResp.Volume.Type)
-		}
-
-		if nodePoolResp.Cri != nil {
-			nodePool["cri"] = types.StringValue(string(nodePoolResp.Cri.GetName()))
 		}
 
 		taintsInModel := false
@@ -1558,7 +1620,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 		}
 
 		if nodePoolResp.AvailabilityZones != nil {
-			elemsTF, diags := types.ListValueFrom(ctx, types.StringType, *nodePoolResp.AvailabilityZones)
+			elemsTF, diags := types.ListValueFrom(ctx, types.StringType, nodePoolResp.AvailabilityZones)
 			if diags.HasError() {
 				return fmt.Errorf("mapping index %d, field availability_zones: %w", i, core.DiagsToError(diags))
 			}
@@ -1579,8 +1641,8 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 	return nil
 }
 
-func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value, existInModel bool) error {
-	if t == nil || len(*t) == 0 {
+func mapTaints(t []ske.Taint, nodePool map[string]attr.Value, existInModel bool) error {
+	if len(t) == 0 {
 		if existInModel {
 			taintsTF, diags := types.ListValue(types.ObjectType{AttrTypes: taintTypes}, []attr.Value{})
 			if diags.HasError() {
@@ -1595,10 +1657,10 @@ func mapTaints(t *[]ske.Taint, nodePool map[string]attr.Value, existInModel bool
 
 	taints := []attr.Value{}
 
-	for i, taintResp := range *t {
+	for i, taintResp := range t {
 		taint := map[string]attr.Value{
 			"effect": types.StringValue(string(taintResp.GetEffect())),
-			"key":    types.StringPointerValue(taintResp.Key),
+			"key":    types.StringValue(taintResp.Key),
 			"value":  types.StringPointerValue(taintResp.Value),
 		}
 		taintTF, diags := basetypes.NewObjectValue(taintTypes, taint)
@@ -1641,10 +1703,10 @@ func mapHibernations(cl *ske.Cluster, m *Model) error {
 	}
 
 	hibernations := []attr.Value{}
-	for i, hibernationResp := range *cl.Hibernation.Schedules {
+	for i, hibernationResp := range cl.Hibernation.Schedules {
 		hibernation := map[string]attr.Value{
-			"start":    types.StringPointerValue(hibernationResp.Start),
-			"end":      types.StringPointerValue(hibernationResp.End),
+			"start":    types.StringValue(hibernationResp.Start),
+			"end":      types.StringValue(hibernationResp.End),
 			"timezone": types.StringPointerValue(hibernationResp.Timezone),
 		}
 		hibernationTF, diags := basetypes.NewObjectValue(hibernationTypes, hibernation)
@@ -1704,8 +1766,7 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 	// If the network field is not provided, the SKE API returns an empty object.
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply error
 
-	emptyNetwork := &ske.Network{}
-	if *cl.Network == *emptyNetwork && m.Network.IsNull() {
+	if skeUtils.IsEmptyNetwork(cl.Network) && m.Network.IsNull() {
 		if m.Network.Attributes() == nil {
 			m.Network = types.ObjectNull(networkTypes)
 		}
@@ -1748,8 +1809,8 @@ func mapNetwork(cl *ske.Cluster, m *Model) error {
 }
 
 func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startTime, endTime string, err error) {
-	startTimeAPI := *cl.Maintenance.TimeWindow.Start
-	endTimeAPI := *cl.Maintenance.TimeWindow.End
+	startTimeAPI := cl.Maintenance.TimeWindow.Start
+	endTimeAPI := cl.Maintenance.TimeWindow.End
 
 	if m.Maintenance.IsNull() || m.Maintenance.IsUnknown() {
 		return startTimeAPI.Format("15:04:05Z07:00"), endTimeAPI.Format("15:04:05Z07:00"), nil
@@ -1861,8 +1922,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	}
 	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled
 
-	emptyExtensions := &ske.Extension{}
-	if *cl.Extensions == *emptyExtensions && (disabledExtensions || m.Extensions.IsNull()) {
+	if skeUtils.IsEmptyExtension(cl.Extensions) && (disabledExtensions || m.Extensions.IsNull()) {
 		if m.Extensions.Attributes() == nil {
 			m.Extensions = types.ObjectNull(extensionsTypes)
 		}
@@ -1871,10 +1931,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 	aclExtension := types.ObjectNull(aclTypes)
 	if cl.Extensions.Acl != nil {
-		enabled := types.BoolNull()
-		if cl.Extensions.Acl.Enabled != nil {
-			enabled = types.BoolValue(*cl.Extensions.Acl.Enabled)
-		}
+		enabled := types.BoolValue(cl.Extensions.Acl.Enabled)
 
 		cidrsList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Acl.AllowedCidrs)
 		if diags.HasError() {
@@ -1898,15 +1955,8 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	argusExtension := types.ObjectNull(argusTypes)
 	observabilityExtension := types.ObjectNull(observabilityTypes)
 	if cl.Extensions.Observability != nil {
-		enabled := types.BoolNull()
-		if cl.Extensions.Observability.Enabled != nil {
-			enabled = types.BoolValue(*cl.Extensions.Observability.Enabled)
-		}
-
-		observabilityInstanceId := types.StringNull()
-		if cl.Extensions.Observability.InstanceId != nil {
-			observabilityInstanceId = types.StringValue(*cl.Extensions.Observability.InstanceId)
-		}
+		enabled := types.BoolValue(cl.Extensions.Observability.Enabled)
+		observabilityInstanceId := types.StringValue(cl.Extensions.Observability.InstanceId)
 
 		observabilityExtensionValues := map[string]attr.Value{
 			"enabled":     enabled,
@@ -1947,10 +1997,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 	dnsExtension := types.ObjectNull(dnsTypes)
 	if cl.Extensions.Dns != nil {
-		enabled := types.BoolNull()
-		if cl.Extensions.Dns.Enabled != nil {
-			enabled = types.BoolValue(*cl.Extensions.Dns.Enabled)
-		}
+		enabled := types.BoolValue(cl.Extensions.Dns.Enabled)
 
 		zonesList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Dns.Zones)
 		if diags.HasError() {
@@ -2001,11 +2048,11 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 	providedVersionMin := m.KubernetesVersionMin.ValueStringPointer()
 	versionUsed, hasDeprecatedVersion, err := latestMatchingKubernetesVersion(availableVersions, providedVersionMin, currentKubernetesVersion, diags)
 	if err != nil {
-		return nil, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
+		return kubernetesPayload, false, fmt.Errorf("getting latest matching kubernetes version: %w", err)
 	}
 
 	k := &ske.Kubernetes{
-		Version: versionUsed,
+		Version: *versionUsed,
 	}
 	return k, hasDeprecatedVersion, nil
 }
@@ -2189,10 +2236,10 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	clResp, err := r.skeClient.GetCluster(ctx, projectId, region, name).Execute()
+	clResp, err := r.skeClient.DefaultAPI.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -2239,7 +2286,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.skeClient, &model)
+	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.skeClient.DefaultAPI, &model)
 
 	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableKubernetesVersions, availableMachines, currentKubernetesVersion, currentMachineImages)
 	if resp.Diagnostics.HasError() {
@@ -2270,16 +2317,20 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	c := r.skeClient
-	_, err := c.DeleteCluster(ctx, projectId, region, name).Execute()
+	_, err := r.skeClient.DefaultAPI.DeleteCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
+	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return

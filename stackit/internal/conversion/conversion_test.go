@@ -470,6 +470,11 @@ func TestStringListToSlice(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "empty list",
+			in:   basetypes.NewListValueMust(types.StringType, []attr.Value{}),
+			want: []string{},
+		},
+		{
 			name:    "invalid type",
 			in:      basetypes.NewListValueMust(types.Int64Type, []attr.Value{types.Int64Value(123)}),
 			wantErr: true,

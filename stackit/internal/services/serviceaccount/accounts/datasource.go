@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -158,7 +158,7 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	// Fetch all service accounts
-	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
+	listSaResp, err := r.client.DefaultAPI.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -175,7 +175,7 @@ func (r *serviceAccountsDataSource) Read(ctx context.Context, req datasource.Rea
 	ctx = core.LogResponse(ctx)
 
 	// Map the response data (filter, sort, and assign) to the model.
-	err = mapDataSourceFields(*listSaResp.Items, &model, compiledRegex)
+	err = mapDataSourceFields(listSaResp.Items, &model, compiledRegex)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service accounts", fmt.Sprintf("Error processing API response: %v", err))
 		return
@@ -195,10 +195,7 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 	emailSuffix := model.EmailSuffix.ValueString()
 
 	for _, sa := range apiItems {
-		if sa.Email == nil {
-			continue
-		}
-		email := *sa.Email
+		email := sa.Email
 
 		// Apply Filters (If neither is set, these checks simply pass)
 		if compiledRegex != nil && !compiledRegex.MatchString(email) {
@@ -212,7 +209,7 @@ func mapDataSourceFields(apiItems []serviceaccount.ServiceAccount, model *Servic
 		nameStr, _ := serviceaccountUtils.ParseNameFromEmail(email)
 
 		matchedItems = append(matchedItems, ServiceAccountItem{
-			ServiceAccountId: types.StringPointerValue(sa.Id),
+			ServiceAccountId: types.StringValue(sa.Id),
 			Email:            types.StringValue(email),
 			Name:             types.StringValue(nameStr),
 		})

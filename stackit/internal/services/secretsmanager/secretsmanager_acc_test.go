@@ -1,12 +1,10 @@
 package secretsmanager_test
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
 	"maps"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
@@ -14,10 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	secretsmanager "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testdestroy"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -72,7 +68,7 @@ func configVarsMaxUpdated() config.Variables {
 func TestAccSecretsManagerMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckSecretsManagerDestroy,
+		CheckDestroy:             testdestroy.AccTestCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
@@ -227,7 +223,7 @@ func TestAccSecretsManagerMin(t *testing.T) {
 func TestAccSecretsManagerMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckSecretsManagerDestroy,
+		CheckDestroy:             testdestroy.AccTestCheckDestroy,
 		Steps: []resource.TestStep{
 			// Creation fail
 			{
@@ -446,41 +442,4 @@ func TestAccSecretsManagerMax(t *testing.T) {
 			// Deletion is done by the framework implicitly
 		},
 	})
-}
-
-func testAccCheckSecretsManagerDestroy(s *terraform.State) error {
-	ctx := context.Background()
-	client, err := secretsmanager.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SecretsManagerCustomEndpoint, true)...)
-	if err != nil {
-		return fmt.Errorf("creating client: %w", err)
-	}
-
-	instancesToDestroy := []string{}
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_secretsmanager_instance" {
-			continue
-		}
-		// instance terraform ID: "[project_id],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
-		instancesToDestroy = append(instancesToDestroy, instanceId)
-	}
-
-	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
-	if err != nil {
-		return fmt.Errorf("getting instancesResp: %w", err)
-	}
-
-	instances := instancesResp.Instances
-	for i := range instances {
-		if instances[i].Id == "" {
-			continue
-		}
-		if utils.Contains(instancesToDestroy, instances[i].Id) {
-			err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, instances[i].Id).Execute()
-			if err != nil {
-				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", instances[i].Id, err)
-			}
-		}
-	}
-	return nil
 }

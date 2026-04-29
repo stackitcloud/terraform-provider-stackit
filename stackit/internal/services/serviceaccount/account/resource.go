@@ -2,7 +2,9 @@ package account
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -20,7 +22,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -154,7 +157,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// Create the new service account via the API client.
-	serviceAccountResp, err := r.client.CreateServiceAccount(ctx, projectId).CreateServiceAccountPayload(*payload).Execute()
+	serviceAccountResp, err := r.client.DefaultAPI.CreateServiceAccount(ctx, projectId).CreateServiceAccountPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -198,8 +201,13 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	projectId := model.ProjectId.ValueString()
 
 	// Fetch the list of service accounts from the API.
-	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
+	listSaResp, err := r.client.DefaultAPI.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error calling API: %v", err))
 		return
 	}
@@ -207,9 +215,9 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = core.LogResponse(ctx)
 
 	// Iterate over the list of service accounts to find the one that matches the email from the state.
-	serviceAccounts := *listSaResp.Items
+	serviceAccounts := listSaResp.Items
 	for i := range serviceAccounts {
-		if *serviceAccounts[i].Email != model.Email.ValueString() {
+		if serviceAccounts[i].Email != model.Email.ValueString() {
 			continue
 		}
 
@@ -255,8 +263,13 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "service_account_name", serviceAccountName)
 
 	// Call API to delete the existing service account.
-	err := r.client.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
+	err := r.client.DefaultAPI.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -303,7 +316,7 @@ func toCreatePayload(model *Model) (*serviceaccount.CreateServiceAccountPayload,
 	}
 
 	return &serviceaccount.CreateServiceAccountPayload{
-		Name: conversion.StringValueToPointer(model.Name),
+		Name: model.Name.ValueString(),
 	}, nil
 }
 
@@ -316,19 +329,11 @@ func mapFields(resp *serviceaccount.ServiceAccount, model *Model) error {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if resp.Email == nil {
-		return fmt.Errorf("service account email not present")
-	}
-
-	if resp.Id == nil {
-		return fmt.Errorf("service account id not present")
-	}
-
 	// Build the ID by combining the project ID and email and assign the model's fields.
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), *resp.Email)
-	model.ServiceAccountId = types.StringPointerValue(resp.Id)
-	model.Email = types.StringPointerValue(resp.Email)
-	model.ProjectId = types.StringPointerValue(resp.ProjectId)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), resp.Email)
+	model.ServiceAccountId = types.StringValue(resp.Id)
+	model.Email = types.StringValue(resp.Email)
+	model.ProjectId = types.StringValue(resp.ProjectId)
 
 	return nil
 }

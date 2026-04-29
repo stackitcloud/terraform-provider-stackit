@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceaccount"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 )
 
 func TestComputeValidUntil(t *testing.T) {
@@ -61,7 +61,7 @@ func TestMapResponse(t *testing.T) {
 		{
 			description: "default_values",
 			input: &serviceaccount.CreateServiceAccountKeyResponse{
-				Id: new("id"),
+				Id: "id",
 			},
 			expected: Model{
 				Id:                  types.StringValue("pid,email,id"),
@@ -78,20 +78,6 @@ func TestMapResponse(t *testing.T) {
 			input:       nil,
 			expected:    Model{},
 			isValid:     false,
-		},
-		{
-			description: "nil_response_2",
-			input:       &serviceaccount.CreateServiceAccountKeyResponse{},
-			expected:    Model{},
-			isValid:     false,
-		},
-		{
-			description: "no_id",
-			input: &serviceaccount.CreateServiceAccountKeyResponse{
-				Active: new(true),
-			},
-			expected: Model{},
-			isValid:  false,
 		},
 	}
 

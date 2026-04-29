@@ -2,6 +2,7 @@ package affinitygroup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -245,6 +246,11 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	affinityGroupId := model.AffinityGroupId.ValueString()
+	if affinityGroupId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -254,8 +260,8 @@ func (r *affinityGroupResource) Read(ctx context.Context, req resource.ReadReque
 
 	affinityGroupResp, err := r.client.GetAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -305,6 +311,11 @@ func (r *affinityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	// Delete existing affinity group
 	err := r.client.DeleteAffinityGroupExecute(ctx, projectId, region, affinityGroupId)
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting affinity group", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

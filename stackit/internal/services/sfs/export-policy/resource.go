@@ -329,6 +329,11 @@ func (r *exportPolicyResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	exportPolicyId := model.ExportPolicyId.ValueString()
+	if exportPolicyId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "policy_id", exportPolicyId)
@@ -452,7 +457,14 @@ func (r *exportPolicyResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	_, err := r.client.DefaultAPI.DeleteShareExportPolicy(ctx, projectId, region, exportPolicyId).Execute()
 	if err != nil {
+		var openapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &openapiError) {
+			if openapiError.StatusCode == http.StatusNotFound {
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting export policy", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
