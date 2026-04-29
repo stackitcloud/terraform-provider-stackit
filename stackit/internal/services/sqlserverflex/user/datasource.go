@@ -12,13 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -158,7 +159,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -219,7 +220,7 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range *user.Roles {
+		for _, role := range user.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)

@@ -88,7 +88,7 @@ func TestToCreatePayload(t *testing.T) {
 		"regions":           regionsFixture,
 		"blocked_countries": blockedCountriesFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
-		"redirects":         types.ObjectNull(redirectsAttrTypes),
+		"redirects":         types.ObjectNull(redirectsTypes),
 		"waf":               defaultWaf,
 	})
 
@@ -97,7 +97,7 @@ func TestToCreatePayload(t *testing.T) {
 	})
 	matcherVal := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValues,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersList := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherVal})
 
@@ -106,7 +106,7 @@ func TestToCreatePayload(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersList,
 	})
 	rulesList := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleVal})
@@ -195,7 +195,7 @@ func TestToCreatePayload(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               defaultWaf,
 				})
 			}),
@@ -245,11 +245,11 @@ func TestToCreatePayload(t *testing.T) {
 							Enabled:            cdnSdk.PtrBool(true),
 							TargetUrl:          "https://example.com/redirect",
 							StatusCode:         301,
-							RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+							RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 							Matchers: []cdnSdk.Matcher{
 								{
 									Values:              []string{"/shop/*"},
-									ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+									ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 								},
 							},
 						},
@@ -278,7 +278,7 @@ func TestToCreatePayload(t *testing.T) {
 					"regions":           regionsFixture, // reusing the existing one
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               defaultWaf,
 				})
 			}),
@@ -389,18 +389,12 @@ func TestConvertConfig(t *testing.T) {
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 
-	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
-	if !ok {
-		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
-	}
-	redirectsAttrTypes := redirectsObjType.AttrTypes
-
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"blocked_countries": blockedCountriesFixture,
-		"redirects":         types.ObjectNull(redirectsAttrTypes),
+		"redirects":         types.ObjectNull(redirectsTypes),
 		"waf":               types.ObjectNull(wafTypes),
 	})
 
@@ -409,7 +403,7 @@ func TestConvertConfig(t *testing.T) {
 	})
 	matcherVal := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValues,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersList := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherVal})
 
@@ -418,7 +412,7 @@ func TestConvertConfig(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersList,
 	})
 	rulesList := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleVal})
@@ -511,7 +505,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         optimizer,
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
@@ -541,7 +535,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               populatedWaf,
 				})
 			}),
@@ -599,11 +593,11 @@ func TestConvertConfig(t *testing.T) {
 							Enabled:            cdnSdk.PtrBool(true),
 							TargetUrl:          "https://example.com/redirect",
 							StatusCode:         301,
-							RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+							RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 							Matchers: []cdnSdk.Matcher{
 								{
 									Values:              []string{"/shop/*"},
-									ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+									ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 								},
 							},
 						},
@@ -632,7 +626,7 @@ func TestConvertConfig(t *testing.T) {
 					"regions":           regionsFixture,
 					"blocked_countries": blockedCountriesFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
-					"redirects":         types.ObjectNull(redirectsAttrTypes),
+					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               types.ObjectNull(wafTypes),
 				})
 			}),
@@ -782,11 +776,11 @@ func TestMapFields(t *testing.T) {
 				Enabled:            cdnSdk.PtrBool(true),
 				TargetUrl:          "https://example.com/redirect",
 				StatusCode:         301,
-				RuleMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+				RuleMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 				Matchers: []cdnSdk.Matcher{
 					{
 						Values:              []string{"/shop/*"},
-						ValueMatchCondition: cdnSdk.MatchCondition("ANY").Ptr(),
+						ValueMatchCondition: cdnSdk.MATCHCONDITION_ALL.Ptr(),
 					},
 				},
 			},
@@ -798,7 +792,7 @@ func TestMapFields(t *testing.T) {
 	})
 	matcherValExpected := types.ObjectValueMust(matcherTypes, map[string]attr.Value{
 		"values":                matcherValuesExpected,
-		"value_match_condition": types.StringValue("ANY"),
+		"value_match_condition": types.StringValue("ALL"),
 	})
 	matchersListExpected := types.ListValueMust(types.ObjectType{AttrTypes: matcherTypes}, []attr.Value{matcherValExpected})
 
@@ -807,7 +801,7 @@ func TestMapFields(t *testing.T) {
 		"enabled":              types.BoolValue(true),
 		"target_url":           types.StringValue("https://example.com/redirect"),
 		"status_code":          types.Int32Value(301),
-		"rule_match_condition": types.StringValue("ANY"),
+		"rule_match_condition": types.StringValue("ALL"),
 		"matchers":             matchersListExpected,
 	})
 	rulesListExpected := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleValExpected})

@@ -14,7 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
@@ -130,7 +131,7 @@ func (d *kubernetesVersionsDataSource) Read(ctx context.Context, req datasource.
 	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	listProviderOptionsReq := d.client.ListProviderOptions(ctx, region)
+	listProviderOptionsReq := d.client.DefaultAPI.ListProviderOptions(ctx, region)
 
 	if !utils.IsUndefined(model.VersionState) {
 		listProviderOptionsReq = listProviderOptionsReq.VersionState(model.VersionState.ValueString())
@@ -190,7 +191,7 @@ func mapFields(_ context.Context, optionsResp *ske.ProviderOptions, model *Model
 		return nil
 	}
 
-	kvSlice := *optionsResp.KubernetesVersions
+	kvSlice := optionsResp.KubernetesVersions
 	kvList := make([]attr.Value, 0, len(kvSlice))
 
 	for _, kv := range kvSlice {

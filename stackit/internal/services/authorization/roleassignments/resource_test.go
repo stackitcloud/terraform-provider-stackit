@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+
 	tfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 

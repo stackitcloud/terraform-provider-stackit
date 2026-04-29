@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
 	"github.com/google/go-cmp/cmp"
@@ -467,6 +468,11 @@ func TestStringListToSlice(t *testing.T) {
 			name: "null",
 			in:   basetypes.NewListNull(types.StringType),
 			want: nil,
+		},
+		{
+			name: "empty list",
+			in:   basetypes.NewListValueMust(types.StringType, []attr.Value{}),
+			want: []string{},
 		},
 		{
 			name:    "invalid type",

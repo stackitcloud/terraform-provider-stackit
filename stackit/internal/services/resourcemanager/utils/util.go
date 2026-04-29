@@ -8,6 +8,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	resourcemanagerLegacy "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )

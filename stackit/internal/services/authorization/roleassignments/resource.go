@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -233,8 +234,8 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// safety sleep due to api cache
-	time.Sleep(1 * time.Second)
+	// sleep to ensure that cache window has passed
+	time.Sleep(10 * time.Second)
 
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment created", r.apiName))
 }
@@ -319,6 +320,10 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	// sleep to ensure that cache window has passed
+	time.Sleep(10 * time.Second)
+
 	tflog.Info(ctx, fmt.Sprintf("%s role assignment deleted", r.apiName))
 }
 

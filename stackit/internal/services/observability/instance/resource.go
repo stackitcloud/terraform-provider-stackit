@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int64planmodifier"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability"
 	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -899,6 +901,11 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 	}
 	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if configModel.ProjectId.IsUnknown() {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Validating plan: project ID not yet known", "The resource references a project ID, which is not yet known but needed for plan validation. Skipping plan validation, apply may fail.")
 		return
 	}
 

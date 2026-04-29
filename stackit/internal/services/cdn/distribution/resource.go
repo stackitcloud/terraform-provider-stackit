@@ -31,8 +31,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -302,7 +304,6 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	backendOptions := []string{"http", "bucket"}
-	matchCondition := []string{"ANY", "ALL", "NONE"}
 	statusCode := []int32{301, 302, 303, 307, 308}
 	defaultWafConfigAllowedHttpVersions := sortedStringListToAttrValueList([]string{
 		"HTTP/1.0", "HTTP/1.1", "HTTP/2", "HTTP/2.0",
@@ -440,7 +441,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 											Computed:    true,
 											Description: schemaDescriptions["config_redirects_rule_match_condition"],
 											Default:     stringdefault.StaticString("ANY"),
-											Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(matchCondition...)},
+											Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
 										},
 										"matchers": schema.ListNestedAttribute{
 											Description: schemaDescriptions["config_redirects_rule_matchers"],
@@ -456,6 +457,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 														ElementType: types.StringType,
 														Validators: []validator.List{
 															listvalidator.SizeAtLeast(1),
+															listvalidator.NoNullValues(),
 														},
 													},
 													"value_match_condition": schema.StringAttribute{
@@ -463,7 +465,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 														Description: schemaDescriptions["config_redirects_rule_match_condition"],
 														Default:     stringdefault.StaticString("ANY"),
 														Computed:    true,
-														Validators:  []validator.String{stringvalidator.OneOfCaseInsensitive(matchCondition...)},
+														Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
 													},
 												},
 											},
@@ -901,47 +903,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// redirects
-	var redirectsConfig *cdnSdk.RedirectConfig
-	if configPlanModel.Redirects != nil {
-		sdkRules := []cdnSdk.RedirectRule{}
-		if len(configPlanModel.Redirects.Rules) > 0 {
-			for _, rule := range configPlanModel.Redirects.Rules {
-				matchers := []cdnSdk.Matcher{}
-				for _, matcher := range rule.Matchers {
-					var matchCond *cdnSdk.MatchCondition
-					if matcher.ValueMatchCondition != nil {
-						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
-						matchCond = &cond
-					}
-
-					matchers = append(matchers, cdnSdk.Matcher{
-						Values:              matcher.Values,
-						ValueMatchCondition: matchCond,
-					})
-				}
-
-				var ruleMatchCond *cdnSdk.MatchCondition
-				if rule.RuleMatchCondition != nil {
-					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
-					ruleMatchCond = &cond
-				}
-				targetUrl := rule.TargetUrl
-
-				sdkConfigRule := cdnSdk.RedirectRule{
-					Description:        rule.Description,
-					Enabled:            rule.Enabled,
-					Matchers:           matchers,
-					RuleMatchCondition: ruleMatchCond,
-					StatusCode:         rule.StatusCode,
-					TargetUrl:          targetUrl,
-				}
-				sdkRules = append(sdkRules, sdkConfigRule)
-			}
-		}
-		redirectsConfig = &cdnSdk.RedirectConfig{
-			Rules: sdkRules,
-		}
-	}
+	redirectsConfig := convertRedirectconfig(configPlanModel.Redirects)
 
 	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
@@ -1204,13 +1166,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			var tfMatchers []attr.Value
 			if r.Matchers != nil {
 				for _, m := range r.Matchers {
-					var tfValues []attr.Value
-					if m.Values != nil {
-						for _, v := range m.Values {
-							tfValues = append(tfValues, types.StringValue(v))
-						}
-					}
-					tfValuesList, diags := types.ListValue(types.StringType, tfValues)
+					tfValuesList, diags := types.ListValueFrom(ctx, types.StringType, m.Values)
 					if diags.HasError() {
 						return core.DiagsToError(diags)
 					}
@@ -1253,7 +1209,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 			tfStatusCode := types.Int32Null()
 			if r.StatusCode > 0 {
-				tfStatusCode = types.Int32Value(int32(r.StatusCode)) // nolint:gosec // HTTP status codes are safely within int32 bounds
+				tfStatusCode = types.Int32Value(r.StatusCode)
 			}
 
 			tfRuleMatchCond := types.StringValue("ANY")
@@ -1589,6 +1545,50 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	return payload, nil
 }
 
+func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.RedirectConfig {
+	var redirectsConfig *cdnSdk.RedirectConfig
+	if redirectConfigModel != nil {
+		sdkRules := []cdnSdk.RedirectRule{}
+		if len(redirectConfigModel.Rules) > 0 {
+			for _, rule := range redirectConfigModel.Rules {
+				matchers := []cdnSdk.Matcher{}
+				for _, matcher := range rule.Matchers {
+					var matchCond *cdnSdk.MatchCondition
+					if matcher.ValueMatchCondition != nil {
+						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
+						matchCond = &cond
+					}
+
+					matchers = append(matchers, cdnSdk.Matcher{
+						Values:              matcher.Values,
+						ValueMatchCondition: matchCond,
+					})
+				}
+
+				var ruleMatchCond *cdnSdk.MatchCondition
+				if rule.RuleMatchCondition != nil {
+					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
+				}
+				targetUrl := rule.TargetUrl
+
+				sdkConfigRule := cdnSdk.RedirectRule{
+					Description:        rule.Description,
+					Enabled:            rule.Enabled,
+					Matchers:           matchers,
+					RuleMatchCondition: ruleMatchCond,
+					StatusCode:         rule.StatusCode,
+					TargetUrl:          targetUrl,
+				}
+				sdkRules = append(sdkRules, sdkConfigRule)
+			}
+		}
+		redirectsConfig = &cdnSdk.RedirectConfig{
+			Rules: sdkRules,
+		}
+	}
+	return redirectsConfig
+}
+
 func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	if model == nil {
 		return nil, errors.New("model cannot be nil")
@@ -1629,7 +1629,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	}
 
 	// redirects
-	var redirectsConfig *cdnSdk.RedirectConfig
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
 
 	if configModel.Redirects != nil {
 		sdkRules := []cdnSdk.RedirectRule{}
@@ -1652,8 +1652,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 				var ruleMatchCond *cdnSdk.MatchCondition
 				if rule.RuleMatchCondition != nil {
-					cond := cdnSdk.MatchCondition(*rule.RuleMatchCondition)
-					ruleMatchCond = &cond
+					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
 				}
 
 				sdkConfigRule := cdnSdk.RedirectRule{

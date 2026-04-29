@@ -43,6 +43,7 @@ data "stackit_loadbalancer" "example" {
 - `private_address` (String) Transient private Load Balancer IP address. It can change any time.
 - `security_group_id` (String) The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT Network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.
 - `target_pools` (Attributes List) List of all target pools which will be used in the Load Balancer. Limited to 20. (see [below for nested schema](#nestedatt--target_pools))
+- `version` (String) Load balancer resource version.
 
 <a id="nestedatt--listeners"></a>
 ### Nested Schema for `listeners`
@@ -134,24 +135,13 @@ Read-Only:
 <a id="nestedatt--target_pools"></a>
 ### Nested Schema for `target_pools`
 
-Optional:
-
-- `session_persistence` (Attributes) Here you can setup various session persistence options, so far only "`use_source_ip_address`" is supported. (see [below for nested schema](#nestedatt--target_pools--session_persistence))
-
 Read-Only:
 
 - `active_health_check` (Attributes) (see [below for nested schema](#nestedatt--target_pools--active_health_check))
 - `name` (String) Target pool name.
+- `session_persistence` (Attributes) Here you can setup various session persistence options, so far only "`use_source_ip_address`" is supported. (see [below for nested schema](#nestedatt--target_pools--session_persistence))
 - `target_port` (Number) Identical port number where each target listens for traffic.
 - `targets` (Attributes List) List of all targets which will be used in the pool. Limited to 1000. (see [below for nested schema](#nestedatt--target_pools--targets))
-
-<a id="nestedatt--target_pools--session_persistence"></a>
-### Nested Schema for `target_pools.session_persistence`
-
-Optional:
-
-- `use_source_ip_address` (Boolean) If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.
-
 
 <a id="nestedatt--target_pools--active_health_check"></a>
 ### Nested Schema for `target_pools.active_health_check`
@@ -163,6 +153,14 @@ Read-Only:
 - `interval_jitter` (String) Interval duration threshold of the health checking in seconds.
 - `timeout` (String) Active health checking timeout duration in seconds.
 - `unhealthy_threshold` (Number) Unhealthy threshold of the health checking.
+
+
+<a id="nestedatt--target_pools--session_persistence"></a>
+### Nested Schema for `target_pools.session_persistence`
+
+Read-Only:
+
+- `use_source_ip_address` (Boolean) If true then all connections from one source IP address are redirected to the same target. This setting changes the load balancing algorithm to Maglev.
 
 
 <a id="nestedatt--target_pools--targets"></a>

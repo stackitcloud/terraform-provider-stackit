@@ -6,53 +6,56 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	sdk "github.com/stackitcloud/stackit-sdk-go/services/serverbackup"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *sdk.BackupSchedule
+		input       *serverbackup.BackupSchedule
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"default_values",
-			&sdk.BackupSchedule{
-				Id: new(int64(5)),
+			&serverbackup.BackupSchedule{
+				Id: int32(5),
 			},
 			Model{
 				ID:               types.StringValue("project_uid,eu01,server_uid,5"),
 				ProjectId:        types.StringValue("project_uid"),
 				ServerId:         types.StringValue("server_uid"),
-				BackupScheduleId: types.Int64Value(5),
+				BackupScheduleId: types.Int32Value(5),
+				Name:             types.StringValue(""),
+				Rrule:            types.StringValue(""),
+				Enabled:          types.BoolValue(false),
 			},
 			true,
 		},
 		{
 			"simple_values",
-			&sdk.BackupSchedule{
-				Id:      new(int64(5)),
-				Enabled: new(true),
-				Name:    new("backup_schedule_name_1"),
-				Rrule:   new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-				BackupProperties: &sdk.BackupProperties{
-					Name:            new("backup_name_1"),
-					RetentionPeriod: new(int64(3)),
-					VolumeIds:       &[]string{"uuid1", "uuid2"},
+			&serverbackup.BackupSchedule{
+				Id:      int32(5),
+				Enabled: true,
+				Name:    "backup_schedule_name_1",
+				Rrule:   "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+				BackupProperties: &serverbackup.BackupProperties{
+					Name:            "backup_name_1",
+					RetentionPeriod: int32(3),
+					VolumeIds:       []string{"uuid1", "uuid2"},
 				},
 			},
 			Model{
 				ServerId:         types.StringValue("server_uid"),
 				ProjectId:        types.StringValue("project_uid"),
-				BackupScheduleId: types.Int64Value(5),
+				BackupScheduleId: types.Int32Value(5),
 				ID:               types.StringValue("project_uid,eu01,server_uid,5"),
 				Name:             types.StringValue("backup_schedule_name_1"),
 				Rrule:            types.StringValue("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				Enabled:          types.BoolValue(true),
 				BackupProperties: &scheduleBackupPropertiesModel{
 					BackupName:      types.StringValue("backup_name_1"),
-					RetentionPeriod: types.Int64Value(3),
+					RetentionPeriod: types.Int32Value(3),
 					VolumeIds:       listValueFrom([]string{"uuid1", "uuid2"}),
 				},
 				Region: types.StringValue("eu01"),
@@ -62,12 +65,6 @@ func TestMapFields(t *testing.T) {
 		{
 			"nil_response",
 			nil,
-			Model{},
-			false,
-		},
-		{
-			"no_resource_id",
-			&sdk.BackupSchedule{},
 			Model{},
 			false,
 		},
@@ -100,14 +97,14 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *sdk.CreateBackupSchedulePayload
+		expected    *serverbackup.CreateBackupSchedulePayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&sdk.CreateBackupSchedulePayload{
-				BackupProperties: &sdk.BackupProperties{},
+			&serverbackup.CreateBackupSchedulePayload{
+				BackupProperties: &serverbackup.BackupProperties{},
 			},
 			true,
 		},
@@ -119,11 +116,11 @@ func TestToCreatePayload(t *testing.T) {
 				Rrule:            types.StringValue("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				BackupProperties: nil,
 			},
-			&sdk.CreateBackupSchedulePayload{
-				Name:             new("name"),
-				Enabled:          new(true),
-				Rrule:            new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-				BackupProperties: &sdk.BackupProperties{},
+			&serverbackup.CreateBackupSchedulePayload{
+				Name:             "name",
+				Enabled:          true,
+				Rrule:            "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+				BackupProperties: &serverbackup.BackupProperties{},
 			},
 			true,
 		},
@@ -133,10 +130,10 @@ func TestToCreatePayload(t *testing.T) {
 				Name:  types.StringValue(""),
 				Rrule: types.StringValue(""),
 			},
-			&sdk.CreateBackupSchedulePayload{
-				BackupProperties: &sdk.BackupProperties{},
-				Name:             new(""),
-				Rrule:            new(""),
+			&serverbackup.CreateBackupSchedulePayload{
+				BackupProperties: &serverbackup.BackupProperties{},
+				Name:             "",
+				Rrule:            "",
 			},
 			true,
 		},
@@ -170,14 +167,14 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		input       *Model
-		expected    *sdk.UpdateBackupSchedulePayload
+		expected    *serverbackup.UpdateBackupSchedulePayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
-			&sdk.UpdateBackupSchedulePayload{
-				BackupProperties: &sdk.BackupProperties{},
+			&serverbackup.UpdateBackupSchedulePayload{
+				BackupProperties: &serverbackup.BackupProperties{},
 			},
 			true,
 		},
@@ -189,11 +186,11 @@ func TestToUpdatePayload(t *testing.T) {
 				Rrule:            types.StringValue("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
 				BackupProperties: nil,
 			},
-			&sdk.UpdateBackupSchedulePayload{
-				Name:             new("name"),
-				Enabled:          new(true),
-				Rrule:            new("DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1"),
-				BackupProperties: &sdk.BackupProperties{},
+			&serverbackup.UpdateBackupSchedulePayload{
+				Name:             "name",
+				Enabled:          true,
+				Rrule:            "DTSTART;TZID=Europe/Sofia:20200803T023000 RRULE:FREQ=DAILY;INTERVAL=1",
+				BackupProperties: &serverbackup.BackupProperties{},
 			},
 			true,
 		},
@@ -203,10 +200,10 @@ func TestToUpdatePayload(t *testing.T) {
 				Name:  types.StringValue(""),
 				Rrule: types.StringValue(""),
 			},
-			&sdk.UpdateBackupSchedulePayload{
-				BackupProperties: &sdk.BackupProperties{},
-				Name:             new(""),
-				Rrule:            new(""),
+			&serverbackup.UpdateBackupSchedulePayload{
+				BackupProperties: &serverbackup.BackupProperties{},
+				Name:             "",
+				Rrule:            "",
 			},
 			true,
 		},

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -111,6 +112,7 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 5 minutes, and the maximum value is one hour.",
 		"udp_options":                           "Options that are specific to the UDP protocol.",
 		"udp_options_idle_timeout":              "Time after which an idle session is closed. The default value is set to 1 minute, and the maximum value is 2 minutes.",
+		"version":                               "Load balancer resource version.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -333,13 +335,11 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 						"session_persistence": schema.SingleNestedAttribute{
 							Description: descriptions["session_persistence"],
-							Optional:    true,
-							Computed:    false,
+							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"use_source_ip_address": schema.BoolAttribute{
 									Description: descriptions["use_source_ip_address"],
-									Optional:    true,
-									Computed:    false,
+									Computed:    true,
 								},
 							},
 						},
@@ -372,6 +372,10 @@ func (r *loadBalancerDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			},
 			"security_group_id": schema.StringAttribute{
 				Description: descriptions["security_group_id"],
+				Computed:    true,
+			},
+			"version": schema.StringAttribute{
+				Description: descriptions["version"],
 				Computed:    true,
 			},
 		},

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
@@ -155,7 +156,8 @@ func StringListToSlice(list basetypes.ListValue) ([]string, error) {
 		return nil, nil
 	}
 
-	var listStr []string
+	// Instantiate an empty slice to ensure the slice is not nil
+	listStr := []string{}
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {

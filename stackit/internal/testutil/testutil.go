@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	sdkConf "github.com/stackitcloud/stackit-sdk-go/core/config"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
@@ -67,6 +68,7 @@ var (
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
 	ALBCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_ALB_CUSTOM_ENDPOINT", providerName: "alb_custom_endpoint"}
+	ALBCertCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_ALB_CERT_CUSTOM_ENDPOINT", providerName: "alb_certificates_custom_endpoint"}
 	CdnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
 	DnsCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
 	EdgeCloudCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
@@ -99,6 +101,7 @@ var (
 
 	allCustomEndpoints = []customEndpointConfig{
 		ALBCustomEndpoint,
+		ALBCertCustomEndpoint,
 		CdnCustomEndpoint,
 		DnsCustomEndpoint,
 		EdgeCloudCustomEndpoint,
@@ -350,4 +353,15 @@ func ConvertConfigVariable(variable config.Variable) string {
 	}
 
 	return input
+}
+
+// CheckAttrHasPrefix returns a CheckResourceAttrWithFunc that validates
+// whether an attribute value starts with the given prefix.
+func CheckAttrHasPrefix(prefix string) resource.CheckResourceAttrWithFunc {
+	return func(value string) error {
+		if !strings.HasPrefix(value, prefix) {
+			return fmt.Errorf("should start with %s", prefix)
+		}
+		return nil
+	}
 }

@@ -13,88 +13,141 @@ import (
 )
 
 var (
-	testRoleId    = uuid.New().String()
-	testProjectId = uuid.New().String()
+	testRoleId     = uuid.New().String()
+	testResourceId = uuid.New().String()
 )
 
+type testCase struct {
+	description string
+	input       *authorization.GetRoleResponse
+	expected    *Model
+	isValid     bool
+}
+
+func allResourceTypes(fn func(resourceType string) []testCase) []testCase {
+	var tests []testCase
+
+	for _, resourceType := range resourceTypes {
+		tests = append(tests, fn(resourceType)...)
+	}
+
+	return tests
+}
+
 func TestMapFields(t *testing.T) {
-	tests := []struct {
-		description string
-		input       *authorization.GetRoleResponse
-		expected    *Model
-		isValid     bool
-	}{
-		{
-			description: "full_input",
-			input: &authorization.GetRoleResponse{
-				ResourceId:   &testProjectId,
-				ResourceType: new("project"),
-				Role: new(authorization.Role{
-					Id:          &testRoleId,
-					Name:        new("role-name"),
-					Description: new("Some description"),
-					Permissions: new([]authorization.Permission{
-						{
-							Name:        new("iam.subject.get"),
-							Description: new("Can read subjects."),
-						},
+	tests := allResourceTypes(func(resourceType string) []testCase {
+		return []testCase{
+			{
+				description: fmt.Sprintf("full_input_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+					Role: new(authorization.Role{
+						Id:          &testRoleId,
+						Name:        new("role-name"),
+						Description: new("Some description"),
+						Permissions: new([]authorization.Permission{
+							{
+								Name:        new("iam.subject.get"),
+								Description: new("Can read subjects."),
+							},
+						}),
 					}),
-				}),
-			},
-			expected: &Model{
-				Id:          types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testRoleId)),
-				RoleId:      types.StringValue(testRoleId),
-				ResourceId:  types.StringValue(testProjectId),
-				Name:        types.StringValue("role-name"),
-				Description: types.StringValue("Some description"),
-				Permissions: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("iam.subject.get"),
-				}),
-			},
-			isValid: true,
-		},
-		{
-			description: "partial_input",
-			input: &authorization.GetRoleResponse{
-				ResourceId:   &testProjectId,
-				ResourceType: new("project"),
-				Role: new(authorization.Role{
-					Id: &testRoleId,
-					Permissions: new([]authorization.Permission{
-						{
-							Name: new("iam.subject.get"),
-						},
+				},
+				expected: &Model{
+					Id:          types.StringValue(fmt.Sprintf("%s,%s", testResourceId, testRoleId)),
+					RoleId:      types.StringValue(testRoleId),
+					ResourceId:  types.StringValue(testResourceId),
+					Name:        types.StringValue("role-name"),
+					Description: types.StringValue("Some description"),
+					Permissions: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("iam.subject.get"),
 					}),
-				}),
+				},
+				isValid: true,
 			},
-			expected: &Model{
-				Id:         types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testRoleId)),
-				RoleId:     types.StringValue(testRoleId),
-				ResourceId: types.StringValue(testProjectId),
-				Permissions: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("iam.subject.get"),
-				}),
+			{
+				description: fmt.Sprintf("partial_input_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+					Role: new(authorization.Role{
+						Id: &testRoleId,
+						Permissions: new([]authorization.Permission{
+							{
+								Name: new("iam.subject.get"),
+							},
+						}),
+					}),
+				},
+				expected: &Model{
+					Id:         types.StringValue(fmt.Sprintf("%s,%s", testResourceId, testRoleId)),
+					RoleId:     types.StringValue(testRoleId),
+					ResourceId: types.StringValue(testResourceId),
+					Permissions: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("iam.subject.get"),
+					}),
+				},
+				isValid: true,
 			},
-			isValid: true,
-		},
-		{
-			description: "partial_input_without_permissions",
-			input: &authorization.GetRoleResponse{
-				ResourceId:   &testProjectId,
-				ResourceType: new("project"),
-				Role: new(authorization.Role{
-					Id:          &testRoleId,
-					Permissions: new([]authorization.Permission{}),
-				}),
+			{
+				description: fmt.Sprintf("missing_role_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+				},
+				expected: nil,
+				isValid:  false,
 			},
-			expected: &Model{
-				Id:          types.StringValue(fmt.Sprintf("%s,%s", testProjectId, testRoleId)),
-				RoleId:      types.StringValue(testRoleId),
-				ResourceId:  types.StringValue(testProjectId),
-				Permissions: types.ListNull(types.StringType),
+			{
+				description: fmt.Sprintf("missing_permissions_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+					Role: new(authorization.Role{
+						Id: &testRoleId,
+					}),
+				},
+				expected: nil,
+				isValid:  false,
 			},
-			isValid: true,
-		},
+			{
+				description: fmt.Sprintf("missing_role_id_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+					Role: new(authorization.Role{
+						Permissions: new([]authorization.Permission{}),
+					}),
+				},
+				expected: nil,
+				isValid:  false,
+			},
+			{
+				description: fmt.Sprintf("missing_role_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+				},
+				expected: nil,
+				isValid:  false,
+			},
+			{
+				description: fmt.Sprintf("missing_permissions_%s", resourceType),
+				input: &authorization.GetRoleResponse{
+					ResourceId:   &testResourceId,
+					ResourceType: &resourceType,
+					Role: new(authorization.Role{
+						Id: &testRoleId,
+					}),
+				},
+				expected: nil,
+				isValid:  false,
+			},
+		}
+	})
+
+	tests = append(tests, []testCase{
 		{
 			description: "nil_instance",
 			input:       nil,
@@ -107,40 +160,7 @@ func TestMapFields(t *testing.T) {
 			expected:    nil,
 			isValid:     false,
 		},
-		{
-			description: "missing_role",
-			input: &authorization.GetRoleResponse{
-				ResourceId:   &testProjectId,
-				ResourceType: new("project"),
-			},
-			expected: nil,
-			isValid:  false,
-		},
-		{
-			description: "missing_permissions",
-			input: &authorization.GetRoleResponse{
-				ResourceId:   &testProjectId,
-				ResourceType: new("project"),
-				Role: new(authorization.Role{
-					Id: &testRoleId,
-				}),
-			},
-			expected: nil,
-			isValid:  false,
-		},
-		{
-			description: "missing_role_id",
-			input: &authorization.GetRoleResponse{
-				ResourceId:   &testProjectId,
-				ResourceType: new("project"),
-				Role: new(authorization.Role{
-					Permissions: new([]authorization.Permission{}),
-				}),
-			},
-			expected: nil,
-			isValid:  false,
-		},
-	}
+	}...)
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
