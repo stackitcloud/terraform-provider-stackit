@@ -43,7 +43,7 @@ import (
 	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
-  
+
 	"golang.org/x/mod/semver"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
