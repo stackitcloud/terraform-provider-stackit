@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -330,7 +331,38 @@ func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 }
 
 func (r *serviceAccountFederatedIdentityProviderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	// Split the import identifier to extract project ID and email.
+	idParts := strings.Split(req.ID, core.Separator)
+
+	// Ensure the import identifier format is correct.
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing federated identity provider",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[email],[federation_id]  Got: %q", req.ID),
+		)
+		return
+	}
+
+	projectId := idParts[0]
+	email := idParts[1]
+	federationId := idParts[2]
+
+	// Attempt to parse the name from the email if valid.
+	_, err := serviceaccountUtils.ParseNameFromEmail(email)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing federated identity provider",
+			fmt.Sprintf("Invalid service account email: %v", err),
+		)
+		return
+	}
+
+	// Set the project ID, email and federation ID attributes in the state.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("email"), email)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("federation_id"), federationId)...)
+
+	tflog.Info(ctx, "Federated identity provider state imported")
 }
 
 func mapFields(ctx context.Context, apiResp *serviceaccount.FederatedIdentityProvider, model *Model, projectId, serviceAccountEmail string) error {
