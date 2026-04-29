@@ -359,7 +359,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) ImportState(ctx contex
 
 	// Set the project ID, email and federation ID attributes in the state.
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), projectId)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("email"), email)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("service_account_email"), email)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("federation_id"), federationId)...)
 
 	tflog.Info(ctx, "Federated identity provider state imported")
