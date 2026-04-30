@@ -305,20 +305,6 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	backendOptions := []string{"http", "bucket"}
 	statusCode := []int32{301, 302, 303, 307, 308}
-	defaultWafConfigAllowedHttpVersions := sortedStringListToAttrValueList([]string{
-		"HTTP/1.0", "HTTP/1.1", "HTTP/2", "HTTP/2.0",
-	})
-	defaultWafConfigAllowedRequestContentTypes := sortedStringListToAttrValueList([]string{
-		"application/x-www-form-urlencoded", "multipart/form-data", "multipart/related",
-		"text/xml", "application/xml", "application/soap+xml", "application/x-amf",
-		"application/json", "application/octet-stream", "application/csp-report",
-		"application/xss-auditor-report", "text/plain",
-	})
-	defaultWafConfigAllowedHttpMethods := sortedStringListToAttrValueList([]string{
-		"GET", "HEAD", "POST", "PUT", "DELETE",
-		"CONNECT", "OPTIONS", "TRACE", "PATCH",
-	})
-
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
@@ -497,96 +483,73 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							},
 							"allowed_http_versions": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_versions"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedHttpVersions)),
 								Validators: []validator.List{
 									listvalidator.SizeAtLeast(1),
 								},
 							},
 							"allowed_request_content_types": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_request_content_types"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedRequestContentTypes)),
 								Validators: []validator.List{
 									listvalidator.SizeAtLeast(1),
 								},
 							},
 							"allowed_http_methods": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_methods"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, defaultWafConfigAllowedHttpMethods)),
 								Validators: []validator.List{
 									listvalidator.SizeAtLeast(1),
 								},
 							},
 							"enabled_rule_ids": schema.ListAttribute{
-								Optional:    true,
-								Computed:    true,
+								Optional: true,
+
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"disabled_rule_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"log_only_rule_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"enabled_rule_group_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"disabled_rule_group_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"log_only_rule_group_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"enabled_rule_collection_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"disabled_rule_collection_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 							"log_only_rule_collection_ids": schema.ListAttribute{
 								Optional:    true,
-								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
-								Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 							},
 						},
 					},
@@ -1791,7 +1754,7 @@ func validateCountryCode(country string) (string, error) {
 
 // getSortedWafList extracts strings from HCL list, sorts them and returns the slice
 func getSortedWafList(ctx context.Context, tfList basetypes.ListValue) []string {
-	if tfList.IsNull() || tfList.IsUnknown() {
+	if utils.IsUndefined(tfList) {
 		return nil
 	}
 	var elements []string
