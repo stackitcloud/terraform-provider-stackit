@@ -120,6 +120,7 @@ import (
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
+	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -710,6 +711,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
 		serverUpdateEnable.NewServerUpdateEnableDataSource,
+		vpnGateway.NewVPNGatewayDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -802,6 +804,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
 		serverUpdateEnable.NewServerUpdateEnableResource,
+		vpnGateway.NewVpnGatewayResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
