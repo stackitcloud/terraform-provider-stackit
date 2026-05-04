@@ -141,7 +141,7 @@ func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 }
 
 // Read implements [datasource.DataSource].
-func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)

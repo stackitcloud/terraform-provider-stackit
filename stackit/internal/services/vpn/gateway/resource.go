@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -218,7 +219,7 @@ func (r *vpnGatewayResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 }
 
-func (r *vpnGatewayResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+func (r *vpnGatewayResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	if req.Config.Raw.IsNull() {
 		return
@@ -264,7 +265,7 @@ func (r *vpnGatewayResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "VPN gateway state imported")
 }
 
-func (r *vpnGatewayResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *vpnGatewayResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -328,7 +329,7 @@ func (r *vpnGatewayResource) Create(ctx context.Context, req resource.CreateRequ
 	tflog.Info(ctx, "VPN gateway created")
 }
 
-func (r *vpnGatewayResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *vpnGatewayResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -347,8 +348,8 @@ func (r *vpnGatewayResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	gatewayResp, err := r.client.DefaultAPI.GetVPNGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -372,7 +373,7 @@ func (r *vpnGatewayResource) Read(ctx context.Context, req resource.ReadRequest,
 	tflog.Info(ctx, "VPN gateway read")
 }
 
-func (r *vpnGatewayResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *vpnGatewayResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -423,7 +424,7 @@ func (r *vpnGatewayResource) Update(ctx context.Context, req resource.UpdateRequ
 	tflog.Info(ctx, "VPN gateway updated")
 }
 
-func (r *vpnGatewayResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *vpnGatewayResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
