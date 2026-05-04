@@ -245,9 +245,14 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s", testutil.ProjectId, distributionId), nil
 				},
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"domains"}, // we added a domain in the meantime...
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"domains",
+					"config.waf.allowed_http_methods",
+					"config.waf.allowed_http_versions",
+					"config.waf.allowed_request_content_types",
+					"config.waf.paranoia_level",
+				},
 			},
 			{
 				ResourceName:    "stackit_cdn_custom_domain.custom_domain",
