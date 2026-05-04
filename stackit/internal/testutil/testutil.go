@@ -97,6 +97,7 @@ var (
 	SFSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SFS_CUSTOM_ENDPOINT", providerName: "sfs_custom_endpoint"}
 	ServiceAccountCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT", providerName: "service_account_custom_endpoint"}
 	TokenCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_TOKEN_CUSTOM_ENDPOINT", providerName: "token_custom_endpoint"}
+	VpnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_VPN_CUSTOM_ENDPOINT", providerName: "vpn_custom_endpoint"}
 	SKECustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SKE_CUSTOM_ENDPOINT", providerName: "ske_custom_endpoint"}
 
 	allCustomEndpoints = []customEndpointConfig{
@@ -130,6 +131,7 @@ var (
 		SFSCustomEndpoint,
 		ServiceAccountCustomEndpoint,
 		TokenCustomEndpoint,
+		VpnCustomEndpoint,
 		SKECustomEndpoint,
 	}
 )
