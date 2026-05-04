@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske/wait"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -540,22 +540,22 @@ func testAccCheckSKEDestroy(s *terraform.State) error {
 		clustersToDestroy = append(clustersToDestroy, clusterName)
 	}
 
-	clustersResp, err := client.ListClusters(ctx, testutil.ProjectId, testutil.Region).Execute()
+	clustersResp, err := client.DefaultAPI.ListClusters(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting clustersResp: %w", err)
 	}
 
-	items := *clustersResp.Items
+	items := clustersResp.Items
 	for i := range items {
 		if items[i].Name == nil {
 			continue
 		}
 		if utils.Contains(clustersToDestroy, *items[i].Name) {
-			_, err := client.DeleteClusterExecute(ctx, testutil.ProjectId, testutil.Region, *items[i].Name)
+			_, err := client.DefaultAPI.DeleteCluster(ctx, testutil.ProjectId, testutil.Region, *items[i].Name).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: %w", *items[i].Name, err)
 			}
-			_, err = wait.DeleteClusterWaitHandler(ctx, client, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
+			_, err = wait.DeleteClusterWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *items[i].Name).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("destroying cluster %s during CheckDestroy: waiting for deletion %w", *items[i].Name, err)
 			}
@@ -586,7 +586,7 @@ func NewSkeProviderOptions(nodePoolOs string) *SkeProviderOptions {
 		panic("failed to create SKE client: " + err.Error())
 	}
 
-	options, err := client.ListProviderOptions(ctx, testutil.Region).Execute()
+	options, err := client.DefaultAPI.ListProviderOptions(ctx, testutil.Region).Execute()
 	if err != nil {
 		panic("failed to fetch SKE provider options: " + err.Error())
 	}
@@ -608,10 +608,10 @@ func (s *SkeProviderOptions) getMachineVersionAt(position int) string {
 		panic(fmt.Sprintf("no supported machine version found at position %d", position))
 	}
 
-	for _, mi := range *s.options.MachineImages {
+	for _, mi := range s.options.MachineImages {
 		if mi.Name != nil && *mi.Name == s.nodePoolOsName && mi.Versions != nil {
 			count := 0
-			for _, v := range *mi.Versions {
+			for _, v := range mi.Versions {
 				if v.State != nil && v.Version != nil {
 					if count == position {
 						return *v.Version
@@ -637,7 +637,7 @@ func (s *SkeProviderOptions) getK8sVersionAt(position int) string {
 	}
 
 	count := 0
-	for _, v := range *s.options.KubernetesVersions {
+	for _, v := range s.options.KubernetesVersions {
 		if v.State != nil && *v.State == "supported" && v.Version != nil {
 			if count == position {
 				return *v.Version
