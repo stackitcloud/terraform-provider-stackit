@@ -45,7 +45,7 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Schema(_ context.Con
 		"service_account_email": "The email address associated with the service account, used for account identification and communication.",
 	}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf("%s%s", descriptions["main"], markdownDescription),
+		MarkdownDescription: fmt.Sprintf("%s", descriptions["main"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
