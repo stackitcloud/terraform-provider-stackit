@@ -10,15 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-<<<<<<< service-enablement-sdk-update
+
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	serviceenablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
-=======
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
 	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
->>>>>>> main
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
