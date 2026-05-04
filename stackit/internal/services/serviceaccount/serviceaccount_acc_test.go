@@ -45,6 +45,9 @@ var (
 
 	//go:embed testdata/datasource-service-account-exact-not-found.tf
 	datasourceServiceAccountExactNotFound string
+
+	//go:embed testdata/datasource-service-account-federated-identity-provider.tf
+	datasourceServiceAccountFederatedIdentityProvider string
 )
 
 var testConfigVars = config.Variables{
@@ -89,12 +92,14 @@ var testConfigVarsFederatedIdentityProviderCreate = config.Variables{
 	"project_id":    config.StringVariable(testutil.ProjectId),
 	"provider_name": config.StringVariable("provider1"),
 	"sub":           config.StringVariable("user@mail.com"),
+	"name":          config.StringVariable("satest03"),
 }
 
 var testConfigVarsFederatedIdentityProviderUpdate = config.Variables{
 	"project_id":    config.StringVariable(testutil.ProjectId),
 	"provider_name": config.StringVariable("provider1-updated"),
 	"sub":           config.StringVariable("other@mail.com"),
+	"name":          config.StringVariable("satest03"),
 }
 
 func TestServiceAccount(t *testing.T) {
@@ -267,6 +272,38 @@ func TestServiceAccount(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_service_account_federated_identity_provider.provider", "assertions.2.value", "sts.accounts.stackit.cloud"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "id"),
 					resource.TestCheckResourceAttrSet("stackit_service_account_federated_identity_provider.provider", "service_account_email"),
+				),
+			},
+			// Federated identity data source
+			{
+				ConfigVariables: testConfigVarsFederatedIdentityProviderUpdate,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceServiceAccountFederatedIdentityProvider + "\n" + datasourceServiceAccountFederatedIdentityProvider,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_service_account_federated_identity_provider.provider", "id"),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account_federated_identity_provider.provider", "project_id",
+						"data.stackit_service_account_federated_identity_provider.provider", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account_federated_identity_provider.provider", "service_account_email",
+						"data.stackit_service_account_federated_identity_provider.provider", "service_account_email",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account_federated_identity_provider.provider", "email",
+						"data.stackit_service_account_federated_identity_provider.provider", "email",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account_federated_identity_provider.provider", "name",
+						"data.stackit_service_account_federated_identity_provider.provider", "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account_federated_identity_provider.provider", "issuer",
+						"data.stackit_service_account_federated_identity_provider.provider", "issuer",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_service_account_federated_identity_provider.provider", "assertions",
+						"data.stackit_service_account_federated_identity_provider.provider", "assertions",
+					),
 				),
 			},
 			// Deletion is done by the framework implicitly

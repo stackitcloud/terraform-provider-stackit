@@ -221,7 +221,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 	serviceAccountEmail := model.ServiceAccountEmail.ValueString()
 	federationId := model.FederationId.ValueString()
 
-	apiResp, err := r.client.DefaultAPI.ListFederatedIdentityProviders(ctx, projectId, serviceAccountEmail).
+	apiResp, err := r.client.DefaultAPI.GetFederatedIdentityProvider(ctx, projectId, serviceAccountEmail, federationId).
 		Execute()
 
 	if err != nil {
@@ -236,25 +236,7 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 		return
 	}
 
-	if len(apiResp.Resources) == 0 {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	var found *serviceaccount.FederatedIdentityProvider
-	for i, provider := range apiResp.Resources {
-		if provider.Id != nil && *provider.Id == federationId {
-			found = &(apiResp.Resources)[i]
-			break
-		}
-	}
-
-	if found == nil {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	if err := mapFields(ctx, found, &model, projectId, serviceAccountEmail); err != nil {
+	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("failed to map response to model: %v", err))
 		return
 	}

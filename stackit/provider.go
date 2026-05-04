@@ -690,6 +690,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewScheduleDataSource,
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
+		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderDataSource,
 		serviceAccounts.NewServiceAccountsDataSource,
 		skeCluster.NewClusterDataSource,
 		skeKubernetesVersion.NewKubernetesVersionsDataSource,

@@ -6,13 +6,17 @@ variable "provider_name" {
   type = string
 }
 
+variable "name" {
+  type = string
+}
+
 variable "sub" {
   type = string
 }
 
 resource "stackit_service_account" "sa" {
   project_id = var.project_id
-  name       = "test-sa"
+  name       = var.name
 }
 
 resource "stackit_service_account_federated_identity_provider" "provider" {
