@@ -13,11 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -36,13 +37,17 @@ type RoutingTableRoutesDataSourceModel struct {
 }
 
 // NewRoutingTableRoutesDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTableRoutesDataSource() datasource.DataSource {
-	return &routingTableRoutesDataSource{}
+func NewRoutingTableRoutesDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &routingTableRoutesDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // routingTableDataSource is the data source implementation.
 type routingTableRoutesDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -63,11 +68,11 @@ func (d *routingTableRoutesDataSource) Configure(ctx context.Context, req dataso
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -102,7 +107,7 @@ func (d *routingTableRoutesDataSource) Read(ctx context.Context, req datasource.
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 
-	routesResp, err := d.client.DefaultAPI.ListRoutesOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routesResp, err := d.client.ListRoutesOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

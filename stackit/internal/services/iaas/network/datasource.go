@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -54,13 +55,17 @@ type DataSourceModel struct {
 }
 
 // NewNetworkDataSource is a helper function to simplify the provider implementation.
-func NewNetworkDataSource() datasource.DataSource {
-	return &networkDataSource{}
+func NewNetworkDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &networkDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkDataSource is the data source implementation.
 type networkDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -76,11 +81,11 @@ func (d *networkDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -238,7 +243,7 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
-	networkResp, err := d.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := d.client.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

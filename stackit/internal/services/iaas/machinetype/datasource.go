@@ -9,6 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -21,7 +23,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -48,7 +49,9 @@ func NewMachineTypeDataSource() datasource.DataSource {
 }
 
 type machineTypeDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -68,11 +71,10 @@ func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	client := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = client
 
 	tflog.Info(ctx, "IAAS client configured")
 }
@@ -163,7 +165,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "filter_is_null", model.Filter.IsNull())
 	ctx = tflog.SetField(ctx, "filter_is_unknown", model.Filter.IsUnknown())
 
-	listMachineTypeReq := d.client.DefaultAPI.ListMachineTypes(ctx, projectId, region)
+	listMachineTypeReq := d.client.ListMachineTypes(ctx, projectId, region)
 
 	if !model.Filter.IsNull() && !model.Filter.IsUnknown() && strings.TrimSpace(model.Filter.ValueString()) != "" {
 		listMachineTypeReq = listMachineTypeReq.Filter(strings.TrimSpace(model.Filter.ValueString()))

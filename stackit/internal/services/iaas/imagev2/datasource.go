@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -109,13 +111,17 @@ var checksumTypes = map[string]attr.Type{
 }
 
 // NewImageV2DataSource is a helper function to simplify the provider implementation.
-func NewImageV2DataSource() datasource.DataSource {
-	return &imageDataV2Source{}
+func NewImageV2DataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &imageDataV2Source{
+		clientFactory: clientFactory,
+	}
 }
 
 // imageDataV2Source is the data source implementation.
 type imageDataV2Source struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -136,12 +142,11 @@ func (d *imageDataV2Source) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	d.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -394,7 +399,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Case 1: Direct lookup by image ID
 	if imageID != "" {
-		imageResp, err = d.client.DefaultAPI.GetImage(ctx, projectID, region, imageID).Execute()
+		imageResp, err = d.client.GetImage(ctx, projectID, region, imageID).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "Reading image",
 				fmt.Sprintf("Image with ID %q does not exist in project %q.", imageID, projectID),
@@ -420,7 +425,7 @@ func (d *imageDataV2Source) Read(ctx context.Context, req datasource.ReadRequest
 		}
 
 		// Fetch all available images
-		imageList, err := d.client.DefaultAPI.ListImages(ctx, projectID, region).Execute()
+		imageList, err := d.client.ListImages(ctx, projectID, region).Execute()
 		if err != nil {
 			utils.LogError(ctx, &resp.Diagnostics, err, "List images", "Unable to fetch images", nil)
 			return

@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -26,13 +26,17 @@ var (
 )
 
 // NewNetworkAreaRouteDataSource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRouteDataSource() datasource.DataSource {
-	return &networkAreaRouteDataSource{}
+func NewNetworkAreaRouteDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &networkAreaRouteDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkDataSource is the data source implementation.
 type networkAreaRouteDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -48,11 +52,11 @@ func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -155,7 +159,7 @@ func (d *networkAreaRouteDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
-	networkAreaRouteResp, err := d.client.DefaultAPI.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
+	networkAreaRouteResp, err := d.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

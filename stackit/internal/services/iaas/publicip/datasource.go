@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -26,13 +26,17 @@ var (
 )
 
 // NewPublicIpDataSource is a helper function to simplify the provider implementation.
-func NewPublicIpDataSource() datasource.DataSource {
-	return &publicIpDataSource{}
+func NewPublicIpDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &publicIpDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // publicIpDataSource is the data source implementation.
 type publicIpDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -48,11 +52,11 @@ func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -127,7 +131,7 @@ func (d *publicIpDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
-	publicIpResp, err := d.client.DefaultAPI.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
+	publicIpResp, err := d.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
