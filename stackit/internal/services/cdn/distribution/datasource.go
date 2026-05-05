@@ -274,62 +274,62 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 								Computed:    true,
 								Description: schemaDescriptions["waf_paranoia_level"],
 							},
-							"allowed_http_versions": schema.ListAttribute{
+							"allowed_http_versions": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_versions"],
 							},
-							"allowed_request_content_types": schema.ListAttribute{
+							"allowed_request_content_types": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_request_content_types"],
 							},
-							"allowed_http_methods": schema.ListAttribute{
+							"allowed_http_methods": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_methods"],
 							},
-							"enabled_rule_ids": schema.ListAttribute{
+							"enabled_rule_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_ids"],
 							},
-							"disabled_rule_ids": schema.ListAttribute{
+							"disabled_rule_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_ids"],
 							},
-							"log_only_rule_ids": schema.ListAttribute{
+							"log_only_rule_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_ids"],
 							},
-							"enabled_rule_group_ids": schema.ListAttribute{
+							"enabled_rule_group_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
 							},
-							"disabled_rule_group_ids": schema.ListAttribute{
+							"disabled_rule_group_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
 							},
-							"log_only_rule_group_ids": schema.ListAttribute{
+							"log_only_rule_group_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
 							},
-							"enabled_rule_collection_ids": schema.ListAttribute{
+							"enabled_rule_collection_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
 							},
-							"disabled_rule_collection_ids": schema.ListAttribute{
+							"disabled_rule_collection_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
 							},
-							"log_only_rule_collection_ids": schema.ListAttribute{
+							"log_only_rule_collection_ids": schema.SetAttribute{
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
@@ -593,6 +593,17 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		return core.DiagsToError(diags)
 	}
 
+	// Helper to unconditionally map set fields for WAF
+	mapWafSet := func(apiList []string) types.Set {
+		if apiList != nil {
+			setVal, diags := types.SetValueFrom(ctx, types.StringType, apiList)
+			if !diags.HasError() {
+				return setVal
+			}
+		}
+		return types.SetNull(types.StringType)
+	}
+
 	// Map Waf
 	wafVal := types.ObjectNull(wafTypes)
 	if distribution.Config.Waf.Mode != "" {
@@ -607,18 +618,18 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 			wafObjAttrs["paranoia_level"] = types.StringNull()
 		}
 
-		wafObjAttrs["allowed_http_versions"] = conversion.SortedStringsToListValue(distribution.Config.Waf.AllowedHttpVersions)
-		wafObjAttrs["allowed_request_content_types"] = conversion.SortedStringsToListValue(distribution.Config.Waf.AllowedRequestContentTypes)
-		wafObjAttrs["allowed_http_methods"] = conversion.SortedStringsToListValue(distribution.Config.Waf.AllowedHttpMethods)
-		wafObjAttrs["enabled_rule_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.EnabledRuleIds)
-		wafObjAttrs["disabled_rule_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.DisabledRuleIds)
-		wafObjAttrs["log_only_rule_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.LogOnlyRuleIds)
-		wafObjAttrs["enabled_rule_group_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.EnabledRuleGroupIds)
-		wafObjAttrs["disabled_rule_group_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.DisabledRuleGroupIds)
-		wafObjAttrs["log_only_rule_group_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.LogOnlyRuleGroupIds)
-		wafObjAttrs["enabled_rule_collection_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.EnabledRuleCollectionIds)
-		wafObjAttrs["disabled_rule_collection_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.DisabledRuleCollectionIds)
-		wafObjAttrs["log_only_rule_collection_ids"] = conversion.SortedStringsToListValue(distribution.Config.Waf.LogOnlyRuleCollectionIds)
+		wafObjAttrs["allowed_http_versions"] = mapWafSet(distribution.Config.Waf.AllowedHttpVersions)
+		wafObjAttrs["allowed_request_content_types"] = mapWafSet(distribution.Config.Waf.AllowedRequestContentTypes)
+		wafObjAttrs["allowed_http_methods"] = mapWafSet(distribution.Config.Waf.AllowedHttpMethods)
+		wafObjAttrs["enabled_rule_ids"] = mapWafSet(distribution.Config.Waf.EnabledRuleIds)
+		wafObjAttrs["disabled_rule_ids"] = mapWafSet(distribution.Config.Waf.DisabledRuleIds)
+		wafObjAttrs["log_only_rule_ids"] = mapWafSet(distribution.Config.Waf.LogOnlyRuleIds)
+		wafObjAttrs["enabled_rule_group_ids"] = mapWafSet(distribution.Config.Waf.EnabledRuleGroupIds)
+		wafObjAttrs["disabled_rule_group_ids"] = mapWafSet(distribution.Config.Waf.DisabledRuleGroupIds)
+		wafObjAttrs["log_only_rule_group_ids"] = mapWafSet(distribution.Config.Waf.LogOnlyRuleGroupIds)
+		wafObjAttrs["enabled_rule_collection_ids"] = mapWafSet(distribution.Config.Waf.EnabledRuleCollectionIds)
+		wafObjAttrs["disabled_rule_collection_ids"] = mapWafSet(distribution.Config.Waf.DisabledRuleCollectionIds)
+		wafObjAttrs["log_only_rule_collection_ids"] = mapWafSet(distribution.Config.Waf.LogOnlyRuleCollectionIds)
 
 		var diagWaf diag.Diagnostics
 		wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
