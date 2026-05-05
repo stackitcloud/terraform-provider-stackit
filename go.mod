@@ -20,6 +20,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.12.2
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.11.1
+	github.com/stackitcloud/stackit-sdk-go/services/intake v0.8.1
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.12.2
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.28.2
@@ -210,7 +211,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spf13/viper v1.12.0 // indirect
 	github.com/ssgreg/nlreturn/v2 v2.2.1 // indirect
-	github.com/stackitcloud/stackit-sdk-go/services/intake v0.8.1 // indirect
 	github.com/stbenjam/no-sprintf-host-port v0.3.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
