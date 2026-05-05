@@ -672,7 +672,11 @@ func mapFields(securityGroupRuleResp *iaas.SecurityGroupRule, model *Model, regi
 
 func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error {
 	if securityGroupRuleResp.IcmpParameters == nil {
-		m.IcmpParameters = types.ObjectNull(icmpParametersTypes)
+		// workaround: when the icmp parameters code and type are set to the 0, the API responds with null for icmp parameters.
+		// To prevent a state drift, we set icmp parameters only to null, when it's also in the model as null defined.
+		if utils.IsUndefined(m.IcmpParameters) {
+			m.IcmpParameters = types.ObjectNull(icmpParametersTypes)
+		}
 		return nil
 	}
 
@@ -691,7 +695,11 @@ func mapIcmpParameters(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) 
 
 func mapPortRange(securityGroupRuleResp *iaas.SecurityGroupRule, m *Model) error {
 	if securityGroupRuleResp.PortRange == nil {
-		m.PortRange = types.ObjectNull(portRangeTypes)
+		// workaround: when the port range is set to the whole range 1-65535, the API responds with null for port range.
+		// To prevent a state drift, we set port range only to null, when it's also in the model as null defined.
+		if utils.IsUndefined(m.PortRange) {
+			m.PortRange = types.ObjectNull(portRangeTypes)
+		}
 		return nil
 	}
 
