@@ -76,6 +76,7 @@ import (
 	logsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/instance"
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
+	modelExperimentsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
@@ -191,6 +192,7 @@ type providerModel struct {
 	LogsCustomEndpoint              types.String `tfsdk:"logs_custom_endpoint"`
 	MariaDBCustomEndpoint           types.String `tfsdk:"mariadb_custom_endpoint"`
 	ModelServingCustomEndpoint      types.String `tfsdk:"modelserving_custom_endpoint"`
+	ModelExperimentsCustomEndpoint  types.String `tfsdk:"modelexperiments_custom_endpoint"`
 	MongoDBFlexCustomEndpoint       types.String `tfsdk:"mongodbflex_custom_endpoint"`
 	ObjectStorageCustomEndpoint     types.String `tfsdk:"objectstorage_custom_endpoint"`
 	ObservabilityCustomEndpoint     types.String `tfsdk:"observability_custom_endpoint"`
@@ -248,6 +250,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"kms_custom_endpoint":                  "Custom endpoint for the KMS service",
 		"mongodbflex_custom_endpoint":          "Custom endpoint for the MongoDB Flex service",
 		"modelserving_custom_endpoint":         "Custom endpoint for the AI Model Serving service",
+		"modelexperiments_custom_endpoint":     "Custom endpoint for the AI Model Experiments service",
 		"loadbalancer_custom_endpoint":         "Custom endpoint for the Load Balancer service",
 		"logme_custom_endpoint":                "Custom endpoint for the LogMe service",
 		"logs_custom_endpoint":                 "Custom endpoint for the Logs service",
@@ -406,6 +409,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"modelserving_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["modelserving_custom_endpoint"],
+			},
+			"modelexperiments_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["modelexperiments_custom_endpoint"],
 			},
 			"authorization_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -570,6 +577,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.LogsCustomEndpoint, func(v string) { providerData.LogsCustomEndpoint = v })
 	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { providerData.MariaDBCustomEndpoint = v })
 	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
+	setStringField(providerConfig.ModelExperimentsCustomEndpoint, func(v string) { providerData.ModelExperimentsCustomEndpoint = v })
 	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
 	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { providerData.ObjectStorageCustomEndpoint = v })
 	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { providerData.ObservabilityCustomEndpoint = v })
@@ -815,6 +823,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		mariaDBInstance.NewInstanceResource,
 		mariaDBCredential.NewCredentialResource,
 		modelServingToken.NewTokenResource,
+		modelExperimentsInstance.NewInstanceResource,
 		mongoDBFlexInstance.NewInstanceResource,
 		mongoDBFlexUser.NewUserResource,
 		objectStorageBucket.NewBucketResource,
