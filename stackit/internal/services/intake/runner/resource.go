@@ -431,11 +431,7 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		runnerResp.Id,
 	)
 
-	if runnerResp.Id == "" {
-		model.RunnerId = types.StringNull()
-	} else {
-		model.RunnerId = types.StringValue(runnerResp.Id)
-	}
+	model.RunnerId = types.StringValue(runnerResp.Id)
 
 	if len(runnerResp.Labels) == 0 {
 		model.Labels = types.MapNull(types.StringType)
@@ -447,26 +443,13 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		model.Labels = labels
 	}
 
-	if runnerResp.DisplayName == "" {
-		model.Name = types.StringNull()
-	} else {
-		model.Name = types.StringValue(runnerResp.DisplayName)
-	}
+	model.Name = types.StringValue(runnerResp.DisplayName)
 
 	model.Description = types.StringPointerValue(runnerResp.Description)
 	model.Region = types.StringValue(region)
 
-	if runnerResp.MaxMessageSizeKiB == 0 {
-		model.MaxMessageSizeKiB = types.Int32Null()
-	} else {
-		model.MaxMessageSizeKiB = types.Int32Value(runnerResp.MaxMessageSizeKiB)
-	}
-
-	if runnerResp.MaxMessagesPerHour == 0 {
-		model.MaxMessagesPerHour = types.Int32Null()
-	} else {
-		model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
-	}
+	model.MaxMessageSizeKiB = types.Int32Value(runnerResp.MaxMessageSizeKiB)
+	model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
 
 	return nil
 }
