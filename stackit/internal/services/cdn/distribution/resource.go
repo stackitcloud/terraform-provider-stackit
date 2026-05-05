@@ -477,11 +477,13 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							},
 							"paranoia_level": schema.StringAttribute{
 								Optional:    true,
+								Computed:    true,
 								Description: schemaDescriptions["waf_paranoia_level"],
 								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafParanoiaLevelEnumValues)...)},
 							},
 							"allowed_http_versions": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_versions"],
 								Validators: []validator.List{
@@ -490,6 +492,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							},
 							"allowed_request_content_types": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_request_content_types"],
 								Validators: []validator.List{
@@ -505,18 +508,20 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								},
 							},
 							"enabled_rule_ids": schema.ListAttribute{
-								Optional: true,
-
+								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_ids"],
 							},
 							"disabled_rule_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_ids"],
 							},
 							"log_only_rule_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_ids"],
 							},
@@ -527,26 +532,31 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							},
 							"disabled_rule_group_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
 							},
 							"log_only_rule_group_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
 							},
 							"enabled_rule_collection_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
 							},
 							"disabled_rule_collection_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
 							},
 							"log_only_rule_collection_ids": schema.ListAttribute{
 								Optional:    true,
+								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
 							},
@@ -1307,30 +1317,16 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	// Detect if we are running an Import (or Data Source Read) where prior config doesn't exist
 	isImport := utils.IsUndefined(model.Config)
 
-	// Parse old WAF state to respect omitted configurations during normal applies
-	var oldWaf wafConfig
-	if !isImport {
-		_ = oldConfig.Waf.As(ctx, &oldWaf, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    false,
-			UnhandledUnknownAsEmpty: false,
-		})
-	}
-
-	// Helper to conditionally map string fields
-	mapWafString := func(apiVal *string, oldVal types.String) types.String {
-		// Always map the API value during an Import, OR if the user explicitly defined it in HCL
-		if isImport || !oldVal.IsNull() {
-			if apiVal != nil {
-				return types.StringValue(*apiVal)
-			}
+	// Helper to unconditionally map string fields
+	mapWafString := func(apiVal *string) types.String {
+		if apiVal != nil {
+			return types.StringValue(*apiVal)
 		}
 		return types.StringNull()
 	}
-
-	// Helper to conditionally map list fields
-	mapWafList := func(apiList []string, oldList types.List) types.List {
-		// Always map the API value during an Import, OR if the user explicitly defined it in HCL
-		if isImport || !oldList.IsNull() {
+	// Helper to unconditionally map list fields
+	mapWafList := func(apiList []string) types.List {
+		if apiList != nil {
 			return conversion.SortedStringsToListValue(apiList)
 		}
 		return types.ListNull(types.StringType)
@@ -1341,19 +1337,19 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		plVal := string(*distribution.Config.Waf.ParanoiaLevel)
 		pl = &plVal
 	}
-	wafObjAttrs["paranoia_level"] = mapWafString(pl, oldWaf.ParanoiaLevel)
-	wafObjAttrs["allowed_http_versions"] = mapWafList(distribution.Config.Waf.AllowedHttpVersions, oldWaf.AllowedHttpVersions)
-	wafObjAttrs["allowed_request_content_types"] = mapWafList(distribution.Config.Waf.AllowedRequestContentTypes, oldWaf.AllowedRequestContentTypes)
-	wafObjAttrs["allowed_http_methods"] = mapWafList(distribution.Config.Waf.AllowedHttpMethods, oldWaf.AllowedHttpMethods)
-	wafObjAttrs["enabled_rule_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleIds, oldWaf.EnabledRuleIds)
-	wafObjAttrs["disabled_rule_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleIds, oldWaf.DisabledRuleIds)
-	wafObjAttrs["log_only_rule_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleIds, oldWaf.LogOnlyRuleIds)
-	wafObjAttrs["enabled_rule_group_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleGroupIds, oldWaf.EnabledRuleGroupIds)
-	wafObjAttrs["disabled_rule_group_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleGroupIds, oldWaf.DisabledRuleGroupIds)
-	wafObjAttrs["log_only_rule_group_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleGroupIds, oldWaf.LogOnlyRuleGroupIds)
-	wafObjAttrs["enabled_rule_collection_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleCollectionIds, oldWaf.EnabledRuleCollectionIds)
-	wafObjAttrs["disabled_rule_collection_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleCollectionIds, oldWaf.DisabledRuleCollectionIds)
-	wafObjAttrs["log_only_rule_collection_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleCollectionIds, oldWaf.LogOnlyRuleCollectionIds)
+	wafObjAttrs["paranoia_level"] = mapWafString(pl)
+	wafObjAttrs["allowed_http_versions"] = mapWafList(distribution.Config.Waf.AllowedHttpVersions)
+	wafObjAttrs["allowed_request_content_types"] = mapWafList(distribution.Config.Waf.AllowedRequestContentTypes)
+	wafObjAttrs["allowed_http_methods"] = mapWafList(distribution.Config.Waf.AllowedHttpMethods)
+	wafObjAttrs["enabled_rule_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleIds)
+	wafObjAttrs["disabled_rule_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleIds)
+	wafObjAttrs["log_only_rule_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleIds)
+	wafObjAttrs["enabled_rule_group_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleGroupIds)
+	wafObjAttrs["disabled_rule_group_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleGroupIds)
+	wafObjAttrs["log_only_rule_group_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleGroupIds)
+	wafObjAttrs["enabled_rule_collection_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleCollectionIds)
+	wafObjAttrs["disabled_rule_collection_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleCollectionIds)
+	wafObjAttrs["log_only_rule_collection_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleCollectionIds)
 
 	// Determine if WAF should be entirely excluded to prevent drift.
 	// The API can return an empty string for fully unconfigured backends.
