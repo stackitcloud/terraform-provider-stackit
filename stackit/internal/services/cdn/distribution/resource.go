@@ -502,6 +502,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"allowed_http_methods": schema.ListAttribute{
 								Optional:    true,
 								ElementType: types.StringType,
+								Computed:    true,
 								Description: schemaDescriptions["waf_allowed_http_methods"],
 								Validators: []validator.List{
 									listvalidator.SizeAtLeast(1),
