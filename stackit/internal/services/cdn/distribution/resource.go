@@ -917,10 +917,11 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	modeDisabled := cdnSdk.WafMode(cdnSdk.WAFMODE_DISABLED)
 	typeFree := cdnSdk.WafType(cdnSdk.WAFTYPE_FREE)
-	wafPatch := cdnSdk.WafConfigPatch{
+	configPatch.Waf = &cdnSdk.WafConfigPatch{
 		Mode: &modeDisabled,
 		Type: &typeFree,
 	}
+
 	// Map WAF Update
 	if !utils.IsUndefined(configmodel.Waf) {
 		var wafModel wafConfig
@@ -929,27 +930,25 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
 			return
 		}
-		wafPatch = cdnSdk.WafConfigPatch{
-			Mode:                       new(cdnSdk.WafMode(wafModel.Mode.ValueString())),
-			Type:                       new(cdnSdk.WafType(wafModel.Type.ValueString())),
-			AllowedHttpVersions:        getWafSet(ctx, wafModel.AllowedHttpVersions),
-			AllowedRequestContentTypes: getWafSet(ctx, wafModel.AllowedRequestContentTypes),
-			AllowedHttpMethods:         getWafSet(ctx, wafModel.AllowedHttpMethods),
-			EnabledRuleIds:             getWafSet(ctx, wafModel.EnabledRuleIds),
-			DisabledRuleIds:            getWafSet(ctx, wafModel.DisabledRuleIds),
-			LogOnlyRuleIds:             getWafSet(ctx, wafModel.LogOnlyRuleIds),
-			EnabledRuleGroupIds:        getWafSet(ctx, wafModel.EnabledRuleGroupIds),
-			DisabledRuleGroupIds:       getWafSet(ctx, wafModel.DisabledRuleGroupIds),
-			LogOnlyRuleGroupIds:        getWafSet(ctx, wafModel.LogOnlyRuleGroupIds),
-			EnabledRuleCollectionIds:   getWafSet(ctx, wafModel.EnabledRuleCollectionIds),
-			DisabledRuleCollectionIds:  getWafSet(ctx, wafModel.DisabledRuleCollectionIds),
-			LogOnlyRuleCollectionIds:   getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds),
-		}
+		configPatch.Waf.Mode = new(cdnSdk.WafMode(wafModel.Mode.ValueString()))
+		configPatch.Waf.Type = new(cdnSdk.WafType(wafModel.Type.ValueString()))
+		configPatch.Waf.AllowedHttpVersions = getWafSet(ctx, wafModel.AllowedHttpVersions)
+		configPatch.Waf.AllowedRequestContentTypes = getWafSet(ctx, wafModel.AllowedRequestContentTypes)
+		configPatch.Waf.AllowedHttpMethods = getWafSet(ctx, wafModel.AllowedHttpMethods)
+		configPatch.Waf.EnabledRuleIds = getWafSet(ctx, wafModel.EnabledRuleIds)
+		configPatch.Waf.DisabledRuleIds = getWafSet(ctx, wafModel.DisabledRuleIds)
+		configPatch.Waf.LogOnlyRuleIds = getWafSet(ctx, wafModel.LogOnlyRuleIds)
+		configPatch.Waf.EnabledRuleGroupIds = getWafSet(ctx, wafModel.EnabledRuleGroupIds)
+		configPatch.Waf.DisabledRuleGroupIds = getWafSet(ctx, wafModel.DisabledRuleGroupIds)
+		configPatch.Waf.LogOnlyRuleGroupIds = getWafSet(ctx, wafModel.LogOnlyRuleGroupIds)
+		configPatch.Waf.EnabledRuleCollectionIds = getWafSet(ctx, wafModel.EnabledRuleCollectionIds)
+		configPatch.Waf.DisabledRuleCollectionIds = getWafSet(ctx, wafModel.DisabledRuleCollectionIds)
+		configPatch.Waf.LogOnlyRuleCollectionIds = getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds)
+
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
 			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
-			wafPatch.ParanoiaLevel = &pl
+			configPatch.Waf.ParanoiaLevel = &pl
 		}
-		configPatch.Waf = &wafPatch
 	}
 
 	if !utils.IsUndefined(configmodel.Optimizer) {
