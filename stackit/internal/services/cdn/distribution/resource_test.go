@@ -43,7 +43,7 @@ func TestToCreatePayload(t *testing.T) {
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{
 		"enabled": types.BoolValue(true),
 	})
-	emptyWafList := types.ListValueMust(types.StringType, []attr.Value{})
+	emptyWafSet := types.SetValueMust(types.StringType, []attr.Value{})
 	expectedDefaultWafConfig := cdnSdk.WafConfig{
 		Mode:                       cdnSdk.WafMode("DISABLED"),
 		Type:                       cdnSdk.WafType("FREE"),
@@ -64,18 +64,18 @@ func TestToCreatePayload(t *testing.T) {
 		"mode":                          types.StringValue("DISABLED"),
 		"type":                          types.StringValue("FREE"),
 		"paranoia_level":                types.StringNull(),
-		"allowed_http_versions":         emptyWafList,
-		"allowed_request_content_types": emptyWafList,
-		"allowed_http_methods":          emptyWafList,
-		"enabled_rule_ids":              emptyWafList,
-		"disabled_rule_ids":             emptyWafList,
-		"log_only_rule_ids":             emptyWafList,
-		"enabled_rule_group_ids":        emptyWafList,
-		"disabled_rule_group_ids":       emptyWafList,
-		"log_only_rule_group_ids":       emptyWafList,
-		"enabled_rule_collection_ids":   emptyWafList,
-		"disabled_rule_collection_ids":  emptyWafList,
-		"log_only_rule_collection_ids":  emptyWafList,
+		"allowed_http_versions":         emptyWafSet,
+		"allowed_request_content_types": emptyWafSet,
+		"allowed_http_methods":          emptyWafSet,
+		"enabled_rule_ids":              emptyWafSet,
+		"disabled_rule_ids":             emptyWafSet,
+		"log_only_rule_ids":             emptyWafSet,
+		"enabled_rule_group_ids":        emptyWafSet,
+		"disabled_rule_group_ids":       emptyWafSet,
+		"log_only_rule_group_ids":       emptyWafSet,
+		"enabled_rule_collection_ids":   emptyWafSet,
+		"disabled_rule_collection_ids":  emptyWafSet,
+		"log_only_rule_collection_ids":  emptyWafSet,
 	})
 	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
 	if !ok {
@@ -114,7 +114,7 @@ func TestToCreatePayload(t *testing.T) {
 	redirectsConfigVal := types.ObjectValueMust(redirectsTypes, map[string]attr.Value{
 		"rules": rulesList,
 	})
-	populatedWafList := types.ListValueMust(types.StringType, []attr.Value{
+	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
 		types.StringValue("rule2"),
 	})
@@ -122,18 +122,18 @@ func TestToCreatePayload(t *testing.T) {
 		"mode":                          types.StringValue("ENABLED"),
 		"type":                          types.StringValue("PREMIUM"),
 		"paranoia_level":                types.StringValue("L2"),
-		"allowed_http_versions":         populatedWafList,
-		"allowed_request_content_types": populatedWafList,
-		"allowed_http_methods":          populatedWafList,
-		"enabled_rule_ids":              populatedWafList,
-		"disabled_rule_ids":             populatedWafList,
-		"log_only_rule_ids":             populatedWafList,
-		"enabled_rule_group_ids":        populatedWafList,
-		"disabled_rule_group_ids":       populatedWafList,
-		"log_only_rule_group_ids":       populatedWafList,
-		"enabled_rule_collection_ids":   populatedWafList,
-		"disabled_rule_collection_ids":  populatedWafList,
-		"log_only_rule_collection_ids":  populatedWafList,
+		"allowed_http_versions":         populatedWafSet,
+		"allowed_request_content_types": populatedWafSet,
+		"allowed_http_methods":          populatedWafSet,
+		"enabled_rule_ids":              populatedWafSet,
+		"disabled_rule_ids":             populatedWafSet,
+		"log_only_rule_ids":             populatedWafSet,
+		"enabled_rule_group_ids":        populatedWafSet,
+		"disabled_rule_group_ids":       populatedWafSet,
+		"log_only_rule_group_ids":       populatedWafSet,
+		"enabled_rule_collection_ids":   populatedWafSet,
+		"disabled_rule_collection_ids":  populatedWafSet,
+		"log_only_rule_collection_ids":  populatedWafSet,
 	})
 
 	expectedParanoiaLevel := cdnSdk.WafParanoiaLevel("L2")
@@ -416,7 +416,7 @@ func TestConvertConfig(t *testing.T) {
 		"matchers":             matchersList,
 	})
 	rulesList := types.ListValueMust(types.ObjectType{AttrTypes: redirectRuleTypes}, []attr.Value{ruleVal})
-	populatedWafList := types.ListValueMust(types.StringType, []attr.Value{
+	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
 		types.StringValue("rule2"),
 	})
@@ -428,18 +428,18 @@ func TestConvertConfig(t *testing.T) {
 		"mode":                          types.StringValue("ENABLED"),
 		"type":                          types.StringValue("PREMIUM"),
 		"paranoia_level":                types.StringValue("L2"),
-		"allowed_http_versions":         populatedWafList,
-		"allowed_request_content_types": populatedWafList,
-		"allowed_http_methods":          populatedWafList,
-		"enabled_rule_ids":              populatedWafList,
-		"disabled_rule_ids":             populatedWafList,
-		"log_only_rule_ids":             populatedWafList,
-		"enabled_rule_group_ids":        populatedWafList,
-		"disabled_rule_group_ids":       populatedWafList,
-		"log_only_rule_group_ids":       populatedWafList,
-		"enabled_rule_collection_ids":   populatedWafList,
-		"disabled_rule_collection_ids":  populatedWafList,
-		"log_only_rule_collection_ids":  populatedWafList,
+		"allowed_http_versions":         populatedWafSet,
+		"allowed_request_content_types": populatedWafSet,
+		"allowed_http_methods":          populatedWafSet,
+		"enabled_rule_ids":              populatedWafSet,
+		"disabled_rule_ids":             populatedWafSet,
+		"log_only_rule_ids":             populatedWafSet,
+		"enabled_rule_group_ids":        populatedWafSet,
+		"disabled_rule_group_ids":       populatedWafSet,
+		"log_only_rule_group_ids":       populatedWafSet,
+		"enabled_rule_collection_ids":   populatedWafSet,
+		"disabled_rule_collection_ids":  populatedWafSet,
+		"log_only_rule_collection_ids":  populatedWafSet,
 	})
 
 	expectedParanoiaLevel := cdnSdk.WafParanoiaLevel("L2")
@@ -721,7 +721,7 @@ func TestMapFields(t *testing.T) {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
 	}
 	redirectsAttrTypes := redirectsObjType.AttrTypes
-	populatedWafList := types.ListValueMust(types.StringType, []attr.Value{
+	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
 		types.StringValue("rule2"),
 	})
@@ -729,18 +729,18 @@ func TestMapFields(t *testing.T) {
 		"mode":                          types.StringValue("ENABLED"),
 		"type":                          types.StringValue("PREMIUM"),
 		"paranoia_level":                types.StringValue("L2"),
-		"allowed_http_versions":         populatedWafList,
-		"allowed_request_content_types": populatedWafList,
-		"allowed_http_methods":          populatedWafList,
-		"enabled_rule_ids":              populatedWafList,
-		"disabled_rule_ids":             populatedWafList,
-		"log_only_rule_ids":             populatedWafList,
-		"enabled_rule_group_ids":        populatedWafList,
-		"disabled_rule_group_ids":       populatedWafList,
-		"log_only_rule_group_ids":       populatedWafList,
-		"enabled_rule_collection_ids":   populatedWafList,
-		"disabled_rule_collection_ids":  populatedWafList,
-		"log_only_rule_collection_ids":  populatedWafList,
+		"allowed_http_versions":         populatedWafSet,
+		"allowed_request_content_types": populatedWafSet,
+		"allowed_http_methods":          populatedWafSet,
+		"enabled_rule_ids":              populatedWafSet,
+		"disabled_rule_ids":             populatedWafSet,
+		"log_only_rule_ids":             populatedWafSet,
+		"enabled_rule_group_ids":        populatedWafSet,
+		"disabled_rule_group_ids":       populatedWafSet,
+		"log_only_rule_group_ids":       populatedWafSet,
+		"enabled_rule_collection_ids":   populatedWafSet,
+		"disabled_rule_collection_ids":  populatedWafSet,
+		"log_only_rule_collection_ids":  populatedWafSet,
 	})
 
 	expectedParanoiaLevel := cdnSdk.WafParanoiaLevel("L2")

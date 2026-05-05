@@ -96,7 +96,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	domains := types.ListValueMust(types.ObjectType{AttrTypes: domainTypes}, []attr.Value{managedDomain})
 
 	// WAF Fixtures
-	populatedWafList := types.ListValueMust(types.StringType, []attr.Value{
+	populatedWafSet := types.SetValueMust(types.StringType, []attr.Value{
 		types.StringValue("rule1"),
 		types.StringValue("rule2"),
 	})
@@ -104,18 +104,18 @@ func TestMapDataSourceFields(t *testing.T) {
 		"mode":                          types.StringValue("ENABLED"),
 		"type":                          types.StringValue("PREMIUM"),
 		"paranoia_level":                types.StringValue("L2"),
-		"allowed_http_versions":         populatedWafList,
-		"allowed_request_content_types": populatedWafList,
-		"allowed_http_methods":          populatedWafList,
-		"enabled_rule_ids":              populatedWafList,
-		"disabled_rule_ids":             populatedWafList,
-		"log_only_rule_ids":             populatedWafList,
-		"enabled_rule_group_ids":        populatedWafList,
-		"disabled_rule_group_ids":       populatedWafList,
-		"log_only_rule_group_ids":       populatedWafList,
-		"enabled_rule_collection_ids":   populatedWafList,
-		"disabled_rule_collection_ids":  populatedWafList,
-		"log_only_rule_collection_ids":  populatedWafList,
+		"allowed_http_versions":         populatedWafSet,
+		"allowed_request_content_types": populatedWafSet,
+		"allowed_http_methods":          populatedWafSet,
+		"enabled_rule_ids":              populatedWafSet,
+		"disabled_rule_ids":             populatedWafSet,
+		"log_only_rule_ids":             populatedWafSet,
+		"enabled_rule_group_ids":        populatedWafSet,
+		"disabled_rule_group_ids":       populatedWafSet,
+		"log_only_rule_group_ids":       populatedWafSet,
+		"enabled_rule_collection_ids":   populatedWafSet,
+		"disabled_rule_collection_ids":  populatedWafSet,
+		"log_only_rule_collection_ids":  populatedWafSet,
 	})
 
 	expectedParanoiaLevel := cdnSdk.WafParanoiaLevel("L2")
