@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -90,18 +91,18 @@ var schemaDescriptions = map[string]string{
 	"waf_mode":                                     "The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.",
 	"waf_type":                                     "The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.",
 	"waf_paranoia_level":                           "Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Defaults to 'L1'.",
-	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.",
-	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.",
-	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts. If provided, the list must contain at least one item. If omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.",
-	"waf_enabled_rule_ids":                         "List of WAF rule IDs explicitly enabled. Can be set to an empty list to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly enabled Rule ID takes precedence over a disabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_disabled_rule_ids":                        "List of WAF rule IDs explicitly disabled. Can be set to an empty list to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_log_only_rule_ids":                        "List of WAF rule IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_enabled_rule_group_ids":                   "List of WAF Rule Group IDs explicitly enabled. Can be set to an empty list to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_disabled_rule_group_ids":                  "List of WAF Rule Group IDs explicitly disabled. Can be set to an empty list to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_log_only_rule_group_ids":                  "List of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_enabled_rule_collection_ids":              "List of WAF Collection IDs explicitly enabled. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_disabled_rule_collection_ids":             "List of WAF Collection IDs explicitly disabled. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
-	"waf_log_only_rule_collection_ids":             "List of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty list to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.",
+	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.",
+	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.",
+	"waf_enabled_rule_ids":                         "Set of WAF rule IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly enabled Rule ID takes precedence over a disabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_ids":                        "Set of WAF rule IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_ids":                        "Set of WAF rule IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_group_ids":                   "Set of WAF Rule Group IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_collection_ids":              "Set of WAF Collection IDs explicitly enabled. Can be set to an empty set to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_collection_ids":             "Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_collection_ids":             "Set of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
 }
 
 type Model struct {
@@ -161,18 +162,18 @@ type wafConfig struct {
 	Mode                       types.String `tfsdk:"mode"`
 	Type                       types.String `tfsdk:"type"`
 	ParanoiaLevel              types.String `tfsdk:"paranoia_level"`
-	AllowedHttpVersions        types.List   `tfsdk:"allowed_http_versions"`
-	AllowedRequestContentTypes types.List   `tfsdk:"allowed_request_content_types"`
-	AllowedHttpMethods         types.List   `tfsdk:"allowed_http_methods"`
-	EnabledRuleIds             types.List   `tfsdk:"enabled_rule_ids"`
-	DisabledRuleIds            types.List   `tfsdk:"disabled_rule_ids"`
-	LogOnlyRuleIds             types.List   `tfsdk:"log_only_rule_ids"`
-	EnabledRuleGroupIds        types.List   `tfsdk:"enabled_rule_group_ids"`
-	DisabledRuleGroupIds       types.List   `tfsdk:"disabled_rule_group_ids"`
-	LogOnlyRuleGroupIds        types.List   `tfsdk:"log_only_rule_group_ids"`
-	EnabledRuleCollectionIds   types.List   `tfsdk:"enabled_rule_collection_ids"`
-	DisabledRuleCollectionIds  types.List   `tfsdk:"disabled_rule_collection_ids"`
-	LogOnlyRuleCollectionIds   types.List   `tfsdk:"log_only_rule_collection_ids"`
+	AllowedHttpVersions        types.Set    `tfsdk:"allowed_http_versions"`
+	AllowedRequestContentTypes types.Set    `tfsdk:"allowed_request_content_types"`
+	AllowedHttpMethods         types.Set    `tfsdk:"allowed_http_methods"`
+	EnabledRuleIds             types.Set    `tfsdk:"enabled_rule_ids"`
+	DisabledRuleIds            types.Set    `tfsdk:"disabled_rule_ids"`
+	LogOnlyRuleIds             types.Set    `tfsdk:"log_only_rule_ids"`
+	EnabledRuleGroupIds        types.Set    `tfsdk:"enabled_rule_group_ids"`
+	DisabledRuleGroupIds       types.Set    `tfsdk:"disabled_rule_group_ids"`
+	LogOnlyRuleGroupIds        types.Set    `tfsdk:"log_only_rule_group_ids"`
+	EnabledRuleCollectionIds   types.Set    `tfsdk:"enabled_rule_collection_ids"`
+	DisabledRuleCollectionIds  types.Set    `tfsdk:"disabled_rule_collection_ids"`
+	LogOnlyRuleCollectionIds   types.Set    `tfsdk:"log_only_rule_collection_ids"`
 }
 
 type backendCredentials struct {
@@ -233,18 +234,18 @@ var wafTypes = map[string]attr.Type{
 	"mode":                          types.StringType,
 	"type":                          types.StringType,
 	"paranoia_level":                types.StringType,
-	"allowed_http_versions":         types.ListType{ElemType: types.StringType},
-	"allowed_request_content_types": types.ListType{ElemType: types.StringType},
-	"allowed_http_methods":          types.ListType{ElemType: types.StringType},
-	"enabled_rule_ids":              types.ListType{ElemType: types.StringType},
-	"disabled_rule_ids":             types.ListType{ElemType: types.StringType},
-	"log_only_rule_ids":             types.ListType{ElemType: types.StringType},
-	"enabled_rule_group_ids":        types.ListType{ElemType: types.StringType},
-	"disabled_rule_group_ids":       types.ListType{ElemType: types.StringType},
-	"log_only_rule_group_ids":       types.ListType{ElemType: types.StringType},
-	"enabled_rule_collection_ids":   types.ListType{ElemType: types.StringType},
-	"disabled_rule_collection_ids":  types.ListType{ElemType: types.StringType},
-	"log_only_rule_collection_ids":  types.ListType{ElemType: types.StringType},
+	"allowed_http_versions":         types.SetType{ElemType: types.StringType},
+	"allowed_request_content_types": types.SetType{ElemType: types.StringType},
+	"allowed_http_methods":          types.SetType{ElemType: types.StringType},
+	"enabled_rule_ids":              types.SetType{ElemType: types.StringType},
+	"disabled_rule_ids":             types.SetType{ElemType: types.StringType},
+	"log_only_rule_ids":             types.SetType{ElemType: types.StringType},
+	"enabled_rule_group_ids":        types.SetType{ElemType: types.StringType},
+	"disabled_rule_group_ids":       types.SetType{ElemType: types.StringType},
+	"log_only_rule_group_ids":       types.SetType{ElemType: types.StringType},
+	"enabled_rule_collection_ids":   types.SetType{ElemType: types.StringType},
+	"disabled_rule_collection_ids":  types.SetType{ElemType: types.StringType},
+	"log_only_rule_collection_ids":  types.SetType{ElemType: types.StringType},
 }
 
 var backendTypes = map[string]attr.Type{
@@ -481,81 +482,81 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 								Description: schemaDescriptions["waf_paranoia_level"],
 								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafParanoiaLevelEnumValues)...)},
 							},
-							"allowed_http_versions": schema.ListAttribute{
+							"allowed_http_versions": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_http_versions"],
-								Validators: []validator.List{
-									listvalidator.SizeAtLeast(1),
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
 								},
 							},
-							"allowed_request_content_types": schema.ListAttribute{
+							"allowed_request_content_types": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_allowed_request_content_types"],
-								Validators: []validator.List{
-									listvalidator.SizeAtLeast(1),
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
 								},
 							},
-							"allowed_http_methods": schema.ListAttribute{
+							"allowed_http_methods": schema.SetAttribute{
 								Optional:    true,
 								ElementType: types.StringType,
 								Computed:    true,
 								Description: schemaDescriptions["waf_allowed_http_methods"],
-								Validators: []validator.List{
-									listvalidator.SizeAtLeast(1),
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
 								},
 							},
-							"enabled_rule_ids": schema.ListAttribute{
+							"enabled_rule_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_ids"],
 							},
-							"disabled_rule_ids": schema.ListAttribute{
+							"disabled_rule_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_ids"],
 							},
-							"log_only_rule_ids": schema.ListAttribute{
+							"log_only_rule_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_ids"],
 							},
-							"enabled_rule_group_ids": schema.ListAttribute{
+							"enabled_rule_group_ids": schema.SetAttribute{
 								Optional:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
 							},
-							"disabled_rule_group_ids": schema.ListAttribute{
+							"disabled_rule_group_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
 							},
-							"log_only_rule_group_ids": schema.ListAttribute{
+							"log_only_rule_group_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
 							},
-							"enabled_rule_collection_ids": schema.ListAttribute{
+							"enabled_rule_collection_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
 							},
-							"disabled_rule_collection_ids": schema.ListAttribute{
+							"disabled_rule_collection_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
 								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
 							},
-							"log_only_rule_collection_ids": schema.ListAttribute{
+							"log_only_rule_collection_ids": schema.SetAttribute{
 								Optional:    true,
 								Computed:    true,
 								ElementType: types.StringType,
@@ -931,18 +932,18 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		wafPatch = cdnSdk.WafConfigPatch{
 			Mode:                       new(cdnSdk.WafMode(wafModel.Mode.ValueString())),
 			Type:                       new(cdnSdk.WafType(wafModel.Type.ValueString())),
-			AllowedHttpVersions:        getSortedWafList(ctx, wafModel.AllowedHttpVersions),
-			AllowedRequestContentTypes: getSortedWafList(ctx, wafModel.AllowedRequestContentTypes),
-			AllowedHttpMethods:         getSortedWafList(ctx, wafModel.AllowedHttpMethods),
-			EnabledRuleIds:             getSortedWafList(ctx, wafModel.EnabledRuleIds),
-			DisabledRuleIds:            getSortedWafList(ctx, wafModel.DisabledRuleIds),
-			LogOnlyRuleIds:             getSortedWafList(ctx, wafModel.LogOnlyRuleIds),
-			EnabledRuleGroupIds:        getSortedWafList(ctx, wafModel.EnabledRuleGroupIds),
-			DisabledRuleGroupIds:       getSortedWafList(ctx, wafModel.DisabledRuleGroupIds),
-			LogOnlyRuleGroupIds:        getSortedWafList(ctx, wafModel.LogOnlyRuleGroupIds),
-			EnabledRuleCollectionIds:   getSortedWafList(ctx, wafModel.EnabledRuleCollectionIds),
-			DisabledRuleCollectionIds:  getSortedWafList(ctx, wafModel.DisabledRuleCollectionIds),
-			LogOnlyRuleCollectionIds:   getSortedWafList(ctx, wafModel.LogOnlyRuleCollectionIds),
+			AllowedHttpVersions:        getWafSet(ctx, wafModel.AllowedHttpVersions),
+			AllowedRequestContentTypes: getWafSet(ctx, wafModel.AllowedRequestContentTypes),
+			AllowedHttpMethods:         getWafSet(ctx, wafModel.AllowedHttpMethods),
+			EnabledRuleIds:             getWafSet(ctx, wafModel.EnabledRuleIds),
+			DisabledRuleIds:            getWafSet(ctx, wafModel.DisabledRuleIds),
+			LogOnlyRuleIds:             getWafSet(ctx, wafModel.LogOnlyRuleIds),
+			EnabledRuleGroupIds:        getWafSet(ctx, wafModel.EnabledRuleGroupIds),
+			DisabledRuleGroupIds:       getWafSet(ctx, wafModel.DisabledRuleGroupIds),
+			LogOnlyRuleGroupIds:        getWafSet(ctx, wafModel.LogOnlyRuleGroupIds),
+			EnabledRuleCollectionIds:   getWafSet(ctx, wafModel.EnabledRuleCollectionIds),
+			DisabledRuleCollectionIds:  getWafSet(ctx, wafModel.DisabledRuleCollectionIds),
+			LogOnlyRuleCollectionIds:   getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds),
 		}
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
 			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
@@ -1325,12 +1326,16 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		}
 		return types.StringNull()
 	}
-	// Helper to unconditionally map list fields
-	mapWafList := func(apiList []string) types.List {
+
+	// Helper to unconditionally map set fields
+	mapWafSet := func(apiList []string) types.Set {
 		if apiList != nil {
-			return conversion.SortedStringsToListValue(apiList)
+			setVal, diags := types.SetValueFrom(ctx, types.StringType, apiList)
+			if !diags.HasError() {
+				return setVal
+			}
 		}
-		return types.ListNull(types.StringType)
+		return types.SetNull(types.StringType)
 	}
 
 	var pl *string
@@ -1339,18 +1344,18 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		pl = &plVal
 	}
 	wafObjAttrs["paranoia_level"] = mapWafString(pl)
-	wafObjAttrs["allowed_http_versions"] = mapWafList(distribution.Config.Waf.AllowedHttpVersions)
-	wafObjAttrs["allowed_request_content_types"] = mapWafList(distribution.Config.Waf.AllowedRequestContentTypes)
-	wafObjAttrs["allowed_http_methods"] = mapWafList(distribution.Config.Waf.AllowedHttpMethods)
-	wafObjAttrs["enabled_rule_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleIds)
-	wafObjAttrs["disabled_rule_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleIds)
-	wafObjAttrs["log_only_rule_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleIds)
-	wafObjAttrs["enabled_rule_group_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleGroupIds)
-	wafObjAttrs["disabled_rule_group_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleGroupIds)
-	wafObjAttrs["log_only_rule_group_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleGroupIds)
-	wafObjAttrs["enabled_rule_collection_ids"] = mapWafList(distribution.Config.Waf.EnabledRuleCollectionIds)
-	wafObjAttrs["disabled_rule_collection_ids"] = mapWafList(distribution.Config.Waf.DisabledRuleCollectionIds)
-	wafObjAttrs["log_only_rule_collection_ids"] = mapWafList(distribution.Config.Waf.LogOnlyRuleCollectionIds)
+	wafObjAttrs["allowed_http_versions"] = mapWafSet(distribution.Config.Waf.AllowedHttpVersions)
+	wafObjAttrs["allowed_request_content_types"] = mapWafSet(distribution.Config.Waf.AllowedRequestContentTypes)
+	wafObjAttrs["allowed_http_methods"] = mapWafSet(distribution.Config.Waf.AllowedHttpMethods)
+	wafObjAttrs["enabled_rule_ids"] = mapWafSet(distribution.Config.Waf.EnabledRuleIds)
+	wafObjAttrs["disabled_rule_ids"] = mapWafSet(distribution.Config.Waf.DisabledRuleIds)
+	wafObjAttrs["log_only_rule_ids"] = mapWafSet(distribution.Config.Waf.LogOnlyRuleIds)
+	wafObjAttrs["enabled_rule_group_ids"] = mapWafSet(distribution.Config.Waf.EnabledRuleGroupIds)
+	wafObjAttrs["disabled_rule_group_ids"] = mapWafSet(distribution.Config.Waf.DisabledRuleGroupIds)
+	wafObjAttrs["log_only_rule_group_ids"] = mapWafSet(distribution.Config.Waf.LogOnlyRuleGroupIds)
+	wafObjAttrs["enabled_rule_collection_ids"] = mapWafSet(distribution.Config.Waf.EnabledRuleCollectionIds)
+	wafObjAttrs["disabled_rule_collection_ids"] = mapWafSet(distribution.Config.Waf.DisabledRuleCollectionIds)
+	wafObjAttrs["log_only_rule_collection_ids"] = mapWafSet(distribution.Config.Waf.LogOnlyRuleCollectionIds)
 
 	// Determine if WAF should be entirely excluded to prevent drift.
 	// The API can return an empty string for fully unconfigured backends.
@@ -1669,18 +1674,18 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		cdnConfig.Waf = cdnSdk.WafConfig{
 			Mode:                       cdnSdk.WafMode(wafModel.Mode.ValueString()),
 			Type:                       cdnSdk.WafType(wafModel.Type.ValueString()),
-			AllowedHttpVersions:        getSortedWafList(ctx, wafModel.AllowedHttpVersions),
-			AllowedRequestContentTypes: getSortedWafList(ctx, wafModel.AllowedRequestContentTypes),
-			AllowedHttpMethods:         getSortedWafList(ctx, wafModel.AllowedHttpMethods),
-			EnabledRuleIds:             getSortedWafList(ctx, wafModel.EnabledRuleIds),
-			DisabledRuleIds:            getSortedWafList(ctx, wafModel.DisabledRuleIds),
-			LogOnlyRuleIds:             getSortedWafList(ctx, wafModel.LogOnlyRuleIds),
-			EnabledRuleGroupIds:        getSortedWafList(ctx, wafModel.EnabledRuleGroupIds),
-			DisabledRuleGroupIds:       getSortedWafList(ctx, wafModel.DisabledRuleGroupIds),
-			LogOnlyRuleGroupIds:        getSortedWafList(ctx, wafModel.LogOnlyRuleGroupIds),
-			EnabledRuleCollectionIds:   getSortedWafList(ctx, wafModel.EnabledRuleCollectionIds),
-			DisabledRuleCollectionIds:  getSortedWafList(ctx, wafModel.DisabledRuleCollectionIds),
-			LogOnlyRuleCollectionIds:   getSortedWafList(ctx, wafModel.LogOnlyRuleCollectionIds),
+			AllowedHttpVersions:        getWafSet(ctx, wafModel.AllowedHttpVersions),
+			AllowedRequestContentTypes: getWafSet(ctx, wafModel.AllowedRequestContentTypes),
+			AllowedHttpMethods:         getWafSet(ctx, wafModel.AllowedHttpMethods),
+			EnabledRuleIds:             getWafSet(ctx, wafModel.EnabledRuleIds),
+			DisabledRuleIds:            getWafSet(ctx, wafModel.DisabledRuleIds),
+			LogOnlyRuleIds:             getWafSet(ctx, wafModel.LogOnlyRuleIds),
+			EnabledRuleGroupIds:        getWafSet(ctx, wafModel.EnabledRuleGroupIds),
+			DisabledRuleGroupIds:       getWafSet(ctx, wafModel.DisabledRuleGroupIds),
+			LogOnlyRuleGroupIds:        getWafSet(ctx, wafModel.LogOnlyRuleGroupIds),
+			EnabledRuleCollectionIds:   getWafSet(ctx, wafModel.EnabledRuleCollectionIds),
+			DisabledRuleCollectionIds:  getWafSet(ctx, wafModel.DisabledRuleCollectionIds),
+			LogOnlyRuleCollectionIds:   getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds),
 		}
 
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
@@ -1746,13 +1751,13 @@ func validateCountryCode(country string) (string, error) {
 	return upperCountry, nil
 }
 
-// getSortedWafList extracts strings from HCL list, sorts them and returns the slice
-func getSortedWafList(ctx context.Context, tfList basetypes.ListValue) []string {
-	if utils.IsUndefined(tfList) {
+// getWafSet extracts strings from HCL set, sorts them and returns the slice
+func getWafSet(ctx context.Context, tfSet basetypes.SetValue) []string {
+	if utils.IsUndefined(tfSet) {
 		return nil
 	}
 	var elements []string
-	diags := tfList.ElementsAs(ctx, &elements, true)
+	diags := tfSet.ElementsAs(ctx, &elements, true)
 	if diags.HasError() {
 		return []string{}
 	}
