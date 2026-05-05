@@ -266,6 +266,9 @@ func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *di
 
 // SortedStringsToListValue guarantees the returned HCL List is sorted
 func SortedStringsToListValue(items []string) basetypes.ListValue {
+	if items == nil {
+		return types.ListNull(types.StringType)
+	}
 	if len(items) == 0 {
 		return types.ListValueMust(types.StringType, []attr.Value{})
 	}

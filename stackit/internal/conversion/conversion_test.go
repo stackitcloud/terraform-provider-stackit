@@ -526,7 +526,7 @@ func TestSortedStringsToListValue(t *testing.T) {
 		{
 			name:     "nil slice",
 			items:    nil,
-			expected: types.ListValueMust(types.StringType, []attr.Value{}),
+			expected: types.ListNull(types.StringType),
 		},
 		{
 			name:  "unsorted slice",

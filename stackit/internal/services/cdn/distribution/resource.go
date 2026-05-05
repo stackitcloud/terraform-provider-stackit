@@ -468,17 +468,17 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"mode": schema.StringAttribute{
 								Required:    true,
 								Description: schemaDescriptions["waf_mode"],
-								Validators:  []validator.String{stringvalidator.OneOf(string(cdnSdk.WAFMODE_DISABLED), string(cdnSdk.WAFMODE_ENABLED), string(cdnSdk.WAFMODE_LOG_ONLY))},
+								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafModeEnumValues)...)},
 							},
 							"type": schema.StringAttribute{
 								Required:    true,
 								Description: schemaDescriptions["waf_type"],
-								Validators:  []validator.String{stringvalidator.OneOf(string(cdnSdk.WAFTYPE_PREMIUM), string(cdnSdk.WAFTYPE_FREE))},
+								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafTypeEnumValues)...)},
 							},
 							"paranoia_level": schema.StringAttribute{
 								Optional:    true,
 								Description: schemaDescriptions["waf_paranoia_level"],
-								Validators:  []validator.String{stringvalidator.OneOf(string(cdnSdk.WAFPARANOIALEVEL_L1), string(cdnSdk.WAFPARANOIALEVEL_L2), string(cdnSdk.WAFPARANOIALEVEL_L3), string(cdnSdk.WAFPARANOIALEVEL_L4))},
+								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafParanoiaLevelEnumValues)...)},
 							},
 							"allowed_http_versions": schema.ListAttribute{
 								Optional:    true,
@@ -803,15 +803,8 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var planModel Model
-	diags := req.Plan.Get(ctx, &planModel)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	var stateModel Model
-	diags = req.State.Get(ctx, &stateModel)
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -819,13 +812,13 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := planModel.ProjectId.ValueString()
-	distributionId := planModel.DistributionId.ValueString()
+	projectId := model.ProjectId.ValueString()
+	distributionId := model.DistributionId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	configPlanModel := distributionConfig{}
-	diags = planModel.Config.As(ctx, &configPlanModel, basetypes.ObjectAsOptions{
+	configmodel := distributionConfig{}
+	diags = model.Config.As(ctx, &configmodel, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
 	})
@@ -834,18 +827,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	configStateModel := distributionConfig{}
-	diags = stateModel.Config.As(ctx, &configStateModel, basetypes.ObjectAsOptions{
-		UnhandledNullAsEmpty:    false,
-		UnhandledUnknownAsEmpty: false,
-	})
-	if diags.HasError() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping state config")
-		return
-	}
-
 	regions := []cdnSdk.Region{}
-	for _, r := range *configPlanModel.Regions {
+	for _, r := range *configmodel.Regions {
 		regionEnum, err := cdnSdk.NewRegionFromValue(r)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Map regions: %v", err))
@@ -856,9 +839,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// blockedCountries
 	var blockedCountries []string
-	if configPlanModel.BlockedCountries != nil {
+	if configmodel.BlockedCountries != nil {
 		tempBlockedCountries := []string{}
-		for _, blockedCountry := range *configPlanModel.BlockedCountries {
+		for _, blockedCountry := range *configmodel.BlockedCountries {
 			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked countries: %v", err))
@@ -870,16 +853,16 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// redirects
-	redirectsConfig := convertRedirectconfig(configPlanModel.Redirects)
+	redirectsConfig := convertRedirectconfig(configmodel.Redirects)
 
 	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
-	switch configPlanModel.Backend.Type {
+	switch configmodel.Backend.Type {
 	case "http":
 		geofencingPatch := map[string][]string{}
-		if configPlanModel.Backend.Geofencing != nil {
+		if configmodel.Backend.Geofencing != nil {
 			gf := make(map[string][]string)
-			for url, countries := range *configPlanModel.Backend.Geofencing {
+			for url, countries := range *configmodel.Backend.Geofencing {
 				countryStrings := make([]string, len(countries))
 				for i, countryPtr := range countries {
 					if countryPtr == nil {
@@ -894,21 +877,21 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		configPatchBackend.HttpBackendPatch = &cdnSdk.HttpBackendPatch{
-			OriginRequestHeaders: configPlanModel.Backend.OriginRequestHeaders,
-			OriginUrl:            configPlanModel.Backend.OriginURL,
+			OriginRequestHeaders: configmodel.Backend.OriginRequestHeaders,
+			OriginUrl:            configmodel.Backend.OriginURL,
 			Type:                 "http",
 			Geofencing:           &geofencingPatch,
 		}
 	case "bucket":
 		configPatchBackend.BucketBackendPatch = &cdnSdk.BucketBackendPatch{
 			Type:      "bucket",
-			BucketUrl: configPlanModel.Backend.BucketURL,
-			Region:    configPlanModel.Backend.Region,
+			BucketUrl: configmodel.Backend.BucketURL,
+			Region:    configmodel.Backend.Region,
 		}
-		if configPlanModel.Backend.Credentials != nil {
+		if configmodel.Backend.Credentials != nil {
 			configPatchBackend.BucketBackendPatch.Credentials = &cdnSdk.BucketCredentials{
-				AccessKeyId:     *configPlanModel.Backend.Credentials.AccessKey,
-				SecretAccessKey: *configPlanModel.Backend.Credentials.SecretKey,
+				AccessKeyId:     *configmodel.Backend.Credentials.AccessKey,
+				SecretAccessKey: *configmodel.Backend.Credentials.SecretKey,
 			}
 		}
 	}
@@ -920,15 +903,21 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Redirects:        redirectsConfig,
 	}
 
-	// Map WAF Update/Removal
-	if !utils.IsUndefined(configPlanModel.Waf) {
+	modeDisabled := cdnSdk.WafMode(cdnSdk.WAFMODE_DISABLED)
+	typeFree := cdnSdk.WafType(cdnSdk.WAFTYPE_FREE)
+	wafPatch := cdnSdk.WafConfigPatch{
+		Mode: &modeDisabled,
+		Type: &typeFree,
+	}
+	// Map WAF Update
+	if !utils.IsUndefined(configmodel.Waf) {
 		var wafModel wafConfig
-		diags := configPlanModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		diags := configmodel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
 			return
 		}
-		wafPatch := cdnSdk.WafConfigPatch{
+		wafPatch = cdnSdk.WafConfigPatch{
 			Mode:                       new(cdnSdk.WafMode(wafModel.Mode.ValueString())),
 			Type:                       new(cdnSdk.WafType(wafModel.Type.ValueString())),
 			AllowedHttpVersions:        getSortedWafList(ctx, wafModel.AllowedHttpVersions),
@@ -949,39 +938,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			wafPatch.ParanoiaLevel = &pl
 		}
 		configPatch.Waf = &wafPatch
-	} else if !utils.IsUndefined(configStateModel.Waf) {
-		// User explicitly removed the WAF block from their terraform configuration
-		modeDisabled := cdnSdk.WafMode(cdnSdk.WAFMODE_DISABLED)
-		typeFree := cdnSdk.WafType(cdnSdk.WAFTYPE_FREE)
-		var wafModel wafConfig
-		diags := configStateModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
-			return
-		}
-		wafPatch := cdnSdk.WafConfigPatch{
-			Mode:                       &modeDisabled,
-			Type:                       &typeFree,
-			AllowedHttpVersions:        getSortedWafList(ctx, wafModel.AllowedHttpVersions),
-			AllowedRequestContentTypes: getSortedWafList(ctx, wafModel.AllowedRequestContentTypes),
-			AllowedHttpMethods:         getSortedWafList(ctx, wafModel.AllowedHttpMethods),
-			EnabledRuleIds:             getSortedWafList(ctx, wafModel.EnabledRuleIds),
-			DisabledRuleIds:            getSortedWafList(ctx, wafModel.DisabledRuleIds),
-			LogOnlyRuleIds:             getSortedWafList(ctx, wafModel.LogOnlyRuleIds),
-			EnabledRuleGroupIds:        getSortedWafList(ctx, wafModel.EnabledRuleGroupIds),
-			DisabledRuleGroupIds:       getSortedWafList(ctx, wafModel.DisabledRuleGroupIds),
-			LogOnlyRuleGroupIds:        getSortedWafList(ctx, wafModel.LogOnlyRuleGroupIds),
-			EnabledRuleCollectionIds:   getSortedWafList(ctx, wafModel.EnabledRuleCollectionIds),
-			DisabledRuleCollectionIds:  getSortedWafList(ctx, wafModel.DisabledRuleCollectionIds),
-			LogOnlyRuleCollectionIds:   getSortedWafList(ctx, wafModel.LogOnlyRuleCollectionIds),
-		}
-		configPatch.Waf = &wafPatch
 	}
 
-	if !utils.IsUndefined(configPlanModel.Optimizer) {
+	if !utils.IsUndefined(configmodel.Optimizer) {
 		var optimizerModel optimizerConfig
 
-		diags = configPlanModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		diags = configmodel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping optimizer config")
 			return
@@ -1011,13 +973,13 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	err = mapFields(ctx, &waitResp.Distribution, &planModel)
+	err = mapFields(ctx, &waitResp.Distribution, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, planModel)
+	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

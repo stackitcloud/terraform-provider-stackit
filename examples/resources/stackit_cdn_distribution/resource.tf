@@ -65,7 +65,7 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
     # "@builtin/crs/request/942151" is explicitly DISABLED, overriding the collection setting.
     # 
     # To view all available collections, groups, and rules, consult the API documentation:
-    # https://internal-docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+    # https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
     waf = {
       mode                          = "ENABLED"
       type                          = "PREMIUM"
