@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -47,7 +47,6 @@ func TestConfigureClient(t *testing.T) {
 			expected: func() *serviceenablement.APIClient {
 				apiClient, err := serviceenablement.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
-					config.WithRegion("eu01"),
 				)
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)

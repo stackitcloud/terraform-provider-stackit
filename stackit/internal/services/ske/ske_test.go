@@ -10,7 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
+
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	serviceenablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
@@ -61,14 +63,14 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "service enablement request",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 							},
 							StatusCode: http.StatusOK,
 						},
 						testutil.MockResponse{
 							Description: "service enablement wait handler",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 								Error: nil,
 							},
 							StatusCode: http.StatusOK,
@@ -256,14 +258,14 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "service enablement request",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 							},
 							StatusCode: http.StatusOK,
 						},
 						testutil.MockResponse{
 							Description: "service enablement wait handler",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 								Error: nil,
 							},
 							StatusCode: http.StatusOK,
