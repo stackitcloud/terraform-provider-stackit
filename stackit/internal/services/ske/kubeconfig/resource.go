@@ -2,6 +2,7 @@ package ske
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 )
 
@@ -314,17 +316,21 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	cluster, err := r.client.DefaultAPI.GetCluster(ctx, projectId, region, clusterName).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading kubeconfig",
-			fmt.Sprintf("Kubeconfig with ID %q or cluster with name %q does not exist in project %q.", kubeconfigUUID, clusterName, projectId),
+			fmt.Sprintf("Error reading kubeconfig with ID %q for cluster %q in project %q.", kubeconfigUUID, clusterName, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
-		resp.State.RemoveResource(ctx)
 		return
 	}
 

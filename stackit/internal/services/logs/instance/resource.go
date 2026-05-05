@@ -296,6 +296,11 @@ func (r *logsInstanceResource) Read(ctx context.Context, req resource.ReadReques
 	projectID := model.ProjectID.ValueString()
 	region := model.Region.ValueString()
 	instanceID := model.InstanceID.ValueString()
+	if instanceID == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = tflog.SetField(ctx, "project_id", projectID)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -397,6 +402,10 @@ func (r *logsInstanceResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	err := r.client.DefaultAPI.DeleteLogsInstance(ctx, projectID, region, instanceID).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Logs Instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

@@ -10,8 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
-	"github.com/stackitcloud/stackit-sdk-go/services/ske"
+
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	serviceenablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
+	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -60,14 +63,14 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "service enablement request",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 							},
 							StatusCode: http.StatusOK,
 						},
 						testutil.MockResponse{
 							Description: "service enablement wait handler",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 								Error: nil,
 							},
 							StatusCode: http.StatusOK,
@@ -75,41 +78,41 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "kubernetes versions",
 							ToJsonBody: ske.ProviderOptions{
-								MachineImages: new([]ske.MachineImage{
+								MachineImages: []ske.MachineImage{
 									{
 										Name: new("flatcar"),
-										Versions: new([]ske.MachineImageVersion{
+										Versions: []ske.MachineImageVersion{
 											{
 												State:          new("supported"),
 												Version:        new("1.0.0"),
 												ExpirationDate: nil,
-												Cri: new([]ske.CRI{
+												Cri: []ske.CRI{
 													{
-														Name: new(ske.CRINAME_CONTAINERD),
+														Name: new(string(legacySke.CRINAME_CONTAINERD)),
 													},
-												}),
+												},
 											},
-										}),
+										},
 									},
-								}),
-								MachineTypes: new([]ske.MachineType{
+								},
+								MachineTypes: []ske.MachineType{
 									{
 										Name: new(machineType),
 									},
-								}),
-								KubernetesVersions: new([]ske.KubernetesVersion{
+								},
+								KubernetesVersions: []ske.KubernetesVersion{
 									{
 										State:          new("supported"),
 										ExpirationDate: nil,
 										Version:        new(kubernetesVersionMin),
 									},
-								}),
+								},
 							},
 						},
 						testutil.MockResponse{
 							Description: "create",
 							ToJsonBody: ske.Cluster{
-								Name: new(string(clusterName)),
+								Name: new(clusterName),
 							},
 						},
 						testutil.MockResponse{
@@ -137,7 +140,7 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
 						testutil.MockResponse{Description: "ListClusterResponse is called for checking removal",
 							ToJsonBody: ske.ListClustersResponse{
-								Items: &[]ske.Cluster{},
+								Items: []ske.Cluster{},
 							},
 						},
 					)
@@ -194,35 +197,35 @@ resource "stackit_ske_cluster" "cluster" {
 
 	skeCluster := ske.Cluster{
 		Name: new(clusterName),
-		Nodepools: new([]ske.Nodepool{
+		Nodepools: []ske.Nodepool{
 			{
 				AllowSystemComponents: new(true),
-				AvailabilityZones:     new([]string{"eu01-1"}),
-				Name:                  new(nodeName),
+				AvailabilityZones:     []string{"eu01-1"},
+				Name:                  nodeName,
 				Cri: new(ske.CRI{
-					Name: new(ske.CRINAME_CONTAINERD),
+					Name: new(string(legacySke.CRINAME_CONTAINERD)),
 				}),
-				Machine: new(ske.Machine{
-					Image: new(ske.Image{
-						Name:    new("flatcar"),
-						Version: new("1.0.0"),
-					}),
-					Type: new(machineType),
-				}),
-				MaxSurge:       new(int64(1)),
-				MaxUnavailable: new(int64(0)),
-				Maximum:        new(int64(2)),
-				Minimum:        new(int64(1)),
-				Volume: new(ske.Volume{
-					Size: new(int64(50)),
+				Machine: ske.Machine{
+					Image: ske.Image{
+						Name:    "flatcar",
+						Version: "1.0.0",
+					},
+					Type: machineType,
+				},
+				MaxSurge:       new(int32(1)),
+				MaxUnavailable: new(int32(0)),
+				Maximum:        2,
+				Minimum:        1,
+				Volume: ske.Volume{
+					Size: 50,
 					Type: new("storage_premium_perf4"),
-				}),
+				},
 				Labels: new(map[string]string{}),
 			},
-		}),
-		Kubernetes: new(ske.Kubernetes{
-			Version: new(kubernetesVersionMin),
-		}),
+		},
+		Kubernetes: ske.Kubernetes{
+			Version: kubernetesVersionMin,
+		},
 		Network: &ske.Network{
 			Id: nil,
 			ControlPlane: new(ske.V2ControlPlaneNetwork{
@@ -230,18 +233,18 @@ resource "stackit_ske_cluster" "cluster" {
 			}),
 		},
 		Maintenance: new(ske.Maintenance{
-			AutoUpdate: new(ske.MaintenanceAutoUpdate{
+			AutoUpdate: ske.MaintenanceAutoUpdate{
 				KubernetesVersion:   new(true),
 				MachineImageVersion: new(true),
-			}),
-			TimeWindow: new(ske.TimeWindow{
-				Start: new(time.Now()),
-				End:   new(time.Now()),
-			}),
+			},
+			TimeWindow: ske.TimeWindow{
+				Start: time.Now(),
+				End:   time.Now(),
+			},
 		}),
 		Status: new(ske.ClusterStatus{
-			Aggregated:       new(ske.CLUSTERSTATUSSTATE_HEALTHY),
-			PodAddressRanges: new([]string{"100.64.0.0/10"}),
+			Aggregated:       new(ske.CLUSTERSTATUSSTATE_STATE_HEALTHY),
+			PodAddressRanges: []string{"100.64.0.0/10"},
 		}),
 		Extensions: new(ske.Extension{}),
 	}
@@ -255,14 +258,14 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "service enablement request",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 							},
 							StatusCode: http.StatusOK,
 						},
 						testutil.MockResponse{
 							Description: "service enablement wait handler",
 							ToJsonBody: serviceenablement.ServiceStatus{
-								State: new(serviceenablement.SERVICESTATUSSTATE_ENABLED),
+								State: new(serviceenablementWait.SERVICESTATUSSTATE_ENABLED),
 								Error: nil,
 							},
 							StatusCode: http.StatusOK,
@@ -270,35 +273,35 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{
 							Description: "kubernetes versions",
 							ToJsonBody: ske.ProviderOptions{
-								MachineImages: new([]ske.MachineImage{
+								MachineImages: []ske.MachineImage{
 									{
 										Name: new("flatcar"),
-										Versions: new([]ske.MachineImageVersion{
+										Versions: []ske.MachineImageVersion{
 											{
 												State:          new("supported"),
 												Version:        new("1.0.0"),
 												ExpirationDate: nil,
-												Cri: new([]ske.CRI{
+												Cri: []ske.CRI{
 													{
-														Name: new(ske.CRINAME_CONTAINERD),
+														Name: new(string(legacySke.CRINAME_CONTAINERD)),
 													},
-												}),
+												},
 											},
-										}),
+										},
 									},
-								}),
-								MachineTypes: new([]ske.MachineType{
+								},
+								MachineTypes: []ske.MachineType{
 									{
 										Name: new(machineType),
 									},
-								}),
-								KubernetesVersions: new([]ske.KubernetesVersion{
+								},
+								KubernetesVersions: []ske.KubernetesVersion{
 									{
 										State:          new("supported"),
 										ExpirationDate: nil,
 										Version:        new(kubernetesVersionMin),
 									},
-								}),
+								},
 							},
 						},
 						testutil.MockResponse{
@@ -316,7 +319,7 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
 						testutil.MockResponse{Description: "ListClusterResponse is called for checking removal",
 							ToJsonBody: ske.ListClustersResponse{
-								Items: &[]ske.Cluster{},
+								Items: []ske.Cluster{},
 							},
 						},
 					)
@@ -344,7 +347,7 @@ resource "stackit_ske_cluster" "cluster" {
 						testutil.MockResponse{Description: "delete", StatusCode: http.StatusAccepted},
 						testutil.MockResponse{Description: "ListClusterResponse is called for checking removal",
 							ToJsonBody: ske.ListClustersResponse{
-								Items: &[]ske.Cluster{},
+								Items: []ske.Cluster{},
 							},
 						},
 					)

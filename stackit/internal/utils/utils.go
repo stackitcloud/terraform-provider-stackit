@@ -142,6 +142,10 @@ func LogError(ctx context.Context, inputDiags *diag.Diagnostics, err error, summ
 func FormatPossibleValues(values ...string) string {
 	var formattedValues []string
 	for _, value := range values {
+		if value == "unknown_default_open_api" {
+			continue
+		}
+
 		formattedValues = append(formattedValues, fmt.Sprintf("`%v`", value))
 	}
 	return fmt.Sprintf("Possible values are: %s.", strings.Join(formattedValues, ", "))
@@ -213,4 +217,13 @@ func PrettyApiErr(ctx context.Context, diags *diag.Diagnostics, err error) strin
 		return fmt.Sprintf("%s, status code %d, Body:\n%s", oapiErr.ErrorMessage, oapiErr.StatusCode, prettyJSON.String())
 	}
 	return err.Error()
+}
+
+// Map applies mapFn to each element in input and collects the results in a new slice
+func Map[T, U any](input []T, mapFn func(T) U) []U {
+	values := make([]U, len(input))
+	for i := range input {
+		values[i] = mapFn(input[i])
+	}
+	return values
 }
