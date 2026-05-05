@@ -732,8 +732,8 @@ github.com/stackitcloud/stackit-sdk-go/services/ske v1.12.0 h1:G6iUFDlrwCkCkwSV3
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.12.0/go.mod h1:cSRF2ARIB6dKmvZ12Z5h1usKQligeZJ1JOiJk6Ds3wE=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.9.0 h1:dv+8GYcI2G0BQvMN5Qb4kaCREaj9n2lRzj9sb29NEZg=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.9.0/go.mod h1:HTpVer71ZfpKozpzWVv7EbCPB5ko8vgw4VmFE38lB9I=
-github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.1.0 h1:0WtujHIj8cPZhf03IuLhAzl/WOf8CQJWWyo0Qm/FNwI=
-github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.1.0/go.mod h1:zdOIf7vz4Ay7DmxGO7UoUUd161WcozixrBemBq0aSyE=
+github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.2.1 h1:Tc5gEuHRXbd+r6OlVh9LZFSDKXftD0ChF529FiGG7Wg=
+github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.2.1/go.mod h1:WUmgKtwpe90Yq3YbgNxc2clTTULVxCu0ha6lMTjUnII=
 github.com/stbenjam/no-sprintf-host-port v0.3.1 h1:AyX7+dxI4IdLBPtDbsGAyqiTSLpCP9hWRrXQDU4Cm/g=
 github.com/stbenjam/no-sprintf-host-port v0.3.1/go.mod h1:ODbZesTCHMVKthBHskvUUexdcNHAQRXk9NpSsL8p/HQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

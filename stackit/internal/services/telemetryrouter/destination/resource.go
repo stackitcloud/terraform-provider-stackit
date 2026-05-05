@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
+	"github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -541,7 +542,13 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 		return
 	}
 
-	err = mapFields(ctx, createResp, &model)
+	waitResp, err := wait.CreateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
+		return
+	}
+
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -637,7 +644,13 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, updateResp, &model)
+	waitResp, err := wait.UpdateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, updateResp.Id).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
+		return
+	}
+
+	err = mapFields(ctx, waitResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -677,6 +690,12 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 	err := r.client.DefaultAPI.DeleteDestination(ctx, projectID, region, instanceID, destinationID).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	_, err = wait.DeleteDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, destinationID).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become deleted: %v", err))
 		return
 	}
 

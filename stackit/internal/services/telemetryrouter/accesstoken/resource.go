@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
+	"github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -253,11 +254,17 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Id == "" {
+	waitResp, err := wait.CreateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
+		return
+	}
+
+	if waitResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", "Got empty credential id")
 		return
 	}
-	accessTokenId := createResp.Id
+	accessTokenId := waitResp.Id
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenId)
 
 	err = mapCreateFields(ctx, createResp, &model)
@@ -353,6 +360,12 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 		return
 	}
 
+	_, err = wait.UpdateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenResponse.Id).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
+		return
+	}
+
 	err = mapUpdateFields(ctx, accessTokenResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
@@ -396,6 +409,12 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	_, err = wait.DeleteAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenID).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become deleted: %v", err))
+		return
+	}
 
 	tflog.Info(ctx, "TelemetryRouter access token deleted")
 }
