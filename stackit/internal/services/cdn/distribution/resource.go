@@ -943,7 +943,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		configPatch.Waf.LogOnlyRuleCollectionIds = getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds)
 
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
-			cdnConfig.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
+			configPatch.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
 		}
 	}
 
@@ -1317,7 +1317,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	// Helper to unconditionally map string fields
 	mapWafString := func(apiVal *string) types.String {
 		if apiVal != nil {
-			return types.StringValue(*apiVal)
+			return types.StringPointerValue(apiVal)
 		}
 		return types.StringNull()
 	}
