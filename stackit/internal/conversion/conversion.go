@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 )
 
@@ -109,16 +108,6 @@ func Int64ValueToPointer(s basetypes.Int64Value) *int64 {
 	return &value
 }
 
-// Float32ValueToPointer converts basetypes.Float32Value to a pointer to float32.
-// It returns nil if the value is null or unknown.
-func Float32ValueToPointer(s basetypes.Float32Value) *float32 {
-	if s.IsNull() || s.IsUnknown() {
-		return nil
-	}
-	value := s.ValueFloat32()
-	return &value
-}
-
 // Float64ValueToPointer converts basetypes.Float64Value to a pointer to float64.
 // It returns nil if the value is null or unknown.
 func Float64ValueToPointer(s basetypes.Float64Value) *float64 {
@@ -142,21 +131,10 @@ func BoolValueToPointer(s basetypes.BoolValue) *bool {
 // StringListToPointer converts basetypes.ListValue to a pointer to a list of strings.
 // It returns nil if the value is null or unknown.
 func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
-	result, err := StringListToSlice(list)
-	if result == nil {
-		return nil, err
-	}
-	return &result, err
-}
-
-// StringListToSlice converts basetypes.ListValue to a list of strings.
-// It returns nil if the value is null or unknown.
-func StringListToSlice(list basetypes.ListValue) ([]string, error) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
 
-	// Instantiate an empty slice to ensure the slice is not nil
 	listStr := []string{}
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
@@ -166,7 +144,7 @@ func StringListToSlice(list basetypes.ListValue) ([]string, error) {
 		listStr = append(listStr, elStr.ValueString())
 	}
 
-	return listStr, nil
+	return &listStr, nil
 }
 
 // StringSetToPointer converts basetypes.SetValue to a pointer to a list of strings.
@@ -262,22 +240,4 @@ func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *di
 		return core.EphemeralProviderData{}, false
 	}
 	return stackitProviderData, true
-}
-
-// SortedStringsToListValue guarantees the returned HCL List is sorted
-func SortedStringsToListValue(items []string) basetypes.ListValue {
-	if items == nil {
-		return types.ListNull(types.StringType)
-	}
-	if len(items) == 0 {
-		return types.ListValueMust(types.StringType, []attr.Value{})
-	}
-	sorted := make([]string, len(items))
-	copy(sorted, items)
-	sort.Strings(sorted)
-	elements := make([]attr.Value, len(sorted))
-	for i, val := range sorted {
-		elements[i] = types.StringValue(val)
-	}
-	return types.ListValueMust(types.StringType, elements)
 }
