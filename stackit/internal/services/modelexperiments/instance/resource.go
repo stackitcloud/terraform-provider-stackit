@@ -486,19 +486,14 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	_, err := i.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
+		if !errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
 			}
-			if oapiErr.StatusCode != http.StatusConflict {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
-				return
-			}
-		} else {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
-			return
 		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
