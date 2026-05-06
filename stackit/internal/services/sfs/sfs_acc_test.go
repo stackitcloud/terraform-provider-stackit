@@ -44,6 +44,9 @@ var (
 
 	//go:embed testdata/project-lock-min.tf
 	resourceProjectLockConfig string
+
+	//go:embed testdata/snapshot-policies-datasource.tf
+	snapshotPoliciesDataSourceConfig string
 )
 
 // EXPORT POLICY - MIN
@@ -902,6 +905,52 @@ func TestAccProjectLockMin(t *testing.T) {
 			// Deletion is done by the framework implicitly
 		},
 	})
+}
+
+func TestAccSnapshotPolicies(t *testing.T) {
+	projectId := config.StringVariable(testutil.ProjectId)
+	cfg := fmt.Sprintf(`
+%s
+
+%s`, testutil.NewConfigBuilder().BuildProviderConfig(), snapshotPoliciesDataSourceConfig)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// all
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+				),
+			},
+			// immutable
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+					"immutable":  config.BoolVariable(true),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+				),
+			},
+			// mutable
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+					"immutable":  config.BoolVariable(false),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+				),
+			},
+		},
+	})
+
 }
 
 func createClient() (*sfs.APIClient, error) {
