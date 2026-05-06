@@ -179,7 +179,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	listRequest := r.client.DefaultAPI.ListSnapshotPolicies(ctx, projectId)
 	if !utils.IsUndefined(model.Immutable) {
 		listRequest = listRequest.Immutable(model.Immutable.ValueBool())
-	
+
 		title := `The "immutable" attribute of the "stackit_sfs_snapshot_policies" data source is in beta`
 		content := `This attribute may be subject to breaking changes in the future. Use with caution.`
 		tflog.Warn(ctx, fmt.Sprintf(`%s | %s`, title, content))
