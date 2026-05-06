@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -1750,7 +1749,7 @@ func validateCountryCode(country string) (string, error) {
 	return upperCountry, nil
 }
 
-// getWafSet extracts strings from HCL set, sorts them and returns the slice
+// getWafSet extracts strings from HCL set
 func getWafSet(ctx context.Context, tfSet basetypes.SetValue) []string {
 	if utils.IsUndefined(tfSet) {
 		return nil
@@ -1760,6 +1759,5 @@ func getWafSet(ctx context.Context, tfSet basetypes.SetValue) []string {
 	if diags.HasError() {
 		return []string{}
 	}
-	sort.Strings(elements)
 	return elements
 }
