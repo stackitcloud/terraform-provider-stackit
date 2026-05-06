@@ -20,6 +20,11 @@ const (
 	INSTANCESTATE_UPDATING    = "updating"
 	INSTANCESTATE_IMPAIRED    = "impaired"
 	INSTANCESTATE_RECONCILING = "reconciling"
+
+	TOKENSTATE_ACTIVE   = "active"
+	TOKENSTATE_CREATING = "creating"
+	TOKENSTATE_DELETING = "deleting"
+	TOKENSTATE_INACTIVE = "inactive"
 )
 
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *modelexperiment.APIClient {
