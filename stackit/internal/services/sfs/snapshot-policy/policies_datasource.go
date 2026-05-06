@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
@@ -161,7 +162,7 @@ type schedule struct {
 	RetentionPeriod types.String `tfsdk:"retention_period"`
 }
 
-func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -201,7 +202,7 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 	tflog.Info(ctx, "SFS snapshot policies read")
 }
 
-func mapFields(ctx context.Context, resp *sfs.ListSnapshotPoliciesResponse, model *model) error {
+func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model *model) error {
 	if resp == nil || resp.SnapshotPolicies == nil {
 		return fmt.Errorf("response input is nil")
 	}

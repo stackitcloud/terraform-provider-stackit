@@ -950,7 +950,6 @@ func TestAccSnapshotPolicies(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func createClient() (*sfs.APIClient, error) {
