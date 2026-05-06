@@ -1327,18 +1327,18 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
 	wafObjAttrs["paranoia_level"] = mapWafString(pl)
-	wafObjAttrs["allowed_http_versions"] = mapWafSet(ctx, distribution.Config.Waf.AllowedHttpVersions)
-	wafObjAttrs["allowed_request_content_types"] = mapWafSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes)
-	wafObjAttrs["allowed_http_methods"] = mapWafSet(ctx, distribution.Config.Waf.AllowedHttpMethods)
-	wafObjAttrs["enabled_rule_ids"] = mapWafSet(ctx, distribution.Config.Waf.EnabledRuleIds)
-	wafObjAttrs["disabled_rule_ids"] = mapWafSet(ctx, distribution.Config.Waf.DisabledRuleIds)
-	wafObjAttrs["log_only_rule_ids"] = mapWafSet(ctx, distribution.Config.Waf.LogOnlyRuleIds)
-	wafObjAttrs["enabled_rule_group_ids"] = mapWafSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds)
-	wafObjAttrs["disabled_rule_group_ids"] = mapWafSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds)
-	wafObjAttrs["log_only_rule_group_ids"] = mapWafSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds)
-	wafObjAttrs["enabled_rule_collection_ids"] = mapWafSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds)
-	wafObjAttrs["disabled_rule_collection_ids"] = mapWafSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds)
-	wafObjAttrs["log_only_rule_collection_ids"] = mapWafSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds)
+	wafObjAttrs["allowed_http_versions"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedHttpVersions)
+	wafObjAttrs["allowed_request_content_types"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes)
+	wafObjAttrs["allowed_http_methods"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedHttpMethods)
+	wafObjAttrs["enabled_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleIds)
+	wafObjAttrs["disabled_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleIds)
+	wafObjAttrs["log_only_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleIds)
+	wafObjAttrs["enabled_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds)
+	wafObjAttrs["disabled_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds)
+	wafObjAttrs["log_only_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds)
+	wafObjAttrs["enabled_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds)
+	wafObjAttrs["disabled_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds)
+	wafObjAttrs["log_only_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds)
 
 	// Determine if WAF should be entirely excluded to prevent drift.
 	// The API can return an empty string for fully unconfigured backends.
@@ -1748,7 +1748,7 @@ func getWafSet(ctx context.Context, tfSet basetypes.SetValue) []string {
 }
 
 // Helper to unconditionally map set fields
-func mapWafSet(ctx context.Context, apiList []string) types.Set {
+func mustMapStringSet(ctx context.Context, apiList []string) types.Set {
 	if apiList != nil {
 		setVal, diags := types.SetValueFrom(ctx, types.StringType, apiList)
 		if !diags.HasError() {
