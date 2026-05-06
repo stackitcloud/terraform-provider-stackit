@@ -19,7 +19,7 @@ data "stackit_sfs_snapshot_policies" "all" {
 
 data "stackit_sfs_snapshot_policies" "immutable_only" {
   project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  immutable = true
+  immutable  = true
 }
 ```
 
