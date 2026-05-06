@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
@@ -29,12 +28,11 @@ import (
 )
 
 var (
-	_ resource.Resource              = &instanceResource{}
-	_ resource.ResourceWithConfigure = &instanceResource{}
-	//_ resource.ResourceWithModifyPlan = &tokenResource{}
+	_ resource.Resource               = &instanceResource{}
+	_ resource.ResourceWithConfigure  = &instanceResource{}
+	_ resource.ResourceWithModifyPlan = &instanceResource{}
 )
 
-//go:embed description.md
 var markdownDescription string
 
 type Model struct {
@@ -43,7 +41,7 @@ type Model struct {
 	Region                     types.String `tfsdk:"region"`
 	Name                       types.String `tfsdk:"name"`
 	Description                types.String `tfsdk:"description"`
-	DeletedExperimentRetention types.String `tfsdk:"deletedExperimentRetention"`
+	DeletedExperimentRetention types.String `tfsdk:"deleted_experiment_retention"`
 	Labels                     types.Map    `tfsdk:"labels"`
 	State                      types.String `tfsdk:"state"`
 	BucketName                 types.String `tfsdk:"bucket_name"`
@@ -52,18 +50,21 @@ type Model struct {
 	Url                        types.String `tfsdk:"url"`
 }
 
+// NewInstanceResource is a helper function to simplify the provider implementation.
 func NewInstanceResource() resource.Resource {
 	return &instanceResource{}
 }
 
+// instanceResource is the resource implementation.
 type instanceResource struct {
 	client                  *modelexperiments.APIClient
 	providerData            core.ProviderData
 	serviceEnablementClient *serviceenablement.APIClient
 }
 
+// Metadata returns the resource type name.
 func (i *instanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_order"
+	resp.TypeName = req.ProviderTypeName + "_modelexperiments_instance"
 }
 
 // Configure adds the provider configured client to the resource.
@@ -87,6 +88,44 @@ func (i *instanceResource) Configure(ctx context.Context, req resource.Configure
 	tflog.Info(ctx, "Model experiments client configured")
 }
 
+// ModifyPlan implements resource.ResourceWithModifyPlan.
+// Use the modifier to set the effective region in the current plan.
+func (i *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	utils.AdaptRegion(
+		ctx,
+		configModel.Region,
+		&planModel.Region,
+		i.providerData.GetRegion(),
+		resp,
+	)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Schema defines the schema for the resource.
 func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: markdownDescription,
@@ -153,7 +192,7 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthBetween(0, 1000),
 				},
 			},
-			"deletedExperimentRetention": schema.StringAttribute{
+			"deleted_experiment_retention": schema.StringAttribute{
 				Description: "The deleted experiment retention of the AI model experiments instance.",
 				Optional:    true,
 				Required:    false,
@@ -257,27 +296,23 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	var mapValue basetypes.MapValue
-	if createInstanceResp.Instance.Labels != nil {
-		mapValue, diags = types.MapValueFrom(ctx, types.StringType, createInstanceResp.Instance.Labels)
-		if diags.HasError() {
-			return
-		}
-	}
-
 	//If model experiments instance is impaired, write state avoid dangling resources and return
 	waitResp, err := CreateMExpInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
-		mapCreateResponse(createInstanceResp, waitResp, &model, region, mapValue)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Waiting for instance to be active: %v", err))
+
+		err = mapCreateResponse(ctx, createInstanceResp, waitResp, &model, region)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
+		}
 		diags = resp.State.Set(ctx, model)
 		resp.Diagnostics.Append(diags...)
 
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Waiting for instance to be active: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapCreateResponse(createInstanceResp, waitResp, &model, region, mapValue)
+	err = mapCreateResponse(ctx, createInstanceResp, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -456,10 +491,14 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 				resp.State.RemoveResource(ctx)
 				return
 			}
+			if oapiErr.StatusCode != http.StatusConflict {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
+				return
+			}
+		} else {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
+			return
 		}
-
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
-		return
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -474,7 +513,8 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	tflog.Info(ctx, "Model experiments instance deleted")
 }
 
-func mapCreateResponse(instanceCreateResp *modelexperiments.CreateInstanceResponse, waitResp *modelexperiments.GetInstanceResponse, model *Model, region string, labels basetypes.MapValue) error {
+// mapCreateResponse maps the instace creation response and GET instance response to the model
+func mapCreateResponse(ctx context.Context, instanceCreateResp *modelexperiments.CreateInstanceResponse, waitResp *modelexperiments.GetInstanceResponse, model *Model, region string) error {
 	if instanceCreateResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -488,26 +528,37 @@ func mapCreateResponse(instanceCreateResp *modelexperiments.CreateInstanceRespon
 		return fmt.Errorf("instance id not present")
 	}
 
-	if waitResp == nil {
-		return fmt.Errorf("response input is nil")
+	mapValue, diags := types.MapValueFrom(ctx, types.StringType, instance.Labels)
+	if diags.HasError() {
+		return fmt.Errorf("failure in mapping labels")
 	}
 
+	if waitResp == nil {
+		model.State = types.StringValue("unknown")
+	} else {
+		model.State = types.StringValue(waitResp.Instance.State)
+	}
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceCreateResp.Instance.Id)
 	model.InstanceId = types.StringValue(instance.Id)
 	model.Name = types.StringValue(instance.Name)
-	model.State = types.StringValue(waitResp.Instance.State)
 	model.Description = types.StringPointerValue(instance.Description)
 	model.DeletedExperimentRetention = types.StringPointerValue(instance.DeletedExperimentRetention)
 	model.BucketName = types.StringPointerValue(instance.BucketName)
 	model.ErrorMessage = types.StringPointerValue(instance.ErrorMessage)
-	model.Labels = labels
+	model.Labels = mapValue
+	model.Url = types.StringPointerValue(&instance.Url)
 
 	return nil
 }
 
+// mapInstance maps instances to the resource model
 func mapInstance(ctx context.Context, instance modelexperiments.Instance, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
+	}
+
+	if instance.Id == "" {
+		return fmt.Errorf("instance id not present")
 	}
 
 	mapValue, diags := types.MapValueFrom(ctx, types.StringType, instance.Labels)
@@ -524,6 +575,7 @@ func mapInstance(ctx context.Context, instance modelexperiments.Instance, model 
 	model.BucketName = types.StringPointerValue(instance.BucketName)
 	model.ErrorMessage = types.StringPointerValue(instance.ErrorMessage)
 	model.Labels = mapValue
+	model.Url = types.StringPointerValue(&instance.Url)
 
 	return nil
 }
@@ -566,7 +618,7 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstancePaylo
 
 func CreateMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-		getInstanceResp, err := a.DefaultAPI.GetInstance(ctx, region, projectId, instanceId).Execute()
+		getInstanceResp, err := a.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 		if err != nil {
 			return false, nil, err
 		}
@@ -588,7 +640,7 @@ func CreateMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIC
 func DeleteMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(
 		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			_, err = a.DefaultAPI.GetInstance(ctx, region, projectId, instanceId).Execute()
+			_, err = a.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
 				if errors.As(err, &oapiErr) {

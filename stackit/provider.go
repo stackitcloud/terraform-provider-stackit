@@ -82,6 +82,7 @@ import (
 	mariaDBCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/credential"
 	mariaDBInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/instance"
 	modelExperimentsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
+	modelExperimentsToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
 	modelServingToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelserving/token"
 	mongoDBFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/instance"
 	mongoDBFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/user"
@@ -847,6 +848,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		mariaDBCredential.NewCredentialResource,
 		modelServingToken.NewTokenResource,
 		modelExperimentsInstance.NewInstanceResource,
+		modelExperimentsToken.NewInstanceTokenResource,
 		mongoDBFlexInstance.NewInstanceResource,
 		mongoDBFlexUser.NewUserResource,
 		objectStorageBucket.NewBucketResource,
