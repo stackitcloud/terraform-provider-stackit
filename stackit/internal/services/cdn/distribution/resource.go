@@ -914,11 +914,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Redirects:        redirectsConfig,
 	}
 
-	modeDisabled := cdnSdk.WafMode(cdnSdk.WAFMODE_DISABLED)
-	typeFree := cdnSdk.WafType(cdnSdk.WAFTYPE_FREE)
 	configPatch.Waf = &cdnSdk.WafConfigPatch{
-		Mode: &modeDisabled,
-		Type: &typeFree,
+		Mode: new(cdnSdk.WAFMODE_DISABLED),
+		Type: new(cdnSdk.WAFTYPE_FREE),
 	}
 
 	// Map WAF Update
