@@ -1335,8 +1335,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 	var pl *string
 	if distribution.Config.Waf.ParanoiaLevel != nil {
-		plVal := string(*distribution.Config.Waf.ParanoiaLevel)
-		pl = &plVal
+		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
 	wafObjAttrs["paranoia_level"] = mapWafString(pl)
 	wafObjAttrs["allowed_http_versions"] = mapWafSet(distribution.Config.Waf.AllowedHttpVersions)
