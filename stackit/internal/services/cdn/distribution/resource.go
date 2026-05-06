@@ -1355,8 +1355,8 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 	// Determine if WAF should be entirely excluded to prevent drift.
 	// The API can return an empty string for fully unconfigured backends.
-	isWafDisabled := (distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED || distribution.Config.Waf.Mode == "") &&
-		(distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE || distribution.Config.Waf.Type == "")
+	isWafDisabled := (distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED) &&
+		(distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE)
 
 	var wafVal attr.Value
 	if isWafDisabled && (isImport || utils.IsUndefined(oldConfig.Waf)) {
