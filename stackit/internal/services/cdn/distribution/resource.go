@@ -943,8 +943,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		configPatch.Waf.LogOnlyRuleCollectionIds = getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds)
 
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
-			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
-			configPatch.Waf.ParanoiaLevel = &pl
+			cdnConfig.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
 		}
 	}
 
