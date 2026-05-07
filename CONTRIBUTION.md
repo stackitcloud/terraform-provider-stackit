@@ -99,7 +99,40 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
    You can find an annotated example of such tests in:
 
    https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
-   
+
+### Onboarding new IAM role binding resources and datasources
+
+The IAM role binding is a standardized, distributed API across multiple STACKIT services.
+The standardization of this API allowed us to implement some generic approach for the implementation of new IAM role binding resources and datasources.
+
+To implement a new IAM role binding resource and the corresponding datasource you just need to follow these steps:
+
+1. Create a new package for the IAM role binding resources of your STACKIT service (in case there doesn't exist one already):
+
+   https://github.com/stackitcloud/terraform-provider-stackit/tree/main/stackit/internal/services/iam/rolebindings/v1/services
+
+2. Create some new file with factories to create your new resource and datasource.
+
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/services/secretsmanager/instance.go
+
+3. Register your new IAM role binding resource and datasource in the file below. **Note that you don't have to provide 
+   examples or import statements for IAM role binding resources and datasources. They will be automatically generated for you!**
+
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/rolebindings.go
+
+4. After your new IAM role binding resource and datasource should have been registered in the Terraform provider,
+   it's time to continue with implementing the acceptance tests. Here we got you covered with some generic approach you can use.
+
+   In the package you created during the first step create some `testdata` directory. Place some terraform configuration file 
+   in it for your new IAM role binding resource which looks like the one below. Adjust it so it bootstraps everything you 
+   need to test your new IAM role binding resource and datasource.
+
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/services/secretsmanager/testdata/instance.tf
+
+   Then create some acceptance test file in your package you created during step one which looks like the one below. 
+   You will have to adjust it to your needs.
+
+   https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/services/secretsmanager/iam_rolebindings_secretsmanager_acc_test.go
 
 ### Local development
 
