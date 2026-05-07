@@ -111,9 +111,9 @@ Read-Only:
 
 Read-Only:
 
-- `allowed_http_methods` (Set of String)
-- `allowed_http_versions` (Set of String)
-- `allowed_request_content_types` (Set of String)
+- `allowed_http_methods` (Set of String) Restricts which HTTP methods the distribution accepts. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.
+- `allowed_http_versions` (Set of String) Restricts which HTTP protocol versions are accepted. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.
+- `allowed_request_content_types` (Set of String) Restricts which Content-Type headers are accepted in request bodies. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.
 - `disabled_rule_collection_ids` (Set of String) Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
 - `disabled_rule_group_ids` (Set of String) Set of WAF Rule Group IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
 - `disabled_rule_ids` (Set of String) Set of WAF rule IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
