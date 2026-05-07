@@ -159,7 +159,7 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"instance_id": schema.StringAttribute{
 				Description: "The AI model experiments instance ID.",
-				Computed:    true,
+				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -428,6 +428,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	model.Token = state.Token
 	err = mapToken(ctx, updateInstanceTokenResp.Token, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
