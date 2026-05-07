@@ -160,7 +160,7 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"labels": schema.MapAttribute{
-				Description: "A map of arbitrary key/value pairs for the AI model experiments instance",
+				Description: "A map of arbitrary key/value pairs that can be attached to the AI model experiments instance",
 				Optional:    true,
 				Required:    false,
 				Computed:    true,
@@ -603,12 +603,14 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstancePaylo
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
-	return &modelexperiments.PartialUpdateInstancePayload{
-		Name:                       model.Name.ValueStringPointer(),
-		Description:                model.Description.ValueStringPointer(),
-		DeletedExperimentRetention: model.DeletedExperimentRetention.ValueStringPointer(),
-		Labels:                     labels,
-	}, nil
+	payload := &modelexperiments.PartialUpdateInstancePayload{}
+	payload.Name = model.Name.ValueStringPointer()
+	payload.Description = model.Description.ValueStringPointer()
+	payload.Labels = labels
+	if !model.DeletedExperimentRetention.IsUnknown() {
+		payload.DeletedExperimentRetention = model.DeletedExperimentRetention.ValueStringPointer()
+	}
+	return payload, nil
 }
 
 func CreateMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
