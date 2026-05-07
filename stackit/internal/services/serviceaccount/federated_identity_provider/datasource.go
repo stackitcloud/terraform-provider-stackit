@@ -37,13 +37,6 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Metadata(_ context.C
 }
 
 func (r *serviceAccountFederatedIdentityProviderDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`federation_id`\".",
-		"main":                  "Service account federated identity provider schema.",
-		"project_id":            "The STACKIT project ID associated with the service account.",
-		"federation_id":         "The unique identifier for the federated identity provider associated with the service account.",
-		"service_account_email": "The email address associated with the service account, used for account identification and communication.",
-	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: descriptions["main"],
 		Attributes: map[string]schema.Attribute{

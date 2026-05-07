@@ -53,6 +53,20 @@ type AssertionModel struct {
 	Value    types.String `tfsdk:"value"`
 }
 
+var descriptions = map[string]string{
+	"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`federation_id`\".",
+	"main":                  "Service account federated identity provider schema.",
+	"project_id":            "The STACKIT project ID associated with the service account.",
+	"federation_id":         "The unique identifier for the federated identity provider associated with the service account.",
+	"service_account_email": "The email address associated with the service account, used for account identification and communication.",
+	"name":                  "The name of the federated identity provider.",
+	"issuer":                "The issuer URL.",
+	"assertions":            "The assertions for the federated identity provider.",
+	"assertions.item":       "The assertion claim. At least one assertion with the claim \"aud\" is required for security reasons.",
+	"assertions.operator":   "The assertion operator. Currently, the only supported operator is \"equals\".",
+	"assertions.value":      "The assertion value.",
+}
+
 func NewServiceAccountFederatedIdentityProviderResource() resource.Resource {
 	return &serviceAccountFederatedIdentityProviderResource{}
 }
@@ -66,19 +80,6 @@ func (r *serviceAccountFederatedIdentityProviderResource) Metadata(_ context.Con
 }
 
 func (r *serviceAccountFederatedIdentityProviderResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`federation_id`\".",
-		"main":                  "Service account federated identity provider schema.",
-		"project_id":            "The STACKIT project ID associated with the service account.",
-		"federation_id":         "The unique identifier for the federated identity provider associated with the service account.",
-		"service_account_email": "The email address associated with the service account, used for account identification and communication.",
-		"name":                  "The name of the federated identity provider.",
-		"issuer":                "The issuer URL.",
-		"assertions":            "The assertions for the federated identity provider.",
-		"assertions.item":       "The assertion claim. At least one assertion with the claim \"aud\" is required for security reasons.",
-		"assertions.operator":   "The assertion operator. Currently, the only supported operator is \"equals\".",
-		"assertions.value":      "The assertion value.",
-	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: fmt.Sprintf("%s%s", descriptions["main"], markdownDescription),
 		Attributes: map[string]schema.Attribute{

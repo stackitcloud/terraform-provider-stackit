@@ -36,16 +36,16 @@ data "stackit_service_account_federated_identity_provider" "provider" {
 
 ### Read-Only
 
-- `assertions` (Attributes List) (see [below for nested schema](#nestedatt--assertions))
+- `assertions` (Attributes List) The assertions for the federated identity provider. (see [below for nested schema](#nestedatt--assertions))
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`service_account_email`,`federation_id`".
-- `issuer` (String)
-- `name` (String)
+- `issuer` (String) The issuer URL.
+- `name` (String) The name of the federated identity provider.
 
 <a id="nestedatt--assertions"></a>
 ### Nested Schema for `assertions`
 
 Read-Only:
 
-- `item` (String)
-- `operator` (String)
-- `value` (String)
+- `item` (String) The assertion claim. At least one assertion with the claim "aud" is required for security reasons.
+- `operator` (String) The assertion operator. Currently, the only supported operator is "equals".
+- `value` (String) The assertion value.
