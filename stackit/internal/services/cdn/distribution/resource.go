@@ -829,8 +829,8 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	configmodel := distributionConfig{}
-	diags = model.Config.As(ctx, &configmodel, basetypes.ObjectAsOptions{
+	configModel := distributionConfig{}
+	diags = model.Config.As(ctx, &configModel, basetypes.ObjectAsOptions{
 		UnhandledNullAsEmpty:    false,
 		UnhandledUnknownAsEmpty: false,
 	})
@@ -840,7 +840,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	regions := []cdnSdk.Region{}
-	for _, r := range *configmodel.Regions {
+	for _, r := range *configModel.Regions {
 		regionEnum, err := cdnSdk.NewRegionFromValue(r)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Map regions: %v", err))
@@ -851,9 +851,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// blockedCountries
 	var blockedCountries []string
-	if configmodel.BlockedCountries != nil {
+	if configModel.BlockedCountries != nil {
 		tempBlockedCountries := []string{}
-		for _, blockedCountry := range *configmodel.BlockedCountries {
+		for _, blockedCountry := range *configModel.BlockedCountries {
 			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
 			if err != nil {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked countries: %v", err))
@@ -865,16 +865,16 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// redirects
-	redirectsConfig := convertRedirectconfig(configmodel.Redirects)
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
 
 	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
-	switch configmodel.Backend.Type {
+	switch configModel.Backend.Type {
 	case "http":
 		geofencingPatch := map[string][]string{}
-		if configmodel.Backend.Geofencing != nil {
+		if configModel.Backend.Geofencing != nil {
 			gf := make(map[string][]string)
-			for url, countries := range *configmodel.Backend.Geofencing {
+			for url, countries := range *configModel.Backend.Geofencing {
 				countryStrings := make([]string, len(countries))
 				for i, countryPtr := range countries {
 					if countryPtr == nil {
@@ -889,21 +889,21 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 
 		configPatchBackend.HttpBackendPatch = &cdnSdk.HttpBackendPatch{
-			OriginRequestHeaders: configmodel.Backend.OriginRequestHeaders,
-			OriginUrl:            configmodel.Backend.OriginURL,
+			OriginRequestHeaders: configModel.Backend.OriginRequestHeaders,
+			OriginUrl:            configModel.Backend.OriginURL,
 			Type:                 "http",
 			Geofencing:           &geofencingPatch,
 		}
 	case "bucket":
 		configPatchBackend.BucketBackendPatch = &cdnSdk.BucketBackendPatch{
 			Type:      "bucket",
-			BucketUrl: configmodel.Backend.BucketURL,
-			Region:    configmodel.Backend.Region,
+			BucketUrl: configModel.Backend.BucketURL,
+			Region:    configModel.Backend.Region,
 		}
-		if configmodel.Backend.Credentials != nil {
+		if configModel.Backend.Credentials != nil {
 			configPatchBackend.BucketBackendPatch.Credentials = &cdnSdk.BucketCredentials{
-				AccessKeyId:     *configmodel.Backend.Credentials.AccessKey,
-				SecretAccessKey: *configmodel.Backend.Credentials.SecretKey,
+				AccessKeyId:     *configModel.Backend.Credentials.AccessKey,
+				SecretAccessKey: *configModel.Backend.Credentials.SecretKey,
 			}
 		}
 	}
@@ -921,9 +921,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// Map WAF Update
-	if !utils.IsUndefined(configmodel.Waf) {
+	if !utils.IsUndefined(configModel.Waf) {
 		var wafModel wafConfig
-		diags := configmodel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
 			return
@@ -948,10 +948,10 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	if !utils.IsUndefined(configmodel.Optimizer) {
+	if !utils.IsUndefined(configModel.Optimizer) {
 		var optimizerModel optimizerConfig
 
-		diags = configmodel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
+		diags = configModel.Optimizer.As(ctx, &optimizerModel, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping optimizer config")
 			return
