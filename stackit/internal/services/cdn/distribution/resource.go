@@ -86,7 +86,7 @@ var schemaDescriptions = map[string]string{
 	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
-	"config_waf":                                   "Configuration of the Web Application Firewall (WAF) for the distribution. Removing this block from your configuration will completely disable the WAF.",
+	"config_waf":                                   "Configures the Web Application Firewall (WAF) for the distribution. If you remove this block from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API",
 	"waf_mode":                                     "The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.",
 	"waf_type":                                     "The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.",
 	"waf_paranoia_level":                           "Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Defaults to 'L1'.",
@@ -529,6 +529,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"enabled_rule_group_ids": schema.SetAttribute{
 								Optional:    true,
 								ElementType: types.StringType,
+								Computed:    true,
 								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
 							},
 							"disabled_rule_group_ids": schema.SetAttribute{

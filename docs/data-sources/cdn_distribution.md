@@ -53,7 +53,7 @@ Read-Only:
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 - `regions` (List of String) The configured regions where content will be hosted
-- `waf` (Attributes) Configuration of the Web Application Firewall (WAF) for the distribution. Removing this block from your configuration will completely disable the WAF. (see [below for nested schema](#nestedatt--config--waf))
+- `waf` (Attributes) Configures the Web Application Firewall (WAF) for the distribution. If you remove this block from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API (see [below for nested schema](#nestedatt--config--waf))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
@@ -111,9 +111,9 @@ Read-Only:
 
 Read-Only:
 
-- `allowed_http_methods` (Set of String) Restricts which HTTP methods the distribution accepts. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.
-- `allowed_http_versions` (Set of String) Restricts which HTTP protocol versions are accepted. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.
-- `allowed_request_content_types` (Set of String) Restricts which Content-Type headers are accepted in request bodies. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.
+- `allowed_http_methods` (Set of String)
+- `allowed_http_versions` (Set of String)
+- `allowed_request_content_types` (Set of String)
 - `disabled_rule_collection_ids` (Set of String) Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
 - `disabled_rule_group_ids` (Set of String) Set of WAF Rule Group IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
 - `disabled_rule_ids` (Set of String) Set of WAF rule IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections

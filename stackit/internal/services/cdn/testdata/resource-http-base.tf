@@ -18,7 +18,19 @@ variable "redirect_matcher_value" {}
 variable "redirect_matcher_condition" {}
 variable "waf_mode" {}
 variable "waf_type" {}
+variable "waf_allowed_http_methods" {}
+variable "waf_allowed_request_content_types" {}
+variable "waf_allowed_http_versions" {}
+variable "waf_paranoia_level" {}
 variable "waf_enabled_rule_ids" {}
+variable "waf_disabled_rule_ids" {}
+variable "waf_log_only_rule_ids" {}
+variable "waf_enabled_rule_group_ids" {}
+variable "waf_disabled_rule_group_ids" {}
+variable "waf_log_only_rule_group_ids" {}
+variable "waf_enabled_rule_collection_ids" {}
+variable "waf_disabled_rule_collection_ids" {}
+variable "waf_log_only_rule_collection_ids" {}
 
 # dns
 variable "dns_zone_name" {}
@@ -67,9 +79,22 @@ resource "stackit_cdn_distribution" "distribution" {
       ]
     }
     waf = {
-      mode             = var.waf_mode
-      type             = var.waf_type
-      enabled_rule_ids = var.waf_enabled_rule_ids
+      mode                          = var.waf_mode
+      type                          = var.waf_type
+      enabled_rule_ids              = var.waf_enabled_rule_ids
+      allowed_http_methods          = var.waf_allowed_http_methods
+      allowed_request_content_types = var.waf_allowed_request_content_types
+      allowed_http_versions         = var.waf_allowed_http_versions
+      paranoia_level                = var.waf_paranoia_level
+      disabled_rule_ids             = var.waf_disabled_rule_ids
+      enabled_rule_ids              = var.waf_enabled_rule_ids
+      log_only_rule_ids             = var.waf_log_only_rule_ids
+      disabled_rule_group_ids       = var.waf_disabled_rule_group_ids
+      enabled_rule_group_ids        = var.waf_enabled_rule_group_ids
+      log_only_rule_group_ids       = var.waf_log_only_rule_group_ids
+      disabled_rule_collection_ids  = var.waf_disabled_rule_collection_ids
+      enabled_rule_collection_ids   = var.waf_enabled_rule_collection_ids
+      log_only_rule_collection_ids  = var.waf_log_only_rule_collection_ids
     }
     backend = {
       type       = var.backend_http_type

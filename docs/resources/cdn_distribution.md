@@ -148,7 +148,7 @@ Optional:
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
-- `waf` (Attributes) Configuration of the Web Application Firewall (WAF) for the distribution. Removing this block from your configuration will completely disable the WAF. (see [below for nested schema](#nestedatt--config--waf))
+- `waf` (Attributes) Configures the Web Application Firewall (WAF) for the distribution. If you remove this block from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API (see [below for nested schema](#nestedatt--config--waf))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
