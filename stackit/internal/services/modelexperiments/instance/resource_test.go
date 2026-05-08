@@ -182,7 +182,6 @@ func TestMapCreateResponseFields(t *testing.T) {
 			inputCreateResponse: &modelexperiments.CreateInstanceResponse{
 				Instance: modelexperiments.Instance{
 					Id:                         "id",
-					BucketName:                 new("bucketName"),
 					Description:                new("description"),
 					DeletedExperimentRetention: new("30d"),
 					ErrorMessage:               nil,
@@ -193,7 +192,8 @@ func TestMapCreateResponseFields(t *testing.T) {
 				}},
 			inputGetResponse: &modelexperiments.GetInstanceResponse{
 				Instance: modelexperiments.Instance{
-					State: "active",
+					State:      "active",
+					BucketName: new("bucketName"),
 				},
 			},
 			expected: Model{
