@@ -46,6 +46,28 @@ var (
 	cert, key = makeCertAndKey(testutil.OrganizationId, fullDomainNameHttp)
 )
 
+// WAF Variables for Base and Updated states to prevent manual value hardcoding in checks
+var (
+	wafModeBase               = "LOG_ONLY"
+	wafTypeBase               = "PREMIUM"
+	wafParanoiaLevelBase      = "L3"
+	wafAllowedHttpMethodBase  = "GET"
+	wafAllowedContentTypeBase = "application/json"
+	wafAllowedHttpVersionBase = "HTTP/1.0"
+	wafDisabledRuleBase       = "@builtin/crs/response/955100"
+	wafEnabledRuleBase        = "@builtin/crs/response/955320"
+	wafLogOnlyRuleBase        = "@builtin/crs/response/955102"
+
+	wafModeUpdated                = "ENABLED"
+	wafParanoiaLevelUpdated       = "L2"
+	wafAllowedHttpMethodsUpdated  = []string{"POST", "GET"}
+	wafAllowedContentTypesUpdated = []string{"text/plain", "application/json"}
+	wafAllowedHttpVersionsUpdated = []string{"HTTP/1.1", "HTTP/1.0"}
+	wafDisabledRuleUpdated        = "@builtin/crs/response/955320"
+	wafEnabledRuleUpdated         = "@builtin/crs/response/955102"
+	wafLogOnlyRuleUpdated         = "@builtin/crs/response/955100"
+)
+
 var (
 	//go:embed testdata/resource-bucket.tf
 	resourceBucket string
@@ -100,21 +122,21 @@ var testConfigVarsHttp = config.Variables{
 	"redirect_rule_enabled":             config.BoolVariable(true),
 	"redirect_rule_match_condition":     config.StringVariable("ANY"),
 	"redirect_matcher_condition":        config.StringVariable("ANY"),
-	"waf_mode":                          config.StringVariable("LOG_ONLY"),
-	"waf_type":                          config.StringVariable("PREMIUM"),
-	"waf_allowed_http_methods":          config.SetVariable(config.StringVariable("GET")),
-	"waf_allowed_request_content_types": config.SetVariable(config.StringVariable("application/json")),
-	"waf_allowed_http_versions":         config.SetVariable(config.StringVariable("HTTP/1.0")),
-	"waf_paranoia_level":                config.StringVariable("L3"),
-	"waf_disabled_rule_ids":             config.SetVariable(config.StringVariable("@builtin/crs/response/955100")),
-	"waf_disabled_rule_group_ids":       config.SetVariable(config.StringVariable("@builtin/crs/response/955100")),
-	"waf_disabled_rule_collection_ids":  config.SetVariable(config.StringVariable("@builtin/crs/response/955100")),
-	"waf_enabled_rule_ids":              config.SetVariable(config.StringVariable("@builtin/crs/response/955320")),
-	"waf_enabled_rule_group_ids":        config.SetVariable(config.StringVariable("@builtin/crs/response/955320")),
-	"waf_enabled_rule_collection_ids":   config.SetVariable(config.StringVariable("@builtin/crs/response/955320")),
-	"waf_log_only_rule_ids":             config.SetVariable(config.StringVariable("@builtin/crs/response/955102")),
-	"waf_log_only_rule_group_ids":       config.SetVariable(config.StringVariable("@builtin/crs/response/955102")),
-	"waf_log_only_rule_collection_ids":  config.SetVariable(config.StringVariable("@builtin/crs/response/955102")),
+	"waf_mode":                          config.StringVariable(wafModeBase),
+	"waf_type":                          config.StringVariable(wafTypeBase),
+	"waf_allowed_http_methods":          config.SetVariable(config.StringVariable(wafAllowedHttpMethodBase)),
+	"waf_allowed_request_content_types": config.SetVariable(config.StringVariable(wafAllowedContentTypeBase)),
+	"waf_allowed_http_versions":         config.SetVariable(config.StringVariable(wafAllowedHttpVersionBase)),
+	"waf_paranoia_level":                config.StringVariable(wafParanoiaLevelBase),
+	"waf_disabled_rule_ids":             config.SetVariable(config.StringVariable(wafDisabledRuleBase)),
+	"waf_disabled_rule_group_ids":       config.SetVariable(config.StringVariable(wafDisabledRuleBase)),
+	"waf_disabled_rule_collection_ids":  config.SetVariable(config.StringVariable(wafDisabledRuleBase)),
+	"waf_enabled_rule_ids":              config.SetVariable(config.StringVariable(wafEnabledRuleBase)),
+	"waf_enabled_rule_group_ids":        config.SetVariable(config.StringVariable(wafEnabledRuleBase)),
+	"waf_enabled_rule_collection_ids":   config.SetVariable(config.StringVariable(wafEnabledRuleBase)),
+	"waf_log_only_rule_ids":             config.SetVariable(config.StringVariable(wafLogOnlyRuleBase)),
+	"waf_log_only_rule_group_ids":       config.SetVariable(config.StringVariable(wafLogOnlyRuleBase)),
+	"waf_log_only_rule_collection_ids":  config.SetVariable(config.StringVariable(wafLogOnlyRuleBase)),
 }
 
 func configVarsHttpUpdated() config.Variables {
@@ -123,23 +145,23 @@ func configVarsHttpUpdated() config.Variables {
 	updatedConfig["redirect_target_url"] = config.StringVariable("https://example.com/updated")
 
 	// Update WAF configuration to test mutation
-	updatedConfig["waf_mode"] = config.StringVariable("ENABLED")
-	updatedConfig["waf_allowed_http_methods"] = config.ListVariable(config.StringVariable("POST"), config.StringVariable("GET"))
-	updatedConfig["waf_allowed_request_content_types"] = config.ListVariable(config.StringVariable("text/plain"), config.StringVariable("application/json"))
-	updatedConfig["waf_allowed_http_versions"] = config.ListVariable(config.StringVariable("HTTP/1.1"), config.StringVariable("HTTP/1.0"))
-	updatedConfig["waf_paranoia_level"] = config.StringVariable("L2")
+	updatedConfig["waf_mode"] = config.StringVariable(wafModeUpdated)
+	updatedConfig["waf_allowed_http_methods"] = config.ListVariable(config.StringVariable(wafAllowedHttpMethodsUpdated[0]), config.StringVariable(wafAllowedHttpMethodsUpdated[1]))
+	updatedConfig["waf_allowed_request_content_types"] = config.ListVariable(config.StringVariable(wafAllowedContentTypesUpdated[0]), config.StringVariable(wafAllowedContentTypesUpdated[1]))
+	updatedConfig["waf_allowed_http_versions"] = config.ListVariable(config.StringVariable(wafAllowedHttpVersionsUpdated[0]), config.StringVariable(wafAllowedHttpVersionsUpdated[1]))
+	updatedConfig["waf_paranoia_level"] = config.StringVariable(wafParanoiaLevelUpdated)
 
-	updatedConfig["waf_enabled_rule_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955102"))
-	updatedConfig["waf_enabled_rule_group_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955102"))
-	updatedConfig["waf_enabled_rule_collection_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955102"))
+	updatedConfig["waf_enabled_rule_ids"] = config.SetVariable(config.StringVariable(wafEnabledRuleUpdated))
+	updatedConfig["waf_enabled_rule_group_ids"] = config.SetVariable(config.StringVariable(wafEnabledRuleUpdated))
+	updatedConfig["waf_enabled_rule_collection_ids"] = config.SetVariable(config.StringVariable(wafEnabledRuleUpdated))
 
-	updatedConfig["waf_log_only_rule_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955100"))
-	updatedConfig["waf_log_only_rule_group_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955100"))
-	updatedConfig["waf_log_only_rule_collection_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955100"))
+	updatedConfig["waf_log_only_rule_ids"] = config.SetVariable(config.StringVariable(wafLogOnlyRuleUpdated))
+	updatedConfig["waf_log_only_rule_group_ids"] = config.SetVariable(config.StringVariable(wafLogOnlyRuleUpdated))
+	updatedConfig["waf_log_only_rule_collection_ids"] = config.SetVariable(config.StringVariable(wafLogOnlyRuleUpdated))
 
-	updatedConfig["waf_disabled_rule_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955320"))
-	updatedConfig["waf_disabled_rule_group_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955320"))
-	updatedConfig["waf_disabled_rule_collection_ids"] = config.SetVariable(config.StringVariable("@builtin/crs/response/955320"))
+	updatedConfig["waf_disabled_rule_ids"] = config.SetVariable(config.StringVariable(wafDisabledRuleUpdated))
+	updatedConfig["waf_disabled_rule_group_ids"] = config.SetVariable(config.StringVariable(wafDisabledRuleUpdated))
+	updatedConfig["waf_disabled_rule_collection_ids"] = config.SetVariable(config.StringVariable(wafDisabledRuleUpdated))
 
 	return updatedConfig
 }
@@ -225,39 +247,40 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 						"DE",
 					),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
+
 					// WAF Checks
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", wafModeBase),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", wafTypeBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", "GET"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", wafAllowedHttpMethodBase),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", "application/json"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", wafAllowedContentTypeBase),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", "HTTP/1.0"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.paranoia_level", "L3"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", wafAllowedHttpVersionBase),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.paranoia_level", wafParanoiaLevelBase),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", wafDisabledRuleBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", wafDisabledRuleBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", wafDisabledRuleBase),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", wafEnabledRuleBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", wafEnabledRuleBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", wafEnabledRuleBase),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", wafLogOnlyRuleBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", wafLogOnlyRuleBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", wafLogOnlyRuleBase),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -363,38 +386,38 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 
 					// WAF Checks inside Data Source
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.mode", wafModeBase),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.type", wafTypeBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", "GET"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", wafAllowedHttpMethodBase),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", "application/json"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", wafAllowedContentTypeBase),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", "HTTP/1.0"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.paranoia_level", "L3"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", wafAllowedHttpVersionBase),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.paranoia_level", wafParanoiaLevelBase),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", wafDisabledRuleBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", wafDisabledRuleBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", wafDisabledRuleBase),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", wafEnabledRuleBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", wafEnabledRuleBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", wafEnabledRuleBase),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", wafLogOnlyRuleBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", wafLogOnlyRuleBase),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", wafLogOnlyRuleBase),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -437,41 +460,41 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 
 					// Checking WAF Mutated Configurations
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", "ENABLED"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", wafModeUpdated),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", wafTypeBase),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.#", "2"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.1", "POST"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", "GET"),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.1", wafAllowedHttpMethodsUpdated[0]),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", wafAllowedHttpMethodsUpdated[1]),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", "application/json"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.1", "text/plain"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", wafAllowedContentTypesUpdated[1]),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.1", wafAllowedContentTypesUpdated[0]),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", "HTTP/1.0"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.1", "HTTP/1.1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.paranoia_level", "L2"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", wafAllowedHttpVersionsUpdated[1]),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.1", wafAllowedHttpVersionsUpdated[0]),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.paranoia_level", wafParanoiaLevelUpdated),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", wafDisabledRuleUpdated),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", wafDisabledRuleUpdated),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", "@builtin/crs/response/955320"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", wafDisabledRuleUpdated),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", wafEnabledRuleUpdated),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", wafEnabledRuleUpdated),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", "@builtin/crs/response/955102"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", wafEnabledRuleUpdated),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", wafLogOnlyRuleUpdated),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", wafLogOnlyRuleUpdated),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", "@builtin/crs/response/955100"),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", wafLogOnlyRuleUpdated),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
