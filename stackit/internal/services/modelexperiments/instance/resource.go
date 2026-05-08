@@ -603,14 +603,12 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstancePaylo
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
-	payload := &modelexperiments.PartialUpdateInstancePayload{}
-	payload.Name = model.Name.ValueStringPointer()
-	payload.Description = model.Description.ValueStringPointer()
-	payload.Labels = labels
-	if !model.DeletedExperimentRetention.IsUnknown() {
-		payload.DeletedExperimentRetention = model.DeletedExperimentRetention.ValueStringPointer()
-	}
-	return payload, nil
+	return &modelexperiments.PartialUpdateInstancePayload{
+		Name:                       conversion.StringValueToPointer(model.Name),
+		Description:                conversion.StringValueToPointer(model.Description),
+		Labels:                     labels,
+		DeletedExperimentRetention: conversion.StringValueToPointer(model.DeletedExperimentRetention),
+	}, nil
 }
 
 func CreateMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
