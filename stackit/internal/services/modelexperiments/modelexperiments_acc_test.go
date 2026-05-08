@@ -1,0 +1,172 @@
+package modelexperiments_test
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/wait"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
+)
+
+var instanceResource = map[string]string{
+	"project_id":          testutil.ProjectId,
+	"name":                "instance01",
+	"description":         "my description",
+	"description_updated": "my description updated",
+	"region":              testutil.Region,
+}
+
+func inputInstanceConfig(name, description string) string {
+	return fmt.Sprintf(`
+		%s
+
+		resource "stackit_modelexperiments_instance" "example" {
+  			project_id   = "%s"
+  			name         = "%s"
+  			region       = "%s"
+  			description = "%s"
+		}
+		`,
+		testutil.NewConfigBuilder().BuildProviderConfig(),
+		instanceResource["project_id"],
+		name,
+		instanceResource["region"],
+		description,
+	)
+}
+
+func TestAccModelExperimentsInstanceResource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckModelServingTokenDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				Config: inputInstanceConfig(
+					instanceResource["name"],
+					instanceResource["description"],
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "region", instanceResource["region"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "description", instanceResource["description"]),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "state"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "bucket_name"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "deleted_experiment_retention"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
+				),
+			},
+			// Update
+			{
+				Config: inputInstanceConfig(
+					instanceResource["name"],
+					instanceResource["description_updated"],
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "region", instanceResource["region"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "description", instanceResource["description_updated"]),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "state"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "bucket_name"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "deleted_experiment_retention"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := modelexperiments.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ModelExperimentsCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	instancesToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_modelexperiments_instance" {
+			continue
+		}
+
+		// Token terraform ID: "[project_id],[region],[token_id]"
+		idParts := strings.Split(rs.Primary.ID, core.Separator)
+		if len(idParts) != 3 {
+			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)
+		}
+		if idParts[2] != "" {
+			instancesToDestroy = append(instancesToDestroy, idParts[2])
+		}
+	}
+
+	if len(instancesToDestroy) == 0 {
+		return nil
+	}
+
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, testutil.Region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting instanceResp: %w", err)
+	}
+
+	if len(instancesResp.Instances) == 0 {
+		fmt.Print("No instances found for project \n")
+		return nil
+	}
+
+	items := instancesResp.Instances
+	for i := range items {
+		if slices.Contains(instancesToDestroy, items[i].Name) {
+			_, err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, items[i].Id).Execute()
+			if err != nil {
+				return fmt.Errorf("destroying instance %s during CheckDestroy: %w", items[i].Name, err)
+			}
+			_, err = deleteModelExperimentsWaitHandler(ctx, client.DefaultAPI, testutil.Region, testutil.ProjectId, items[i].Id).WaitWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("destroying token %s during CheckDestroy: waiting for deletion %w", items[i].Name, err)
+			}
+		}
+	}
+	return nil
+}
+
+func deleteModelExperimentsWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
+	handler := wait.New(
+		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
+			_, err = a.GetInstance(ctx, projectId, region, instanceId).Execute()
+			if err != nil {
+				var oapiErr *oapierror.GenericOpenAPIError
+				if errors.As(err, &oapiErr) {
+					if oapiErr.StatusCode == http.StatusNotFound {
+						return true, nil, nil
+					}
+				}
+
+				return false, nil, err
+			}
+
+			return false, nil, nil
+		},
+	)
+
+	handler.SetTimeout(10 * time.Minute)
+
+	return handler
+}
