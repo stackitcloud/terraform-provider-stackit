@@ -279,7 +279,7 @@ If you encounter any issues or have suggestions for improvements, please open an
 
 ## Contribute
 
-Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTION.md).
+Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTING.md).
 
 ## Release creation
 
