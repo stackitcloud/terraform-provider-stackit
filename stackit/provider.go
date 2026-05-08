@@ -902,5 +902,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		access_token.NewAccessTokenEphemeralResource,
+		skeKubeconfig.NewKubeconfigEphemeralResource,
 	}
 }
