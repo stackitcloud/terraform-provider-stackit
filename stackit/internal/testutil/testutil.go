@@ -67,42 +67,43 @@ var (
 	// TestImageLocalFilePath is the local path to an image file used for image acceptance tests
 	TestImageLocalFilePath = getenv("TF_ACC_TEST_IMAGE_LOCAL_FILE_PATH", "default")
 
-	ALBCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_ALB_CUSTOM_ENDPOINT", providerName: "alb_custom_endpoint"}
-	ALBCertCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_ALB_CERT_CUSTOM_ENDPOINT", providerName: "alb_certificates_custom_endpoint"}
-	CdnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
-	DnsCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
-	DremioCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_DREMIO_CUSTOM_ENDPOINT", providerName: "dremio_custom_endpoint"}
-	EdgeCloudCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
-	GitCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_GIT_CUSTOM_ENDPOINT", providerName: "git_custom_endpoint"}
-	IaaSCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_IAAS_CUSTOM_ENDPOINT", providerName: "iaas_custom_endpoint"}
-	KMSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_KMS_CUSTOM_ENDPOINT", providerName: "kms_custom_endpoint"}
-	LoadBalancerCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT", providerName: "loadbalancer_custom_endpoint"}
-	LogMeCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_LOGME_CUSTOM_ENDPOINT", providerName: "logme_custom_endpoint"}
-	LogsCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_LOGS_CUSTOM_ENDPOINT", providerName: "logs_custom_endpoint"}
-	MariaDBCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_MARIADB_CUSTOM_ENDPOINT", providerName: "mariadb_custom_endpoint"}
-	ModelServingCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_MODELSERVING_CUSTOM_ENDPOINT", providerName: "modelserving_custom_endpoint"}
-	AuthorizationCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT", providerName: "authorization_custom_endpoint"}
-	MongoDBFlexCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT", providerName: "mongodbflex_custom_endpoint"}
-	OpenSearchCustomEndpoint      = customEndpointConfig{envVarName: "TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT", providerName: "opensearch_custom_endpoint"}
-	ObservabilityCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT", providerName: "observability_custom_endpoint"}
-	ObjectStorageCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT", providerName: "objectstorage_custom_endpoint"}
-	PostgresFlexCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT", providerName: "postgresflex_custom_endpoint"}
-	RabbitMQCustomEndpoint        = customEndpointConfig{envVarName: "TF_ACC_RABBITMQ_CUSTOM_ENDPOINT", providerName: "rabbitmq_custom_endpoint"}
-	RedisCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_REDIS_CUSTOM_ENDPOINT", providerName: "redis_custom_endpoint"}
-	ResourceManagerCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT", providerName: "resourcemanager_custom_endpoint"}
-	ScfCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SCF_CUSTOM_ENDPOINT", providerName: "scf_custom_endpoint"}
-	SecretsManagerCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT", providerName: "secretsmanager_custom_endpoint"}
-	SQLServerFlexCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT", providerName: "sqlserverflex_custom_endpoint"}
-	ServerBackupCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT", providerName: "server_backup_custom_endpoint"}
-	ServerUpdateCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT", providerName: "server_update_custom_endpoint"}
-	SFSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SFS_CUSTOM_ENDPOINT", providerName: "sfs_custom_endpoint"}
-	ServiceAccountCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT", providerName: "service_account_custom_endpoint"}
-	TokenCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_TOKEN_CUSTOM_ENDPOINT", providerName: "token_custom_endpoint"}
-	VpnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_VPN_CUSTOM_ENDPOINT", providerName: "vpn_custom_endpoint"}
-	SKECustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SKE_CUSTOM_ENDPOINT", providerName: "ske_custom_endpoint"}
-	IntakeCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_INTAKE_CUSTOM_ENDPOINT", providerName: "intake_custom_endpoint"}
-	TelemetryRouterCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYROUTER_CUSTOM_ENDPOINT", providerName: "telemetryrouter_custom_endpoint"}
-	TelemetryLinkCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYLINK_CUSTOM_ENDPOINT", providerName: "telemetrylink_custom_endpoint"}
+	ALBCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_ALB_CUSTOM_ENDPOINT", providerName: "alb_custom_endpoint"}
+	ALBCertCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_ALB_CERT_CUSTOM_ENDPOINT", providerName: "alb_certificates_custom_endpoint"}
+	CdnCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
+	DnsCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
+	DremioCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_DREMIO_CUSTOM_ENDPOINT", providerName: "dremio_custom_endpoint"}
+	EdgeCloudCustomEndpoint        = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
+	GitCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_GIT_CUSTOM_ENDPOINT", providerName: "git_custom_endpoint"}
+	IaaSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_IAAS_CUSTOM_ENDPOINT", providerName: "iaas_custom_endpoint"}
+	KMSCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_KMS_CUSTOM_ENDPOINT", providerName: "kms_custom_endpoint"}
+	LoadBalancerCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_LOADBALANCER_CUSTOM_ENDPOINT", providerName: "loadbalancer_custom_endpoint"}
+	LogMeCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_LOGME_CUSTOM_ENDPOINT", providerName: "logme_custom_endpoint"}
+	LogsCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_LOGS_CUSTOM_ENDPOINT", providerName: "logs_custom_endpoint"}
+	MariaDBCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_MARIADB_CUSTOM_ENDPOINT", providerName: "mariadb_custom_endpoint"}
+	ModelServingCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_MODELSERVING_CUSTOM_ENDPOINT", providerName: "modelserving_custom_endpoint"}
+	ModelExperimentsCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_MODELEXPERIMENTS_CUSTOM_ENDPOINT", providerName: "modelexperiments_custom_endpoint"}
+	AuthorizationCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_AUTHORIZATION_CUSTOM_ENDPOINT", providerName: "authorization_custom_endpoint"}
+	MongoDBFlexCustomEndpoint      = customEndpointConfig{envVarName: "TF_ACC_MONGODBFLEX_CUSTOM_ENDPOINT", providerName: "mongodbflex_custom_endpoint"}
+	OpenSearchCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_OPENSEARCH_CUSTOM_ENDPOINT", providerName: "opensearch_custom_endpoint"}
+	ObservabilityCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_OBSERVABILITY_CUSTOM_ENDPOINT", providerName: "observability_custom_endpoint"}
+	ObjectStorageCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_OBJECTSTORAGE_CUSTOM_ENDPOINT", providerName: "objectstorage_custom_endpoint"}
+	PostgresFlexCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_POSTGRESFLEX_CUSTOM_ENDPOINT", providerName: "postgresflex_custom_endpoint"}
+	RabbitMQCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_RABBITMQ_CUSTOM_ENDPOINT", providerName: "rabbitmq_custom_endpoint"}
+	RedisCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_REDIS_CUSTOM_ENDPOINT", providerName: "redis_custom_endpoint"}
+	ResourceManagerCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_RESOURCEMANAGER_CUSTOM_ENDPOINT", providerName: "resourcemanager_custom_endpoint"}
+	ScfCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_SCF_CUSTOM_ENDPOINT", providerName: "scf_custom_endpoint"}
+	SecretsManagerCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_SECRETSMANAGER_CUSTOM_ENDPOINT", providerName: "secretsmanager_custom_endpoint"}
+	SQLServerFlexCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_SQLSERVERFLEX_CUSTOM_ENDPOINT", providerName: "sqlserverflex_custom_endpoint"}
+	ServerBackupCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_SERVER_BACKUP_CUSTOM_ENDPOINT", providerName: "server_backup_custom_endpoint"}
+	ServerUpdateCustomEndpoint     = customEndpointConfig{envVarName: "TF_ACC_SERVER_UPDATE_CUSTOM_ENDPOINT", providerName: "server_update_custom_endpoint"}
+	SFSCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_SFS_CUSTOM_ENDPOINT", providerName: "sfs_custom_endpoint"}
+	ServiceAccountCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT", providerName: "service_account_custom_endpoint"}
+	TokenCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_TOKEN_CUSTOM_ENDPOINT", providerName: "token_custom_endpoint"}
+	VpnCustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_VPN_CUSTOM_ENDPOINT", providerName: "vpn_custom_endpoint"}
+	SKECustomEndpoint              = customEndpointConfig{envVarName: "TF_ACC_SKE_CUSTOM_ENDPOINT", providerName: "ske_custom_endpoint"}
+	IntakeCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_INTAKE_CUSTOM_ENDPOINT", providerName: "intake_custom_endpoint"}
+	TelemetryRouterCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYROUTER_CUSTOM_ENDPOINT", providerName: "telemetryrouter_custom_endpoint"}
+	TelemetryLinkCustomEndpoint    = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYLINK_CUSTOM_ENDPOINT", providerName: "telemetrylink_custom_endpoint"}
 
 	allCustomEndpoints = []customEndpointConfig{
 		ALBCustomEndpoint,
@@ -118,6 +119,7 @@ var (
 		LogsCustomEndpoint,
 		MariaDBCustomEndpoint,
 		ModelServingCustomEndpoint,
+		ModelExperimentsCustomEndpoint,
 		AuthorizationCustomEndpoint,
 		MongoDBFlexCustomEndpoint,
 		OpenSearchCustomEndpoint,
