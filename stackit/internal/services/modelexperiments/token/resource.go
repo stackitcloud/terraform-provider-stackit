@@ -594,8 +594,8 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstanceToken
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 	return &modelexperiments.PartialUpdateInstanceTokenPayload{
-		Name:        model.Name.ValueStringPointer(),
-		Description: model.Description.ValueStringPointer(),
+		Name:        conversion.StringValueToPointer(model.Name),
+		Description: conversion.StringValueToPointer(model.Description),
 		Labels:      labels,
 	}, nil
 }
