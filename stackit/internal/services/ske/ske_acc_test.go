@@ -10,8 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
@@ -117,10 +121,12 @@ func configVarsMaxUpdated() config.Variables {
 
 func TestAccSKEMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		ProtoV6ProviderFactories: testutil.TestEphemeralAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
@@ -157,6 +163,13 @@ func TestAccSKEMin(t *testing.T) {
 						"stackit_ske_cluster.cluster", "name",
 					),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.example",
+						tfjsonpath.New("data"),
+						knownvalue.NotNull(),
+					),
+				},
 			},
 			// 2) Data source
 			{
@@ -260,10 +273,12 @@ func TestAccSKEMin(t *testing.T) {
 
 func TestAccSKEMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		ProtoV6ProviderFactories: testutil.TestEphemeralAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
@@ -337,6 +352,13 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "refresh_before", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_before"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.example",
+						tfjsonpath.New("data"),
+						knownvalue.NotNull(),
+					),
+				},
 			},
 			// 2) Data source
 			{
