@@ -11,6 +11,7 @@ Your contribution is welcome! Thank you for your interest in contributing to the
   	- [Resource file structure](#resource-file-structure)
   - [Implementing a new datasource](#implementing-a-new-datasource)
   - [Onboarding a new STACKIT service](#onboarding-a-new-stackit-service)
+  - [Implementing IAM Role Bindings](#implementing-iam-role-bindings)
   - [Local development](#local-development)
   	- [Setup centralized Terraform state](#setup-centralized-terraform-state)
 - [Code Contributions](#code-contributions)
@@ -99,7 +100,34 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
    You can find an annotated example of such tests in:
 
    https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/resource.go
+
+## Implementing IAM Role Bindings
+
+The IAM role binding API is standardized and distributed across multiple STACKIT services. This consistency allows us 
+to use a generic implementation approach when adding new IAM role binding resources and data sources.
+
+To implement a new IAM role binding, follow these steps:
+
+1. **Create a Service Package:** Create a new package for your service's IAM role binding resources if it does not already exist:
    
+   `stackit/internal/services/iam/rolebindings/v1/services/[SERVICE_NAME]`
+
+2. **Define Resource Factories:** Create a new file containing the factories for your resource and data source. You can use the link below as a template:
+   
+   [instance.go (Example)](https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/services/secretsmanager/instance.go)
+
+3. **Register the Resource:** Register the new resource and data source in the central role bindings file.
+   
+   **Note:** You do **not** need to manually provide examples or import statements; these are automatically generated for you.
+
+   [rolebindings.go](https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/rolebindings.go)
+
+4. **Implement Acceptance Tests:** Once the resource is registered in the provider, implement acceptance tests using our generic testing framework.
+
+   * **Test Data:** Inside your service package, create a `testdata` directory. Add a Terraform configuration file (`.tf`) to bootstrap the environment required for your tests.
+     * [Example Configuration](https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/services/secretsmanager/testdata/instance.tf)
+   * **Test Logic:** Create an acceptance test file in your package. You can adapt the following example to your specific service needs:
+     * [Example Acceptance Test](https://github.com/stackitcloud/terraform-provider-stackit/blob/main/stackit/internal/services/iam/rolebindings/v1/services/secretsmanager/iam_rolebindings_secretsmanager_acc_test.go)
 
 ### Local development
 
