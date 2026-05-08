@@ -46,7 +46,7 @@ var (
 	cert, key = makeCertAndKey(testutil.OrganizationId, fullDomainNameHttp)
 )
 
-// WAF Variables for Base and Updated states to prevent manual value hardcoding in checks
+// WAF Rules for Base and Updated states
 var (
 	wafRule1 = "@builtin/crs/response/955100"
 	wafRule2 = "@builtin/crs/response/955320"
