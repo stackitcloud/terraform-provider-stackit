@@ -131,6 +131,7 @@ func configVarsHttpUpdated() config.Variables {
 
 	// Update WAF configuration to test mutation
 	updatedConfig["waf_mode"] = config.StringVariable("LOG_ONLY")
+	updatedConfig["waf_type"] = config.StringVariable("PREMIUM")
 	updatedConfig["waf_allowed_http_methods_0"] = config.StringVariable("POST")
 	updatedConfig["waf_allowed_request_content_types_0"] = config.StringVariable("text/plain")
 	updatedConfig["waf_allowed_http_versions_0"] = config.StringVariable("HTTP/1.1")
