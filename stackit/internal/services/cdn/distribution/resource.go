@@ -86,7 +86,7 @@ var schemaDescriptions = map[string]string{
 	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
-	"config_waf":                                   "Configures the Web Application Firewall (WAF) for the distribution. If you remove this block from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API",
+	"config_waf":                                   "Configures the Web Application Firewall (WAF) for the distribution. If is undefinied or removed this block from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API",
 	"waf_mode":                                     "The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.",
 	"waf_type":                                     "The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.",
 	"waf_paranoia_level":                           "Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Defaults to 'L1'.",
@@ -466,14 +466,18 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"mode": schema.StringAttribute{
-								Required:    true,
+								Optional:    true,
+								Computed:    true,
 								Description: schemaDescriptions["waf_mode"],
 								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafModeEnumValues)...)},
+								Default:     stringdefault.StaticString(string(cdnSdk.WAFMODE_DISABLED)),
 							},
 							"type": schema.StringAttribute{
-								Required:    true,
+								Optional:    true,
+								Computed:    true,
 								Description: schemaDescriptions["waf_type"],
 								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafTypeEnumValues)...)},
+								Default:     stringdefault.StaticString(string(cdnSdk.WAFTYPE_FREE)),
 							},
 							"paranoia_level": schema.StringAttribute{
 								Optional:    true,
@@ -924,24 +928,26 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	if !utils.IsUndefined(configModel.Waf) {
 		var wafModel wafConfig
 		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+
+		configPatch.Waf.Mode = new(cdnSdk.WafMode(wafModel.Mode.ValueString()))
+		configPatch.Waf.Type = new(cdnSdk.WafType(wafModel.Type.ValueString()))
+		configPatch.Waf.AllowedHttpVersions = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpVersions, &diags)
+		configPatch.Waf.AllowedRequestContentTypes = conversion.TerraformStringSetToList(ctx, wafModel.AllowedRequestContentTypes, &diags)
+		configPatch.Waf.AllowedHttpMethods = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpMethods, &diags)
+		configPatch.Waf.EnabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleIds, &diags)
+		configPatch.Waf.DisabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleIds, &diags)
+		configPatch.Waf.LogOnlyRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleIds, &diags)
+		configPatch.Waf.EnabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleGroupIds, &diags)
+		configPatch.Waf.DisabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleGroupIds, &diags)
+		configPatch.Waf.LogOnlyRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleGroupIds, &diags)
+		configPatch.Waf.EnabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleCollectionIds, &diags)
+		configPatch.Waf.DisabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleCollectionIds, &diags)
+		configPatch.Waf.LogOnlyRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleCollectionIds, &diags)
+
 		if diags.HasError() {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
 			return
 		}
-		configPatch.Waf.Mode = new(cdnSdk.WafMode(wafModel.Mode.ValueString()))
-		configPatch.Waf.Type = new(cdnSdk.WafType(wafModel.Type.ValueString()))
-		configPatch.Waf.AllowedHttpVersions = getWafSet(ctx, wafModel.AllowedHttpVersions)
-		configPatch.Waf.AllowedRequestContentTypes = getWafSet(ctx, wafModel.AllowedRequestContentTypes)
-		configPatch.Waf.AllowedHttpMethods = getWafSet(ctx, wafModel.AllowedHttpMethods)
-		configPatch.Waf.EnabledRuleIds = getWafSet(ctx, wafModel.EnabledRuleIds)
-		configPatch.Waf.DisabledRuleIds = getWafSet(ctx, wafModel.DisabledRuleIds)
-		configPatch.Waf.LogOnlyRuleIds = getWafSet(ctx, wafModel.LogOnlyRuleIds)
-		configPatch.Waf.EnabledRuleGroupIds = getWafSet(ctx, wafModel.EnabledRuleGroupIds)
-		configPatch.Waf.DisabledRuleGroupIds = getWafSet(ctx, wafModel.DisabledRuleGroupIds)
-		configPatch.Waf.LogOnlyRuleGroupIds = getWafSet(ctx, wafModel.LogOnlyRuleGroupIds)
-		configPatch.Waf.EnabledRuleCollectionIds = getWafSet(ctx, wafModel.EnabledRuleCollectionIds)
-		configPatch.Waf.DisabledRuleCollectionIds = getWafSet(ctx, wafModel.DisabledRuleCollectionIds)
-		configPatch.Waf.LogOnlyRuleCollectionIds = getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds)
 
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
 			configPatch.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
@@ -1307,54 +1313,38 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	}
 
 	// Map Waf
-	wafObjAttrs := map[string]attr.Value{
-		"mode": types.StringValue(string(distribution.Config.Waf.Mode)),
-		"type": types.StringValue(string(distribution.Config.Waf.Type)),
-	}
-
-	// Detect if we are running an Import (or Data Source Read) where prior config doesn't exist
-	isImport := utils.IsUndefined(model.Config)
-
-	// Helper to unconditionally map string fields
-	mapWafString := func(apiVal *string) types.String {
-		if apiVal != nil {
-			return types.StringPointerValue(apiVal)
-		}
-		return types.StringNull()
-	}
-
 	var pl *string
 	if distribution.Config.Waf.ParanoiaLevel != nil {
 		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
 	}
-	wafObjAttrs["paranoia_level"] = mapWafString(pl)
-	wafObjAttrs["allowed_http_versions"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedHttpVersions)
-	wafObjAttrs["allowed_request_content_types"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes)
-	wafObjAttrs["allowed_http_methods"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedHttpMethods)
-	wafObjAttrs["enabled_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleIds)
-	wafObjAttrs["disabled_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleIds)
-	wafObjAttrs["log_only_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleIds)
-	wafObjAttrs["enabled_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds)
-	wafObjAttrs["disabled_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds)
-	wafObjAttrs["log_only_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds)
-	wafObjAttrs["enabled_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds)
-	wafObjAttrs["disabled_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds)
-	wafObjAttrs["log_only_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds)
+	wafObjAttrs := map[string]attr.Value{
+		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
+		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
+		"paranoia_level":                types.StringPointerValue(pl),
+		"allowed_http_versions":         conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpVersions, &diags),
+		"allowed_request_content_types": conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes, &diags),
+		"allowed_http_methods":          conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpMethods, &diags),
+		"enabled_rule_ids":              conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleIds, &diags),
+		"disabled_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleIds, &diags),
+		"log_only_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleIds, &diags),
+		"enabled_rule_group_ids":        conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds, &diags),
+		"disabled_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds, &diags),
+		"log_only_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds, &diags),
+		"enabled_rule_collection_ids":   conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds, &diags),
+		"disabled_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds, &diags),
+		"log_only_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds, &diags),
+	}
 
-	// Determine if WAF should be entirely excluded to prevent drift.
-	// The API can return an empty string for fully unconfigured backends.
-	isWafDisabled := (distribution.Config.Waf.Mode == cdnSdk.WAFMODE_DISABLED) &&
-		(distribution.Config.Waf.Type == cdnSdk.WAFTYPE_FREE)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
 
 	var wafVal attr.Value
-	if isWafDisabled && (isImport || utils.IsUndefined(oldConfig.Waf)) {
-		wafVal = types.ObjectNull(wafTypes)
-	} else {
-		var diagWaf diag.Diagnostics
-		wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
-		if diagWaf.HasError() {
-			return core.DiagsToError(diagWaf)
-		}
+
+	var diagWaf diag.Diagnostics
+	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
+	if diagWaf.HasError() {
+		return core.DiagsToError(diagWaf)
 	}
 
 	optimizerVal := types.ObjectNull(optimizerTypes)
@@ -1658,18 +1648,18 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		cdnConfig.Waf = cdnSdk.WafConfig{
 			Mode:                       cdnSdk.WafMode(wafModel.Mode.ValueString()),
 			Type:                       cdnSdk.WafType(wafModel.Type.ValueString()),
-			AllowedHttpVersions:        getWafSet(ctx, wafModel.AllowedHttpVersions),
-			AllowedRequestContentTypes: getWafSet(ctx, wafModel.AllowedRequestContentTypes),
-			AllowedHttpMethods:         getWafSet(ctx, wafModel.AllowedHttpMethods),
-			EnabledRuleIds:             getWafSet(ctx, wafModel.EnabledRuleIds),
-			DisabledRuleIds:            getWafSet(ctx, wafModel.DisabledRuleIds),
-			LogOnlyRuleIds:             getWafSet(ctx, wafModel.LogOnlyRuleIds),
-			EnabledRuleGroupIds:        getWafSet(ctx, wafModel.EnabledRuleGroupIds),
-			DisabledRuleGroupIds:       getWafSet(ctx, wafModel.DisabledRuleGroupIds),
-			LogOnlyRuleGroupIds:        getWafSet(ctx, wafModel.LogOnlyRuleGroupIds),
-			EnabledRuleCollectionIds:   getWafSet(ctx, wafModel.EnabledRuleCollectionIds),
-			DisabledRuleCollectionIds:  getWafSet(ctx, wafModel.DisabledRuleCollectionIds),
-			LogOnlyRuleCollectionIds:   getWafSet(ctx, wafModel.LogOnlyRuleCollectionIds),
+			AllowedHttpVersions:        conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpVersions, &diags),
+			AllowedRequestContentTypes: conversion.TerraformStringSetToList(ctx, wafModel.AllowedRequestContentTypes, &diags),
+			AllowedHttpMethods:         conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpMethods, &diags),
+			EnabledRuleIds:             conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleIds, &diags),
+			DisabledRuleIds:            conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleIds, &diags),
+			LogOnlyRuleIds:             conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleIds, &diags),
+			EnabledRuleGroupIds:        conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleGroupIds, &diags),
+			DisabledRuleGroupIds:       conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleGroupIds, &diags),
+			LogOnlyRuleGroupIds:        conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleGroupIds, &diags),
+			EnabledRuleCollectionIds:   conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleCollectionIds, &diags),
+			DisabledRuleCollectionIds:  conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleCollectionIds, &diags),
+			LogOnlyRuleCollectionIds:   conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleCollectionIds, &diags),
 		}
 
 		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
@@ -1733,28 +1723,4 @@ func validateCountryCode(country string) (string, error) {
 	}
 
 	return upperCountry, nil
-}
-
-// getWafSet extracts strings from HCL set
-func getWafSet(ctx context.Context, tfSet basetypes.SetValue) []string {
-	if utils.IsUndefined(tfSet) {
-		return nil
-	}
-	var elements []string
-	diags := tfSet.ElementsAs(ctx, &elements, true)
-	if diags.HasError() {
-		return []string{}
-	}
-	return elements
-}
-
-// Helper to unconditionally map set fields
-func mustMapStringSet(ctx context.Context, apiList []string) types.Set {
-	if apiList != nil {
-		setVal, diags := types.SetValueFrom(ctx, types.StringType, apiList)
-		if !diags.HasError() {
-			return setVal
-		}
-	}
-	return types.SetNull(types.StringType)
 }

@@ -594,37 +594,37 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	// Map Waf
-	wafVal := types.ObjectNull(wafTypes)
-	if distribution.Config.Waf.Mode != "" {
-		wafObjAttrs := map[string]attr.Value{
-			"mode": types.StringValue(string(distribution.Config.Waf.Mode)),
-			"type": types.StringValue(string(distribution.Config.Waf.Type)),
-		}
+	var pl *string
+	if distribution.Config.Waf.ParanoiaLevel != nil {
+		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
+	}
+	wafObjAttrs := map[string]attr.Value{
+		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
+		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
+		"paranoia_level":                types.StringPointerValue(pl),
+		"allowed_http_versions":         conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpVersions, &diags),
+		"allowed_request_content_types": conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes, &diags),
+		"allowed_http_methods":          conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpMethods, &diags),
+		"enabled_rule_ids":              conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleIds, &diags),
+		"disabled_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleIds, &diags),
+		"log_only_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleIds, &diags),
+		"enabled_rule_group_ids":        conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds, &diags),
+		"disabled_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds, &diags),
+		"log_only_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds, &diags),
+		"enabled_rule_collection_ids":   conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds, &diags),
+		"disabled_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds, &diags),
+		"log_only_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds, &diags),
+	}
 
-		if distribution.Config.Waf.ParanoiaLevel != nil {
-			wafObjAttrs["paranoia_level"] = types.StringValue(string(*distribution.Config.Waf.ParanoiaLevel))
-		} else {
-			wafObjAttrs["paranoia_level"] = types.StringNull()
-		}
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	var wafVal attr.Value
 
-		wafObjAttrs["allowed_http_versions"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedHttpVersions)
-		wafObjAttrs["allowed_request_content_types"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes)
-		wafObjAttrs["allowed_http_methods"] = mustMapStringSet(ctx, distribution.Config.Waf.AllowedHttpMethods)
-		wafObjAttrs["enabled_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleIds)
-		wafObjAttrs["disabled_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleIds)
-		wafObjAttrs["log_only_rule_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleIds)
-		wafObjAttrs["enabled_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds)
-		wafObjAttrs["disabled_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds)
-		wafObjAttrs["log_only_rule_group_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds)
-		wafObjAttrs["enabled_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds)
-		wafObjAttrs["disabled_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds)
-		wafObjAttrs["log_only_rule_collection_ids"] = mustMapStringSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds)
-
-		var diagWaf diag.Diagnostics
-		wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
-		if diagWaf.HasError() {
-			return core.DiagsToError(diagWaf)
-		}
+	var diagWaf diag.Diagnostics
+	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
+	if diagWaf.HasError() {
+		return core.DiagsToError(diagWaf)
 	}
 
 	// Optimizer
