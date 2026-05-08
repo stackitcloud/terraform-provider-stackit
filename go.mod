@@ -17,7 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2
-	github.com/stackitcloud/stackit-sdk-go/services/edge v0.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/edge v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.12.2
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.11.1
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.8.0
