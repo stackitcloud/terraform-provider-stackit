@@ -532,13 +532,13 @@ func mapCreateResponse(ctx context.Context, instanceCreateResp *modelexperiments
 		model.State = types.StringValue("unknown")
 	} else {
 		model.State = types.StringValue(waitResp.Instance.State)
+		model.BucketName = types.StringValue(*waitResp.Instance.BucketName)
 	}
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceCreateResp.Instance.Id)
 	model.InstanceId = types.StringValue(instance.Id)
 	model.Name = types.StringValue(instance.Name)
 	model.Description = types.StringPointerValue(instance.Description)
 	model.DeletedExperimentRetention = types.StringPointerValue(instance.DeletedExperimentRetention)
-	model.BucketName = types.StringPointerValue(instance.BucketName)
 	model.ErrorMessage = types.StringPointerValue(instance.ErrorMessage)
 	model.Labels = mapValue
 	model.Url = types.StringPointerValue(&instance.Url)
