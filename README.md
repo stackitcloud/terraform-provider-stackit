@@ -195,7 +195,7 @@ To enable experiments set the experiments field in the provider definition:
 ```hcl
 provider "stackit" {
   default_region        = "eu01"
-  experiments           = ["iam", "routing-tables", "network"]
+  experiments           = ["iam", "routing-tables", "network", "dremio", "ske"]
 }
 ```
 
@@ -220,6 +220,10 @@ If you don't need these fields, don't set the experiment flag `network`, to use 
 Enables the usage and provisioning of STACKIT Dremio resources.
 The STACKIT Dremio API is currently in alpha state.
 The fields of the resources are still subject to change.
+
+#### `ske`
+
+Enables experimental SKE features. These features are subject to change and may be removed or redesigned in future releases.
 
 ## Acceptance Tests
 
