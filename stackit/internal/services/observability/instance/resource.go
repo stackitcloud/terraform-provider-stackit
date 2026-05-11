@@ -83,6 +83,9 @@ type Model struct {
 	LogsPushURL                        types.String `tfsdk:"logs_push_url"`
 	JaegerTracesURL                    types.String `tfsdk:"jaeger_traces_url"`
 	JaegerUIURL                        types.String `tfsdk:"jaeger_ui_url"`
+	OtlpGRPCTracesURL                  types.String `tfsdk:"otlp_grpc_traces_url"`
+	OtlpHTTPLogsURL                    types.String `tfsdk:"otlp_http_logs_url"`
+	OtlpHTTPTracesURL                  types.String `tfsdk:"otlp_http_traces_url"`
 	OtlpTracesURL                      types.String `tfsdk:"otlp_traces_url"`
 	ZipkinSpansURL                     types.String `tfsdk:"zipkin_spans_url"`
 	ACL                                types.Set    `tfsdk:"acl"`
@@ -604,6 +607,24 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"jaeger_ui_url": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"otlp_grpc_traces_url": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"otlp_http_logs_url": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"otlp_http_traces_url": schema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -1613,6 +1634,9 @@ func mapFields(ctx context.Context, r *observability.GetInstanceResponse, model 
 		model.LogsPushURL = types.StringPointerValue(i.LogsPushUrl)
 		model.JaegerTracesURL = types.StringPointerValue(i.JaegerTracesUrl)
 		model.JaegerUIURL = types.StringPointerValue(i.JaegerUiUrl)
+		model.OtlpGRPCTracesURL = types.StringPointerValue(i.OtlpGrpcTracesUrl)
+		model.OtlpHTTPLogsURL = types.StringPointerValue(i.OtlpHttpLogsUrl)
+		model.OtlpHTTPTracesURL = types.StringPointerValue(i.OtlpHttpTracesUrl)
 		model.OtlpTracesURL = types.StringPointerValue(i.OtlpTracesUrl)
 		model.ZipkinSpansURL = types.StringPointerValue(i.ZipkinSpansUrl)
 		model.GrafanaAdminEnabled = types.BoolPointerValue(i.GrafanaAdminEnabled)
