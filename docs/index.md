@@ -182,6 +182,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `logs_custom_endpoint` (String) Custom endpoint for the Logs service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
+- `modelexperiments_custom_endpoint` (String) Custom endpoint for the AI Model Experiments service
 - `modelserving_custom_endpoint` (String) Custom endpoint for the AI Model Serving service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
