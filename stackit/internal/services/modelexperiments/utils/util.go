@@ -28,7 +28,7 @@ const (
 	TOKENSTATE_INACTIVE = "inactive"
 )
 
-func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *modelexperiment.APIClient {
+func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) modelexperiment.DefaultAPI {
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),
 		utils.UserAgentConfigOption(providerData.Version),
@@ -42,10 +42,11 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 		return nil
 	}
 
-	return apiClient
+	return apiClient.DefaultAPI
 }
 
-func ConfigureServiceEnablementClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *serviceenablement.APIClient {
+//go:generate mockgen -destination=./mock/serviceenablement.go -package=mock_serviceenablement github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api DefaultAPI
+func ConfigureServiceEnablementClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) serviceenablement.DefaultAPI {
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),
 		utils.UserAgentConfigOption(providerData.Version),
@@ -61,5 +62,5 @@ func ConfigureServiceEnablementClient(ctx context.Context, providerData *core.Pr
 		return nil
 	}
 
-	return apiClient
+	return apiClient.DefaultAPI
 }
