@@ -1,6 +1,6 @@
 variable "project_id" {}
 variable "immutable" {
-  default = null
+  default = "all"
 }
 
 data "stackit_sfs_snapshot_policies" "snapshot_policies" {

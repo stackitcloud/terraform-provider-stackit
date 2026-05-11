@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -21,6 +22,18 @@ import (
 var (
 	_ datasource.DataSource = &policiesDataSource{}
 )
+
+const (
+	ImmutableFilterAll           = "all"
+	ImmutableFilterImmutableOnly = "immutable-only"
+	ImmutableFilterMutableOnly   = "mutable-only"
+)
+
+var ImmutableFilterValues = []string{
+	ImmutableFilterAll,
+	ImmutableFilterImmutableOnly,
+	ImmutableFilterMutableOnly,
+}
 
 func NewSnapshotPoliciesDataSource() datasource.DataSource {
 	return &policiesDataSource{}
@@ -66,9 +79,12 @@ func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					validate.NoSeparator(),
 				},
 			},
-			"immutable": schema.BoolAttribute{
-				Description: "List only immutable snapshot policies.",
+			"immutable": schema.StringAttribute{
+				Description: "Filter snapshot policies by immutability. " + utils.FormatPossibleValues(ImmutableFilterValues...) + " Defaults to `" + ImmutableFilterAll + "`. This attribute is in beta, may have breaking changes in the future.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(ImmutableFilterValues...),
+				},
 			},
 			"items": schema.ListNestedAttribute{
 				Computed: true,
@@ -139,7 +155,7 @@ func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 type model struct {
 	ID        types.String `tfsdk:"id"`
 	ProjectId types.String `tfsdk:"project_id"`
-	Immutable types.Bool   `tfsdk:"immutable"`
+	Immutable types.String `tfsdk:"immutable"`
 	Items     []policy     `tfsdk:"items"`
 }
 
@@ -178,12 +194,17 @@ func (r *policiesDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	listRequest := r.client.DefaultAPI.ListSnapshotPolicies(ctx, projectId)
 	if !utils.IsUndefined(model.Immutable) {
-		listRequest = listRequest.Immutable(model.Immutable.ValueBool())
+		switch model.Immutable.ValueString() {
+		case ImmutableFilterImmutableOnly:
+			listRequest = listRequest.Immutable(true)
+		case ImmutableFilterMutableOnly:
+			listRequest = listRequest.Immutable(false)
+		}
 
 		title := `The "immutable" attribute of the "stackit_sfs_snapshot_policies" data source is in beta`
 		content := `This attribute may be subject to breaking changes in the future. Use with caution.`
 		tflog.Warn(ctx, fmt.Sprintf(`%s | %s`, title, content))
-		diags.AddWarning(title, content)
+		resp.Diagnostics.AddWarning(title, content)
 	}
 	policies, err := listRequest.Execute()
 	if err != nil {

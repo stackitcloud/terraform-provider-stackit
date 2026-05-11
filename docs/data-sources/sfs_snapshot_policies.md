@@ -32,7 +32,7 @@ data "stackit_sfs_snapshot_policies" "immutable_only" {
 
 ### Optional
 
-- `immutable` (Boolean) List only immutable snapshot policies.
+- `immutable` (String) Filter snapshot policies by immutability. Possible values are: `all`, `immutable-only`, `mutable-only`. Defaults to `all`. This attribute is in beta, may have breaking changes in the future.
 
 ### Read-Only
 
