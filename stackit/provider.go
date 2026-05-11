@@ -18,6 +18,7 @@ import (
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
+
 	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
