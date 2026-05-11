@@ -189,6 +189,15 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"jaeger_ui_url": schema.StringAttribute{
 				Computed: true,
 			},
+			"otlp_grpc_traces_url": schema.StringAttribute{
+				Computed: true,
+			},
+			"otlp_http_logs_url": schema.StringAttribute{
+				Computed: true,
+			},
+			"otlp_http_traces_url": schema.StringAttribute{
+				Computed: true,
+			},
 			"otlp_traces_url": schema.StringAttribute{
 				Computed: true,
 			},

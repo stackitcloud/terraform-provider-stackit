@@ -511,3 +511,127 @@ func TestStringListToSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestStringListToSet(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		stringList []string
+		want       types.Set
+		wantErr    bool
+	}{
+		{
+			name:       "nil list",
+			stringList: nil,
+			want:       basetypes.NewSetNull(types.StringType),
+			wantErr:    false,
+		},
+		{
+			name:       "empty list",
+			stringList: []string{},
+			want:       basetypes.NewSetValueMust(types.StringType, []attr.Value{}),
+			wantErr:    false,
+		},
+		{
+			name:       "valid list",
+			stringList: []string{"value1", "value2"},
+			want: basetypes.NewSetValueMust(
+				types.StringType,
+				[]attr.Value{
+					types.StringValue("value1"),
+					types.StringValue("value2"),
+				},
+			),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			var diags diag.Diagnostics
+
+			got := StringListToSet(ctx, tt.stringList, &diags)
+
+			if diags.HasError() != tt.wantErr {
+				t.Fatalf("expected error presence: %v, got diagnostics: %v", tt.wantErr, diags)
+			}
+
+			if !got.Equal(tt.want) {
+				t.Fatalf("expected set: %v, got set: %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestTerraformStringSetToList(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		tfSet   basetypes.SetValue
+		want    []string
+		wantErr bool
+	}{
+		{
+			name:    "unknown",
+			tfSet:   basetypes.NewSetUnknown(types.StringType),
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name:    "null",
+			tfSet:   basetypes.NewSetNull(types.StringType),
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name:    "invalid type",
+			tfSet:   basetypes.NewSetValueMust(types.Int64Type, []attr.Value{types.Int64Value(123)}),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "valid string set",
+			tfSet: basetypes.NewSetValueMust(
+				types.StringType,
+				[]attr.Value{
+					types.StringValue("value1"),
+					types.StringValue("value2"),
+				},
+			),
+			want: []string{
+				"value1",
+				"value2",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty string set",
+			tfSet: basetypes.NewSetValueMust(
+				types.StringType,
+				[]attr.Value{},
+			),
+			want:    []string{},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			var diags diag.Diagnostics
+
+			got := TerraformStringSetToList(ctx, tt.tfSet, &diags)
+
+			if diags.HasError() != tt.wantErr {
+				t.Fatalf("expected error presence: %v, got diagnostics: %v", tt.wantErr, diags)
+			}
+
+			if d := cmp.Diff(got, tt.want); d != "" {
+				t.Fatalf("no match, diff: %s", d)
+			}
+		})
+	}
+}
