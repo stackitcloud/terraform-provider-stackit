@@ -1760,25 +1760,29 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 		}
 
 		// observability logs
-		observabilityLogsModel := observabilityOption{}
-		diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
-		}
-		observabilityPayload.Logs = &albSdk.LoadbalancerOptionLogs{
-			CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
-			PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
+		if !utils.IsUndefined(observabilityModel.Logs) {
+			observabilityLogsModel := observabilityOption{}
+			diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
+			}
+			observabilityPayload.Logs = &albSdk.LoadbalancerOptionLogs{
+				CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
+				PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
+			}
 		}
 
 		// observability metrics
-		observabilityMetricsModel := observabilityOption{}
-		diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
-		}
-		observabilityPayload.Metrics = &albSdk.LoadbalancerOptionMetrics{
-			CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
-			PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
+		if !utils.IsUndefined(observabilityModel.Metrics) {
+			observabilityMetricsModel := observabilityOption{}
+			diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
+			}
+			observabilityPayload.Metrics = &albSdk.LoadbalancerOptionMetrics{
+				CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
+				PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
+			}
 		}
 	}
 

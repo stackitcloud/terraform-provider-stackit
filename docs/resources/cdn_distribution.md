@@ -74,6 +74,39 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
         }
       ]
     }
+
+    # WAF Configuration
+    # 
+    # Precedence Hierarchy: Specific Rules > Groups > Collections
+    # In this example, the entire "@builtin/crs/request" collection is ENABLED.
+    # However, because specific Rule IDs have a higher precedence, the rule 
+    # "@builtin/crs/request/942151" is explicitly DISABLED, overriding the collection setting.
+    # 
+    # To view all available collections, groups, and rules, consult the API documentation:
+    # https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+    waf = {
+      mode                          = "ENABLED"
+      type                          = "PREMIUM"
+      paranoia_level                = "L1"
+      allowed_http_versions         = ["HTTP/1.0", "HTTP/1.1"]
+      allowed_http_methods          = ["GET"]
+      allowed_request_content_types = ["text/plain"]
+
+      # Collections
+      enabled_rule_collection_ids  = ["@builtin/crs/request"]
+      disabled_rule_collection_ids = []
+      log_only_rule_collection_ids = ["@builtin/crs/response"]
+
+      # Groups
+      enabled_rule_group_ids  = []
+      disabled_rule_group_ids = []
+      log_only_rule_group_ids = []
+
+      # Specific Rules (Highest Precedence)
+      enabled_rule_ids  = ["@builtin/crs/request/913100"]
+      disabled_rule_ids = ["@builtin/crs/request/942151"]
+      log_only_rule_ids = ["@builtin/crs/response/954120"]
+    }
   }
 }
 
@@ -115,6 +148,7 @@ Optional:
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
+- `waf` (Attributes) Configures the Web Application Firewall (WAF) for the distribution. If this block is undefined or removed from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API; if they were never defined, the API will apply its default settings. (see [below for nested schema](#nestedatt--config--waf))
 
 <a id="nestedatt--config--backend"></a>
 ### Nested Schema for `config.backend`
@@ -184,6 +218,28 @@ Optional:
 - `value_match_condition` (String) Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.
 
 
+
+
+<a id="nestedatt--config--waf"></a>
+### Nested Schema for `config.waf`
+
+Optional:
+
+- `allowed_http_methods` (Set of String) Restricts which HTTP methods the distribution accepts. If provided, the set must contain at least one item. Case you removed waf will retain the last known state and if omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.
+- `allowed_http_versions` (Set of String) Restricts which HTTP protocol versions are accepted. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.
+- `allowed_request_content_types` (Set of String) Restricts which Content-Type headers are accepted in request bodies. If provided, the set must contain at least one item. Case you removed waf will retain the last known state and if omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.
+- `disabled_rule_collection_ids` (Set of String) Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `disabled_rule_group_ids` (Set of String) Set of WAF Rule Group IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `disabled_rule_ids` (Set of String) Set of WAF rule IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `enabled_rule_collection_ids` (Set of String) Set of WAF Collection IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `enabled_rule_group_ids` (Set of String) Set of WAF Rule Group IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `enabled_rule_ids` (Set of String) Set of WAF rule IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly enabled Rule ID takes precedence over a disabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `log_only_rule_collection_ids` (Set of String) Set of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `log_only_rule_group_ids` (Set of String) Set of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `log_only_rule_ids` (Set of String) Set of WAF rule IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+- `mode` (String) The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.
+- `paranoia_level` (String) Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Case you removed waf will retain the last known state and if omitted, The API applies the following default 'L1'.
+- `type` (String) The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.
 
 
 

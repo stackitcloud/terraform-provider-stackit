@@ -56,6 +56,39 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
         }
       ]
     }
+
+    # WAF Configuration
+    # 
+    # Precedence Hierarchy: Specific Rules > Groups > Collections
+    # In this example, the entire "@builtin/crs/request" collection is ENABLED.
+    # However, because specific Rule IDs have a higher precedence, the rule 
+    # "@builtin/crs/request/942151" is explicitly DISABLED, overriding the collection setting.
+    # 
+    # To view all available collections, groups, and rules, consult the API documentation:
+    # https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections
+    waf = {
+      mode                          = "ENABLED"
+      type                          = "PREMIUM"
+      paranoia_level                = "L1"
+      allowed_http_versions         = ["HTTP/1.0", "HTTP/1.1"]
+      allowed_http_methods          = ["GET"]
+      allowed_request_content_types = ["text/plain"]
+
+      # Collections
+      enabled_rule_collection_ids  = ["@builtin/crs/request"]
+      disabled_rule_collection_ids = []
+      log_only_rule_collection_ids = ["@builtin/crs/response"]
+
+      # Groups
+      enabled_rule_group_ids  = []
+      disabled_rule_group_ids = []
+      log_only_rule_group_ids = []
+
+      # Specific Rules (Highest Precedence)
+      enabled_rule_ids  = ["@builtin/crs/request/913100"]
+      disabled_rule_ids = ["@builtin/crs/request/942151"]
+      log_only_rule_ids = ["@builtin/crs/response/954120"]
+    }
   }
 }
 
