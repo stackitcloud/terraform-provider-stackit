@@ -20,7 +20,7 @@ import (
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshot-policy"
+	snapshot_policy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshot-policy"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
