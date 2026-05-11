@@ -20,6 +20,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
@@ -296,7 +297,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	//If model experiments instance is impaired, write state avoid dangling resources and return
+	// If model experiments instance is impaired, write state avoid dangling resources and return
 	waitResp, err := CreateMExpInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Waiting for instance to be active: %v", err))
@@ -368,7 +369,7 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapInstance(ctx, getInstanceResp.Instance, &model)
+	err = mapInstance(ctx, &getInstanceResp.Instance, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -381,7 +382,6 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	tflog.Info(ctx, "Model experiments instance read")
-
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -447,7 +447,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapInstance(ctx, updateInstanceResp.Instance, &model)
+	err = mapInstance(ctx, &updateInstanceResp.Instance, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -547,7 +547,7 @@ func mapCreateResponse(ctx context.Context, instanceCreateResp *modelexperiments
 }
 
 // mapInstance maps instances to the resource model
-func mapInstance(ctx context.Context, instance modelexperiments.Instance, model *Model) error {
+func mapInstance(ctx context.Context, instance *modelexperiments.Instance, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
