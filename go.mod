@@ -53,6 +53,8 @@ require (
 	golang.org/x/mod v0.38.0
 )
 
+require go.uber.org/mock v0.6.0 // indirect
+
 require (
 	4d63.com/gocheckcompilerdirectives v1.3.0 // indirect
 	4d63.com/gochecknoglobals v0.2.2 // indirect
