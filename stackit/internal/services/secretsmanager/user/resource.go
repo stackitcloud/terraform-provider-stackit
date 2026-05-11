@@ -135,9 +135,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"write_enabled": schema.BoolAttribute{
 				Description: descriptions["write_enabled"],
@@ -396,7 +393,8 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.UpdateUserPayload{
-		Write: conversion.BoolValueToPointer(model.WriteEnabled),
+		Description: conversion.StringValueToPointer(model.Description),
+		Write:       conversion.BoolValueToPointer(model.WriteEnabled),
 	}, nil
 }
 

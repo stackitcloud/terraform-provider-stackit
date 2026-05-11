@@ -229,17 +229,20 @@ func TestToUpdatePayload(t *testing.T) {
 			"default_values",
 			&Model{},
 			&secretsmanager.UpdateUserPayload{
-				Write: nil,
+				Description: nil,
+				Write:       nil,
 			},
 			true,
 		},
 		{
 			"simple_values",
 			&Model{
+				Description:  types.StringValue("description"),
 				WriteEnabled: types.BoolValue(false),
 			},
 			&secretsmanager.UpdateUserPayload{
-				Write: new(false),
+				Description: new("description"),
+				Write:       new(false),
 			},
 			true,
 		},
