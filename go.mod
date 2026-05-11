@@ -53,6 +53,8 @@ require (
 	golang.org/x/mod v0.38.0
 )
 
+require go.uber.org/mock v0.6.0 // indirect
+
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
