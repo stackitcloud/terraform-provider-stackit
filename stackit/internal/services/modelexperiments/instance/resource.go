@@ -21,10 +21,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
+	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -54,15 +54,17 @@ type Model struct {
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
+//
+//go:generate mockgen -destination=./mock/instance.go -package=mock_instance dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api DefaultAPI
 func NewInstanceResource() resource.Resource {
 	return &instanceResource{}
 }
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client                  *modelexperiments.APIClient
+	client                  modelexperiments.DefaultAPI
 	providerData            core.ProviderData
-	serviceEnablementClient *serviceenablement.APIClient
+	serviceEnablementClient serviceenablement.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -233,7 +235,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := i.serviceEnablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.ModelExperimentsServiceId).
+	err := i.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelExperimentsServiceId).
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -254,7 +256,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, i.serviceEnablementClient.DefaultAPI, region, projectId, utils.ModelServingServiceId).
+	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, i.serviceEnablementClient, region, projectId, utils.ModelServingServiceId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -272,7 +274,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	createInstanceResp, err := i.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createInstanceResp, err := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -355,7 +357,7 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getInstanceResp, err := i.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	getInstanceResp, err := i.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -421,7 +423,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updateInstanceResp, err := i.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	updateInstanceResp, err := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -485,7 +487,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := i.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	_, err := i.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if !errors.As(err, &oapiErr) {
@@ -613,9 +615,9 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstancePaylo
 	}, nil
 }
 
-func CreateMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
+func CreateMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-		getInstanceResp, err := a.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+		getInstanceResp, err := a.GetInstance(ctx, projectId, region, instanceId).Execute()
 		if err != nil {
 			return false, nil, err
 		}
@@ -634,10 +636,10 @@ func CreateMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIC
 	return handler
 }
 
-func DeleteMExpInstanceWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
+func DeleteMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(
 		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			_, err = a.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+			_, err = a.GetInstance(ctx, projectId, region, instanceId).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
 				if errors.As(err, &oapiErr) {
