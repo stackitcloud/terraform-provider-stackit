@@ -59,9 +59,9 @@ func NewInstanceTokenResource() resource.Resource {
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client                  *modelexperiments.APIClient
+	client                  modelexperiments.DefaultAPI
 	providerData            core.ProviderData
-	serviceEnablementClient *serviceenablement.APIClient
+	serviceEnablementClient serviceenablement.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -242,7 +242,7 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	createInstanceTokenResp, err := i.client.DefaultAPI.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload).Execute()
+	createInstanceTokenResp, err := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -328,7 +328,7 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getInstanceTokenResp, err := i.client.DefaultAPI.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+	getInstanceTokenResp, err := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -395,7 +395,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	updateInstanceTokenResp, err := i.client.DefaultAPI.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
+	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -469,7 +469,7 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := i.client.DefaultAPI.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+	_, err := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if !errors.As(err, &oapiErr) {
@@ -601,9 +601,9 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstanceToken
 	}, nil
 }
 
-func CreateMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetTokenResponse] {
+func CreateMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetTokenResponse] {
 	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetTokenResponse, err error) {
-		getTokenResp, err := a.DefaultAPI.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+		getTokenResp, err := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 		if err != nil {
 			return false, nil, err
 		}
@@ -619,10 +619,10 @@ func CreateMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClie
 	return handler
 }
 
-func DeleteMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
+func DeleteMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(
 		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			_, err = a.DefaultAPI.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+			_, err = a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
 				if errors.As(err, &oapiErr) {
