@@ -75,7 +75,7 @@ func TestMapTokenFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapToken(ctx, tt.input, tt.state)
+			err := mapToken(ctx, &tt.input, tt.state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

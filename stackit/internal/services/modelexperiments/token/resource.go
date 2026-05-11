@@ -19,6 +19,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
@@ -341,7 +342,7 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapToken(ctx, getInstanceTokenResp.Token, &model)
+	err = mapToken(ctx, &getInstanceTokenResp.Token, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -354,7 +355,6 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	tflog.Info(ctx, "Model experiments instance token read")
-
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -429,7 +429,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	model.Token = state.Token
-	err = mapToken(ctx, updateInstanceTokenResp.Token, &model)
+	err = mapToken(ctx, &updateInstanceTokenResp.Token, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -470,16 +470,15 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	_, err := i.client.DefaultAPI.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
-			if oapiErr.StatusCode == http.StatusNotFound {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-			if oapiErr.StatusCode != http.StatusConflict {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Calling API: %v", err))
-				return
-			}
-		} else {
+		if !errors.As(err, &oapiErr) {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Calling API: %v", err))
+			return
+		}
+		if oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		if oapiErr.StatusCode != http.StatusConflict {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
@@ -540,7 +539,7 @@ func mapCreateResponse(ctx context.Context, instanceTokenResp *modelexperiments.
 }
 
 // mapToken maps instances to the resource model
-func mapToken(ctx context.Context, token modelexperiments.TokenMetadata, model *Model) error {
+func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -600,7 +599,7 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstanceToken
 	}, nil
 }
 
-func CreateMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetTokenResponse] {
+func CreateMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetTokenResponse] {
 	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetTokenResponse, err error) {
 		getTokenResp, err := a.DefaultAPI.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 		if err != nil {
@@ -618,7 +617,7 @@ func CreateMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClie
 	return handler
 }
 
-func DeleteMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId string, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
+func DeleteMExpTokenWaitHandler(ctx context.Context, a *modelexperiments.APIClient, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(
 		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
 			_, err = a.DefaultAPI.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
