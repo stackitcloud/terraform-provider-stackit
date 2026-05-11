@@ -22,14 +22,17 @@ import (
 )
 
 var instanceResource = map[string]string{
-	"project_id":          testutil.ProjectId,
-	"name":                "instance01",
-	"description":         "my description",
-	"description_updated": "my description updated",
-	"region":              testutil.Region,
+	"project_id":              testutil.ProjectId,
+	"name":                    "instance01",
+	"description":             "my description",
+	"description_updated":     "my description updated",
+	"region":                  testutil.Region,
+	"tokenName":               "token01",
+	"tokenDescription":        "my token description",
+	"tokenDescriptionUpdated": "my token description updated",
 }
 
-func inputInstanceConfig(name, description string) string {
+func inputInstanceConfig(instanceName, instanceDescription, tokenName, tokenDescription string) string {
 	return fmt.Sprintf(`
 		%s
 
@@ -39,12 +42,24 @@ func inputInstanceConfig(name, description string) string {
   			region       = "%s"
   			description = "%s"
 		}
+
+		resource "stackit_modelexperiments_token" "token" {
+  			project_id   = "%s"
+  			name         = "%s"
+  			region       = "%s"
+  			instance_id = stackit_modelexperiments_instance.example.instance_id
+  			description =  "%s"
+		}
 		`,
 		testutil.NewConfigBuilder().BuildProviderConfig(),
 		instanceResource["project_id"],
-		name,
+		instanceName,
 		instanceResource["region"],
-		description,
+		instanceDescription,
+		instanceResource["project_id"],
+		tokenName,
+		instanceResource["region"],
+		tokenDescription,
 	)
 }
 
@@ -58,6 +73,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 				Config: inputInstanceConfig(
 					instanceResource["name"],
 					instanceResource["description"],
+					instanceResource["tokenName"],
+					instanceResource["tokenDescription"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
@@ -69,6 +86,15 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "bucket_name"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "deleted_experiment_retention"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "region", instanceResource["region"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["tokenName"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "description", instanceResource["tokenDescription"]),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "token_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "state"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "token"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "valid_until"),
 				),
 			},
 			// Update
@@ -76,6 +102,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 				Config: inputInstanceConfig(
 					instanceResource["name"],
 					instanceResource["description_updated"],
+					instanceResource["tokenName"],
+					instanceResource["tokenDescriptionUpdated"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
@@ -87,6 +115,15 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "bucket_name"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "deleted_experiment_retention"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "region", instanceResource["region"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["tokenName"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "description", instanceResource["tokenDescriptionUpdated"]),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "token_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "state"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "token"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "valid_until"),
 				),
 			},
 			// Deletion is done by the framework implicitly
