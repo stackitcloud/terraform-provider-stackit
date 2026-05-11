@@ -2,6 +2,7 @@ package instance
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,6 +35,7 @@ var (
 	_ resource.ResourceWithModifyPlan = &instanceResource{}
 )
 
+//go:embed description.md
 var markdownDescription string
 
 type Model struct {
