@@ -20,7 +20,7 @@ func TestDataSourceMapFields(t *testing.T) {
 		{
 			"basic_gateway",
 			&vpn.GatewayResponse{
-				Id:          utils.Ptr("gateway-id"),
+				Id:          new("gateway-id"),
 				DisplayName: "test-gateway",
 				PlanId:      "p500",
 				RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,

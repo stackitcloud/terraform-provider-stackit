@@ -20,7 +20,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"default_ok",
 			&vpn.GatewayResponse{
-				Id:          utils.Ptr("gateway-id"),
+				Id:          new("gateway-id"),
 				DisplayName: "test-gateway",
 				PlanId:      "p500",
 				RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
@@ -48,7 +48,7 @@ func TestMapFields(t *testing.T) {
 		{
 			"with_bgp_and_labels",
 			&vpn.GatewayResponse{
-				Id:          utils.Ptr("gateway-id"),
+				Id:          new("gateway-id"),
 				DisplayName: "test-gateway",
 				PlanId:      "p500",
 				RoutingType: vpn.ROUTINGTYPE_BGP_ROUTE_BASED,
@@ -57,7 +57,7 @@ func TestMapFields(t *testing.T) {
 					Tunnel2: "eu01-2",
 				},
 				Bgp: &vpn.BGPGatewayConfig{
-					LocalAsn:                 utils.Ptr(int32(65000)),
+					LocalAsn:                 new(int32(65000)),
 					OverrideAdvertisedRoutes: []string{"10.0.0.0/16", "192.168.0.0/24"},
 				},
 				Labels: &map[string]string{
