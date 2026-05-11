@@ -18,6 +18,7 @@ import (
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
+	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
@@ -196,6 +197,7 @@ type providerModel struct {
 	SfsCustomEndpoint               types.String `tfsdk:"sfs_custom_endpoint"`
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
+	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
@@ -252,6 +254,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":                  "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"service_enablement_custom_endpoint":   "Custom endpoint for the Service Enablement API",
 		"sfs_custom_endpoint":                  "Custom endpoint for the Stackit Filestorage API",
+		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
@@ -458,6 +461,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["sfs_custom_endpoint"],
 			},
+			"telemetrylink_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["telemetrylink_custom_endpoint"],
+			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
@@ -544,6 +551,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { providerData.SfsCustomEndpoint = v })
 	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -703,6 +711,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
 		serverUpdateEnable.NewServerUpdateEnableDataSource,
+		telemetryLink.NewTelemetryLinkLinkDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -795,6 +804,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
 		serverUpdateEnable.NewServerUpdateEnableResource,
+		telemetryLink.NewTelemetryLinkResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
