@@ -43,6 +43,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"redirects": types.ObjectType{
 		AttrTypes: redirectsTypes, // Shared from resource.go
 	},
+	"waf": types.ObjectType{
+		AttrTypes: wafTypes, // Shared from resource.go
+	},
 }
 
 type distributionDataSource struct {
@@ -92,7 +95,7 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 			},
 			"distribution_id": schema.StringAttribute{
-				Description: schemaDescriptions["project_id"],
+				Description: schemaDescriptions["distribution_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -252,6 +255,84 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 										},
 									},
 								},
+							},
+						},
+					},
+					"waf": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_waf"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"mode": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["waf_mode"],
+							},
+							"type": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["waf_type"],
+							},
+							"paranoia_level": schema.StringAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["waf_paranoia_level"],
+							},
+							"allowed_http_versions": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_versions"],
+							},
+							"allowed_request_content_types": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_request_content_types"],
+							},
+							"allowed_http_methods": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_methods"],
+							},
+							"enabled_rule_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_ids"],
+							},
+							"disabled_rule_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_ids"],
+							},
+							"log_only_rule_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_ids"],
+							},
+							"enabled_rule_group_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
+							},
+							"disabled_rule_group_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
+							},
+							"log_only_rule_group_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
+							},
+							"enabled_rule_collection_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
+							},
+							"disabled_rule_collection_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
+							},
+							"log_only_rule_collection_ids": schema.SetAttribute{
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
 							},
 						},
 					},
@@ -512,6 +593,40 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		return core.DiagsToError(diags)
 	}
 
+	// Map Waf
+	var pl *string
+	if distribution.Config.Waf.ParanoiaLevel != nil {
+		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
+	}
+	wafObjAttrs := map[string]attr.Value{
+		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
+		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
+		"paranoia_level":                types.StringPointerValue(pl),
+		"allowed_http_versions":         conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpVersions, &diags),
+		"allowed_request_content_types": conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes, &diags),
+		"allowed_http_methods":          conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpMethods, &diags),
+		"enabled_rule_ids":              conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleIds, &diags),
+		"disabled_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleIds, &diags),
+		"log_only_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleIds, &diags),
+		"enabled_rule_group_ids":        conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds, &diags),
+		"disabled_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds, &diags),
+		"log_only_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds, &diags),
+		"enabled_rule_collection_ids":   conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds, &diags),
+		"disabled_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds, &diags),
+		"log_only_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds, &diags),
+	}
+
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+	var wafVal attr.Value
+
+	var diagWaf diag.Diagnostics
+	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
+	if diagWaf.HasError() {
+		return core.DiagsToError(diagWaf)
+	}
+
 	// Optimizer
 	optimizerVal := types.ObjectNull(optimizerTypes)
 	if o := distribution.Config.Optimizer; o != nil {
@@ -533,6 +648,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		"blocked_countries": modelBlockedCountries,
 		"optimizer":         optimizerVal,
 		"redirects":         redirectsVal,
+		"waf":               wafVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)

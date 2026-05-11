@@ -180,6 +180,9 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -429,6 +432,9 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -513,6 +519,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -688,6 +697,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -920,6 +932,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 

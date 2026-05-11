@@ -51,6 +51,9 @@ data "stackit_observability_instance" "example" {
 - `metrics_retention_days_5m_downsampling` (Number) Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.
 - `metrics_url` (String) Specifies metrics URL.
 - `name` (String) The name of the Observability instance.
+- `otlp_grpc_traces_url` (String)
+- `otlp_http_logs_url` (String)
+- `otlp_http_traces_url` (String)
 - `otlp_traces_url` (String)
 - `parameters` (Map of String) Additional parameters.
 - `plan_id` (String) The Observability plan ID.

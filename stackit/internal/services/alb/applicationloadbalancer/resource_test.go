@@ -495,6 +495,88 @@ func TestToCreatePayload(t *testing.T) {
 			expected:    nil,
 			isValid:     false,
 		},
+		{
+			description: "options.observability.metrics set but not logs",
+			input: fixtureModel(nil, func(m *Model) {
+				m.Options = types.ObjectValueMust(
+					optionsTypes,
+					map[string]attr.Value{
+						"access_control": types.ObjectValueMust(
+							accessControlTypes,
+							map[string]attr.Value{
+								"allowed_source_ranges": types.SetValueMust(
+									types.StringType,
+									[]attr.Value{
+										types.StringValue("192.168.0.0"),
+										types.StringValue("192.168.0.1"),
+									},
+								),
+							},
+						),
+						"ephemeral_address":    types.BoolPointerValue(nil),
+						"private_network_only": types.BoolPointerValue(nil),
+						"observability": types.ObjectValueMust(
+							observabilityTypes,
+							map[string]attr.Value{
+								"metrics": types.ObjectValueMust(
+									observabilityOptionTypes,
+									map[string]attr.Value{
+										"credentials_ref": types.StringValue(credentialsRef),
+										"push_url":        types.StringValue("http://www.example.org/pull"),
+									},
+								),
+								"logs": types.ObjectNull(observabilityOptionTypes),
+							},
+						),
+					},
+				)
+			}),
+			expected: fixtureCreatePayload(fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
+				m.Options.Observability.Logs = nil
+			})),
+			isValid: true,
+		},
+		{
+			description: "options.observability.logs set but not metrics",
+			input: fixtureModel(nil, func(m *Model) {
+				m.Options = types.ObjectValueMust(
+					optionsTypes,
+					map[string]attr.Value{
+						"access_control": types.ObjectValueMust(
+							accessControlTypes,
+							map[string]attr.Value{
+								"allowed_source_ranges": types.SetValueMust(
+									types.StringType,
+									[]attr.Value{
+										types.StringValue("192.168.0.0"),
+										types.StringValue("192.168.0.1"),
+									},
+								),
+							},
+						),
+						"ephemeral_address":    types.BoolPointerValue(nil),
+						"private_network_only": types.BoolPointerValue(nil),
+						"observability": types.ObjectValueMust(
+							observabilityTypes,
+							map[string]attr.Value{
+								"metrics": types.ObjectNull(observabilityOptionTypes),
+								"logs": types.ObjectValueMust(
+									observabilityOptionTypes,
+									map[string]attr.Value{
+										"credentials_ref": types.StringValue(credentialsRef),
+										"push_url":        types.StringValue("http://www.example.org/push"),
+									},
+								),
+							},
+						),
+					},
+				)
+			}),
+			expected: fixtureCreatePayload(fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
+				m.Options.Observability.Metrics = nil
+			})),
+			isValid: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {

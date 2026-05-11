@@ -107,6 +107,7 @@ import (
 	serverUpdateSchedule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/schedule"
 	serviceAccount "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/account"
 	serviceAccounts "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/accounts"
+	serviceAccountFederatedIdentityProvider "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/federated_identity_provider"
 	serviceAccountKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/key"
 	exportpolicy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/export-policy"
 	projectLock "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/project-lock"
@@ -690,6 +691,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		serverUpdateSchedule.NewScheduleDataSource,
 		serverUpdateSchedule.NewSchedulesDataSource,
 		serviceAccount.NewServiceAccountDataSource,
+		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderDataSource,
 		serviceAccounts.NewServiceAccountsDataSource,
 		skeCluster.NewClusterDataSource,
 		skeKubernetesVersion.NewKubernetesVersionsDataSource,
@@ -784,6 +786,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		serverBackupSchedule.NewScheduleResource,
 		serverUpdateSchedule.NewScheduleResource,
 		serviceAccount.NewServiceAccountResource,
+		serviceAccountFederatedIdentityProvider.NewServiceAccountFederatedIdentityProviderResource,
 		serviceAccountKey.NewServiceAccountKeyResource,
 		skeCluster.NewClusterResource,
 		skeKubeconfig.NewKubeconfigResource,
