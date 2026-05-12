@@ -9,15 +9,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -43,9 +40,6 @@ var (
 	_ resource.ResourceWithConfigure   = &resourcePoolResource{}
 	_ resource.ResourceWithModifyPlan  = &resourcePoolResource{}
 )
-
-// defaultSnapshotPolicyId is an empty string, which removes any snapshot policy within updates
-const defaultSnapshotPolicyId = ""
 
 type Model struct {
 	Id                  types.String `tfsdk:"id"` // needed by TF
@@ -222,27 +216,14 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"snapshot_policy": schema.SingleNestedAttribute{
 				Description: `Name of the snapshot policy.`,
-				Computed:    true,
 				Optional:    true,
-				Default: objectdefault.StaticValue(
-					types.ObjectValueMust(snapshotPolicyTypes, map[string]attr.Value{
-						"id":   types.StringValue(defaultSnapshotPolicyId),
-						"name": types.StringUnknown(),
-					}),
-				),
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Description: "ID of the snapshot policy.",
-						Optional:    true,
-						Computed:    true,
-						// ID can be either an empty string or a UUID
+						Required:    true, // must be set when snapshot_policy != null
 						Validators: []validator.String{
-							stringvalidator.Any(
-								stringvalidator.OneOf(""),
-								validate.UUID(),
-							),
+							validate.UUID(),
 						},
-						Default: stringdefault.StaticString(defaultSnapshotPolicyId),
 					},
 					"name": schema.StringAttribute{
 						Description: "Name of the snapshot policy.",
@@ -651,7 +632,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateResourcePool
 		PerformanceClass:    model.PerformanceClass.ValueStringPointer(),
 		SizeGigabytes:       *sfs.NewNullableInt32(model.SizeGigabytes.ValueInt32Pointer()),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
-		SnapshotPolicyId:    snapshotPolicy.Id.ValueStringPointer(),
+		SnapshotPolicyId:    *sfs.NewNullableString(snapshotPolicy.Id.ValueStringPointer()),
 	}
 	return result, nil
 }

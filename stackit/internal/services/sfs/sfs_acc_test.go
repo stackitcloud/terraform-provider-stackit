@@ -430,8 +430,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_1"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", ""),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name", "none"),
+					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
 				),
 			},
 			// Data source
@@ -467,8 +466,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_1"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", "false"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy.id", ""),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy.name", "none"),
+					resource.TestCheckNoResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy"),
 				),
 			},
 			// Import
@@ -511,8 +509,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_1"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", ""),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name", "none"),
+					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
 				),
 			},
 			// Deletion is done by the framework implicitly
