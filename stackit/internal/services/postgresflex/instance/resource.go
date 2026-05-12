@@ -617,7 +617,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := instance.Acl.Items
-		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
+		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
 		}

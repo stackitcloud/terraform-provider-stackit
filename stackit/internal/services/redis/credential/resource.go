@@ -363,7 +363,7 @@ func mapFields(ctx context.Context, credentialsResp *redis.CredentialsResponse, 
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId)
 
-	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)
+	modelHosts, err := utils.ListValueToStringSlice(model.Hosts)
 	if err != nil {
 		return err
 	}
