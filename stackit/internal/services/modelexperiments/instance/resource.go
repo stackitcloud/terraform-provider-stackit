@@ -358,7 +358,8 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getInstanceResp, err := i.client.GetInstance(ctx, projectId, region, instanceId).Execute()
+	getInstanceReq := i.client.GetInstance(ctx, projectId, region, instanceId)
+	getInstanceResp, err := i.client.GetInstanceExecute(getInstanceReq)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -424,7 +425,8 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updateInstanceResp, err := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	updateInstanceReq := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload)
+	updateInstanceResp, err := i.client.PartialUpdateInstanceExecute(updateInstanceReq)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
