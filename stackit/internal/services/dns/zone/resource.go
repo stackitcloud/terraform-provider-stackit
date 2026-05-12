@@ -587,7 +587,7 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 		model.Primaries = types.ListNull(types.StringType)
 	} else {
 		respPrimaries := z.Primaries
-		modelPrimaries, err := utils.ListValuetoStringSlice(model.Primaries)
+		modelPrimaries, err := utils.ListValueToStringSlice(model.Primaries)
 		if err != nil {
 			return err
 		}

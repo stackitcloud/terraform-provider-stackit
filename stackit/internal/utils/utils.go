@@ -73,7 +73,7 @@ func ReconcileStringSlices(list1, list2 []string) []string {
 	return list1Copy
 }
 
-func ListValuetoStringSlice(list basetypes.ListValue) ([]string, error) {
+func ListValueToStringSlice(list basetypes.ListValue) ([]string, error) {
 	result := []string{}
 	for _, el := range list.Elements() {
 		elStr, ok := el.(types.String)
