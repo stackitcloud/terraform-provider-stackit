@@ -36,7 +36,6 @@ func NewVPNGatewayDataSource() datasource.DataSource {
 	return &vpnGatewayDataSource{}
 }
 
-// Configure implements [datasource.DataSourceWithConfigure].
 func (d *vpnGatewayDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
@@ -52,12 +51,10 @@ func (d *vpnGatewayDataSource) Configure(ctx context.Context, req datasource.Con
 	tflog.Info(ctx, "VPN client configured")
 }
 
-// Metadata implements [datasource.DataSource].
 func (d *vpnGatewayDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_vpn_gateway"
 }
 
-// Schema implements [datasource.DataSource].
 func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("VPN Gateway data source schema. %s", core.DatasourceRegionFallbackDocstring),
@@ -76,7 +73,7 @@ func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
-				Required:    true,
+				Computed:    true,
 			},
 			"gateway_id": schema.StringAttribute{
 				Description: schemaDescriptions["gateway_id"],
@@ -140,7 +137,6 @@ func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	}
 }
 
-// Read implements [datasource.DataSource].
 func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
