@@ -56,8 +56,16 @@ type Model struct {
 // NewInstanceResource is a helper function to simplify the provider implementation.
 //
 //go:generate mockgen -destination=./mock/instance.go -package=mock_instance dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api DefaultAPI
-func NewInstanceResource() resource.Resource {
+func NewInstanceResourceEmpty() resource.Resource {
 	return &instanceResource{}
+}
+
+func NewInstanceResource(client modelexperiments.DefaultAPI, serviceClient serviceenablement.DefaultAPI, providerData core.ProviderData) resource.Resource {
+	return &instanceResource{
+		client:                  client,
+		providerData:            providerData,
+		serviceEnablementClient: serviceClient,
+	}
 }
 
 // instanceResource is the resource implementation.
@@ -235,8 +243,9 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := i.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelExperimentsServiceId).
-		Execute()
+	serviceEnablementReq := i.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelExperimentsServiceId)
+	err := i.serviceEnablementClient.EnableServiceRegionalExecute(serviceEnablementReq)
+
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -274,7 +283,8 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	createInstanceResp, err := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createInstanceRequest := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload)
+	createInstanceResp, err := i.client.CreateInstanceExecute(createInstanceRequest)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -305,15 +315,6 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	waitResp, err := CreateMExpInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Waiting for instance to be active: %v", err))
-
-		err = mapCreateResponse(ctx, createInstanceResp, waitResp, &model, region)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
-		}
-		diags = resp.State.Set(ctx, model)
-		resp.Diagnostics.Append(diags...)
-
-		return
 	}
 
 	// Map response body to schema
@@ -617,7 +618,8 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstancePaylo
 
 func CreateMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-		getInstanceResp, err := a.GetInstance(ctx, projectId, region, instanceId).Execute()
+		getInstanceRequest := a.GetInstance(ctx, projectId, region, instanceId)
+		getInstanceResp, err := a.GetInstanceExecute(getInstanceRequest)
 		if err != nil {
 			return false, nil, err
 		}

@@ -53,8 +53,16 @@ type Model struct {
 }
 
 // NewInstanceTokenResource is a helper function to simplify the provider implementation.
-func NewInstanceTokenResource() resource.Resource {
+func NewInstanceTokenResourceEmpty() resource.Resource {
 	return &tokenResource{}
+}
+
+func NewInstanceTokenResource(client modelexperiments.DefaultAPI, serviceEnablementClient serviceenablement.DefaultAPI, providerData core.ProviderData) resource.Resource {
+	return &tokenResource{
+		client:                  client,
+		providerData:            providerData,
+		serviceEnablementClient: serviceEnablementClient,
+	}
 }
 
 // tokenResource is the resource implementation.
