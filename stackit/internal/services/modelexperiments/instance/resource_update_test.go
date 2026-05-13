@@ -9,11 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestUpdate_Success(t *testing.T) {
@@ -77,21 +77,39 @@ func TestUpdate_Success(t *testing.T) {
 	// Execute Update
 	instanceRes.Update(tc.Ctx, req, resp)
 
-	require.False(t, resp.Diagnostics.HasError(), "Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
 	// Extract final state
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
 
 	// Verify all fields match the updated values from GetInstance, state should be updated
-	require.Equal(t, instanceId.String(), finalState.InstanceId.ValueString())
-	require.Equal(t, projectId.String(), finalState.ProjectId.ValueString())
-	require.Equal(t, instanceNameUpdated, finalState.Name.ValueString())
-	require.Equal(t, descriptionUpdated, finalState.Description.ValueString())
-	require.Equal(t, "active", finalState.State.ValueString())
-	require.Equal(t, url, finalState.Url.ValueString())
-	require.Equal(t, region, finalState.Region.ValueString())
+	if instanceId.String() != finalState.InstanceId.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
+	}
+	if projectId.String() != finalState.ProjectId.ValueString() {
+		t.Fatalf("expected %v, got %v", projectId.String(), finalState.ProjectId.ValueString())
+	}
+	if instanceNameUpdated != finalState.Name.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceNameUpdated, finalState.Name.ValueString())
+	}
+	if descriptionUpdated != finalState.Description.ValueString() {
+		t.Fatalf("expected %v, got %v", descriptionUpdated, finalState.Description.ValueString())
+	}
+	if finalState.State.ValueString() != "active" {
+		t.Fatalf("expected %v, got %v", "active", finalState.State.ValueString())
+	}
+	if url != finalState.Url.ValueString() {
+		t.Fatalf("expected %v, got %v", url, finalState.Url.ValueString())
+	}
+	if region != finalState.Region.ValueString() {
+		t.Fatalf("expected %v, got %v", region, finalState.Region.ValueString())
+	}
 }
 
 func TestUpdate_InstanceNotFound(t *testing.T) {
@@ -144,13 +162,19 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 	// Execute Update
 	instanceRes.Update(tc.Ctx, req, resp)
 
-	require.False(t, resp.Diagnostics.HasError(), "Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
 	// Extract final state, state should be deleted
 	var finalState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, finalState, "State should not be written")
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
+	if finalState != nil {
+		t.Fatalf("State should not be written")
+	}
 }
 
 func TestUpdate_InstanceUpdateError(t *testing.T) {
@@ -200,17 +224,33 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 
 	// Execute Update
 	instanceRes.Update(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Update should not succeed, but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Update should not succeed, but got no errors")
+	}
 
 	// Extract final state, instance should not be updated
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
 
-	require.Equal(t, description, finalState.Description.ValueString(), "value should not have changed")
-	require.Equal(t, instanceName, finalState.Name.ValueString(), "value should not have changed")
-	require.Equal(t, instanceId.String(), finalState.InstanceId.ValueString(), "value should not have changed")
-	require.Equal(t, region, finalState.Region.ValueString(), "value should not have changed")
-	require.Equal(t, projectId.String(), finalState.ProjectId.ValueString(), "value should not have changed")
-	require.Equal(t, fmt.Sprintf("%s,%s", projectId, instanceId), finalState.Id.ValueString(), "value should not have changed")
+	if description != finalState.Description.ValueString() {
+		t.Fatalf("value should not have changed - expected %v, got %v", description, finalState.Description.ValueString())
+	}
+	if instanceName != finalState.Name.ValueString() {
+		t.Fatalf("value should not have changed - expected %v, got %v", instanceName, finalState.Name.ValueString())
+	}
+	if instanceId.String() != finalState.InstanceId.ValueString() {
+		t.Fatalf("value should not have changed - expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
+	}
+	if region != finalState.Region.ValueString() {
+		t.Fatalf("value should not have changed - expected %v, got %v", region, finalState.Region.ValueString())
+	}
+	if projectId.String() != finalState.ProjectId.ValueString() {
+		t.Fatalf("value should not have changed - expected %v, got %v", projectId.String(), finalState.ProjectId.ValueString())
+	}
+	if fmt.Sprintf("%s,%s", projectId, instanceId) != finalState.Id.ValueString() {
+		t.Fatalf("value should not have changed - expected %v, got %v", fmt.Sprintf("%s,%s", projectId, instanceId), finalState.Id.ValueString())
+	}
 }
