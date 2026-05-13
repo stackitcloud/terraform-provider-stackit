@@ -71,8 +71,8 @@ func TestUpdate_Success(t *testing.T) {
 		Labels:      types.MapNull(types.StringType),
 	}
 
-	req := testutils.UpdateRequest(tc.Ctx, schemaResp, currentState, plannedState)
-	resp := testutils.UpdateResponse(tc.Ctx, schemaResp, &currentState)
+	req := testutils.UpdateInstanceRequest(tc.Ctx, schemaResp, currentState, plannedState)
+	resp := testutils.UpdateInstanceResponse(tc.Ctx, schemaResp, &currentState)
 
 	// Execute Update
 	instanceRes.Update(tc.Ctx, req, resp)
@@ -138,8 +138,8 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 		Labels:      types.MapNull(types.StringType),
 	}
 
-	req := testutils.UpdateRequest(tc.Ctx, schemaResp, currentState, plannedState)
-	resp := testutils.UpdateResponse(tc.Ctx, schemaResp, &currentState)
+	req := testutils.UpdateInstanceRequest(tc.Ctx, schemaResp, currentState, plannedState)
+	resp := testutils.UpdateInstanceResponse(tc.Ctx, schemaResp, &currentState)
 
 	// Execute Update
 	instanceRes.Update(tc.Ctx, req, resp)
@@ -195,8 +195,8 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 		Labels:      types.MapNull(types.StringType),
 	}
 
-	req := testutils.UpdateRequest(tc.Ctx, schemaResp, currentState, plannedState)
-	resp := testutils.UpdateResponse(tc.Ctx, schemaResp, &currentState)
+	req := testutils.UpdateInstanceRequest(tc.Ctx, schemaResp, currentState, plannedState)
+	resp := testutils.UpdateInstanceResponse(tc.Ctx, schemaResp, &currentState)
 
 	// Execute Update
 	instanceRes.Update(tc.Ctx, req, resp)
