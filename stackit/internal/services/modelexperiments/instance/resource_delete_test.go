@@ -49,14 +49,14 @@ func TestDelete_Success(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.DeleteInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
 	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
 }
 
-func TestDelete_DeleteCallFailed(t *testing.T) {
+func TestDelete_DeleteInstanceFailed(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
 	projectId := uuid.New()
@@ -86,8 +86,8 @@ func TestDelete_DeleteCallFailed(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.DeleteInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
 	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed, but got no errors")
@@ -129,8 +129,8 @@ func TestDelete_InstanceAlreadyDeleted(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.DeleteInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
 	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
@@ -174,8 +174,8 @@ func TestDelete_GetInstanceFailed(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.DeleteInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
 	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed, but got no errors")

@@ -57,8 +57,8 @@ func TestRead_Success(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, nil)
+	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, nil)
 
 	instanceRes.Read(tc.Ctx, req, resp)
 
@@ -100,8 +100,8 @@ func TestRead_InstanceIdEmptyFailure(t *testing.T) {
 		Name:       types.StringValue(instanceName),
 	}
 
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Read(tc.Ctx, req, resp)
 	require.True(t, resp.Diagnostics.HasError(), "Get should not succeed, but got no errors")
@@ -143,8 +143,8 @@ func TestRead_InstanceNotFound(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Read(tc.Ctx, req, resp)
 	require.False(t, resp.Diagnostics.HasError(), "Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
@@ -186,8 +186,8 @@ func TestRead_GetRequestFailed(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, nil)
+	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, nil)
 
 	instanceRes.Read(tc.Ctx, req, resp)
 	require.True(t, resp.Diagnostics.HasError(), "Get should not succeed")
