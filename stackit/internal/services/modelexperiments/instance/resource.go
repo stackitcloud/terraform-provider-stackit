@@ -3,6 +3,7 @@ package instance
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -20,10 +21,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
-	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -59,7 +60,7 @@ func NewInstanceResourceEmpty() resource.Resource {
 	return &instanceResource{}
 }
 
-func NewInstanceResource(client modelexperiments.DefaultAPI, serviceClient serviceenablement.DefaultAPI, providerData core.ProviderData) resource.Resource {
+func NewInstanceResource(client modelexperiments.DefaultAPI, serviceClient serviceenablement.DefaultAPI, providerData core.ProviderData) resource.Resource { //nolint:gocritic
 	return &instanceResource{
 		client:                  client,
 		providerData:            providerData,
@@ -246,8 +247,8 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err := i.serviceEnablementClient.EnableServiceRegionalExecute(serviceEnablementReq)
 
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-		if ok {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI model experiments",
 					fmt.Sprintf("Service not available in region %s \n%v", region, err),
@@ -361,8 +362,8 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	getInstanceReq := i.client.GetInstance(ctx, projectId, region, instanceId)
 	getInstanceResp, err := i.client.GetInstanceExecute(getInstanceReq)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-		if ok {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
@@ -427,8 +428,8 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	updateInstanceReq := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload)
 	updateInstanceResp, err := i.client.PartialUpdateInstanceExecute(updateInstanceReq)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-		if ok {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
@@ -479,8 +480,8 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	deleteInstanceReq := i.client.DeleteInstance(ctx, projectId, region, instanceId)
 	_, err := i.client.DeleteInstanceExecute(deleteInstanceReq)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-		if ok {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
@@ -633,8 +634,8 @@ func DeleteMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.Defau
 			getInstanceReq := a.GetInstance(ctx, projectId, region, instanceId)
 			_, err = a.GetInstanceExecute(getInstanceReq)
 			if err != nil {
-				oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-				if !ok {
+				var oapiErr *oapierror.GenericOpenAPIError
+				if !errors.As(err, &oapiErr) {
 					return false, nil, err
 				}
 				if oapiErr.StatusCode != http.StatusNotFound {

@@ -9,12 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestCreate_Success(t *testing.T) {
@@ -76,20 +76,40 @@ func TestCreate_Success(t *testing.T) {
 	resp := testutils.CreateResponse(schemaResp)
 
 	tokenRes.Create(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Create should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Create should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
 	var createdState token.Model
 	diags := resp.State.Get(tc.Ctx, &createdState)
-	require.False(t, diags.HasError(), "Failed to get state")
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
 
-	require.Equal(t, tokenId.String(), createdState.TokenId.ValueString(), "Should be equal")
-	require.Equal(t, projectId.String(), createdState.ProjectId.ValueString(), "Should be equal")
-	require.Equal(t, instanceId.String(), createdState.InstanceId.ValueString(), "Should be equal")
-	require.Equal(t, name, createdState.Name.ValueString(), "Should be equal")
-	require.Equal(t, "active", createdState.State.ValueString(), "Should be equal")
-	require.Equal(t, description, createdState.Description.ValueString(), "Should be equal")
-	require.Equal(t, "token", createdState.Token.ValueString(), "Should be equal")
-	require.Equal(t, utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString(), createdState.Id.ValueString(), "Should be equal")
+	if tokenId.String() != createdState.TokenId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", tokenId.String(), createdState.TokenId.ValueString())
+	}
+	if projectId.String() != createdState.ProjectId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", projectId.String(), createdState.ProjectId.ValueString())
+	}
+	if instanceId.String() != createdState.InstanceId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", instanceId.String(), createdState.InstanceId.ValueString())
+	}
+	if name != createdState.Name.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", name, createdState.Name.ValueString())
+	}
+	if createdState.State.ValueString() != "active" {
+		t.Fatalf("Should be equal - expected %v, got %v", "active", createdState.State.ValueString())
+	}
+	if description != createdState.Description.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", description, createdState.Description.ValueString())
+	}
+	if createdState.Token.ValueString() != "token" {
+		t.Fatalf("Should be equal - expected %v, got %v", "token", createdState.Token.ValueString())
+	}
+	if utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString() != createdState.Id.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString(), createdState.Id.ValueString())
+	}
 }
 
 func TestCreate_TokenIdEmpty(t *testing.T) {
@@ -137,13 +157,19 @@ func TestCreate_TokenIdEmpty(t *testing.T) {
 	resp := testutils.CreateResponse(schemaResp)
 
 	tokenRes.Create(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Create should not succeed but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Create should not succeed but got no errors")
+	}
 
 	// state should not be created
 	var createdState *token.Model
 	diags := resp.State.Get(tc.Ctx, &createdState)
-	require.False(t, diags.HasError(), "Failed to get state")
-	require.Nil(t, createdState)
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
+	if createdState != nil {
+		t.Fatalf("expected nil, got %v", createdState)
+	}
 }
 
 func TestCreate_CreateTokenFailure(t *testing.T) {
@@ -182,13 +208,19 @@ func TestCreate_CreateTokenFailure(t *testing.T) {
 	resp := testutils.CreateResponse(schemaResp)
 
 	tokenRes.Create(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Create should not succeed but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Create should not succeed but got no errors")
+	}
 
 	// state should not be created
 	var createdState *token.Model
 	diags := resp.State.Get(tc.Ctx, &createdState)
-	require.False(t, diags.HasError(), "Failed to get state")
-	require.Nil(t, createdState)
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
+	if createdState != nil {
+		t.Fatalf("expected nil, got %v", createdState)
+	}
 }
 
 func TestCreate_GetTokenFailure(t *testing.T) {
@@ -243,19 +275,39 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	resp := testutils.CreateResponse(schemaResp)
 
 	tokenRes.Create(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Create should not succeed but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Create should not succeed but got no errors")
+	}
 
 	// state should be created
 	var createdState token.Model
 	diags := resp.State.Get(tc.Ctx, &createdState)
-	require.False(t, diags.HasError(), "Failed to get state")
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
 
-	require.Equal(t, tokenId.String(), createdState.TokenId.ValueString(), "Should be equal")
-	require.Equal(t, projectId.String(), createdState.ProjectId.ValueString(), "Should be equal")
-	require.Equal(t, instanceId.String(), createdState.InstanceId.ValueString(), "Should be equal")
-	require.Equal(t, name, createdState.Name.ValueString(), "Should be equal")
-	require.Equal(t, "unknown", createdState.State.ValueString(), "Should be equal")
-	require.Equal(t, description, createdState.Description.ValueString(), "Should be equal")
-	require.Equal(t, "token", createdState.Token.ValueString(), "Should be equal")
-	require.Equal(t, utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString(), createdState.Id.ValueString(), "Should be equal")
+	if tokenId.String() != createdState.TokenId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", tokenId.String(), createdState.TokenId.ValueString())
+	}
+	if projectId.String() != createdState.ProjectId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", projectId.String(), createdState.ProjectId.ValueString())
+	}
+	if instanceId.String() != createdState.InstanceId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", instanceId.String(), createdState.InstanceId.ValueString())
+	}
+	if name != createdState.Name.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", name, createdState.Name.ValueString())
+	}
+	if createdState.State.ValueString() != "unknown" {
+		t.Fatalf("Should be equal - expected %v, got %v", "unknown", createdState.State.ValueString())
+	}
+	if description != createdState.Description.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", description, createdState.Description.ValueString())
+	}
+	if createdState.Token.ValueString() != "token" {
+		t.Fatalf("Should be equal - expected %v, got %v", "token", createdState.Token.ValueString())
+	}
+	if utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString() != createdState.Id.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString(), createdState.Id.ValueString())
+	}
 }

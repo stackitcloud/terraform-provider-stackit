@@ -9,11 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestDelete_Success(t *testing.T) {
@@ -53,7 +53,9 @@ func TestDelete_Success(t *testing.T) {
 	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 }
 
 func TestDelete_DeleteInstanceFailed(t *testing.T) {
@@ -90,13 +92,19 @@ func TestDelete_DeleteInstanceFailed(t *testing.T) {
 	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed, but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should not succeed, but got no errors")
+	}
 
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
 
-	require.Equal(t, instanceId.String(), finalState.InstanceId.ValueString(), "state should not have been deleted")
+	if instanceId.String() != finalState.InstanceId.ValueString() {
+		t.Fatalf("state should not have been deleted - expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
+	}
 }
 
 func TestDelete_InstanceAlreadyDeleted(t *testing.T) {
@@ -133,12 +141,18 @@ func TestDelete_InstanceAlreadyDeleted(t *testing.T) {
 	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
 	var finalState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, finalState, "state should have been deleted")
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
+	if finalState != nil {
+		t.Fatalf("state should have been deleted - got %v", finalState)
+	}
 }
 
 func TestDelete_GetInstanceFailed(t *testing.T) {
@@ -178,11 +192,17 @@ func TestDelete_GetInstanceFailed(t *testing.T) {
 	resp := testutils.DeleteInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Delete(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed, but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should not succeed, but got no errors")
+	}
 
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
 
-	require.Equal(t, instanceId.String(), state.InstanceId.ValueString(), "state should not have been deleted")
+	if instanceId.String() != state.InstanceId.ValueString() {
+		t.Fatalf("state should not have been deleted - expected %v, got %v", instanceId.String(), state.InstanceId.ValueString())
+	}
 }

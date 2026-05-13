@@ -56,7 +56,7 @@ func NewInstanceTokenResourceEmpty() resource.Resource {
 	return &tokenResource{}
 }
 
-func NewInstanceTokenResource(client modelexperiments.DefaultAPI, providerData core.ProviderData) resource.Resource {
+func NewInstanceTokenResource(client modelexperiments.DefaultAPI, providerData core.ProviderData) resource.Resource { //nolint:gocritic
 	return &tokenResource{
 		client:       client,
 		providerData: providerData,
@@ -472,8 +472,8 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	deleteTokenReq := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId)
 	_, err := i.client.DeleteInstanceTokenExecute(deleteTokenReq)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-		if ok {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
@@ -623,8 +623,8 @@ func DeleteMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultA
 			getTokenReq := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
 			_, err = a.GetInstanceTokenExecute(getTokenReq)
 			if err != nil {
-				oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
-				if ok {
+				var oapiErr *oapierror.GenericOpenAPIError
+				if errors.As(err, &oapiErr) {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						return true, nil, nil
 					}

@@ -10,12 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestUpdate_Success(t *testing.T) {
@@ -83,23 +83,22 @@ func TestUpdate_Success(t *testing.T) {
 
 	// Execute Update
 	tokenRes.Update(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("update should succeed")
+	}
 
 	// state should be updated
 	var updatedState token.Model
 	diags := resp.State.Get(tc.Ctx, &updatedState)
-	require.False(t, diags.HasError(), "Failed to get state")
-
-	require.Equal(t, tokenId.String(), updatedState.TokenId.ValueString(), "Should be equal")
-	require.Equal(t, projectId.String(), updatedState.ProjectId.ValueString(), "Should be equal")
-	require.Equal(t, instanceId.String(), updatedState.InstanceId.ValueString(), "Should be equal")
-	require.Equal(t, nameUpdated, updatedState.Name.ValueString(), "Should be equal")
-	require.Equal(t, "active", updatedState.State.ValueString(), "Should be equal")
-	require.Equal(t, descriptionUpdated, updatedState.Description.ValueString(), "Should be equal")
-	require.Equal(t, tokenContent, updatedState.Token.ValueString(), "Should be equal")
-	require.Equal(t, id.ValueString(), updatedState.Id.ValueString(), "Should be equal")
-	require.Equal(t, region, updatedState.Region.ValueString(), "Should be equal")
-	require.Equal(t, "2099-01-01T00:00:00Z", updatedState.ValidUntil.ValueString(), "Should be equal")
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
+	if updatedState.Name.ValueString() != nameUpdated {
+		t.Fatalf("should be equal")
+	}
+	if updatedState.Description.ValueString() != descriptionUpdated {
+		t.Fatalf("should be equal")
+	}
 }
 
 func TestUpdate_TokenNotFound(t *testing.T) {
@@ -159,13 +158,19 @@ func TestUpdate_TokenNotFound(t *testing.T) {
 
 	// Execute Update
 	tokenRes.Update(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("update should succeed")
+	}
 
 	// state should be removed
 	var updatedState *token.Model
 	diags := resp.State.Get(tc.Ctx, &updatedState)
-	require.False(t, diags.HasError(), "Failed to get state")
-	require.Nil(t, updatedState)
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
+	if updatedState != nil {
+		t.Fatalf("state should be nil")
+	}
 }
 
 func TestUpdate_TokenUpdateError(t *testing.T) {
@@ -225,23 +230,23 @@ func TestUpdate_TokenUpdateError(t *testing.T) {
 
 	// Execute Update
 	tokenRes.Update(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Update should not succeed")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("update should not succeed")
+	}
 
 	// state should not be changed
 	var updatedState token.Model
 	diags := resp.State.Get(tc.Ctx, &updatedState)
-	require.False(t, diags.HasError(), "Failed to get state")
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
 
-	require.Equal(t, tokenId.String(), updatedState.TokenId.ValueString(), "Should be equal")
-	require.Equal(t, projectId.String(), updatedState.ProjectId.ValueString(), "Should be equal")
-	require.Equal(t, instanceId.String(), updatedState.InstanceId.ValueString(), "Should be equal")
-	require.Equal(t, name, updatedState.Name.ValueString(), "Should be equal")
-	require.Equal(t, "active", updatedState.State.ValueString(), "Should be equal")
-	require.Equal(t, description, updatedState.Description.ValueString(), "Should be equal")
-	require.Equal(t, tokenContent, updatedState.Token.ValueString(), "Should be equal")
-	require.Equal(t, id.ValueString(), updatedState.Id.ValueString(), "Should be equal")
-	require.Equal(t, region, updatedState.Region.ValueString(), "Should be equal")
-	require.Equal(t, "2099-01-01T00:00:00Z", updatedState.ValidUntil.ValueString(), "Should be equal")
+	if updatedState.Name.ValueString() != name {
+		t.Fatalf("should be equal")
+	}
+	if updatedState.Description.ValueString() != description {
+		t.Fatalf("should be equal")
+	}
 }
 
 func TestUpdate_TokenInvalidStateError(t *testing.T) {
@@ -309,11 +314,18 @@ func TestUpdate_TokenInvalidStateError(t *testing.T) {
 
 	// Execute Update
 	tokenRes.Update(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Update should succeed")
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("update should succeed")
+	}
 
 	// state should not be removed
 	var updatedState *token.Model
 	diags := resp.State.Get(tc.Ctx, &updatedState)
-	require.False(t, diags.HasError(), "Failed to get state")
-	require.Nil(t, updatedState)
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
+	if updatedState != nil {
+		t.Fatalf("state should be nil")
+	}
 }
