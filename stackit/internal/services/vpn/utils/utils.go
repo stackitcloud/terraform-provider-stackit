@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1beta1api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"

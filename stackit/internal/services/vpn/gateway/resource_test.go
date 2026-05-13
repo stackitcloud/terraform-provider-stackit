@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1beta1api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -57,7 +57,7 @@ func TestMapFields(t *testing.T) {
 					Tunnel2: "eu01-2",
 				},
 				Bgp: &vpn.BGPGatewayConfig{
-					LocalAsn:                 new(int32(65000)),
+					LocalAsn:                 new(int64(65000)),
 					OverrideAdvertisedRoutes: []string{"10.0.0.0/16", "192.168.0.0/24"},
 				},
 				Labels: &map[string]string{

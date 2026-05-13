@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1beta1api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -243,7 +243,7 @@ func testAccCheckVpnGatewayDestroy(s *terraform.State) error {
 		gatewaysToDestroy = append(gatewaysToDestroy, gatewayId)
 	}
 
-	gatewaysResp, err := client.DefaultAPI.ListVPNGateways(ctx, testutil.ProjectId, vpn.REGION_EU01).Execute()
+	gatewaysResp, err := client.DefaultAPI.ListGateways(ctx, testutil.ProjectId, vpn.REGION_EU01).Execute()
 	if err != nil {
 		return fmt.Errorf("getting gateways: %w", err)
 	}
@@ -255,7 +255,7 @@ func testAccCheckVpnGatewayDestroy(s *terraform.State) error {
 		}
 		for _, gatewayId := range gatewaysToDestroy {
 			if *gateway.Id == gatewayId {
-				err := client.DefaultAPI.DeleteVPNGateway(ctx, testutil.ProjectId, vpn.REGION_EU01, *gateway.Id).Execute()
+				err := client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, vpn.REGION_EU01, *gateway.Id).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying gateway %s during CheckDestroy: %w", gatewayId, err)
 				}

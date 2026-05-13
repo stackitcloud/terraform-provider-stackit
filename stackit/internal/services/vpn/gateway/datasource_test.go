@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1beta1api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
 func TestDataSourceMapFields(t *testing.T) {

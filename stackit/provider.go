@@ -804,7 +804,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
 		serverUpdateEnable.NewServerUpdateEnableResource,
-		vpnGateway.NewVpnGatewayResource,
+		vpnGateway.NewGatewayResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

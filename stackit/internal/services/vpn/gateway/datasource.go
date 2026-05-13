@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1beta1api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
@@ -155,7 +155,7 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 
-	gatewayResponse, err := d.client.DefaultAPI.GetVPNGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
+	gatewayResponse, err := d.client.DefaultAPI.GetGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
