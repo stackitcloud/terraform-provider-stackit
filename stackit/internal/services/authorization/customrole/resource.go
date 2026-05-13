@@ -367,7 +367,7 @@ func mapGetCustomRoleResponse(ctx context.Context, resp *authorization.GetRoleRe
 		return fmt.Errorf("model input is nil")
 	}
 
-	modelPermissions, err := utils.ListValuetoStringSlice(model.Permissions)
+	modelPermissions, err := utils.ListValueToStringSlice(model.Permissions)
 	if err != nil {
 		return err
 	}

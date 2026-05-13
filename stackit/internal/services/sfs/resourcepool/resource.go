@@ -531,7 +531,7 @@ func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
 		aclList []string
 	)
 	if !utils.IsUndefined(model.IpAcl) {
-		tmp, err := utils.ListValuetoStringSlice(model.IpAcl)
+		tmp, err := utils.ListValueToStringSlice(model.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}
@@ -557,7 +557,7 @@ func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 		aclList []string
 	)
 	if !utils.IsUndefined(model.IpAcl) {
-		tmp, err := utils.ListValuetoStringSlice(model.IpAcl)
+		tmp, err := utils.ListValueToStringSlice(model.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}

@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -65,6 +66,7 @@ type Model struct {
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
+	Agent             types.Object `tfsdk:"agent"`
 	AvailabilityZone  types.String `tfsdk:"availability_zone"`
 	BootVolume        types.Object `tfsdk:"boot_volume"`
 	ImageId           types.String `tfsdk:"image_id"`
@@ -77,6 +79,12 @@ type Model struct {
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
 	DesiredStatus     types.String `tfsdk:"desired_status"`
+}
+
+// Struct corresponding to Model.Agent
+type agentModel struct {
+	Provisioned        types.Bool   `tfsdk:"provisioned"`
+	ProvisioningPolicy types.String `tfsdk:"provisioning_policy"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -97,6 +105,12 @@ var bootVolumeTypes = map[string]attr.Type{
 	"source_id":             basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
 	"id":                    basetypes.StringType{},
+}
+
+// Types corresponding to agentModel
+var agentTypes = map[string]attr.Type{
+	"provisioned":         basetypes.BoolType{},
+	"provisioning_policy": basetypes.StringType{},
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
@@ -276,6 +290,35 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 				Optional: true,
 				Computed: true,
+			},
+			"agent": schema.SingleNestedAttribute{
+				Description: "The STACKIT Server Agent configured for the server",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"provisioned": schema.BoolAttribute{
+						Description: "Whether a STACKIT Server Agent is provisioned at the server",
+						Computed:    true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"provisioning_policy": schema.StringAttribute{
+						Description: "Agent provisioning policy: `ALWAYS`, `NEVER`, or `INHERIT`. `INHERIT` follows the image default value.",
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("INHERIT"),
+						Validators: []validator.String{
+							stringvalidator.OneOf("ALWAYS", "NEVER", "INHERIT"),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(), // trigger recreation on change
+						},
+					},
+				},
 			},
 			"boot_volume": schema.SingleNestedAttribute{
 				Description: "The boot volume for the server",
@@ -993,6 +1036,33 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 		model.NetworkInterfaces = types.ListNull(types.StringType)
 	}
 
+	// agent{...} block, determine the intent policy from Terraform state
+	currentPolicy := types.StringValue("INHERIT")
+	if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+		var currentAgent agentModel
+		diags := model.Agent.As(ctx, &currentAgent, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+		}
+		if !currentAgent.ProvisioningPolicy.IsNull() {
+			currentPolicy = currentAgent.ProvisioningPolicy
+		}
+	}
+	// agent{...} block, determine the 'provisioned' field from API response
+	agentProvisioned := types.BoolNull()
+	if serverResp.Agent != nil && serverResp.Agent.Provisioned != nil {
+		agentProvisioned = types.BoolPointerValue(serverResp.Agent.Provisioned)
+	}
+	// agent{...} block, finalizing
+	agent, diags := types.ObjectValue(agentTypes, map[string]attr.Value{
+		"provisioned":         agentProvisioned,
+		"provisioning_policy": currentPolicy,
+	})
+	if diags.HasError() {
+		return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+	}
+	model.Agent = agent
+
 	if serverResp.BootVolume != nil {
 		// convert boot volume model
 		var bootVolumeModel = &bootVolumeModel{}
@@ -1061,6 +1131,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		}
 	}
 
+	var agent = &agentModel{}
+	if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+		diags := model.Agent.As(ctx, agent, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("convert agent object to struct: %w", core.DiagsToError(diags))
+		}
+	}
+
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
@@ -1080,6 +1158,16 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 			// it is set and true, adjust payload
 			bootVolumePayload.DeleteOnTermination = conversion.BoolValueToPointer(bootVolume.DeleteOnTermination)
 		}
+	}
+
+	var agentPayload *iaas.ServerAgent
+	switch agent.ProvisioningPolicy.ValueString() {
+	case "ALWAYS":
+		agentPayload = &iaas.ServerAgent{Provisioned: conversion.BoolValueToPointer(types.BoolValue(true))}
+	case "NEVER":
+		agentPayload = &iaas.ServerAgent{Provisioned: conversion.BoolValueToPointer(types.BoolValue(false))}
+	case "INHERIT":
+		agentPayload = nil // "agent" key is omitted from JSON thanks to omitempty
 	}
 
 	var userData *[]byte
@@ -1111,6 +1199,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 	return &iaas.CreateServerPayload{
 		AffinityGroup:    conversion.StringValueToPointer(model.AffinityGroup),
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
+		Agent:            agentPayload,
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),

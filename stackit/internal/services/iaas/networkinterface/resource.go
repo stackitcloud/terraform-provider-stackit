@@ -535,7 +535,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 			respAllowedAddresses = append(respAllowedAddresses, *n.String)
 		}
 
-		modelAllowedAddresses, err := utils.ListValuetoStringSlice(model.AllowedAddresses)
+		modelAllowedAddresses, err := utils.ListValueToStringSlice(model.AllowedAddresses)
 		if err != nil {
 			return fmt.Errorf("get current network interface allowed addresses from model: %w", err)
 		}
@@ -554,7 +554,7 @@ func mapFields(ctx context.Context, networkInterfaceResp *iaas.NIC, model *Model
 		model.SecurityGroupIds = types.ListNull(types.StringType)
 	} else {
 		respSecurityGroups := *networkInterfaceResp.SecurityGroups
-		modelSecurityGroups, err := utils.ListValuetoStringSlice(model.SecurityGroupIds)
+		modelSecurityGroups, err := utils.ListValueToStringSlice(model.SecurityGroupIds)
 		if err != nil {
 			return fmt.Errorf("get current network interface security groups from model: %w", err)
 		}
