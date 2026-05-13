@@ -62,7 +62,7 @@ import {
 <a id="nestedatt--snapshot_policy"></a>
 ### Nested Schema for `snapshot_policy`
 
-Optional:
+Required:
 
 - `id` (String) ID of the snapshot policy.
 
