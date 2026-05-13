@@ -1,6 +1,7 @@
 package instance_test
 
 import (
+	"net/http"
 	"testing"
 
 	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
@@ -15,114 +16,19 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestRead_Success(t *testing.T) {
+func TestDelete_Success(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
 	projectId := uuid.New()
 	instanceName := "test"
-	description := "description"
 	region := "eu01"
 	instanceId := uuid.New()
-	url := "url"
-	instanceNameUpdated := "updatedName"
 
-	getResp := &modelexperiments.GetInstanceResponse{
-		Instance: modelexperiments.Instance{
-			DeletedExperimentRetention: new("1m"),
-			Description:                &description,
-			Name:                       instanceNameUpdated,
-			Region:                     new("eu01"),
-			Url:                        url,
-			Id:                         instanceId.String(),
-			State:                      "active",
-			BucketName:                 new("bucket"),
-		},
-	}
-	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
-	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(getResp, nil)
-
-	providerData := core.ProviderData{
-		DefaultRegion: "eu01",
-	}
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, nil, providerData)
-
-	schemaResp := resource.SchemaResponse{}
-	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
-
-	state := instance.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(instanceName),
-		Labels:     types.MapNull(types.StringType),
-	}
-
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, nil)
-
-	instanceRes.Read(tc.Ctx, req, resp)
-
-	require.False(t, resp.Diagnostics.HasError(), "Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
-
-	var refreshedState instance.Model
-	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-
-	// state should be written according to GetInstance Response
-	require.Equal(t, instanceId.String(), refreshedState.InstanceId.ValueString())
-	require.Equal(t, projectId.String(), refreshedState.ProjectId.ValueString())
-	require.Equal(t, instanceNameUpdated, refreshedState.Name.ValueString())
-	require.Equal(t, url, refreshedState.Url.ValueString())
-	require.Equal(t, "active", refreshedState.State.ValueString())
-	require.Equal(t, region, refreshedState.Region.ValueString())
-	require.Equal(t, "bucket", refreshedState.BucketName.ValueString())
-}
-
-func TestRead_InstanceIdEmptyFailure(t *testing.T) {
-	tc := testutils.NewTestContext(t)
-
-	projectId := uuid.New()
-	instanceName := "test"
-	region := "eu01"
-
-	providerData := core.ProviderData{
-		DefaultRegion: "eu01",
-	}
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, nil, providerData)
-
-	schemaResp := resource.SchemaResponse{}
-	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
-
-	state := instance.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(""),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(instanceName),
-	}
-
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, &state)
-
-	instanceRes.Read(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Get should not succeed, but got no errors")
-
-	// state should be removed
-	var refreshedState *instance.Model
-	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, refreshedState, "State not nil")
-}
-
-func TestRead_InstanceNotFound(t *testing.T) {
-	tc := testutils.NewTestContext(t)
-
-	projectId := uuid.New()
-	instanceId := uuid.New()
-	instanceName := "test"
-	region := "eu01"
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, nil)
 
 	oapiErr := &oapierror.GenericOpenAPIError{
-		StatusCode: 404,
+		StatusCode: http.StatusNotFound,
 	}
 	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
 	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(nil, oapiErr)
@@ -143,20 +49,14 @@ func TestRead_InstanceNotFound(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, &state)
+	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
 
-	instanceRes.Read(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
-
-	// state should be removed
-	var refreshedState *instance.Model
-	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, refreshedState, "State not nil")
+	instanceRes.Delete(tc.Ctx, req, resp)
+	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
 }
 
-func TestRead_GetRequestFailed(t *testing.T) {
+func TestDelete_DeleteCallFailed(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
 	projectId := uuid.New()
@@ -165,7 +65,95 @@ func TestRead_GetRequestFailed(t *testing.T) {
 	instanceId := uuid.New()
 
 	oapiErr := &oapierror.GenericOpenAPIError{
-		StatusCode: 400,
+		StatusCode: http.StatusInternalServerError,
+	}
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, oapiErr)
+
+	providerData := core.ProviderData{
+		DefaultRegion: "eu01",
+	}
+	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, nil, providerData)
+
+	schemaResp := resource.SchemaResponse{}
+	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
+
+	state := instance.Model{
+		ProjectId:  types.StringValue(projectId.String()),
+		InstanceId: types.StringValue(instanceId.String()),
+		Region:     types.StringValue(region),
+		Name:       types.StringValue(instanceName),
+		Labels:     types.MapNull(types.StringType),
+	}
+
+	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
+
+	instanceRes.Delete(tc.Ctx, req, resp)
+	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed, but got no errors")
+
+	var finalState instance.Model
+	diags := resp.State.Get(tc.Ctx, &finalState)
+	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+
+	require.Equal(t, instanceId.String(), finalState.InstanceId.ValueString(), "state should not have been deleted")
+}
+
+func TestDelete_InstanceAlreadyDeleted(t *testing.T) {
+	tc := testutils.NewTestContext(t)
+
+	projectId := uuid.New()
+	instanceName := "test"
+	region := "eu01"
+	instanceId := uuid.New()
+
+	oapiErr := &oapierror.GenericOpenAPIError{
+		StatusCode: http.StatusNotFound,
+	}
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, oapiErr)
+
+	providerData := core.ProviderData{
+		DefaultRegion: "eu01",
+	}
+	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, nil, providerData)
+
+	schemaResp := resource.SchemaResponse{}
+	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
+
+	state := instance.Model{
+		ProjectId:  types.StringValue(projectId.String()),
+		InstanceId: types.StringValue(instanceId.String()),
+		Region:     types.StringValue(region),
+		Name:       types.StringValue(instanceName),
+		Labels:     types.MapNull(types.StringType),
+	}
+
+	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
+
+	instanceRes.Delete(tc.Ctx, req, resp)
+	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+
+	var finalState *instance.Model
+	diags := resp.State.Get(tc.Ctx, &finalState)
+	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	require.Nil(t, finalState, "state should have been deleted")
+}
+
+func TestDelete_GetInstanceFailed(t *testing.T) {
+	tc := testutils.NewTestContext(t)
+
+	projectId := uuid.New()
+	instanceName := "test"
+	region := "eu01"
+	instanceId := uuid.New()
+
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, nil)
+
+	oapiErr := &oapierror.GenericOpenAPIError{
+		StatusCode: http.StatusInternalServerError,
 	}
 	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
 	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(nil, oapiErr)
@@ -186,15 +174,15 @@ func TestRead_GetRequestFailed(t *testing.T) {
 		Labels:     types.MapNull(types.StringType),
 	}
 
-	req := testutils.ReadRequest(tc.Ctx, schemaResp, state)
-	resp := testutils.ReadResponse(tc.Ctx, schemaResp, nil)
+	req := testutils.DeleteRequest(tc.Ctx, schemaResp, state)
+	resp := testutils.DeleteResponse(tc.Ctx, schemaResp, &state)
 
-	instanceRes.Read(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Get should not succeed")
+	instanceRes.Delete(tc.Ctx, req, resp)
+	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed, but got no errors")
 
-	//state should not be set
-	var refreshedState *instance.Model
-	diags := resp.State.Get(tc.Ctx, &refreshedState)
+	var finalState instance.Model
+	diags := resp.State.Get(tc.Ctx, &finalState)
 	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, refreshedState)
+
+	require.Equal(t, instanceId.String(), state.InstanceId.ValueString(), "state should not have been deleted")
 }
