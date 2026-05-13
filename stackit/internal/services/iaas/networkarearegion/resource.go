@@ -536,7 +536,7 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 		model.Ipv4.DefaultNameservers = types.ListNull(types.StringType)
 	} else {
 		respDefaultNameservers := *networkAreaRegion.Ipv4.DefaultNameservers
-		modelDefaultNameservers, err := utils.ListValuetoStringSlice(model.Ipv4.DefaultNameservers)
+		modelDefaultNameservers, err := utils.ListValueToStringSlice(model.Ipv4.DefaultNameservers)
 		if err != nil {
 			return fmt.Errorf("get current network area default nameservers from model: %w", err)
 		}

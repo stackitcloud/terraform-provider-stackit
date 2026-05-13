@@ -643,7 +643,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
 		respNameservers := *networkResp.Ipv4.Nameservers
-		modelIPv4Nameservers, err := utils.ListValuetoStringSlice(model.IPv4Nameservers)
+		modelIPv4Nameservers, err := utils.ListValueToStringSlice(model.IPv4Nameservers)
 		if err != nil {
 			return fmt.Errorf("get current IPv4 network nameservers from model: %w", err)
 		}
@@ -701,7 +701,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 		model.IPv6Nameservers = types.ListNull(types.StringType)
 	} else {
 		respIPv6Nameservers := *networkResp.Ipv6.Nameservers
-		modelIPv6Nameservers, errIpv6 := utils.ListValuetoStringSlice(model.IPv6Nameservers)
+		modelIPv6Nameservers, errIpv6 := utils.ListValueToStringSlice(model.IPv6Nameservers)
 		if errIpv6 != nil {
 			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
 		}

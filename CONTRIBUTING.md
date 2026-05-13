@@ -201,7 +201,7 @@ To make your contribution, follow these steps:
 1. Check open or recently closed [Pull Requests](https://github.com/stackitcloud/terraform-provider-stackit/pulls) and [Issues](https://github.com/stackitcloud/terraform-provider-stackit/issues)to make sure the contribution you are making has not been already tackled by someone else.
 2. Fork the repo.
 3. Make your changes in a branch that is up-to-date with the original repo's `main` branch.
-4. Commit your changes including a descriptive message
+4. Commit your changes including a descriptive message (see commit message guide below).
 5. Create a pull request with your changes.
 6. The pull request will be reviewed by the repo maintainers. If you need to make further changes, make additional commits to keep commit history. When the PR is merged, commits will be squashed.
 
@@ -212,8 +212,44 @@ To make your contribution, follow these steps:
 > **Break down large changes into smaller PRs**: Separate new features or bigger changes into multiple smaller Pull Requests.
 > This allows us to provide earlier feedback and makes it easier to review your PR.
 > 
-> **Create a draft PR for early feedback**: If you want feedback during the implementation process, create a draft PR so we can have a look. 
+> **Create a draft PR for early feedback**: If you want feedback during the implementation process, create a draft PR so we can have a look. Make sure to actually [mark](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request) your PR as draft in that case.
 
+### Commit messages
+
+Commit messages should follow the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
+
+This means your commit message should be structured as follows:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+- `type`: Required. Must be `feat`, `fix`, `chore`, `refactor`, ...
+- `scope`: Required. Must be one or multiple STACKIT services. Should follow the names of the [service modules](https://github.com/stackitcloud/stackit-sdk-go/tree/main/services) in the STACKIT Go SDK.
+- Body: Optional. Additional details about your changes.
+- Footer: Must include your Jira issue ID or GitHub issue ID (prefixed by a `#`) if there are any. Optional if there are no open issues for your change. For bigger changes please create an issue first.
+
+#### Examples
+
+```
+feat(iaas): onboarding of server resource and datasource
+
+relates to STACKITTPR-1234 and #123
+```
+
+```
+feat(iam, secretsmanager): add secretsmanager IAM rolebinding datasources
+
+relates to STACKITTPR-641
+```
+
+#### Notes for maintainers
+
+- When doing a squash merge on GitHub, please make sure you stick to these conventions. Don't just use the default commit message provided by GitHub (especially when you're merging a PR with multiple commits in it).
 
 ## Bug Reports
 

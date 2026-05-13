@@ -115,7 +115,7 @@ func TestListValuetoStrSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := ListValuetoStringSlice(tt.input)
+			output, err := ListValueToStringSlice(tt.input)
 			if err != nil {
 				if !tt.isValid {
 					return
