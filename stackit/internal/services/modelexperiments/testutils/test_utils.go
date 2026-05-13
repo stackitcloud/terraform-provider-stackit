@@ -8,10 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	mock_instance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance/mock"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
-	"go.uber.org/mock/gomock"
 )
 
 type TestContext struct {
@@ -42,7 +43,7 @@ func CreateInstanceTestModel(projectId, region, name, description string) instan
 	}
 }
 
-func CreateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, model instance.Model) resource.CreateRequest {
+func CreateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, model instance.Model) resource.CreateRequest { //nolint:gocritic
 	req := resource.CreateRequest{}
 	req.Plan = tfsdk.Plan{
 		Schema: schema.Schema,
@@ -52,7 +53,7 @@ func CreateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, 
 	return req
 }
 
-func CreateInstanceTokenRequest(ctx context.Context, schema resource.SchemaResponse, model token.Model) resource.CreateRequest {
+func CreateInstanceTokenRequest(ctx context.Context, schema resource.SchemaResponse, model token.Model) resource.CreateRequest { //nolint:gocritic
 	req := resource.CreateRequest{}
 	req.Plan = tfsdk.Plan{
 		Schema: schema.Schema,
@@ -62,7 +63,7 @@ func CreateInstanceTokenRequest(ctx context.Context, schema resource.SchemaRespo
 	return req
 }
 
-func CreateResponse(schema resource.SchemaResponse) *resource.CreateResponse {
+func CreateResponse(schema resource.SchemaResponse) *resource.CreateResponse { //nolint:gocritic
 	resp := &resource.CreateResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -71,7 +72,7 @@ func CreateResponse(schema resource.SchemaResponse) *resource.CreateResponse {
 	return resp
 }
 
-func UpdateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState instance.Model) resource.UpdateRequest {
+func UpdateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState instance.Model) resource.UpdateRequest { //nolint:gocritic
 	req := resource.UpdateRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -86,7 +87,7 @@ func UpdateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, 
 	return req
 }
 
-func UpdateTokenRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState token.Model) resource.UpdateRequest {
+func UpdateTokenRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState token.Model) resource.UpdateRequest { //nolint:gocritic
 	req := resource.UpdateRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -103,7 +104,7 @@ func UpdateTokenRequest(ctx context.Context, schema resource.SchemaResponse, cur
 
 // UpdateInstanceResponse creates a test Update response
 // Optionally initialize with current state to simulate Terraform framework behavior
-func UpdateInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.UpdateResponse {
+func UpdateInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.UpdateResponse { //nolint:gocritic
 	resp := &resource.UpdateResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -117,7 +118,7 @@ func UpdateInstanceResponse(ctx context.Context, schema resource.SchemaResponse,
 	return resp
 }
 
-func UpdateTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.UpdateResponse {
+func UpdateTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.UpdateResponse { //nolint:gocritic
 	resp := &resource.UpdateResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -132,7 +133,7 @@ func UpdateTokenResponse(ctx context.Context, schema resource.SchemaResponse, cu
 }
 
 // DeleteInstanceRequest creates a test Delete request
-func DeleteInstanceRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.DeleteRequest {
+func DeleteInstanceRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.DeleteRequest { //nolint:gocritic
 	req := resource.DeleteRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -142,7 +143,7 @@ func DeleteInstanceRequest(ctx context.Context, schema resource.SchemaResponse, 
 	return req
 }
 
-func DeleteTokenRequest(ctx context.Context, schema resource.SchemaResponse, state token.Model) resource.DeleteRequest {
+func DeleteTokenRequest(ctx context.Context, schema resource.SchemaResponse, state token.Model) resource.DeleteRequest { //nolint:gocritic
 	req := resource.DeleteRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -154,7 +155,7 @@ func DeleteTokenRequest(ctx context.Context, schema resource.SchemaResponse, sta
 
 // DeleteInstanceResponse creates a test Delete response
 // Optionally initialize with current state to simulate Terraform framework behavior
-func DeleteInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.DeleteResponse {
+func DeleteInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.DeleteResponse { //nolint:gocritic
 	resp := &resource.DeleteResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -168,7 +169,7 @@ func DeleteInstanceResponse(ctx context.Context, schema resource.SchemaResponse,
 	return resp
 }
 
-func DeleteTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.DeleteResponse {
+func DeleteTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.DeleteResponse { //nolint:gocritic
 	resp := &resource.DeleteResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -183,7 +184,7 @@ func DeleteTokenResponse(ctx context.Context, schema resource.SchemaResponse, cu
 }
 
 // ReadInstanceRequest creates a test Read request
-func ReadInstanceRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.ReadRequest {
+func ReadInstanceRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.ReadRequest { //nolint:gocritic
 	req := resource.ReadRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -193,7 +194,7 @@ func ReadInstanceRequest(ctx context.Context, schema resource.SchemaResponse, st
 	return req
 }
 
-func ReadTokenRequest(ctx context.Context, schema resource.SchemaResponse, state token.Model) resource.ReadRequest {
+func ReadTokenRequest(ctx context.Context, schema resource.SchemaResponse, state token.Model) resource.ReadRequest { //nolint:gocritic
 	req := resource.ReadRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -204,7 +205,7 @@ func ReadTokenRequest(ctx context.Context, schema resource.SchemaResponse, state
 }
 
 // ReadInstanceResponse creates a test Read response
-func ReadInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.ReadResponse {
+func ReadInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.ReadResponse { //nolint:gocritic
 	resp := &resource.ReadResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -218,7 +219,7 @@ func ReadInstanceResponse(ctx context.Context, schema resource.SchemaResponse, c
 	return resp
 }
 
-func ReadTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.ReadResponse {
+func ReadTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.ReadResponse { //nolint:gocritic
 	resp := &resource.ReadResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,

@@ -9,11 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestDelete_Success(t *testing.T) {
@@ -55,7 +55,9 @@ func TestDelete_Success(t *testing.T) {
 	resp := testutils.DeleteTokenResponse(tc.Ctx, schemaResp, nil)
 
 	tokenRes.Delete(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 }
 
 func TestDelete_DeleteTokenFailed(t *testing.T) {
@@ -94,14 +96,20 @@ func TestDelete_DeleteTokenFailed(t *testing.T) {
 	resp := testutils.DeleteTokenResponse(tc.Ctx, schemaResp, &state)
 
 	tokenRes.Delete(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should not succeed")
+	}
 
-	//state should not be removed
+	// state should not be removed
 	var deletedState token.Model
 	diags := resp.State.Get(tc.Ctx, &deletedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
 
-	require.Equal(t, instanceId.String(), deletedState.InstanceId.ValueString())
+	if instanceId.String() != deletedState.InstanceId.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceId.String(), deletedState.InstanceId.ValueString())
+	}
 }
 
 func TestDelete_TokenNotFound(t *testing.T) {
@@ -140,13 +148,19 @@ func TestDelete_TokenNotFound(t *testing.T) {
 	resp := testutils.DeleteTokenResponse(tc.Ctx, schemaResp, &state)
 
 	tokenRes.Delete(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
-	//state should be removed
+	// state should be removed
 	var deletedState *token.Model
 	diags := resp.State.Get(tc.Ctx, &deletedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, deletedState)
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
+	if deletedState != nil {
+		t.Fatalf("should be nil")
+	}
 }
 
 func TestDelete_GetTokenFailed(t *testing.T) {
@@ -188,12 +202,18 @@ func TestDelete_GetTokenFailed(t *testing.T) {
 	resp := testutils.DeleteTokenResponse(tc.Ctx, schemaResp, &state)
 
 	tokenRes.Delete(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Delete should not succeed")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Delete should not succeed")
+	}
 
-	//state should not be removed
+	// state should not be removed
 	var deletedState token.Model
 	diags := resp.State.Get(tc.Ctx, &deletedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("failed to get state")
+	}
 
-	require.Equal(t, instanceId.String(), deletedState.InstanceId.ValueString())
+	if instanceId.String() != deletedState.InstanceId.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceId.String(), deletedState.InstanceId.ValueString())
+	}
 }
