@@ -8,11 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"go.uber.org/mock/gomock"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 func TestRead_Success(t *testing.T) {
@@ -62,20 +62,38 @@ func TestRead_Success(t *testing.T) {
 
 	instanceRes.Read(tc.Ctx, req, resp)
 
-	require.False(t, resp.Diagnostics.HasError(), "Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
 	var refreshedState instance.Model
 	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
 
 	// state should be written according to GetInstance Response
-	require.Equal(t, instanceId.String(), refreshedState.InstanceId.ValueString())
-	require.Equal(t, projectId.String(), refreshedState.ProjectId.ValueString())
-	require.Equal(t, instanceNameUpdated, refreshedState.Name.ValueString())
-	require.Equal(t, url, refreshedState.Url.ValueString())
-	require.Equal(t, "active", refreshedState.State.ValueString())
-	require.Equal(t, region, refreshedState.Region.ValueString())
-	require.Equal(t, "bucket", refreshedState.BucketName.ValueString())
+	if instanceId.String() != refreshedState.InstanceId.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceId.String(), refreshedState.InstanceId.ValueString())
+	}
+	if projectId.String() != refreshedState.ProjectId.ValueString() {
+		t.Fatalf("expected %v, got %v", projectId.String(), refreshedState.ProjectId.ValueString())
+	}
+	if instanceNameUpdated != refreshedState.Name.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceNameUpdated, refreshedState.Name.ValueString())
+	}
+	if url != refreshedState.Url.ValueString() {
+		t.Fatalf("expected %v, got %v", url, refreshedState.Url.ValueString())
+	}
+	if refreshedState.State.ValueString() != "active" {
+		t.Fatalf("expected %v, got %v", "active", refreshedState.State.ValueString())
+	}
+	if region != refreshedState.Region.ValueString() {
+		t.Fatalf("expected %v, got %v", region, refreshedState.Region.ValueString())
+	}
+	if refreshedState.BucketName.ValueString() != "bucket" {
+		t.Fatalf("expected %v, got %v", "bucket", refreshedState.BucketName.ValueString())
+	}
 }
 
 func TestRead_InstanceIdEmptyFailure(t *testing.T) {
@@ -104,13 +122,19 @@ func TestRead_InstanceIdEmptyFailure(t *testing.T) {
 	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Read(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Get should not succeed, but got no errors")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Get should not succeed, but got no errors")
+	}
 
 	// state should be removed
 	var refreshedState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, refreshedState, "State not nil")
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
+	if refreshedState != nil {
+		t.Fatalf("State not nil")
+	}
 }
 
 func TestRead_InstanceNotFound(t *testing.T) {
@@ -147,13 +171,19 @@ func TestRead_InstanceNotFound(t *testing.T) {
 	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, &state)
 
 	instanceRes.Read(tc.Ctx, req, resp)
-	require.False(t, resp.Diagnostics.HasError(), "Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Get should succeed, but got errors: %v", resp.Diagnostics.Errors())
+	}
 
 	// state should be removed
 	var refreshedState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, refreshedState, "State not nil")
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
+	if refreshedState != nil {
+		t.Fatalf("State not nil")
+	}
 }
 
 func TestRead_GetRequestFailed(t *testing.T) {
@@ -190,11 +220,17 @@ func TestRead_GetRequestFailed(t *testing.T) {
 	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, nil)
 
 	instanceRes.Read(tc.Ctx, req, resp)
-	require.True(t, resp.Diagnostics.HasError(), "Get should not succeed")
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("Get should not succeed")
+	}
 
-	//state should not be set
+	// state should not be set
 	var refreshedState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &refreshedState)
-	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
-	require.Nil(t, refreshedState)
+	if diags.HasError() {
+		t.Fatalf("Failed to get state: %v", diags.Errors())
+	}
+	if refreshedState != nil {
+		t.Fatalf("expected nil, got %v", refreshedState)
+	}
 }
