@@ -4,11 +4,14 @@ page_title: "stackit_sfs_snapshot_policies Data Source - stackit"
 subcategory: ""
 description: |-
   SFS snapshot policies datasource schema
+  ~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_sfs_snapshot_policies (Data Source)
 
 SFS snapshot policies datasource schema
+
+~> This datasource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 

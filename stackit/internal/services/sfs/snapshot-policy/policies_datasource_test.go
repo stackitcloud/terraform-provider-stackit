@@ -63,7 +63,7 @@ func TestMapFields(t *testing.T) {
 								CreatedAt:       types.StringValue(now.String()),
 								Interval:        types.StringValue("interval"),
 								Prefix:          types.StringValue("prefix"),
-								RetentionCount:  types.Int64Value(123),
+								RetentionCount:  types.Int32Value(123),
 								RetentionPeriod: types.StringValue("period"),
 							},
 						},

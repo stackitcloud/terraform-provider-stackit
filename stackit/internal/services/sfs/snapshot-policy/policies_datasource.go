@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
@@ -55,6 +57,11 @@ func (r *policiesDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
+	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_snapshot_policies", core.Datasource)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -64,8 +71,10 @@ func (r *policiesDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	description := "SFS snapshot policies datasource schema"
 	resp.Schema = schema.Schema{
-		Description: "SFS snapshot policies datasource schema",
+		Description:         description,
+		MarkdownDescription: features.AddBetaDescription(description, core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source ID. It is structured as \"`project_id`\".",
@@ -134,7 +143,7 @@ func (r *policiesDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 										Computed:    true,
 										Description: "Prefix used for snapshots created by this policy.",
 									},
-									"retention_count": schema.Int64Attribute{
+									"retention_count": schema.Int32Attribute{
 										Computed:    true,
 										Description: "Retention Count.",
 									},
@@ -174,7 +183,7 @@ type schedule struct {
 	CreatedAt       types.String `tfsdk:"created_at"`
 	Interval        types.String `tfsdk:"interval"`
 	Prefix          types.String `tfsdk:"prefix"`
-	RetentionCount  types.Int64  `tfsdk:"retention_count"`
+	RetentionCount  types.Int32  `tfsdk:"retention_count"`
 	RetentionPeriod types.String `tfsdk:"retention_period"`
 }
 
@@ -257,17 +266,13 @@ func mapFields(_ context.Context, resp *sfs.ListSnapshotPoliciesResponse, model 
 			if respPolicy.CreatedAt != nil {
 				scheduleCreatedAt = types.StringValue(respSchedule.CreatedAt.String())
 			}
-			var retentionCount *int64
-			if respSchedule.RetentionCount != nil {
-				retentionCount = new(int64(*respSchedule.RetentionCount))
-			}
 			modelSchedule := schedule{
 				ID:              types.StringPointerValue(respSchedule.Id),
 				Name:            types.StringPointerValue(respSchedule.Name),
 				CreatedAt:       scheduleCreatedAt,
 				Interval:        types.StringPointerValue(respSchedule.Interval),
 				Prefix:          types.StringPointerValue(respSchedule.Prefix),
-				RetentionCount:  types.Int64PointerValue(retentionCount),
+				RetentionCount:  types.Int32PointerValue(respSchedule.RetentionCount),
 				RetentionPeriod: types.StringPointerValue(respSchedule.RetentionPeriod),
 			}
 			modelPolicy.SnapshotSchedules = append(modelPolicy.SnapshotSchedules, modelSchedule)

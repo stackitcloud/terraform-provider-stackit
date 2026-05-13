@@ -913,7 +913,7 @@ func TestAccSnapshotPolicies(t *testing.T) {
 	cfg := fmt.Sprintf(`
 %s
 
-%s`, testutil.NewConfigBuilder().BuildProviderConfig(), snapshotPoliciesDataSourceConfig)
+%s`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), snapshotPoliciesDataSourceConfig)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
