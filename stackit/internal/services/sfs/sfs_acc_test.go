@@ -20,6 +20,7 @@ import (
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	snapshot_policy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshot-policy"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -44,6 +45,9 @@ var (
 
 	//go:embed testdata/project-lock-min.tf
 	resourceProjectLockConfig string
+
+	//go:embed testdata/snapshot-policies-datasource.tf
+	snapshotPoliciesDataSourceConfig string
 )
 
 // EXPORT POLICY - MIN
@@ -912,6 +916,54 @@ func TestAccProjectLockMin(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccSnapshotPolicies(t *testing.T) {
+	projectId := config.StringVariable(testutil.ProjectId)
+	cfg := fmt.Sprintf(`
+%s
+
+%s`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), snapshotPoliciesDataSourceConfig)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// all / default
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "immutable", snapshot_policy.ImmutableFilterAll),
+				),
+			},
+			// immutable
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+					"immutable":  config.StringVariable(snapshot_policy.ImmutableFilterImmutableOnly),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "immutable", snapshot_policy.ImmutableFilterImmutableOnly),
+				),
+			},
+			// mutable
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+					"immutable":  config.StringVariable(snapshot_policy.ImmutableFilterMutableOnly),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "immutable", snapshot_policy.ImmutableFilterMutableOnly),
+				),
+			},
 		},
 	})
 }
