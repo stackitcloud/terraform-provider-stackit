@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	mock_instance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance/mock"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
 	"go.uber.org/mock/gomock"
 )
 
@@ -51,6 +52,16 @@ func CreateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, 
 	return req
 }
 
+func CreateInstanceTokenRequest(ctx context.Context, schema resource.SchemaResponse, model token.Model) resource.CreateRequest {
+	req := resource.CreateRequest{}
+	req.Plan = tfsdk.Plan{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	req.Plan.Set(ctx, model)
+	return req
+}
+
 func CreateResponse(schema resource.SchemaResponse) *resource.CreateResponse {
 	resp := &resource.CreateResponse{}
 	resp.State = tfsdk.State{
@@ -60,7 +71,7 @@ func CreateResponse(schema resource.SchemaResponse) *resource.CreateResponse {
 	return resp
 }
 
-func UpdateRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState instance.Model) resource.UpdateRequest {
+func UpdateInstanceRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState instance.Model) resource.UpdateRequest {
 	req := resource.UpdateRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -75,9 +86,24 @@ func UpdateRequest(ctx context.Context, schema resource.SchemaResponse, currentS
 	return req
 }
 
-// UpdateResponse creates a test Update response
+func UpdateTokenRequest(ctx context.Context, schema resource.SchemaResponse, currentState, plannedState token.Model) resource.UpdateRequest {
+	req := resource.UpdateRequest{}
+	req.State = tfsdk.State{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	req.Plan = tfsdk.Plan{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	req.State.Set(ctx, currentState)
+	req.Plan.Set(ctx, plannedState)
+	return req
+}
+
+// UpdateInstanceResponse creates a test Update response
 // Optionally initialize with current state to simulate Terraform framework behavior
-func UpdateResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.UpdateResponse {
+func UpdateInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.UpdateResponse {
 	resp := &resource.UpdateResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -91,8 +117,22 @@ func UpdateResponse(ctx context.Context, schema resource.SchemaResponse, current
 	return resp
 }
 
-// DeleteRequest creates a test Delete request
-func DeleteRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.DeleteRequest {
+func UpdateTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.UpdateResponse {
+	resp := &resource.UpdateResponse{}
+	resp.State = tfsdk.State{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	// Initialize with current state to simulate framework behavior
+	// When Update errors without calling State.Set(), this state is preserved
+	if currentState != nil {
+		resp.State.Set(ctx, *currentState)
+	}
+	return resp
+}
+
+// DeleteInstanceRequest creates a test Delete request
+func DeleteInstanceRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.DeleteRequest {
 	req := resource.DeleteRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -102,9 +142,19 @@ func DeleteRequest(ctx context.Context, schema resource.SchemaResponse, state in
 	return req
 }
 
-// DeleteResponse creates a test Delete response
+func DeleteTokenRequest(ctx context.Context, schema resource.SchemaResponse, state token.Model) resource.DeleteRequest {
+	req := resource.DeleteRequest{}
+	req.State = tfsdk.State{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	req.State.Set(ctx, state)
+	return req
+}
+
+// DeleteInstanceResponse creates a test Delete response
 // Optionally initialize with current state to simulate Terraform framework behavior
-func DeleteResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.DeleteResponse {
+func DeleteInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.DeleteResponse {
 	resp := &resource.DeleteResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -118,8 +168,22 @@ func DeleteResponse(ctx context.Context, schema resource.SchemaResponse, current
 	return resp
 }
 
-// ReadRequest creates a test Read request
-func ReadRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.ReadRequest {
+func DeleteTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.DeleteResponse {
+	resp := &resource.DeleteResponse{}
+	resp.State = tfsdk.State{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	// Initialize with current state to simulate framework behavior
+	// When Delete errors without calling State.RemoveResource(), this state is preserved
+	if currentState != nil {
+		resp.State.Set(ctx, *currentState)
+	}
+	return resp
+}
+
+// ReadInstanceRequest creates a test Read request
+func ReadInstanceRequest(ctx context.Context, schema resource.SchemaResponse, state instance.Model) resource.ReadRequest {
 	req := resource.ReadRequest{}
 	req.State = tfsdk.State{
 		Schema: schema.Schema,
@@ -129,8 +193,32 @@ func ReadRequest(ctx context.Context, schema resource.SchemaResponse, state inst
 	return req
 }
 
-// ReadResponse creates a test Read response
-func ReadResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.ReadResponse {
+func ReadTokenRequest(ctx context.Context, schema resource.SchemaResponse, state token.Model) resource.ReadRequest {
+	req := resource.ReadRequest{}
+	req.State = tfsdk.State{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	req.State.Set(ctx, state)
+	return req
+}
+
+// ReadInstanceResponse creates a test Read response
+func ReadInstanceResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.ReadResponse {
+	resp := &resource.ReadResponse{}
+	resp.State = tfsdk.State{
+		Schema: schema.Schema,
+		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	// Initialize with current state to simulate framework behavior
+	// When Delete errors without calling State.RemoveResource(), this state is preserved
+	if currentState != nil {
+		resp.State.Set(ctx, *currentState)
+	}
+	return resp
+}
+
+func ReadTokenResponse(ctx context.Context, schema resource.SchemaResponse, currentState *token.Model) *resource.ReadResponse {
 	resp := &resource.ReadResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
