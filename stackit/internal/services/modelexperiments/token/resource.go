@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/wait"
-	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -57,19 +56,17 @@ func NewInstanceTokenResourceEmpty() resource.Resource {
 	return &tokenResource{}
 }
 
-func NewInstanceTokenResource(client modelexperiments.DefaultAPI, serviceEnablementClient serviceenablement.DefaultAPI, providerData core.ProviderData) resource.Resource {
+func NewInstanceTokenResource(client modelexperiments.DefaultAPI, providerData core.ProviderData) resource.Resource {
 	return &tokenResource{
-		client:                  client,
-		providerData:            providerData,
-		serviceEnablementClient: serviceEnablementClient,
+		client:       client,
+		providerData: providerData,
 	}
 }
 
 // tokenResource is the resource implementation.
 type tokenResource struct {
-	client                  modelexperiments.DefaultAPI
-	providerData            core.ProviderData
-	serviceEnablementClient serviceenablement.DefaultAPI
+	client       modelexperiments.DefaultAPI
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -89,12 +86,7 @@ func (i *tokenResource) Configure(ctx context.Context, req resource.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	serviceEnablementClient := modelexperimentsutils.ConfigureServiceEnablementClient(ctx, &i.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	i.client = apiClient
-	i.serviceEnablementClient = serviceEnablementClient
 	tflog.Info(ctx, "Model experiments client configured")
 }
 
@@ -250,7 +242,8 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	createInstanceTokenResp, err := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload).Execute()
+	createTokenReq := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload)
+	createInstanceTokenResp, err := i.client.CreateInstanceTokenExecute(createTokenReq)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -281,15 +274,6 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	waitResp, err := CreateMExpTokenWaitHandler(ctx, i.client, region, projectId, instanceId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance token", fmt.Sprintf("Waiting for instance to be active: %v", err))
-
-		err = mapCreateResponse(ctx, createInstanceTokenResp, waitResp, &model, region)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
-		}
-		diags = resp.State.Set(ctx, model)
-		resp.Diagnostics.Append(diags...)
-
-		return
 	}
 
 	// Map response body to schema
@@ -336,7 +320,8 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getInstanceTokenResp, err := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+	getTokenReq := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
+	getInstanceTokenResp, err := i.client.GetInstanceTokenExecute(getTokenReq)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -351,6 +336,12 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 	ctx = core.LogResponse(ctx)
+
+	if getInstanceTokenResp != nil && getInstanceTokenResp.Token.State == modelexperiments.TOKENSTATE_INACTIVE {
+		resp.State.RemoveResource(ctx)
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating AI model experiments instance token", "AI model experiments token has expired")
+		return
+	}
 
 	err = mapToken(ctx, &getInstanceTokenResp.Token, &model)
 	if err != nil {
@@ -388,7 +379,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := state.ProjectId.ValueString()
-	instanceId := state.InstanceId.ValueString()
+	instanceId := model.InstanceId.ValueString()
 	tokenId := state.TokenId.ValueString()
 	region := i.providerData.GetRegionWithOverride(model.Region)
 
@@ -403,7 +394,8 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
+	updateTokenReq := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload)
+	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceTokenExecute(updateTokenReq)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -433,8 +425,8 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	ctx = core.LogResponse(ctx)
 
 	if updateInstanceTokenResp != nil && updateInstanceTokenResp.Token.State == modelexperiments.TOKENSTATE_INACTIVE {
-		resp.State.RemoveResource(ctx)
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Error updating AI model experiments instance token", "AI model experiments token has expired")
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -477,21 +469,18 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+	deleteTokenReq := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId)
+	_, err := i.client.DeleteInstanceTokenExecute(deleteTokenReq)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if !errors.As(err, &oapiErr) {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Calling API: %v", err))
-			return
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		if ok {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				resp.State.RemoveResource(ctx)
+				return
+			}
 		}
-		if oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		if oapiErr.StatusCode != http.StatusConflict {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -563,7 +552,7 @@ func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model 
 		return fmt.Errorf("failure in mapping labels")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString())
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), token.Id)
 	model.TokenId = types.StringValue(token.Id)
 	model.Name = types.StringValue(token.Name)
 	model.State = types.StringValue(string(token.State))
@@ -611,7 +600,8 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstanceToken
 
 func CreateMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetTokenResponse] {
 	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetTokenResponse, err error) {
-		getTokenResp, err := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+		getTokenReq := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
+		getTokenResp, err := a.GetInstanceTokenExecute(getTokenReq)
 		if err != nil {
 			return false, nil, err
 		}
@@ -630,15 +620,15 @@ func CreateMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultA
 func DeleteMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(
 		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			_, err = a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
+			getTokenReq := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
+			_, err = a.GetInstanceTokenExecute(getTokenReq)
 			if err != nil {
-				var oapiErr *oapierror.GenericOpenAPIError
-				if errors.As(err, &oapiErr) {
+				oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+				if ok {
 					if oapiErr.StatusCode == http.StatusNotFound {
 						return true, nil, nil
 					}
 				}
-
 				return false, nil, err
 			}
 
