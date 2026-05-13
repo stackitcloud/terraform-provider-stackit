@@ -130,11 +130,16 @@ func ReadRequest(ctx context.Context, schema resource.SchemaResponse, state inst
 }
 
 // ReadResponse creates a test Read response
-func ReadResponse(schema resource.SchemaResponse) *resource.ReadResponse {
+func ReadResponse(ctx context.Context, schema resource.SchemaResponse, currentState *instance.Model) *resource.ReadResponse {
 	resp := &resource.ReadResponse{}
 	resp.State = tfsdk.State{
 		Schema: schema.Schema,
 		Raw:    tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+	}
+	// Initialize with current state to simulate framework behavior
+	// When Delete errors without calling State.RemoveResource(), this state is preserved
+	if currentState != nil {
+		resp.State.Set(ctx, *currentState)
 	}
 	return resp
 }

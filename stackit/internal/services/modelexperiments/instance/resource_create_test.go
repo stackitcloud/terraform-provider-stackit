@@ -118,6 +118,7 @@ func TestCreate_Success(t *testing.T) {
 	diags := resp.State.Get(tc.Ctx, &stateAfterCreate)
 	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
 
+	// state should be created correctly
 	require.Equal(t, instanceId.String(), stateAfterCreate.InstanceId.ValueString())
 	require.Equal(t, projectId.String(), stateAfterCreate.ProjectId.ValueString())
 	require.Equal(t, instanceName, stateAfterCreate.Name.ValueString())
@@ -183,6 +184,7 @@ func TestCreate_ServiceEnablementFailure(t *testing.T) {
 
 	require.True(t, resp.Diagnostics.HasError(), "Create should not succeed, but got no errors")
 
+	// state should not be created
 	var stateAfterCreate *instance.Model
 	diags := resp.State.Get(tc.Ctx, &stateAfterCreate)
 	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
@@ -270,6 +272,7 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	diags := resp.State.Get(tc.Ctx, &stateAfterCreate)
 	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())
 
+	// state should be created even if get request failed
 	require.Equal(t, instanceId.String(), stateAfterCreate.InstanceId.ValueString())
 	require.Equal(t, projectId.String(), stateAfterCreate.ProjectId.ValueString())
 	require.Equal(t, instanceName, stateAfterCreate.Name.ValueString())
@@ -339,6 +342,7 @@ func TestCreate_InstanceCreateFailure(t *testing.T) {
 
 	require.True(t, resp.Diagnostics.HasError(), "Create should not succeed, but got no errors")
 
+	// no state should be created
 	var stateAfterCreate *instance.Model
 	diags := resp.State.Get(tc.Ctx, &stateAfterCreate)
 	require.False(t, diags.HasError(), "Failed to get state: %v", diags.Errors())

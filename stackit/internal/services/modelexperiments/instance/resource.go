@@ -3,7 +3,6 @@ package instance
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -247,8 +246,8 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	err := i.serviceEnablementClient.EnableServiceRegionalExecute(serviceEnablementReq)
 
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		if ok {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI model experiments",
 					fmt.Sprintf("Service not available in region %s \n%v", region, err),
@@ -256,6 +255,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 				return
 			}
 		}
+
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
@@ -361,10 +361,9 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	getInstanceReq := i.client.GetInstance(ctx, projectId, region, instanceId)
 	getInstanceResp, err := i.client.GetInstanceExecute(getInstanceReq)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		if ok {
 			if oapiErr.StatusCode == http.StatusNotFound {
-				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
 				return
 			}
@@ -428,27 +427,14 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	updateInstanceReq := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload)
 	updateInstanceResp, err := i.client.PartialUpdateInstanceExecute(updateInstanceReq)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		if ok {
 			if oapiErr.StatusCode == http.StatusNotFound {
-				// Remove the resource from the state so Terraform will recreate it
 				resp.State.RemoveResource(ctx)
 				return
 			}
 		}
-
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating AI model experiments instance",
-			fmt.Sprintf(
-				"Calling API: %v, instanceId: %s, region: %s, projectId: %s",
-				err,
-				instanceId,
-				region,
-				projectId,
-			),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -490,10 +476,11 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := i.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	deleteInstanceReq := i.client.DeleteInstance(ctx, projectId, region, instanceId)
+	_, err := i.client.DeleteInstanceExecute(deleteInstanceReq)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if !errors.As(err, &oapiErr) {
+		oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+		if ok {
 			if oapiErr.StatusCode == http.StatusNotFound {
 				resp.State.RemoveResource(ctx)
 				return
@@ -643,16 +630,18 @@ func CreateMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.Defau
 func DeleteMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
 	handler := wait.New(
 		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			_, err = a.GetInstance(ctx, projectId, region, instanceId).Execute()
+			getInstanceReq := a.GetInstance(ctx, projectId, region, instanceId)
+			_, err = a.GetInstanceExecute(getInstanceReq)
 			if err != nil {
-				var oapiErr *oapierror.GenericOpenAPIError
-				if errors.As(err, &oapiErr) {
-					if oapiErr.StatusCode == http.StatusNotFound {
-						return true, nil, nil
-					}
+				oapiErr, ok := err.(*oapierror.GenericOpenAPIError)
+				if !ok {
+					return false, nil, err
+				}
+				if oapiErr.StatusCode != http.StatusNotFound {
+					return false, nil, err
 				}
 
-				return false, nil, err
+				return true, nil, nil
 			}
 
 			return false, nil, nil
