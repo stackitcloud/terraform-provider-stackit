@@ -84,11 +84,6 @@ func (d *telemetryLinkLinkDataSource) Schema(_ context.Context, _ datasource.Sch
 					validate.NoSeparator(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
-				// the region cannot be found, so it has to be passed
-				Optional: true,
-			},
 			"resource_type": schema.StringAttribute{
 				Description: schemaDescriptions["resource_type"],
 				Required:    true,
@@ -104,6 +99,11 @@ func (d *telemetryLinkLinkDataSource) Schema(_ context.Context, _ datasource.Sch
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
