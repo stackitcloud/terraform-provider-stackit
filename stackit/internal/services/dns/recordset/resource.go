@@ -495,7 +495,7 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 			respRecords = append(respRecords, record.Content)
 		}
 
-		modelRecords, err := utils.ListValuetoStringSlice(model.Records)
+		modelRecords, err := utils.ListValueToStringSlice(model.Records)
 		if err != nil {
 			return err
 		}

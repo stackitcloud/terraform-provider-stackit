@@ -149,6 +149,7 @@ var testConfigServerVarsMax = config.Variables{
 	"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"public_key":           config.StringVariable(keypairPublicKey),
 	"desired_status":       config.StringVariable("active"),
+	"agent_policy":         config.StringVariable("ALWAYS"),
 }
 
 var testConfigServerVarsMaxUpdated = func() config.Variables {
@@ -158,6 +159,7 @@ var testConfigServerVarsMaxUpdated = func() config.Variables {
 	updatedConfig["machine_type"] = config.StringVariable("t1.2")
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["desired_status"] = config.StringVariable("inactive")
+	updatedConfig["agent_policy"] = config.StringVariable("NEVER")
 	return updatedConfig
 }()
 
@@ -2223,6 +2225,8 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_server.server", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "launched_at"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "updated_at"),
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioning_policy", "INHERIT"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "agent.provisioned"),
 				),
 			},
 			// Data source
@@ -2275,6 +2279,7 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_server.server", "created_at"),
 					resource.TestCheckResourceAttrSet("data.stackit_server.server", "launched_at"),
 					resource.TestCheckResourceAttrSet("data.stackit_server.server", "updated_at"),
+					resource.TestCheckNoResourceAttr("data.stackit_server.server", "agent.provisioned"),
 				),
 			},
 			// Import
@@ -2328,6 +2333,8 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_server.server", "created_at"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "launched_at"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "updated_at"),
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioning_policy", "INHERIT"),
+					resource.TestCheckNoResourceAttr("stackit_server.server", "agent.provisioned"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -2351,6 +2358,10 @@ func TestAccServerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigServerVarsMax["name_not_updated"])),
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "policy", testutil.ConvertConfigVariable(testConfigServerVarsMax["policy"])),
 					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
+
+					// Agent
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioning_policy", testutil.ConvertConfigVariable(testConfigServerVarsMax["agent_policy"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioned", "true"),
 
 					// Volume base
 					resource.TestCheckResourceAttr("stackit_volume.base_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMax["project_id"])),
@@ -2500,6 +2511,7 @@ func TestAccServerMax(t *testing.T) {
 						"stackit_key_pair.key_pair", "name",
 						"data.stackit_server.server", "keypair_name",
 					),
+					resource.TestCheckResourceAttr("data.stackit_server.server", "agent.provisioned", "true"),
 					// All network interface which was are attached appear here
 					resource.TestCheckResourceAttr("data.stackit_server.server", "network_interfaces.#", "2"),
 					resource.TestCheckTypeSetElemAttrPair(
@@ -2725,7 +2737,7 @@ func TestAccServerMax(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"boot_volume", "desired_status", "network_interfaces"}, // Field is not mapped as it is only relevant on creation
+				ImportStateVerifyIgnore: []string{"boot_volume", "desired_status", "network_interfaces", "agent"}, // Field is not mapped as it is only relevant on creation
 			},
 			// Update
 			{
@@ -2737,6 +2749,10 @@ func TestAccServerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["name_not_updated"])),
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "policy", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["policy"])),
 					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
+
+					// Agent
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioning_policy", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["agent_policy"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioned", "false"),
 
 					// Volume base
 					resource.TestCheckResourceAttr("stackit_volume.base_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdated["project_id"])),
@@ -2842,6 +2858,10 @@ func TestAccServerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "name", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["name_not_updated"])),
 					resource.TestCheckResourceAttr("stackit_affinity_group.affinity_group", "policy", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["policy"])),
 					resource.TestCheckResourceAttrSet("stackit_affinity_group.affinity_group", "affinity_group_id"),
+
+					// Agent
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioning_policy", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["agent_policy"])),
+					resource.TestCheckResourceAttr("stackit_server.server", "agent.provisioned", "false"),
 
 					// Volume base
 					resource.TestCheckResourceAttr("stackit_volume.base_volume", "project_id", testutil.ConvertConfigVariable(testConfigServerVarsMaxUpdatedDesiredStatus["project_id"])),
