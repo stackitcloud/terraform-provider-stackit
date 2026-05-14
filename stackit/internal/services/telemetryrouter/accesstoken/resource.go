@@ -277,7 +277,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "TelemetryRouter instance created")
+	tflog.Info(ctx, "TelemetryRouter access token created")
 }
 
 func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
