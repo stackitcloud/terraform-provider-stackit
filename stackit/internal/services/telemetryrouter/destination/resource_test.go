@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 )
 
@@ -68,7 +67,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "OpenTelemetry bearer token with filter",
 			input: fixtureDestinationResponse(func(destination *telemetryrouter.DestinationResponse) {
-				destination.Description = utils.Ptr("description")
+				destination.Description = new("description")
 				destination.DisplayName = "display-name"
 				destination.CredentialType = "bearerToken"
 				destination.Config = telemetryrouter.DestinationConfig{
@@ -84,7 +83,7 @@ func TestMapFields(t *testing.T) {
 						},
 					},
 					OpenTelemetry: &telemetryrouter.DestinationConfigOpenTelemetry{
-						BearerToken: utils.Ptr("bearer-token"),
+						BearerToken: new("bearer-token"),
 						Uri:         "https://example.test",
 					},
 				}
@@ -105,7 +104,7 @@ func TestMapFields(t *testing.T) {
 				})
 				openTelemetryVal, _ := types.ObjectValueFrom(ctx, openTelemetryTypes, openTelemetry{
 					BasicAuth:   types.ObjectNull(basicAuthTypes),
-					BearerToken: types.StringPointerValue(utils.Ptr("bearer-token")),
+					BearerToken: types.StringPointerValue(new("bearer-token")),
 					Uri:         types.StringValue("https://example.test"),
 				})
 				cfg, _ := types.ObjectValueFrom(context.Background(), configTypes, config{
@@ -123,7 +122,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "OpenTelemetry basic auth",
 			input: fixtureDestinationResponse(func(destination *telemetryrouter.DestinationResponse) {
-				destination.Description = utils.Ptr("description")
+				destination.Description = new("description")
 				destination.DisplayName = "display-name"
 				destination.CredentialType = "bearerToken"
 				destination.Config = telemetryrouter.DestinationConfig{
@@ -163,7 +162,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "S3 with filter",
 			input: fixtureDestinationResponse(func(destination *telemetryrouter.DestinationResponse) {
-				destination.Description = utils.Ptr("description")
+				destination.Description = new("description")
 				destination.DisplayName = "display-name"
 				destination.CredentialType = "accessKey"
 				destination.Config = telemetryrouter.DestinationConfig{
@@ -293,7 +292,7 @@ func TestToCreatePayload(t *testing.T) {
 				model.CredentialType = types.StringValue("bearerToken")
 			}),
 			expected: &telemetryrouter.CreateDestinationPayload{
-				Description: utils.Ptr("description"),
+				Description: new("description"),
 				DisplayName: "display-name",
 				Config: telemetryrouter.DestinationConfig{
 					ConfigType: "OpenTelemetry",
@@ -340,7 +339,7 @@ func TestToCreatePayload(t *testing.T) {
 				model.CredentialType = types.StringValue("bearerToken")
 			}),
 			expected: &telemetryrouter.CreateDestinationPayload{
-				Description: utils.Ptr("description"),
+				Description: new("description"),
 				DisplayName: "display-name",
 				Config: telemetryrouter.DestinationConfig{
 					ConfigType: "OpenTelemetry",
@@ -355,7 +354,7 @@ func TestToCreatePayload(t *testing.T) {
 						},
 					},
 					OpenTelemetry: &telemetryrouter.DestinationConfigOpenTelemetry{
-						BearerToken: utils.Ptr("bearerToken"),
+						BearerToken: new("bearerToken"),
 						Uri:         "https://example.test",
 					},
 				},
@@ -386,7 +385,7 @@ func TestToCreatePayload(t *testing.T) {
 				model.CredentialType = types.StringValue("accessKey")
 			}),
 			expected: &telemetryrouter.CreateDestinationPayload{
-				Description: utils.Ptr("description"),
+				Description: new("description"),
 				DisplayName: "display-name",
 				Config: telemetryrouter.DestinationConfig{
 					ConfigType: "S3",
@@ -434,7 +433,7 @@ func TestToUpdatePayload(t *testing.T) {
 			description: "min values",
 			model:       fixtureModel(),
 			expected: &telemetryrouter.UpdateDestinationPayload{
-				DisplayName: utils.Ptr("test"),
+				DisplayName: new("test"),
 				Config: &telemetryrouter.DestinationConfig{
 					ConfigType: "",
 				},
@@ -465,8 +464,8 @@ func TestToUpdatePayload(t *testing.T) {
 				model.CredentialType = types.StringValue("bearerToken")
 			}),
 			expected: &telemetryrouter.UpdateDestinationPayload{
-				Description: utils.Ptr("description"),
-				DisplayName: utils.Ptr("display-name"),
+				Description: new("description"),
+				DisplayName: new("display-name"),
 				Config: &telemetryrouter.DestinationConfig{
 					ConfigType: "OpenTelemetry",
 					OpenTelemetry: &telemetryrouter.DestinationConfigOpenTelemetry{
@@ -512,8 +511,8 @@ func TestToUpdatePayload(t *testing.T) {
 				model.CredentialType = types.StringValue("bearerToken")
 			}),
 			expected: &telemetryrouter.UpdateDestinationPayload{
-				Description: utils.Ptr("description"),
-				DisplayName: utils.Ptr("display-name"),
+				Description: new("description"),
+				DisplayName: new("display-name"),
 				Config: &telemetryrouter.DestinationConfig{
 					ConfigType: "OpenTelemetry",
 					Filter: &telemetryrouter.ConfigFilter{
@@ -527,7 +526,7 @@ func TestToUpdatePayload(t *testing.T) {
 						},
 					},
 					OpenTelemetry: &telemetryrouter.DestinationConfigOpenTelemetry{
-						BearerToken: utils.Ptr("bearerToken"),
+						BearerToken: new("bearerToken"),
 						Uri:         "https://example.test",
 					},
 				},
@@ -558,8 +557,8 @@ func TestToUpdatePayload(t *testing.T) {
 				model.CredentialType = types.StringValue("accessKey")
 			}),
 			expected: &telemetryrouter.UpdateDestinationPayload{
-				Description: utils.Ptr("description"),
-				DisplayName: utils.Ptr("display-name"),
+				Description: new("description"),
+				DisplayName: new("display-name"),
 				Config: &telemetryrouter.DestinationConfig{
 					ConfigType: "S3",
 					S3: &telemetryrouter.DestinationConfigS3{

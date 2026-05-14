@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 )
 
@@ -60,7 +59,7 @@ func TestMapGetFields(t *testing.T) {
 		{
 			description: "max values",
 			input: fixtureGetAccessToken(func(accessToken *telemetryrouter.GetAccessTokenResponse) {
-				accessToken.Description = utils.Ptr("description")
+				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"
 				accessToken.CreatorId = "testUser"
 				accessToken.ExpirationTime = *telemetryrouter.NewNullableTime(&testTime)
@@ -130,9 +129,9 @@ func TestToCreatePayload(t *testing.T) {
 				model.Ttl = types.Int32Value(7)
 			}),
 			expected: &telemetryrouter.CreateAccessTokenPayload{
-				Description: utils.Ptr("description"),
+				Description: new("description"),
 				DisplayName: "display-name",
-				Ttl:         *telemetryrouter.NewNullableInt32(utils.Ptr(int32(7))),
+				Ttl:         *telemetryrouter.NewNullableInt32(new(int32(7))),
 			},
 		},
 		{
@@ -168,7 +167,7 @@ func TestToUpdatePayload(t *testing.T) {
 			description: "min values",
 			model:       fixtureModel(),
 			expected: &telemetryrouter.UpdateAccessTokenPayload{
-				DisplayName: *telemetryrouter.NewNullableString(utils.Ptr("")),
+				DisplayName: *telemetryrouter.NewNullableString(new("")),
 				Description: *telemetryrouter.NewNullableString(nil),
 			},
 		},
@@ -179,8 +178,8 @@ func TestToUpdatePayload(t *testing.T) {
 				model.DisplayName = types.StringValue("display-name")
 			}),
 			expected: &telemetryrouter.UpdateAccessTokenPayload{
-				Description: *telemetryrouter.NewNullableString(utils.Ptr("description")),
-				DisplayName: *telemetryrouter.NewNullableString(utils.Ptr("display-name")),
+				Description: *telemetryrouter.NewNullableString(new("description")),
+				DisplayName: *telemetryrouter.NewNullableString(new("display-name")),
 			},
 		},
 		{

@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 )
 
@@ -52,7 +51,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "OpenTelemetry with filter",
 			input: fixtureDestinationResponse(func(destination *telemetryrouter.DestinationResponse) {
-				destination.Description = utils.Ptr("description")
+				destination.Description = new("description")
 				destination.DisplayName = "display-name"
 				destination.CredentialType = "bearerToken"
 				destination.Config = telemetryrouter.DestinationConfig{
@@ -68,7 +67,7 @@ func TestMapDataSourceFields(t *testing.T) {
 						},
 					},
 					OpenTelemetry: &telemetryrouter.DestinationConfigOpenTelemetry{
-						BearerToken: utils.Ptr("bearer-token"),
+						BearerToken: new("bearer-token"),
 						Uri:         "https://example.test",
 					},
 				}
@@ -105,7 +104,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "S3 with filter",
 			input: fixtureDestinationResponse(func(destination *telemetryrouter.DestinationResponse) {
-				destination.Description = utils.Ptr("description")
+				destination.Description = new("description")
 				destination.DisplayName = "display-name"
 				destination.CredentialType = "accessKey"
 				destination.Config = telemetryrouter.DestinationConfig{

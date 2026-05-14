@@ -561,7 +561,7 @@ func mapFilter(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 			Values:  values,
 		})
 		if diags.HasError() {
-			return fmt.Errorf("mapping opsgenie config: %w", core.DiagsToError(diags))
+			return fmt.Errorf("mapping filter attributes: %w", core.DiagsToError(diags))
 		}
 		attrList = append(attrList, attrModel)
 	}

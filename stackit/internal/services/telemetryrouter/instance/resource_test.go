@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 )
 
@@ -65,7 +64,7 @@ func TestMapFields(t *testing.T) {
 			description: "max values",
 			input: fixtureInstance(func(instance *telemetryrouter.TelemetryRouterResponse) {
 				instance.DisplayName = "display-name"
-				instance.Description = utils.Ptr("description")
+				instance.Description = new("description")
 				instance.Uri = "query-url"
 				instance.Filter = &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
@@ -161,7 +160,7 @@ func TestToCreatePayload(t *testing.T) {
 			}),
 			expected: &telemetryrouter.CreateTelemetryRouterPayload{
 				DisplayName: "display-name",
-				Description: utils.Ptr("description"),
+				Description: new("description"),
 				Filter: &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{
@@ -229,8 +228,8 @@ func TestToUpdatePayload(t *testing.T) {
 				model.Description = types.StringValue("description")
 			}),
 			expected: &telemetryrouter.UpdateTelemetryRouterPayload{
-				DisplayName: utils.Ptr("display-name"),
-				Description: utils.Ptr("description"),
+				DisplayName: new("display-name"),
+				Description: new("description"),
 				Filter: &telemetryrouter.ConfigFilter{
 					Attributes: []telemetryrouter.ConfigFilterAttributes{
 						{

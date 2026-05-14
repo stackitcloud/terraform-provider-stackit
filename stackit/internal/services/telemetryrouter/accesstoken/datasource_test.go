@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 )
 
@@ -45,7 +44,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "max values",
 			input: fixtureGetAccessToken(func(accessToken *telemetryrouter.GetAccessTokenResponse) {
-				accessToken.Description = utils.Ptr("description")
+				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"
 				accessToken.CreatorId = "testUser"
 				accessToken.ExpirationTime = *telemetryrouter.NewNullableTime(&testTime)
