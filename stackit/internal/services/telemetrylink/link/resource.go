@@ -339,40 +339,20 @@ func (r *telemetryLinkInstanceResource) Read(ctx context.Context, req resource.R
 	switch resourceType {
 	case resourceTypeOrganization:
 		response, err = r.client.DefaultAPI.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
-		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			ok := errors.As(err, &oapiErr)
-			if ok && oapiErr.StatusCode == http.StatusNotFound {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
 	case resourceTypeFolder:
 		response, err = r.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
-		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			ok := errors.As(err, &oapiErr)
-			if ok && oapiErr.StatusCode == http.StatusNotFound {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
 	case resourceTypeProject:
 		response, err = r.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
-		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			ok := errors.As(err, &oapiErr)
-			if ok && oapiErr.StatusCode == http.StatusNotFound {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
+	}
+	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		ok := errors.As(err, &oapiErr)
+		if ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
 			return
 		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 	ctx = core.LogResponse(ctx)
 
