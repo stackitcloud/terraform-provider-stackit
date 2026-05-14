@@ -42,7 +42,7 @@ var schemaDescriptions = map[string]string{
 	"instance_id":           "The TelemetryRouter instance ID",
 	"region":                "STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"project_id":            "STACKIT project ID associated with the TelemetryRouter instance",
-	"display_name":          "The displayed name of the TelemetryRouter instance",
+	"display_name":          "The display name of the TelemetryRouter instance",
 	"description":           "The description of the TelemetryRouter instance",
 	"filter":                "The TelemetryRouter global filter settings",
 	"filter.attributes":     "The TelemetryRouter global filter attributes",
