@@ -70,7 +70,7 @@ func (d *telemetryLinkLinkDataSource) Configure(ctx context.Context, req datasou
 
 func (d *telemetryLinkLinkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: fmt.Sprintf("TelemetryLink Link data source schema. %s", core.DatasourceRegionFallbackDocstring),
+		Description: fmt.Sprintf("TelemetryLink data source schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],
@@ -165,14 +165,14 @@ func (d *telemetryLinkLinkDataSource) Read(ctx context.Context, req datasource.R
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink link", fmt.Sprintf("Calling API: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = core.LogResponse(ctx)
 
 	err = mapDataSourceFields(ctx, response, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink link", fmt.Sprintf("Processing response: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
 		return
 	}
 	diags = resp.State.Set(ctx, model)
@@ -180,7 +180,7 @@ func (d *telemetryLinkLinkDataSource) Read(ctx context.Context, req datasource.R
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "TelemetryLink Link read", map[string]interface{}{
+	tflog.Info(ctx, "TelemetryLink read", map[string]interface{}{
 		"resource_type": resourceType,
 		"resource_id":   resourceID,
 	})

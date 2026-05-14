@@ -17,7 +17,7 @@ resource "stackit_telemetrylink" "link2" {
   telemetry_router_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
-# Only use the import statement, if you want to import an existing TelemetryLink link
+# Only use the import statement, if you want to import an existing TelemetryLink
 import {
   to = stackit_telemetrylink.import-example
   id = "${var.resource_type},${var.resource_id},${var.region}"

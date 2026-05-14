@@ -57,7 +57,7 @@ func testConfigVarsMaxUpdated() config.Variables {
 	newVars := make(config.Variables, len(testConfigVarsMin))
 	maps.Copy(newVars, testConfigVarsMin)
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
-	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Link Updated")
+	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Updated")
 	return newVars
 }
 
