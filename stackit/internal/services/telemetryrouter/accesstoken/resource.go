@@ -267,7 +267,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	accessTokenId := waitResp.Id
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenId)
 
-	err = mapCreateFields(ctx, createResp, &model)
+	err = mapFields(ctx, createResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -313,7 +313,7 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapGetFields(ctx, accessTokenResponse, &model)
+	err = mapFields(ctx, accessTokenResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -366,7 +366,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 		return
 	}
 
-	err = mapUpdateFields(ctx, accessTokenResponse, &model)
+	err = mapFields(ctx, accessTokenResponse, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -450,7 +450,7 @@ func toCreatePayload(_ context.Context, _ diag.Diagnostics, model *Model) (*tele
 	}, nil
 }
 
-func mapCreateFields(_ context.Context, accessToken *telemetryrouter.CreateAccessTokenResponse, model *Model) error {
+func mapFields(_ context.Context, accessToken any, model *Model) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
@@ -458,11 +458,63 @@ func mapCreateFields(_ context.Context, accessToken *telemetryrouter.CreateAcces
 		return fmt.Errorf("model is nil")
 	}
 
+	var id, creatorId, displayName, status string
+	var description *string
+	var expirationTime *time.Time
+	var hasExpirationTime bool
+
+	switch v := accessToken.(type) {
+	case *telemetryrouter.CreateAccessTokenResponse:
+		if v == nil {
+			return fmt.Errorf("access token is nil")
+		}
+		id = v.Id
+		creatorId = v.CreatorId
+		description = v.Description
+		displayName = v.DisplayName
+		status = v.Status
+		hasExpirationTime = v.HasExpirationTime()
+		if hasExpirationTime {
+			expirationTime = v.ExpirationTime.Get()
+		}
+		if v.AccessToken != "" {
+			model.AccessToken = types.StringValue(v.AccessToken)
+		}
+	case *telemetryrouter.GetAccessTokenResponse:
+		if v == nil {
+			return fmt.Errorf("access token is nil")
+		}
+		id = v.Id
+		creatorId = v.CreatorId
+		description = v.Description
+		displayName = v.DisplayName
+		status = v.Status
+		hasExpirationTime = v.HasExpirationTime()
+		if hasExpirationTime {
+			expirationTime = v.ExpirationTime.Get()
+		}
+	case *telemetryrouter.UpdateAccessTokenResponse:
+		if v == nil {
+			return fmt.Errorf("access token is nil")
+		}
+		id = v.Id
+		creatorId = v.CreatorId
+		description = v.Description
+		displayName = v.DisplayName
+		status = v.Status
+		hasExpirationTime = v.HasExpirationTime()
+		if hasExpirationTime {
+			expirationTime = v.ExpirationTime.Get()
+		}
+	default:
+		return fmt.Errorf("unsupported access token type: %T", accessToken)
+	}
+
 	var accessTokenID string
 	if model.AccessTokenID.ValueString() != "" {
 		accessTokenID = model.AccessTokenID.ValueString()
-	} else if accessToken.Id != "" {
-		accessTokenID = accessToken.Id
+	} else if id != "" {
+		accessTokenID = id
 	} else {
 		return fmt.Errorf("access token id not present")
 	}
@@ -470,86 +522,14 @@ func mapCreateFields(_ context.Context, accessToken *telemetryrouter.CreateAcces
 	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
 	model.Region = types.StringValue(model.Region.ValueString())
-	model.CreatorID = types.StringValue(accessToken.CreatorId)
-	model.Description = types.StringPointerValue(accessToken.Description)
-	model.DisplayName = types.StringValue(accessToken.DisplayName)
-	model.Status = types.StringValue(accessToken.Status)
+	model.CreatorID = types.StringValue(creatorId)
+	model.Description = types.StringPointerValue(description)
+	model.DisplayName = types.StringValue(displayName)
+	model.Status = types.StringValue(status)
 
 	model.ExpirationTime = types.StringNull()
-	if accessToken.HasExpirationTime() && accessToken.ExpirationTime.Get() != nil {
-		model.ExpirationTime = types.StringValue(accessToken.ExpirationTime.Get().Format(time.RFC3339))
-	}
-
-	if accessToken.AccessToken != "" {
-		model.AccessToken = types.StringValue(accessToken.AccessToken)
-	}
-
-	return nil
-}
-
-func mapGetFields(_ context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *Model) error {
-	if accessToken == nil {
-		return fmt.Errorf("access token is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model is nil")
-	}
-
-	var accessTokenID string
-	if model.AccessTokenID.ValueString() != "" {
-		accessTokenID = model.AccessTokenID.ValueString()
-	} else if accessToken.Id != "" {
-		accessTokenID = accessToken.Id
-	} else {
-		return fmt.Errorf("access token id not present")
-	}
-
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
-	model.AccessTokenID = types.StringValue(accessTokenID)
-	model.Region = types.StringValue(model.Region.ValueString())
-	model.CreatorID = types.StringValue(accessToken.CreatorId)
-	model.Description = types.StringPointerValue(accessToken.Description)
-	model.DisplayName = types.StringValue(accessToken.DisplayName)
-	model.Status = types.StringValue(accessToken.Status)
-
-	model.ExpirationTime = types.StringNull()
-	if accessToken.HasExpirationTime() && accessToken.ExpirationTime.Get() != nil {
-		model.ExpirationTime = types.StringValue(accessToken.ExpirationTime.Get().Format(time.RFC3339))
-	}
-
-	return nil
-}
-
-func mapUpdateFields(_ context.Context, accessToken *telemetryrouter.UpdateAccessTokenResponse, model *Model) error {
-	if accessToken == nil {
-		return fmt.Errorf("access token is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model is nil")
-	}
-
-	var accessTokenID string
-	if model.AccessTokenID.ValueString() != "" {
-		accessTokenID = model.AccessTokenID.ValueString()
-	} else if accessToken.Id != "" {
-		accessTokenID = accessToken.Id
-	} else {
-		return fmt.Errorf("access token id not present")
-	}
-
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
-	model.AccessTokenID = types.StringValue(accessTokenID)
-	model.Region = types.StringValue(model.Region.ValueString())
-	model.CreatorID = types.StringValue(accessToken.CreatorId)
-	if accessToken.Description != nil && *accessToken.Description != "" {
-		model.Description = types.StringPointerValue(accessToken.Description)
-	}
-	model.DisplayName = types.StringValue(accessToken.DisplayName)
-	model.Status = types.StringValue(accessToken.Status)
-
-	model.ExpirationTime = types.StringNull()
-	if accessToken.HasExpirationTime() && accessToken.ExpirationTime.Get() != nil {
-		model.ExpirationTime = types.StringValue(accessToken.ExpirationTime.Get().Format(time.RFC3339))
+	if hasExpirationTime && expirationTime != nil {
+		model.ExpirationTime = types.StringValue(expirationTime.Format(time.RFC3339))
 	}
 
 	return nil

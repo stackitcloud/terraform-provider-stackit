@@ -24,6 +24,28 @@ func fixtureGetAccessToken(mods ...func(accessToken *telemetryrouter.GetAccessTo
 	return accessToken
 }
 
+func fixtureCreateAccessToken(mods ...func(accessToken *telemetryrouter.CreateAccessTokenResponse)) *telemetryrouter.CreateAccessTokenResponse {
+	accessToken := &telemetryrouter.CreateAccessTokenResponse{
+		Id:     "atid",
+		Status: AccessTokenStatusActive,
+	}
+	for _, mod := range mods {
+		mod(accessToken)
+	}
+	return accessToken
+}
+
+func fixtureUpdateAccessToken(mods ...func(accessToken *telemetryrouter.UpdateAccessTokenResponse)) *telemetryrouter.UpdateAccessTokenResponse {
+	accessToken := &telemetryrouter.UpdateAccessTokenResponse{
+		Id:     "atid",
+		Status: AccessTokenStatusActive,
+	}
+	for _, mod := range mods {
+		mod(accessToken)
+	}
+	return accessToken
+}
+
 func fixtureModel(mods ...func(model *Model)) *Model {
 	model := &Model{
 		ID:             types.StringValue("pid,rid,iid,atid"),
@@ -47,17 +69,28 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 func TestMapGetFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *telemetryrouter.GetAccessTokenResponse
+		input       any
 		expected    *Model
 		wantErr     bool
 	}{
 		{
-			description: "min values",
+			description: "nil input",
+			wantErr:     true,
+			expected:    fixtureModel(),
+		},
+		{
+			description: "wrong type",
+			wantErr:     true,
+			input:       "invalid",
+			expected:    fixtureModel(),
+		},
+		{
+			description: "min values GetAccessTokenResponse",
 			input:       fixtureGetAccessToken(),
 			expected:    fixtureModel(),
 		},
 		{
-			description: "max values",
+			description: "max values GetAccessTokenResponse",
 			input: fixtureGetAccessToken(func(accessToken *telemetryrouter.GetAccessTokenResponse) {
 				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"
@@ -72,13 +105,62 @@ func TestMapGetFields(t *testing.T) {
 			}),
 		},
 		{
-			description: "nil input",
+			description: "nil access token id GetAccessTokenResponse",
+			input:       &telemetryrouter.GetAccessTokenResponse{},
 			wantErr:     true,
 			expected:    fixtureModel(),
 		},
 		{
-			description: "nil access token id",
-			input:       &telemetryrouter.GetAccessTokenResponse{},
+			description: "min values CreateAccessTokenResponse",
+			input:       fixtureCreateAccessToken(),
+			expected:    fixtureModel(),
+		},
+		{
+			description: "max values CreateAccessTokenResponse",
+			input: fixtureCreateAccessToken(func(accessToken *telemetryrouter.CreateAccessTokenResponse) {
+				accessToken.Description = new("description")
+				accessToken.DisplayName = "display-name"
+				accessToken.CreatorId = "testUser"
+				accessToken.ExpirationTime = *telemetryrouter.NewNullableTime(&testTime)
+				accessToken.AccessToken = "acc"
+			}),
+			expected: fixtureModel(func(model *Model) {
+				model.Description = types.StringValue("description")
+				model.DisplayName = types.StringValue("display-name")
+				model.CreatorID = types.StringValue("testUser")
+				model.ExpirationTime = types.StringValue(testTime.Format(time.RFC3339))
+				model.AccessToken = types.StringValue("acc")
+			}),
+		},
+		{
+			description: "nil access token id CreateAccessTokenResponse",
+			input:       &telemetryrouter.CreateAccessTokenResponse{},
+			wantErr:     true,
+			expected:    fixtureModel(),
+		},
+		{
+			description: "min values UpdateAccessTokenResponse",
+			input:       fixtureUpdateAccessToken(),
+			expected:    fixtureModel(),
+		},
+		{
+			description: "max values UpdateAccessTokenResponse",
+			input: fixtureUpdateAccessToken(func(accessToken *telemetryrouter.UpdateAccessTokenResponse) {
+				accessToken.Description = new("description")
+				accessToken.DisplayName = "display-name"
+				accessToken.CreatorId = "testUser"
+				accessToken.ExpirationTime = *telemetryrouter.NewNullableTime(&testTime)
+			}),
+			expected: fixtureModel(func(model *Model) {
+				model.Description = types.StringValue("description")
+				model.DisplayName = types.StringValue("display-name")
+				model.CreatorID = types.StringValue("testUser")
+				model.ExpirationTime = types.StringValue(testTime.Format(time.RFC3339))
+			}),
+		},
+		{
+			description: "nil access token id UpdateAccessTokenResponse",
+			input:       &telemetryrouter.UpdateAccessTokenResponse{},
 			wantErr:     true,
 			expected:    fixtureModel(),
 		},
@@ -90,7 +172,7 @@ func TestMapGetFields(t *testing.T) {
 				Region:     tt.expected.Region,
 				InstanceID: tt.expected.InstanceID,
 			}
-			err := mapGetFields(context.Background(), tt.input, state)
+			err := mapFields(context.Background(), tt.input, state)
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}
