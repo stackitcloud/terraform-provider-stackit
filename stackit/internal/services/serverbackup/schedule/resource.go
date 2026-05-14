@@ -495,7 +495,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		var modelVolIds []string
 		if model.BackupProperties != nil {
 			var err error
-			modelVolIds, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			modelVolIds, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return err
 			}
@@ -580,7 +580,7 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 		ids := []string{}
 		var err error
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
-			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			ids, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
 			}
@@ -613,7 +613,7 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 		ids := []string{}
 		var err error
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
-			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			ids, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
 			}

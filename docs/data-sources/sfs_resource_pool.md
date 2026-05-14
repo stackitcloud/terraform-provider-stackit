@@ -44,4 +44,13 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 - `performance_class_downgradable_at` (String) Time when the performance class can be downgraded again.
 - `size_gigabytes` (Number) Size of the resource pool (unit: gigabytes)
 - `size_reducible_at` (String) Time when the size can be reduced again.
+- `snapshot_policy` (Attributes) Name of the snapshot policy. (see [below for nested schema](#nestedatt--snapshot_policy))
 - `snapshots_are_visible` (Boolean) If set to true, snapshots are visible and accessible to users. (default: false)
+
+<a id="nestedatt--snapshot_policy"></a>
+### Nested Schema for `snapshot_policy`
+
+Read-Only:
+
+- `id` (String) ID of the snapshot policy.
+- `name` (String) Name of the snapshot policy.

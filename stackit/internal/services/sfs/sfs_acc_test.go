@@ -20,6 +20,7 @@ import (
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	snapshot_policy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshot-policy"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
@@ -44,6 +45,9 @@ var (
 
 	//go:embed testdata/project-lock-min.tf
 	resourceProjectLockConfig string
+
+	//go:embed testdata/snapshot-policies-datasource.tf
+	snapshotPoliciesDataSourceConfig string
 )
 
 // EXPORT POLICY - MIN
@@ -121,6 +125,7 @@ var testConfigResourcePoolVarsMax = config.Variables{
 	"performance_class":     config.StringVariable("Standard"),
 	"size_gigabytes":        config.IntegerVariable(512),
 	"snapshots_are_visible": config.BoolVariable(true),
+	"snapshot_policy_id":    config.StringVariable("2b138c3b-2453-11f1-97cd-d039eac4b54e"),
 }
 
 var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
@@ -429,6 +434,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_1"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
+					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
 				),
 			},
 			// Data source
@@ -464,6 +470,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_1"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", "false"),
+					resource.TestCheckNoResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy"),
 				),
 			},
 			// Import
@@ -506,6 +513,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_1"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
+					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -535,6 +543,8 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_1"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name"),
 				),
 			},
 			// Data source
@@ -570,6 +580,11 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_1"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_2"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy.name",
+						"stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name",
+					),
 				),
 			},
 			// Import
@@ -612,7 +627,8 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["ip_acl_1"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["snapshots_are_visible"])),
-				),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name")),
 			},
 			// Deletion is done by the framework implicitly
 		},
@@ -900,6 +916,54 @@ func TestAccProjectLockMin(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccSnapshotPolicies(t *testing.T) {
+	projectId := config.StringVariable(testutil.ProjectId)
+	cfg := fmt.Sprintf(`
+%s
+
+%s`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), snapshotPoliciesDataSourceConfig)
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// all / default
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "immutable", snapshot_policy.ImmutableFilterAll),
+				),
+			},
+			// immutable
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+					"immutable":  config.StringVariable(snapshot_policy.ImmutableFilterImmutableOnly),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "immutable", snapshot_policy.ImmutableFilterImmutableOnly),
+				),
+			},
+			// mutable
+			{
+				Config: cfg,
+				ConfigVariables: config.Variables{
+					"project_id": projectId,
+					"immutable":  config.StringVariable(snapshot_policy.ImmutableFilterMutableOnly),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_sfs_snapshot_policies.snapshot_policies", "immutable", snapshot_policy.ImmutableFilterMutableOnly),
+				),
+			},
 		},
 	})
 }

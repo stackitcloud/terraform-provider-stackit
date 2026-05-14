@@ -10,6 +10,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
 )
 
+var expectedNullAgentData = types.ObjectValueMust(agentDataTypes, map[string]attr.Value{
+	"provisioned": types.BoolNull(),
+})
+
 func TestMapDataSourceFields(t *testing.T) {
 	type args struct {
 		state  DataSourceModel
@@ -40,6 +44,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ServerId:          types.StringValue("sid"),
 				Name:              types.StringNull(),
 				AvailabilityZone:  types.StringNull(),
+				Agent:             expectedNullAgentData,
 				Labels:            types.MapNull(types.StringType),
 				ImageId:           types.StringNull(),
 				NetworkInterfaces: types.ListNull(types.StringType),
@@ -77,7 +82,10 @@ func TestMapDataSourceFields(t *testing.T) {
 							NicId: new("nic2"),
 						},
 					},
-					KeypairName:   new("keypair_name"),
+					KeypairName: new("keypair_name"),
+					Agent: &iaas.ServerAgent{
+						Provisioned: new(true),
+					},
 					AffinityGroup: new("group_id"),
 					CreatedAt:     new(testTimestamp()),
 					UpdatedAt:     new(testTimestamp()),
@@ -100,7 +108,10 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("nic1"),
 					types.StringValue("nic2"),
 				}),
-				KeypairName:   types.StringValue("keypair_name"),
+				KeypairName: types.StringValue("keypair_name"),
+				Agent: types.ObjectValueMust(agentDataTypes, map[string]attr.Value{
+					"provisioned": types.BoolValue(true),
+				}),
 				AffinityGroup: types.StringValue("group_id"),
 				CreatedAt:     types.StringValue(testTimestampValue),
 				UpdatedAt:     types.StringValue(testTimestampValue),
@@ -131,6 +142,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Labels:            types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				ImageId:           types.StringNull(),
 				NetworkInterfaces: types.ListNull(types.StringType),
+				Agent:             expectedNullAgentData,
 				KeypairName:       types.StringNull(),
 				AffinityGroup:     types.StringNull(),
 				UserData:          types.StringNull(),

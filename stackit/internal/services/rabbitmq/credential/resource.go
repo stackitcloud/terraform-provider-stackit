@@ -380,15 +380,15 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 	)
 	model.CredentialId = types.StringValue(credentialId)
 
-	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)
+	modelHosts, err := utils.ListValueToStringSlice(model.Hosts)
 	if err != nil {
 		return err
 	}
-	modelHttpApiUris, err := utils.ListValuetoStringSlice(model.HttpAPIURIs)
+	modelHttpApiUris, err := utils.ListValueToStringSlice(model.HttpAPIURIs)
 	if err != nil {
 		return err
 	}
-	modelUris, err := utils.ListValuetoStringSlice(model.Uris)
+	modelUris, err := utils.ListValueToStringSlice(model.Uris)
 	if err != nil {
 		return err
 	}

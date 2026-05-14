@@ -74,6 +74,10 @@ func TestMapDatasourceFields(t *testing.T) {
 				Space: &sfs.ResourcePoolSpace{
 					SizeGigabytes: utils.Ptr[int32](42),
 				},
+				SnapshotPolicy: *sfs.NewNullableResourcePoolSnapshotPolicy(&sfs.ResourcePoolSnapshotPolicy{
+					Id:   new("snapshot-id"),
+					Name: new("snapshot-name"),
+				}),
 				State: new("state"),
 			},
 			expected: &dataSourceModel{
@@ -92,6 +96,10 @@ func TestMapDatasourceFields(t *testing.T) {
 				Region:                         testRegion,
 				SizeReducibleAt:                testTimePlus1h,
 				PerformanceClassDowngradableAt: testTime,
+				SnapshotPolicy: &SnapshotPolicyModel{
+					Id:   types.StringValue("snapshot-id"),
+					Name: types.StringValue("snapshot-name"),
+				},
 			},
 			isValid: true,
 		},
