@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 )
 
@@ -63,9 +62,9 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "max values",
 			input: fixtureLink(func(link *telemetrylink.TelemetryLinkResponse) {
-				link.Description = utils.Ptr("description")
+				link.Description = new("description")
 				link.DisplayName = "display-name"
-				link.AccessToken = utils.Ptr("access-token")
+				link.AccessToken = new("access-token")
 				link.TelemetryRouterId = "tlmr-id"
 			}),
 			expected: fixtureModel(func(model *Model) {
@@ -129,7 +128,7 @@ func TestToCreateOrUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 				model.TelemetryRouterID = types.StringValue("tlmr_id")
 			}),
 			expected: &telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload{
-				Description:       utils.Ptr("description"),
+				Description:       new("description"),
 				DisplayName:       "display-name",
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
@@ -182,7 +181,7 @@ func TestToCreateOrUpdateFolderTelemetryLinkPayload(t *testing.T) {
 				model.TelemetryRouterID = types.StringValue("tlmr_id")
 			}),
 			expected: &telemetrylink.CreateOrUpdateFolderTelemetryLinkPayload{
-				Description:       utils.Ptr("description"),
+				Description:       new("description"),
 				DisplayName:       "display-name",
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
@@ -235,10 +234,169 @@ func TestToCreateOrUpdateProjectTelemetryLinkPayload(t *testing.T) {
 				model.TelemetryRouterID = types.StringValue("tlmr_id")
 			}),
 			expected: &telemetrylink.CreateOrUpdateProjectTelemetryLinkPayload{
-				Description:       utils.Ptr("description"),
+				Description:       new("description"),
 				DisplayName:       "display-name",
 				AccessToken:       "access-token",
 				TelemetryRouterId: "tlmr_id",
+			},
+		},
+		{
+			description:    "nil model",
+			wantErrMessage: "missing model",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			got, err := toCreateOrUpdateProjectTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
+			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
+				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
+			}
+			if tt.wantErrMessage == "" && err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			diff := cmp.Diff(got, tt.expected)
+			if diff != "" {
+				t.Fatalf("Payload does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
+	tests := []struct {
+		description    string
+		model          *Model
+		expected       *telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload
+		wantErrMessage string
+	}{
+		{
+			description: "min values",
+			model:       fixtureModel(),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				AccessToken:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+			},
+		},
+		{
+			description: "max values",
+			model: fixtureModel(func(model *Model) {
+				model.Description = types.StringValue("description")
+				model.DisplayName = types.StringValue("display-name")
+				model.AccessToken = types.StringValue("access-token")
+				model.TelemetryRouterID = types.StringValue("tlmr_id")
+			}),
+			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+				Description:       new("description"),
+				DisplayName:       new("display-name"),
+				AccessToken:       new("access-token"),
+				TelemetryRouterId: new("tlmr_id"),
+			},
+		},
+		{
+			description:    "nil model",
+			wantErrMessage: "missing model",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			got, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
+			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
+				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
+			}
+			if tt.wantErrMessage == "" && err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			diff := cmp.Diff(got, tt.expected)
+			if diff != "" {
+				t.Fatalf("Payload does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
+	tests := []struct {
+		description    string
+		model          *Model
+		expected       *telemetrylink.PartialUpdateFolderTelemetryLinkPayload
+		wantErrMessage string
+	}{
+		{
+			description: "min values",
+			model:       fixtureModel(),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				AccessToken:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+			},
+		},
+		{
+			description: "max values",
+			model: fixtureModel(func(model *Model) {
+				model.Description = types.StringValue("description")
+				model.DisplayName = types.StringValue("display-name")
+				model.AccessToken = types.StringValue("access-token")
+				model.TelemetryRouterID = types.StringValue("tlmr_id")
+			}),
+			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+				Description:       new("description"),
+				DisplayName:       new("display-name"),
+				AccessToken:       new("access-token"),
+				TelemetryRouterId: new("tlmr_id"),
+			},
+		},
+		{
+			description:    "nil model",
+			wantErrMessage: "missing model",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			got, err := toCreateOrUpdateFolderTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
+			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
+				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
+			}
+			if tt.wantErrMessage == "" && err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			diff := cmp.Diff(got, tt.expected)
+			if diff != "" {
+				t.Fatalf("Payload does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
+	tests := []struct {
+		description    string
+		model          *Model
+		expected       *telemetrylink.PartialUpdateProjectTelemetryLinkPayload
+		wantErrMessage string
+	}{
+		{
+			description: "min values",
+			model:       fixtureModel(),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				DisplayName:       new("name"),
+				AccessToken:       new(""),
+				TelemetryRouterId: new("tlmrid"),
+			},
+		},
+		{
+			description: "max values",
+			model: fixtureModel(func(model *Model) {
+				model.Description = types.StringValue("description")
+				model.DisplayName = types.StringValue("display-name")
+				model.AccessToken = types.StringValue("access-token")
+				model.TelemetryRouterID = types.StringValue("tlmr_id")
+			}),
+			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+				Description:       new("description"),
+				DisplayName:       new("display-name"),
+				AccessToken:       new("access-token"),
+				TelemetryRouterId: new("tlmr_id"),
 			},
 		},
 		{

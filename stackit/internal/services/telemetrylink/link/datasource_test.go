@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 )
 
@@ -44,9 +43,9 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "max values",
 			input: fixtureLink(func(link *telemetrylink.TelemetryLinkResponse) {
-				link.Description = utils.Ptr("description")
+				link.Description = new("description")
 				link.DisplayName = "display-name"
-				link.AccessToken = utils.Ptr("access-token")
+				link.AccessToken = new("access-token")
 				link.TelemetryRouterId = "tlmr-id"
 			}),
 			expected: fixtureDataSourceModel(func(model *DataSourceModel) {

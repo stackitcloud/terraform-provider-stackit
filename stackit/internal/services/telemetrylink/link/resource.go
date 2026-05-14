@@ -396,13 +396,13 @@ func (r *telemetryLinkInstanceResource) Update(ctx context.Context, req resource
 	var response *telemetrylink.TelemetryLinkResponse
 	switch model.ResourceType.ValueString() {
 	case resourceTypeOrganization:
-		payload, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
+		payload, err := toPartialUpdateOrganizationTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
 		}
 
-		_, err = r.client.DefaultAPI.CreateOrUpdateOrganizationTelemetryLink(ctx, resourceID, regionId).CreateOrUpdateOrganizationTelemetryLinkPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.PartialUpdateOrganizationTelemetryLink(ctx, resourceID, regionId).PartialUpdateOrganizationTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -410,19 +410,19 @@ func (r *telemetryLinkInstanceResource) Update(ctx context.Context, req resource
 
 		ctx = core.LogResponse(ctx)
 
-		response, err = wait.CreateOrUpdateProjectTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
+		response, err = wait.PartialUpdateOrganizationTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
 		}
 	case resourceTypeFolder:
-		payload, err := toCreateOrUpdateFolderTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
+		payload, err := toPartialUpdateFolderTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
 		}
 
-		_, err = r.client.DefaultAPI.CreateOrUpdateFolderTelemetryLink(ctx, resourceID, regionId).CreateOrUpdateFolderTelemetryLinkPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.PartialUpdateFolderTelemetryLink(ctx, resourceID, regionId).PartialUpdateFolderTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -430,19 +430,19 @@ func (r *telemetryLinkInstanceResource) Update(ctx context.Context, req resource
 
 		ctx = core.LogResponse(ctx)
 
-		response, err = wait.CreateOrUpdateFolderTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
+		response, err = wait.PartialUpdateFolderTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
 		}
 	case resourceTypeProject:
-		payload, err := toCreateOrUpdateProjectTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
+		payload, err := toPartialUpdateProjectTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
 			return
 		}
 
-		_, err = r.client.DefaultAPI.CreateOrUpdateProjectTelemetryLink(ctx, resourceID, regionId).CreateOrUpdateProjectTelemetryLinkPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.PartialUpdateProjectTelemetryLink(ctx, resourceID, regionId).PartialUpdateProjectTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -450,7 +450,7 @@ func (r *telemetryLinkInstanceResource) Update(ctx context.Context, req resource
 
 		ctx = core.LogResponse(ctx)
 
-		response, err = wait.CreateOrUpdateOrganizationTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
+		response, err = wait.PartialUpdateProjectTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
@@ -551,6 +551,45 @@ func (r *telemetryLinkInstanceResource) ImportState(ctx context.Context, req res
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), idParts[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[2])...)
 	tflog.Info(ctx, "TelemetryLink state imported")
+}
+
+func toPartialUpdateOrganizationTelemetryLinkPayload(_ context.Context, _ diag.Diagnostics, model *Model) (*telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("missing model")
+	}
+
+	return &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
+		DisplayName:       model.DisplayName.ValueStringPointer(),
+		Description:       model.Description.ValueStringPointer(),
+		TelemetryRouterId: model.TelemetryRouterID.ValueStringPointer(),
+		AccessToken:       model.AccessToken.ValueStringPointer(),
+	}, nil
+}
+
+func toPartialUpdateFolderTelemetryLinkPayload(_ context.Context, _ diag.Diagnostics, model *Model) (*telemetrylink.PartialUpdateFolderTelemetryLinkPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("missing model")
+	}
+
+	return &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
+		DisplayName:       model.DisplayName.ValueStringPointer(),
+		Description:       model.Description.ValueStringPointer(),
+		TelemetryRouterId: model.TelemetryRouterID.ValueStringPointer(),
+		AccessToken:       model.AccessToken.ValueStringPointer(),
+	}, nil
+}
+
+func toPartialUpdateProjectTelemetryLinkPayload(_ context.Context, _ diag.Diagnostics, model *Model) (*telemetrylink.PartialUpdateProjectTelemetryLinkPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("missing model")
+	}
+
+	return &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
+		DisplayName:       model.DisplayName.ValueStringPointer(),
+		Description:       model.Description.ValueStringPointer(),
+		TelemetryRouterId: model.TelemetryRouterID.ValueStringPointer(),
+		AccessToken:       model.AccessToken.ValueStringPointer(),
+	}, nil
 }
 
 func toCreateOrUpdateOrganizationTelemetryLinkPayload(_ context.Context, _ diag.Diagnostics, model *Model) (*telemetrylink.CreateOrUpdateOrganizationTelemetryLinkPayload, error) {
