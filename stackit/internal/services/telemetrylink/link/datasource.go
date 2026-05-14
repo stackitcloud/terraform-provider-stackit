@@ -50,7 +50,7 @@ type telemetryLinkLinkDataSource struct {
 }
 
 func (d *telemetryLinkLinkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_telemetrylink_link"
+	resp.TypeName = req.ProviderTypeName + "_telemetrylink"
 }
 
 func (d *telemetryLinkLinkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {

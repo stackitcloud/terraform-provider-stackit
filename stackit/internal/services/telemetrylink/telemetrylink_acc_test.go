@@ -71,69 +71,69 @@ func TestAccTelemetryLinkLinkMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMin,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMin["resource_type"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMin["resource_id"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMin["display_name"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMin["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMin["telemetry_router_id"])),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "link_id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "create_time"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "status"),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMin["resource_type"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMin["resource_id"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMin["display_name"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMin["access_token"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMin["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
 			},
 			// Datasource
 			{
 				ConfigVariables: testConfigVarsMin,
 				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin + `
-			data "stackit_telemetrylink_link" "link" {
-			 resource_type = stackit_telemetrylink_link.link.resource_type
-			 resource_id   = stackit_telemetrylink_link.link.resource_id
-			 region        = stackit_telemetrylink_link.link.region
+			data "stackit_telemetrylink" "link" {
+			 resource_type = stackit_telemetrylink.link.resource_type
+			 resource_id   = stackit_telemetrylink.link.resource_id
+			 region        = stackit_telemetrylink.link.region
 			}
 			`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_telemetrylink_link.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMin["resource_type"])),
-					resource.TestCheckResourceAttr("data.stackit_telemetrylink_link.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMin["resource_id"])),
+					resource.TestCheckResourceAttr("data.stackit_telemetrylink.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMin["resource_type"])),
+					resource.TestCheckResourceAttr("data.stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMin["resource_id"])),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "region",
-						"data.stackit_telemetrylink_link.link", "region",
+						"stackit_telemetrylink.link", "region",
+						"data.stackit_telemetrylink.link", "region",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "id",
-						"data.stackit_telemetrylink_link.link", "id",
+						"stackit_telemetrylink.link", "id",
+						"data.stackit_telemetrylink.link", "id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "link_id",
-						"data.stackit_telemetrylink_link.link", "link_id",
+						"stackit_telemetrylink.link", "link_id",
+						"data.stackit_telemetrylink.link", "link_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "display_name",
-						"data.stackit_telemetrylink_link.link", "display_name",
+						"stackit_telemetrylink.link", "display_name",
+						"data.stackit_telemetrylink.link", "display_name",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "create_time",
-						"data.stackit_telemetrylink_link.link", "create_time",
+						"stackit_telemetrylink.link", "create_time",
+						"data.stackit_telemetrylink.link", "create_time",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "telemetry_router_id",
-						"data.stackit_telemetrylink_link.link", "telemetry_router_id",
+						"stackit_telemetrylink.link", "telemetry_router_id",
+						"data.stackit_telemetrylink.link", "telemetry_router_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "status",
-						"data.stackit_telemetrylink_link.link", "status",
+						"stackit_telemetrylink.link", "status",
+						"data.stackit_telemetrylink.link", "status",
 					),
 				),
 			},
 			// Import
 			{
 				ConfigVariables: testConfigVarsMin,
-				ResourceName:    "stackit_telemetrylink_link.link",
+				ResourceName:    "stackit_telemetrylink.link",
 				ImportStateIdFunc: func(state *terraform.State) (string, error) {
-					rs, ok := state.RootModule().Resources["stackit_telemetrylink_link.link"]
+					rs, ok := state.RootModule().Resources["stackit_telemetrylink.link"]
 					if !ok {
-						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink_link.link")
+						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink.link")
 					}
 					resourceType, ok := rs.Primary.Attributes["resource_type"]
 					if !ok {
@@ -150,16 +150,16 @@ func TestAccTelemetryLinkLinkMin(t *testing.T) {
 				ConfigVariables: testConfigVarsMinUpdated(),
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["resource_type"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["resource_id"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "region", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["region"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["display_name"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["telemetry_router_id"])),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "link_id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "create_time"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "status"),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["resource_type"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["resource_id"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["region"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["display_name"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["access_token"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
 			},
 			// Deletion handled by framework
@@ -177,74 +177,74 @@ func TestAccTelemetryLinkLinkMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMax,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMax["resource_type"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMax["resource_id"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["display_name"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMax["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMax["telemetry_router_id"])),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "link_id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "create_time"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "status"),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMax["resource_type"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMax["resource_id"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["display_name"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMax["access_token"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMax["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
 			},
 			// Datasource
 			{
 				ConfigVariables: testConfigVarsMax,
 				Config: testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax + `
-			data "stackit_telemetrylink_link" "link" {
-			 resource_type = stackit_telemetrylink_link.link.resource_type
-			 resource_id   = stackit_telemetrylink_link.link.resource_id
-			 region        = stackit_telemetrylink_link.link.region
+			data "stackit_telemetrylink" "link" {
+			 resource_type = stackit_telemetrylink.link.resource_type
+			 resource_id   = stackit_telemetrylink.link.resource_id
+			 region        = stackit_telemetrylink.link.region
 			}
 			`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.stackit_telemetrylink_link.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMax["resource_type"])),
-					resource.TestCheckResourceAttr("data.stackit_telemetrylink_link.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMax["resource_id"])),
+					resource.TestCheckResourceAttr("data.stackit_telemetrylink.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMax["resource_type"])),
+					resource.TestCheckResourceAttr("data.stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMax["resource_id"])),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "region",
-						"data.stackit_telemetrylink_link.link", "region",
+						"stackit_telemetrylink.link", "region",
+						"data.stackit_telemetrylink.link", "region",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "id",
-						"data.stackit_telemetrylink_link.link", "id",
+						"stackit_telemetrylink.link", "id",
+						"data.stackit_telemetrylink.link", "id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "link_id",
-						"data.stackit_telemetrylink_link.link", "link_id",
+						"stackit_telemetrylink.link", "link_id",
+						"data.stackit_telemetrylink.link", "link_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "display_name",
-						"data.stackit_telemetrylink_link.link", "display_name",
+						"stackit_telemetrylink.link", "display_name",
+						"data.stackit_telemetrylink.link", "display_name",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "description",
-						"data.stackit_telemetrylink_link.link", "description",
+						"stackit_telemetrylink.link", "description",
+						"data.stackit_telemetrylink.link", "description",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "create_time",
-						"data.stackit_telemetrylink_link.link", "create_time",
+						"stackit_telemetrylink.link", "create_time",
+						"data.stackit_telemetrylink.link", "create_time",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "telemetry_router_id",
-						"data.stackit_telemetrylink_link.link", "telemetry_router_id",
+						"stackit_telemetrylink.link", "telemetry_router_id",
+						"data.stackit_telemetrylink.link", "telemetry_router_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink_link.link", "status",
-						"data.stackit_telemetrylink_link.link", "status",
+						"stackit_telemetrylink.link", "status",
+						"data.stackit_telemetrylink.link", "status",
 					),
 				),
 			},
 			// Import
 			{
 				ConfigVariables: testConfigVarsMax,
-				ResourceName:    "stackit_telemetrylink_link.link",
+				ResourceName:    "stackit_telemetrylink.link",
 				ImportStateIdFunc: func(state *terraform.State) (string, error) {
-					rs, ok := state.RootModule().Resources["stackit_telemetrylink_link.link"]
+					rs, ok := state.RootModule().Resources["stackit_telemetrylink.link"]
 					if !ok {
-						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink_link.link")
+						return "", fmt.Errorf("not found: %s", "stackit_telemetrylink.link")
 					}
 					resourceType, ok := rs.Primary.Attributes["resource_type"]
 					if !ok {
@@ -261,17 +261,17 @@ func TestAccTelemetryLinkLinkMax(t *testing.T) {
 				ConfigVariables: testConfigVarsMaxUpdated(),
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["resource_type"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["resource_id"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "region", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["region"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["display_name"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "description", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["description"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink_link.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["telemetry_router_id"])),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "link_id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "create_time"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink_link.link", "status"),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_type", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["resource_type"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["resource_id"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["region"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["display_name"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["description"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["access_token"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
 			},
 			// Deletion handled by framework
@@ -317,7 +317,7 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 
 	var linksToDestroy []link
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_telemetrylink_link" {
+		if rs.Type != "stackit_telemetrylink" {
 			continue
 		}
 		parts := strings.Split(rs.Primary.ID, core.Separator)

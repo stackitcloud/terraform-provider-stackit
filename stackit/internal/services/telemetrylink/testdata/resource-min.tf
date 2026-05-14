@@ -6,7 +6,7 @@ variable "display_name" {}
 variable "access_token" {}
 variable "telemetry_router_id" {}
 
-resource "stackit_telemetrylink_link" "link" {
+resource "stackit_telemetrylink" "link" {
   resource_type       = var.resource_type
   resource_id         = var.resource_id
   region              = var.region

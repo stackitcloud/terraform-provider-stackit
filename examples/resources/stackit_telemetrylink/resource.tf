@@ -1,4 +1,4 @@
-resource "stackit_telemetrylink_link" "link" {
+resource "stackit_telemetrylink" "link" {
   resource_type       = "project"
   resource_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region              = "eu01"
@@ -7,7 +7,7 @@ resource "stackit_telemetrylink_link" "link" {
   telemetry_router_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
-resource "stackit_telemetrylink_link" "link2" {
+resource "stackit_telemetrylink" "link2" {
   resource_type       = "project"
   resource_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region              = "eu01"
@@ -19,6 +19,6 @@ resource "stackit_telemetrylink_link" "link2" {
 
 # Only use the import statement, if you want to import an existing TelemetryLink link
 import {
-  to = stackit_telemetrylink_link.import-example
+  to = stackit_telemetrylink.import-example
   id = "${var.resource_type},${var.resource_id},${var.region}"
 }
