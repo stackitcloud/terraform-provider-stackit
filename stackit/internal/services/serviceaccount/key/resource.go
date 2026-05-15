@@ -81,7 +81,7 @@ func (r *serviceAccountKeyResource) Metadata(_ context.Context, req resource.Met
 func (r *serviceAccountKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"id":                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`service_account_email`,`key_id`\".",
-		"main":                  "Service account key schema.",
+		"main":                  "Creates and manages a key for a STACKIT service account.",
 		"project_id":            "The STACKIT project ID associated with the service account key.",
 		"key_id":                "The unique identifier for the key associated with the service account.",
 		"service_account_email": "The email address associated with the service account, used for account identification and communication.",

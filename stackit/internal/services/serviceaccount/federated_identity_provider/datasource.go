@@ -38,7 +38,8 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Metadata(_ context.C
 
 func (r *serviceAccountFederatedIdentityProviderDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: descriptions["main"],
+		MarkdownDescription: "Gets details about a federated identity provider configured for a STACKIT service account.",
+		Description:         "Gets details about a federated identity provider configured for a STACKIT service account.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
