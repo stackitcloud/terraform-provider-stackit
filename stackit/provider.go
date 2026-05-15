@@ -177,6 +177,7 @@ type providerModel struct {
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	ALBCertificatesCustomEndpoint   types.String `tfsdk:"alb_certificates_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
+	DremioCustomEndpoint            types.String `tfsdk:"dremio_custom_endpoint"`
 	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
@@ -236,6 +237,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
+		"dremio_custom_endpoint":               "Custom endpoint for the Dremio service",
 		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
 		"git_custom_endpoint":                  "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":                 "Custom endpoint for the IaaS service",
@@ -550,6 +552,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
+	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { providerData.DremioCustomEndpoint = v })
 	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
 	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })

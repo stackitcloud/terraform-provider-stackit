@@ -17,6 +17,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2
+	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.12.0
