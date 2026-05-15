@@ -22,9 +22,9 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.11.1
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.12.2
+	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.28.2
-	github.com/stackitcloud/stackit-sdk-go/services/logs v0.8.2
+	github.com/stackitcloud/stackit-sdk-go/services/logs v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.2
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.9.2
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.3
