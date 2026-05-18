@@ -482,7 +482,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 			bgpConfig.LocalAsn = new(model.Bgp.LocalAsn.ValueInt64())
 		}
 		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() && !model.Bgp.OverrideAdvertisedRoutes.IsUnknown() {
-			routes := toStringSlice(ctx, model.Bgp.OverrideAdvertisedRoutes)
+			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
+			if err != nil {
+				return nil, err
+			}
 			if len(routes) > 0 {
 				bgpConfig.OverrideAdvertisedRoutes = routes
 			}
@@ -529,7 +532,10 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 			bgpConfig.LocalAsn = &asn
 		}
 		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() && !model.Bgp.OverrideAdvertisedRoutes.IsUnknown() {
-			routes := toStringSlice(ctx, model.Bgp.OverrideAdvertisedRoutes)
+			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
+			if err != nil {
+				return nil, err
+			}
 			if len(routes) > 0 {
 				bgpConfig.OverrideAdvertisedRoutes = routes
 			}
@@ -617,10 +623,4 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	}
 
 	return nil
-}
-
-func toStringSlice(ctx context.Context, list types.List) []string {
-	var result []string
-	list.ElementsAs(ctx, &result, false)
-	return result
 }
