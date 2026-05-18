@@ -27,6 +27,9 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
     "192.168.42.2/32"
   ]
   snapshots_are_visible = true
+  labels = {
+    "foo" = "bar"
+  }
 }
 
 # Only use the import statement, if you want to import an existing resource pool

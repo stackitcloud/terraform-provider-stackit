@@ -143,7 +143,7 @@ func (d *exportPolicyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 			},
 			"labels": schema.MapAttribute{
-				Description: "Labels are key-value string pairs which can be attached to a resource pool",
+				Description: "Labels are key-value string pairs which can be attached to an export policy",
 				ElementType: types.StringType,
 				Computed:    true,
 			},

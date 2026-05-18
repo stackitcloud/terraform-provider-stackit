@@ -86,14 +86,14 @@ func TestLabelValidators(t *testing.T) {
 			true,
 		},
 		{
-			"Key to long",
+			"Key too long",
 			map[string]attr.Value{
 				"1234567890123456789012345678901234567890123456789012345678901234": types.StringValue("bar"),
 			},
 			false,
 		},
 		{
-			"Key to short",
+			"Key too short",
 			map[string]attr.Value{
 				"": types.StringValue("bar"),
 			},
@@ -114,7 +114,7 @@ func TestLabelValidators(t *testing.T) {
 			true,
 		},
 		{
-			"Value to long",
+			"Value too long",
 			map[string]attr.Value{
 				"foo": types.StringValue("1234567890123456789012345678901234567890123456789012345678901234"),
 			},
