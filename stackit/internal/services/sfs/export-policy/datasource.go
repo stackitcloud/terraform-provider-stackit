@@ -142,6 +142,11 @@ func (d *exportPolicyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Description: "Name of the export policy.",
 				Computed:    true,
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource pool",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 			"rules": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{

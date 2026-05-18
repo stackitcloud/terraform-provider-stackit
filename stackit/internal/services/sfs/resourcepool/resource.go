@@ -48,6 +48,7 @@ type Model struct {
 	AvailabilityZone    types.String `tfsdk:"availability_zone"`
 	IpAcl               types.List   `tfsdk:"ip_acl"`
 	Name                types.String `tfsdk:"name"`
+	Labels              types.Map    `tfsdk:"labels"`
 	PerformanceClass    types.String `tfsdk:"performance_class"`
 	SizeGigabytes       types.Int32  `tfsdk:"size_gigabytes"`
 	SnapshotPolicy      types.Object `tfsdk:"snapshot_policy"`
@@ -155,6 +156,12 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to the resource.",
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators:  validate.LabelValidators(),
 			},
 			"region": schema.StringAttribute{
 				Optional: true,
@@ -544,6 +551,12 @@ func mapFields(ctx context.Context, region string, resourcePool *sfs.ResourcePoo
 		model.IpAcl = types.ListNull(types.StringType)
 	}
 
+	labels, err := utils.MapLabels(ctx, resourcePool.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+	model.Labels = labels
+
 	model.Name = types.StringPointerValue(resourcePool.Name)
 	if pc := resourcePool.PerformanceClass; pc != nil {
 		model.PerformanceClass = types.StringPointerValue(pc.Name)
@@ -591,10 +604,16 @@ func toCreatePayload(ctx context.Context, model *Model) (*sfs.CreateResourcePool
 		}
 	}
 
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
+	}
+
 	result := &sfs.CreateResourcePoolPayload{
 		AvailabilityZone:    model.AvailabilityZone.ValueString(),
 		IpAcl:               aclList,
 		Name:                model.Name.ValueString(),
+		Labels:              &labels,
 		PerformanceClass:    model.PerformanceClass.ValueString(),
 		SizeGigabytes:       model.SizeGigabytes.ValueInt32(),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
@@ -627,12 +646,18 @@ func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateResourcePool
 		}
 	}
 
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
+	}
+
 	result := &sfs.UpdateResourcePoolPayload{
 		IpAcl:               aclList,
 		PerformanceClass:    model.PerformanceClass.ValueStringPointer(),
 		SizeGigabytes:       *sfs.NewNullableInt32(model.SizeGigabytes.ValueInt32Pointer()),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
 		SnapshotPolicyId:    *sfs.NewNullableString(snapshotPolicy.Id.ValueStringPointer()),
+		Labels:              &labels,
 	}
 	return result, nil
 }
