@@ -27,6 +27,9 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
     "192.168.42.2/32"
   ]
   snapshots_are_visible = true
+  labels = {
+    "foo" = "bar"
+  }
 }
 
 # Only use the import statement, if you want to import an existing resource pool
@@ -50,6 +53,7 @@ import {
 
 ### Optional
 
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to the resource.
 - `region` (String) The resource region. If not defined, the provider region is used.
 - `snapshot_policy` (Attributes) Name of the snapshot policy. (see [below for nested schema](#nestedatt--snapshot_policy))
 - `snapshots_are_visible` (Boolean) If set to true, snapshots are visible and accessible to users. (default: false)

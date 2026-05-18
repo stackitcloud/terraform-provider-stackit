@@ -71,6 +71,7 @@ func fixtureResponseModel(rulesModel basetypes.ListValue) *Model {
 		Id:             types.StringValue(project_id + ",region,uuid1"),
 		ExportPolicyId: types.StringValue("uuid1"),
 		Rules:          rulesModel,
+		Labels:         types.MapNull(types.StringType),
 		Region:         types.StringValue("region"),
 	}
 }
@@ -152,14 +153,16 @@ func fixtureRulesPayloadModel() []rulesModel {
 
 func fixtureExportPolicyCreatePayload(rules []sfs.CreateShareExportPolicyRequestRule) *sfs.CreateShareExportPolicyPayload {
 	return &sfs.CreateShareExportPolicyPayload{
-		Name:  "createPayloadName",
-		Rules: rules,
+		Name:   "createPayloadName",
+		Rules:  rules,
+		Labels: &map[string]string{},
 	}
 }
 
 func fixtureExportPolicyUpdatePayload(rules []sfs.UpdateShareExportPolicyBodyRule) *sfs.UpdateShareExportPolicyPayload {
 	return &sfs.UpdateShareExportPolicyPayload{
-		Rules: rules,
+		Rules:  rules,
+		Labels: &map[string]string{},
 	}
 }
 
@@ -220,6 +223,84 @@ func TestMapFields(t *testing.T) {
 			expectedModel: fixtureResponseModel(fixtureRulesModel()),
 			region:        testRegion,
 			isValid:       true,
+		},
+		{
+			name: "Add Labels",
+			state: &Model{
+				ProjectId: types.StringValue(project_id),
+			},
+			input: &sfs.GetShareExportPolicyResponse{
+				ShareExportPolicy: &sfs.ShareExportPolicy{
+					Id:    new("uuid1"),
+					Rules: fixtureRulesResponse(),
+					Labels: &map[string]string{
+						"foo": "bar",
+					},
+				},
+			},
+			expectedModel: &Model{
+				ProjectId:      types.StringValue(project_id),
+				Id:             types.StringValue(project_id + ",region,uuid1"),
+				ExportPolicyId: types.StringValue("uuid1"),
+				Rules:          fixtureRulesModel(),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"foo": types.StringValue("bar"),
+				}),
+				Region: types.StringValue("region"),
+			},
+			region:  testRegion,
+			isValid: true,
+		},
+		{
+			name: "Remove Labels through empty map",
+			state: &Model{
+				ProjectId: types.StringValue(project_id),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"foo": types.StringValue("bar"),
+				}),
+			},
+			input: &sfs.GetShareExportPolicyResponse{
+				ShareExportPolicy: &sfs.ShareExportPolicy{
+					Id:     new("uuid1"),
+					Rules:  fixtureRulesResponse(),
+					Labels: &map[string]string{},
+				},
+			},
+			expectedModel: &Model{
+				ProjectId:      types.StringValue(project_id),
+				Id:             types.StringValue(project_id + ",region,uuid1"),
+				ExportPolicyId: types.StringValue("uuid1"),
+				Rules:          fixtureRulesModel(),
+				Labels:         types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Region:         types.StringValue("region"),
+			},
+			region:  testRegion,
+			isValid: true,
+		},
+		{
+			name: "Remove Labels through missing parameter",
+			state: &Model{
+				ProjectId: types.StringValue(project_id),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"foo": types.StringValue("bar"),
+				}),
+			},
+			input: &sfs.GetShareExportPolicyResponse{
+				ShareExportPolicy: &sfs.ShareExportPolicy{
+					Id:    new("uuid1"),
+					Rules: fixtureRulesResponse(),
+				},
+			},
+			expectedModel: &Model{
+				ProjectId:      types.StringValue(project_id),
+				Id:             types.StringValue(project_id + ",region,uuid1"),
+				ExportPolicyId: types.StringValue("uuid1"),
+				Rules:          fixtureRulesModel(),
+				Labels:         types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Region:         types.StringValue("region"),
+			},
+			region:  testRegion,
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
@@ -284,10 +365,29 @@ func TestToCreatePayload(t *testing.T) {
 			expected: fixtureExportPolicyCreatePayload(fixtureRulesCreatePayload()),
 			wantErr:  false,
 		},
+		{
+			name: "valid label payload",
+			model: &Model{
+				ProjectId: types.StringValue(project_id),
+				Name:      types.StringValue("createPayloadName"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"foo": types.StringValue("bar"),
+				}),
+			},
+			rules: fixtureRulesPayloadModel(),
+			expected: &sfs.CreateShareExportPolicyPayload{
+				Name:  "createPayloadName",
+				Rules: fixtureRulesCreatePayload(),
+				Labels: &map[string]string{
+					"foo": "bar",
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toCreatePayload(tt.model, tt.rules)
+			got, err := toCreatePayload(context.Background(), tt.model, tt.rules)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -342,10 +442,28 @@ func TestToUpdatePayload(t *testing.T) {
 			expected: fixtureExportPolicyUpdatePayload(fixtureRulesUpdatePayload()),
 			wantErr:  false,
 		},
+		{
+			name: "valid label payload",
+			model: &Model{
+				ProjectId: types.StringValue(project_id),
+				Name:      types.StringValue("createPayloadName"),
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"foo": types.StringValue("bar"),
+				}),
+			},
+			rules: fixtureRulesPayloadModel(),
+			expected: &sfs.UpdateShareExportPolicyPayload{
+				Rules: fixtureRulesUpdatePayload(),
+				Labels: &map[string]string{
+					"foo": "bar",
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toUpdatePayload(tt.model, tt.rules)
+			got, err := toUpdatePayload(context.Background(), tt.model, tt.rules)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return

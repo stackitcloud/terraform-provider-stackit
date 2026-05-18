@@ -4,6 +4,9 @@ resource "stackit_sfs_share" "example" {
   name                       = "my-nfs-share"
   export_policy              = "high-performance-class"
   space_hard_limit_gigabytes = 32
+  labels = {
+    "foo" = "bar"
+  }
 }
 
 # Only use the import statement, if you want to import an existing sfs share
