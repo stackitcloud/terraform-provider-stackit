@@ -88,11 +88,6 @@ linters:
         - "-QF1012" # disable 'use fmt.Fprintf instead' Fprintf returns bytes written and an error, which we'd have to handle/ignore to appease some other linter
   exclusions:
     generated: lax
-    rules:
-      - linters:
-          - gocritic
-        text: 'dupOption'
-        path: _acc_test\.go
     paths:
       - third_party$
       - builtin$
