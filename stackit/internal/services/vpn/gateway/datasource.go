@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = (*vpnGatewayDataSource)(nil)
-	_ datasource.DataSourceWithConfigure = (*vpnGatewayDataSource)(nil)
+	_ datasource.DataSource              = &vpnGatewayDataSource{}
+	_ datasource.DataSourceWithConfigure = &vpnGatewayDataSource{}
 )
 
 type vpnGatewayDataSource struct {
@@ -37,17 +37,16 @@ func NewVPNGatewayDataSource() datasource.DataSource {
 }
 
 func (d *vpnGatewayDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	d.client = utils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
-	d.providerData = providerData
 	tflog.Info(ctx, "VPN client configured")
 }
 
@@ -174,7 +173,6 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	// Set state
 	diags = resp.State.Set(ctx, model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

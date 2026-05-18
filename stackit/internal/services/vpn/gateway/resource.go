@@ -466,24 +466,20 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 		return nil, fmt.Errorf("availability_zones is required")
 	}
 
-	azTunnel1 := model.AvailabilityZones.Tunnel1.ValueString()
-	azTunnel2 := model.AvailabilityZones.Tunnel2.ValueString()
-
 	payload := &vpn.CreateGatewayPayload{
 		DisplayName: model.DisplayName.ValueString(),
 		PlanId:      model.PlanID.ValueString(),
 		RoutingType: vpn.RoutingType(model.RoutingType.ValueString()),
 		AvailabilityZones: vpn.CreateGatewayPayloadAvailabilityZones{
-			Tunnel1: azTunnel1,
-			Tunnel2: azTunnel2,
+			Tunnel1: model.AvailabilityZones.Tunnel1.ValueString(),
+			Tunnel2: model.AvailabilityZones.Tunnel2.ValueString(),
 		},
 	}
 
 	if model.Bgp != nil {
 		bgpConfig := &vpn.BGPGatewayConfig{}
 		if !model.Bgp.LocalAsn.IsNull() && !model.Bgp.LocalAsn.IsUnknown() {
-			asn := model.Bgp.LocalAsn.ValueInt64()
-			bgpConfig.LocalAsn = &asn
+			bgpConfig.LocalAsn = new(model.Bgp.LocalAsn.ValueInt64())
 		}
 		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() && !model.Bgp.OverrideAdvertisedRoutes.IsUnknown() {
 			routes := toStringSlice(ctx, model.Bgp.OverrideAdvertisedRoutes)
@@ -516,15 +512,12 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 		return nil, fmt.Errorf("availability_zones is required")
 	}
 
-	azTunnel1 := model.AvailabilityZones.Tunnel1.ValueString()
-	azTunnel2 := model.AvailabilityZones.Tunnel2.ValueString()
-
 	payload := &vpn.UpdateGatewayPayload{
 		DisplayName: model.DisplayName.ValueString(),
 		PlanId:      model.PlanID.ValueString(),
 		AvailabilityZones: vpn.UpdateGatewayPayloadAvailabilityZones{
-			Tunnel1: azTunnel1,
-			Tunnel2: azTunnel2,
+			Tunnel1: model.AvailabilityZones.Tunnel1.ValueString(),
+			Tunnel2: model.AvailabilityZones.Tunnel2.ValueString(),
 		},
 		RoutingType: vpn.RoutingType(model.RoutingType.ValueString()),
 	}
