@@ -66,8 +66,8 @@ func (r *serviceAccountDataSource) Schema(_ context.Context, _ datasource.Schema
 
 	// Define the schema with validation rules and descriptions for each attribute.
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Service account data source schema.",
-		Description:         "Service account data source schema.",
+		MarkdownDescription: "Gets details about a STACKIT service account in a project by email.",
+		Description:         "Gets details about a STACKIT service account in a project by email.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

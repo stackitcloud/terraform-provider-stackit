@@ -3,12 +3,12 @@
 page_title: "stackit_service_account Resource - stackit"
 subcategory: ""
 description: |-
-  Service account resource schema.
+  Manages a STACKIT service account in a project.
 ---
 
 # stackit_service_account (Resource)
 
-Service account resource schema.
+Manages a STACKIT service account in a project.
 
 ## Example Usage
 

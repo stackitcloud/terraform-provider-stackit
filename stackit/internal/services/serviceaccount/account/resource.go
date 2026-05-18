@@ -87,8 +87,8 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Service account resource schema.",
-		Description:         "Service account resource schema.",
+		MarkdownDescription: "Manages a STACKIT service account in a project.",
+		Description:         "Manages a STACKIT service account in a project.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
