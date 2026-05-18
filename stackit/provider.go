@@ -114,6 +114,7 @@ import (
 	projectLock "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/project-lock"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/resourcepool"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/share"
+	snapshotPolicy "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshot-policy"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/snapshots"
 	skeCluster "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/cluster"
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
@@ -717,6 +718,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		share.NewShareDataSource,
 		exportpolicy.NewExportPolicyDataSource,
 		snapshots.NewResourcePoolSnapshotDataSource,
+		snapshotPolicy.NewSnapshotPoliciesDataSource,
 		projectLock.NewProjectLockDatasource,
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
