@@ -46,7 +46,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *vpn.APIClient {
 				apiClient, err := vpn.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
