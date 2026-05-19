@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 )
 
 const (
@@ -58,7 +58,7 @@ func TestMapFields(t *testing.T) {
 				Id:                types.StringValue("pid,eu01,sid"),
 				ProjectId:         types.StringValue("pid"),
 				ServerId:          types.StringValue("sid"),
-				Name:              types.StringNull(),
+				Name:              types.StringValue(""),
 				AvailabilityZone:  types.StringNull(),
 				Labels:            types.MapNull(types.StringType),
 				ImageId:           types.StringNull(),
@@ -71,6 +71,7 @@ func TestMapFields(t *testing.T) {
 				UpdatedAt:         types.StringNull(),
 				LaunchedAt:        types.StringNull(),
 				Region:            types.StringValue("eu01"),
+				MachineType:       types.StringValue(""),
 			},
 			isValid: true,
 		},
@@ -84,18 +85,18 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.Server{
 					Id:               new("sid"),
-					Name:             new("name"),
+					Name:             "name",
 					AvailabilityZone: new("zone"),
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"key": "value",
 					},
 					ImageId: new("image_id"),
-					Nics: &[]iaas.ServerNetwork{
+					Nics: []iaas.ServerNetwork{
 						{
-							NicId: new("nic1"),
+							NicId: "nic1",
 						},
 						{
-							NicId: new("nic2"),
+							NicId: "nic2",
 						},
 					},
 					Agent: &iaas.ServerAgent{
@@ -107,6 +108,7 @@ func TestMapFields(t *testing.T) {
 					UpdatedAt:     new(testTimestamp()),
 					LaunchedAt:    new(testTimestamp()),
 					Status:        new("active"),
+					UserData:      new(base64EncodedUserData),
 				},
 				region: "eu02",
 			},
@@ -131,6 +133,8 @@ func TestMapFields(t *testing.T) {
 				UpdatedAt:     types.StringValue(testTimestampValue),
 				LaunchedAt:    types.StringValue(testTimestampValue),
 				Region:        types.StringValue("eu02"),
+				MachineType:   types.StringValue(""),
+				UserData:      types.StringValue(userData),
 			},
 			isValid: true,
 		},
@@ -151,7 +155,7 @@ func TestMapFields(t *testing.T) {
 				Id:                types.StringValue("pid,eu01,sid"),
 				ProjectId:         types.StringValue("pid"),
 				ServerId:          types.StringValue("sid"),
-				Name:              types.StringNull(),
+				Name:              types.StringValue(""),
 				AvailabilityZone:  types.StringNull(),
 				Labels:            types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				ImageId:           types.StringNull(),
@@ -164,6 +168,7 @@ func TestMapFields(t *testing.T) {
 				UpdatedAt:         types.StringNull(),
 				LaunchedAt:        types.StringNull(),
 				Region:            types.StringValue("eu01"),
+				MachineType:       types.StringValue(""),
 			},
 			isValid: true,
 		},
@@ -236,26 +241,26 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateServerPayload{
-				Name:             new("name"),
+				Name:             "name",
 				AvailabilityZone: new("zone"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
-				BootVolume: &iaas.ServerBootVolume{
+				BootVolume: &iaas.BootVolume{
 					PerformanceClass: new("class"),
 					Size:             new(int64(1)),
 					Source: &iaas.BootVolumeSource{
-						Type: new("type"),
-						Id:   new("id"),
+						Type: "type",
+						Id:   "id",
 					},
 				},
 				ImageId:     new("image"),
 				KeypairName: new("keypair"),
-				MachineType: new("machine_type"),
-				UserData:    new([]byte(base64EncodedUserData)),
-				Networking: &iaas.CreateServerPayloadAllOfNetworking{
+				MachineType: "machine_type",
+				UserData:    new(base64EncodedUserData),
+				Networking: iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-						NicIds: &[]string{"nic1", "nic2"},
+						NicIds: []string{"nic1", "nic2"},
 					},
 				},
 				Agent: &iaas.ServerAgent{
@@ -294,27 +299,27 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &iaas.CreateServerPayload{
-				Name:             new("name"),
+				Name:             "name",
 				AvailabilityZone: new("zone"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
-				BootVolume: &iaas.ServerBootVolume{
+				BootVolume: &iaas.BootVolume{
 					PerformanceClass: new("class"),
 					Size:             new(int64(1)),
 					Source: &iaas.BootVolumeSource{
-						Type: new("image"),
-						Id:   new("id"),
+						Type: "image",
+						Id:   "id",
 					},
 					DeleteOnTermination: new(true),
 				},
 				ImageId:     new("image"),
 				KeypairName: new("keypair"),
-				MachineType: new("machine_type"),
-				UserData:    new([]byte(base64EncodedUserData)),
-				Networking: &iaas.CreateServerPayloadAllOfNetworking{
+				MachineType: "machine_type",
+				UserData:    new(base64EncodedUserData),
+				Networking: iaas.CreateServerPayloadAllOfNetworking{
 					CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-						NicIds: &[]string{"nic1", "nic2"},
+						NicIds: []string{"nic1", "nic2"},
 					},
 				},
 				Agent: &iaas.ServerAgent{
@@ -360,7 +365,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateServerPayload{
 				Name: new("name"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
 			},
@@ -386,54 +391,46 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 }
 
-var _ serverControlClient = &mockServerControlClient{}
-
-// mockServerControlClient mocks the [serverControlClient] interface with
-// pluggable functions
-type mockServerControlClient struct {
-	wait.APIClientInterface
-	startServerCalled  int
-	startServerExecute func(callNo int, ctx context.Context, projectId, region, serverId string) error
-
-	stopServerCalled  int
-	stopServerExecute func(callNo int, ctx context.Context, projectId, region, serverId string) error
-
-	deallocateServerCalled  int
-	deallocateServerExecute func(callNo int, ctx context.Context, projectId, region, serverId string) error
-
-	getServerCalled  int
-	getServerExecute func(callNo int, ctx context.Context, projectId, region, serverId string) (*iaas.Server, error)
+type mockCounter struct {
+	startServerCalled      int
+	stopServerCalled       int
+	deallocateServerCalled int
+	getServerCalled        int
 }
 
-// DeallocateServerExecute implements serverControlClient.
-func (t *mockServerControlClient) DeallocateServerExecute(ctx context.Context, projectId, region, serverId string) error {
-	t.deallocateServerCalled++
-	return t.deallocateServerExecute(t.deallocateServerCalled, ctx, projectId, region, serverId)
+type mockSettings struct {
+	startServerExecute      func(r iaas.ApiStartServerRequest) error
+	stopServerExecute       func(r iaas.ApiStopServerRequest) error
+	deallocateServerExecute func(r iaas.ApiDeallocateServerRequest) error
+	getServerExecute        func(callNo int, r iaas.ApiGetServerRequest) (*iaas.Server, error)
 }
 
-// GetServerExecute implements serverControlClient.
-func (t *mockServerControlClient) GetServerExecute(ctx context.Context, projectId, region, serverId string) (*iaas.Server, error) {
-	t.getServerCalled++
-	return t.getServerExecute(t.getServerCalled, ctx, projectId, region, serverId)
-}
-
-// StartServerExecute implements serverControlClient.
-func (t *mockServerControlClient) StartServerExecute(ctx context.Context, projectId, region, serverId string) error {
-	t.startServerCalled++
-	return t.startServerExecute(t.startServerCalled, ctx, projectId, region, serverId)
-}
-
-// StopServerExecute implements serverControlClient.
-func (t *mockServerControlClient) StopServerExecute(ctx context.Context, projectId, region, serverId string) error {
-	t.stopServerCalled++
-	return t.stopServerExecute(t.stopServerCalled, ctx, projectId, region, serverId)
+func newAPIMock(settings *mockSettings, counter *mockCounter) iaas.DefaultAPI {
+	return &iaas.DefaultAPIServiceMock{
+		StartServerExecuteMock: new(func(r iaas.ApiStartServerRequest) error {
+			counter.startServerCalled++
+			return settings.startServerExecute(r)
+		}),
+		StopServerExecuteMock: new(func(r iaas.ApiStopServerRequest) error {
+			counter.stopServerCalled++
+			return settings.stopServerExecute(r)
+		}),
+		DeallocateServerExecuteMock: new(func(r iaas.ApiDeallocateServerRequest) error {
+			counter.deallocateServerCalled++
+			return settings.deallocateServerExecute(r)
+		}),
+		GetServerExecuteMock: new(func(r iaas.ApiGetServerRequest) (*iaas.Server, error) {
+			counter.getServerCalled++
+			return settings.getServerExecute(counter.getServerCalled, r)
+		}),
+	}
 }
 
 func Test_serverResource_updateServerStatus(t *testing.T) {
 	projectId := basetypes.NewStringValue("projectId")
 	serverId := basetypes.NewStringValue("serverId")
 	type fields struct {
-		client *mockServerControlClient
+		mockSettings *mockSettings
 	}
 	type args struct {
 		currentState *string
@@ -457,8 +454,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		{
 			name: "no desired status",
 			fields: fields{
-				client: &mockServerControlClient{
-					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
+				mockSettings: &mockSettings{
+					getServerExecute: func(_ int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						return &iaas.Server{
 							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerActiveStatus),
@@ -481,8 +478,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		{
 			name: "desired inactive state",
 			fields: fields{
-				client: &mockServerControlClient{
-					getServerExecute: func(no int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
+				mockSettings: &mockSettings{
+					getServerExecute: func(no int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						var state string
 						if no <= 1 {
 							state = wait.ServerActiveStatus
@@ -494,7 +491,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							Status: &state,
 						}, nil
 					},
-					stopServerExecute: func(_ int, _ context.Context, _, _, _ string) error { return nil },
+					stopServerExecute: func(_ iaas.ApiStopServerRequest) error { return nil },
 				},
 			},
 			args: args{
@@ -514,8 +511,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		{
 			name: "desired deallocated state",
 			fields: fields{
-				client: &mockServerControlClient{
-					getServerExecute: func(no int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
+				mockSettings: &mockSettings{
+					getServerExecute: func(no int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						var state string
 						switch no {
 						case 1:
@@ -530,7 +527,7 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 							Status: &state,
 						}, nil
 					},
-					deallocateServerExecute: func(_ int, _ context.Context, _, _, _ string) error { return nil },
+					deallocateServerExecute: func(_ iaas.ApiDeallocateServerRequest) error { return nil },
 				},
 			},
 			args: args{
@@ -550,8 +547,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		{
 			name: "don't call start if active",
 			fields: fields{
-				client: &mockServerControlClient{
-					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
+				mockSettings: &mockSettings{
+					getServerExecute: func(_ int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						return &iaas.Server{
 							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerActiveStatus),
@@ -575,8 +572,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		{
 			name: "don't call stop if inactive",
 			fields: fields{
-				client: &mockServerControlClient{
-					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
+				mockSettings: &mockSettings{
+					getServerExecute: func(_ int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						return &iaas.Server{
 							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerInactiveStatus),
@@ -600,8 +597,8 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 		{
 			name: "don't call dealloacate if deallocated",
 			fields: fields{
-				client: &mockServerControlClient{
-					getServerExecute: func(_ int, _ context.Context, _, _, _ string) (*iaas.Server, error) {
+				mockSettings: &mockSettings{
+					getServerExecute: func(_ int, _ iaas.ApiGetServerRequest) (*iaas.Server, error) {
 						return &iaas.Server{
 							Id:     new(serverId.ValueString()),
 							Status: utils.Ptr(wait.ServerDeallocatedStatus),
@@ -626,7 +623,11 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := updateServerStatus(context.Background(), tt.fields.client, tt.args.currentState, &tt.args.model, tt.args.region)
+
+			counter := &mockCounter{}
+			client := newAPIMock(tt.fields.mockSettings, counter)
+
+			err := updateServerStatus(context.Background(), client, tt.args.currentState, &tt.args.model, tt.args.region)
 			if (err != nil) != tt.want.err {
 				t.Errorf("inconsistent error, want %v and got %v", tt.want.err, err)
 			}
@@ -634,16 +635,16 @@ func Test_serverResource_updateServerStatus(t *testing.T) {
 				t.Errorf("wanted status %s but got %s", expected, actual)
 			}
 
-			if expected, actual := tt.want.getServerCount, tt.fields.client.getServerCalled; expected != actual {
+			if expected, actual := tt.want.getServerCount, counter.getServerCalled; expected != actual {
 				t.Errorf("wrong number of get server calls: Expected %d but got %d", expected, actual)
 			}
-			if expected, actual := tt.want.startCount, tt.fields.client.startServerCalled; expected != actual {
+			if expected, actual := tt.want.startCount, counter.startServerCalled; expected != actual {
 				t.Errorf("wrong number of start server calls: Expected %d but got %d", expected, actual)
 			}
-			if expected, actual := tt.want.stopCount, tt.fields.client.stopServerCalled; expected != actual {
+			if expected, actual := tt.want.stopCount, counter.stopServerCalled; expected != actual {
 				t.Errorf("wrong number of stop server calls: Expected %d but got %d", expected, actual)
 			}
-			if expected, actual := tt.want.deallocatedCount, tt.fields.client.deallocateServerCalled; expected != actual {
+			if expected, actual := tt.want.deallocatedCount, counter.deallocateServerCalled; expected != actual {
 				t.Errorf("wrong number of deallocate server calls: Expected %d but got %d", expected, actual)
 			}
 		})

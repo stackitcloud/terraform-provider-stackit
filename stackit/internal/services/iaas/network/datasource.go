@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -211,7 +211,7 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
-	networkResp, err := d.client.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := d.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -253,10 +253,8 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	var networkId string
 	if model.NetworkId.ValueString() != "" {
 		networkId = model.NetworkId.ValueString()
-	} else if networkResp.Id != nil {
-		networkId = *networkResp.Id
 	} else {
-		return fmt.Errorf("network id not present")
+		networkId = networkResp.Id
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, networkId)
@@ -271,7 +269,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Nameservers == nil {
 		model.IPv4Nameservers = types.ListNull(types.StringType)
 	} else {
-		respNameservers := *networkResp.Ipv4.Nameservers
+		respNameservers := networkResp.Ipv4.Nameservers
 		modelIPv4Nameservers, err := utils.ListValueToStringSlice(model.IPv4Nameservers)
 		if err != nil {
 			return fmt.Errorf("get current IPv4 network nameservers from model: %w", err)
@@ -290,7 +288,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.Prefixes == nil {
 		model.IPv4Prefixes = types.ListNull(types.StringType)
 	} else {
-		respPrefixes := *networkResp.Ipv4.Prefixes
+		respPrefixes := networkResp.Ipv4.Prefixes
 		prefixesTF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixes)
 		if diags.HasError() {
 			return fmt.Errorf("map network prefixes: %w", core.DiagsToError(diags))
@@ -310,10 +308,10 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv4Prefixes = prefixesTF
 	}
 
-	if networkResp.Ipv4 == nil || networkResp.Ipv4.Gateway == nil {
+	if networkResp.Ipv4 == nil {
 		model.IPv4Gateway = types.StringNull()
 	} else {
-		model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.GetGateway())
+		model.IPv4Gateway = types.StringPointerValue(networkResp.Ipv4.Gateway.Get())
 	}
 
 	if networkResp.Ipv4 == nil || networkResp.Ipv4.PublicIp == nil {
@@ -327,7 +325,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Nameservers == nil {
 		model.IPv6Nameservers = types.ListNull(types.StringType)
 	} else {
-		respIPv6Nameservers := *networkResp.Ipv6.Nameservers
+		respIPv6Nameservers := networkResp.Ipv6.Nameservers
 		modelIPv6Nameservers, errIpv6 := utils.ListValueToStringSlice(model.IPv6Nameservers)
 		if errIpv6 != nil {
 			return fmt.Errorf("get current IPv6 network nameservers from model: %w", errIpv6)
@@ -346,7 +344,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Prefixes == nil {
 		model.IPv6Prefixes = types.ListNull(types.StringType)
 	} else {
-		respPrefixesV6 := *networkResp.Ipv6.Prefixes
+		respPrefixesV6 := networkResp.Ipv6.Prefixes
 		prefixesV6TF, diags := types.ListValueFrom(ctx, types.StringType, respPrefixesV6)
 		if diags.HasError() {
 			return fmt.Errorf("map network IPv6 prefixes: %w", core.DiagsToError(diags))
@@ -365,10 +363,10 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv6Prefixes = prefixesV6TF
 	}
 
-	if networkResp.Ipv6 == nil || networkResp.Ipv6.Gateway == nil {
+	if networkResp.Ipv6 == nil {
 		model.IPv6Gateway = types.StringNull()
 	} else {
-		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.GetGateway())
+		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.Gateway.Get())
 	}
 
 	model.RoutingTableID = types.StringNull()
@@ -377,7 +375,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	}
 
 	model.NetworkId = types.StringValue(networkId)
-	model.Name = types.StringPointerValue(networkResp.Name)
+	model.Name = types.StringValue(networkResp.Name)
 	model.Labels = labels
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
