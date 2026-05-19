@@ -1,5 +1,4 @@
 variable "project_id" {}
-variable "region" {}
 variable "display_name" {}
 variable "plan_id" {}
 variable "routing_type" {}
@@ -8,7 +7,6 @@ variable "az_tunnel2" {}
 
 resource "stackit_vpn_gateway" "gateway" {
   project_id   = var.project_id
-  region       = var.region
   display_name = var.display_name
   plan_id      = var.plan_id
   routing_type = var.routing_type
