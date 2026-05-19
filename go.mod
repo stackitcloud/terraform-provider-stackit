@@ -23,7 +23,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.13.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.28.2
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.29.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.29.0
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.10.0
