@@ -724,7 +724,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
 		serverUpdateEnable.NewServerUpdateEnableDataSource,
-		telemetryLink.NewTelemetryLinkLinkDataSource,
+		telemetryLink.NewTelemetryLinkDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)

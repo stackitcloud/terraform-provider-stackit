@@ -24,11 +24,11 @@ import (
 )
 
 var (
-	_ datasource.DataSource = &telemetryLinkLinkDataSource{}
+	_ datasource.DataSource = &telemetryLinkDataSource{}
 )
 
-func NewTelemetryLinkLinkDataSource() datasource.DataSource {
-	return &telemetryLinkLinkDataSource{}
+func NewTelemetryLinkDataSource() datasource.DataSource {
+	return &telemetryLinkDataSource{}
 }
 
 type DataSourceModel struct {
@@ -44,16 +44,16 @@ type DataSourceModel struct {
 	Status            types.String `tfsdk:"status"`
 }
 
-type telemetryLinkLinkDataSource struct {
+type telemetryLinkDataSource struct {
 	client       *telemetrylink.APIClient
 	providerData core.ProviderData
 }
 
-func (d *telemetryLinkLinkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *telemetryLinkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_telemetrylink"
 }
 
-func (d *telemetryLinkLinkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *telemetryLinkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -68,7 +68,7 @@ func (d *telemetryLinkLinkDataSource) Configure(ctx context.Context, req datasou
 	tflog.Info(ctx, "TelemetryLink client configured")
 }
 
-func (d *telemetryLinkLinkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("TelemetryLink data source schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
@@ -130,7 +130,7 @@ func (d *telemetryLinkLinkDataSource) Schema(_ context.Context, _ datasource.Sch
 	}
 }
 
-func (d *telemetryLinkLinkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)

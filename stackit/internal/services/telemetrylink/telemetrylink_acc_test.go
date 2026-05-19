@@ -61,7 +61,7 @@ func testConfigVarsMaxUpdated() config.Variables {
 	return newVars
 }
 
-func TestAccTelemetryLinkLinkMin(t *testing.T) {
+func TestAccTelemetryLinkMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
@@ -167,7 +167,7 @@ func TestAccTelemetryLinkLinkMin(t *testing.T) {
 	})
 }
 
-func TestAccTelemetryLinkLinkMax(t *testing.T) {
+func TestAccTelemetryLinkMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
