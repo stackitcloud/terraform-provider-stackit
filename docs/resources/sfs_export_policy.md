@@ -25,6 +25,9 @@ resource "stackit_sfs_export_policy" "example" {
       order  = 1
     }
   ]
+  labels = {
+    "foo" = "bar"
+  }
 }
 
 # Only use the import statement, if you want to import an existing export policy
@@ -44,6 +47,7 @@ import {
 
 ### Optional
 
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to the resource.
 - `region` (String) The resource region. If not defined, the provider region is used.
 - `rules` (Attributes List) (see [below for nested schema](#nestedatt--rules))
 
