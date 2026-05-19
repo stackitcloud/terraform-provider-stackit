@@ -708,7 +708,11 @@ func mapFields(ctx context.Context, imageResp *iaas.Image, model *Model, region 
 		configModel.SecureBoot = types.BoolPointerValue(imageResp.Config.SecureBoot)
 		configModel.UEFI = types.BoolPointerValue(imageResp.Config.Uefi)
 		configModel.VideoModel = types.StringPointerValue(imageResp.Config.VideoModel.Get())
-		configModel.VirtioScsi = types.BoolPointerValue(imageResp.Config.VirtioScsi)
+		if imageResp.Config.VirtioScsi != nil {
+			configModel.VirtioScsi = types.BoolValue(*imageResp.Config.VirtioScsi)
+		} else {
+			configModel.VirtioScsi = types.BoolValue(false)
+		}
 
 		configObject, diags = types.ObjectValue(configTypes, map[string]attr.Value{
 			"boot_menu":                configModel.BootMenu,
