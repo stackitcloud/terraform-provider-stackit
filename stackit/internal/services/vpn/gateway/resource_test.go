@@ -2,12 +2,20 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
+)
+
+var (
+	projectId = uuid.NewString()
+	region    = "eu01"
 )
 
 func TestMapFields(t *testing.T) {
@@ -18,8 +26,8 @@ func TestMapFields(t *testing.T) {
 		isValid     bool
 	}{
 		{
-			"default_ok",
-			&vpn.GatewayResponse{
+			description: "default_ok",
+			input: &vpn.GatewayResponse{
 				Id:          new("gateway-id"),
 				DisplayName: "test-gateway",
 				PlanId:      "p500",
@@ -30,7 +38,10 @@ func TestMapFields(t *testing.T) {
 				},
 				State: utils.Ptr(vpn.GATEWAYSTATUS_READY),
 			},
-			Model{
+			expected: Model{
+				ID:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectID:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
 				GatewayID:   types.StringValue("gateway-id"),
 				DisplayName: types.StringValue("test-gateway"),
 				PlanID:      types.StringValue("p500"),
@@ -43,11 +54,11 @@ func TestMapFields(t *testing.T) {
 				Labels: types.MapNull(types.StringType),
 				State:  types.StringValue("READY"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"with_bgp_and_labels",
-			&vpn.GatewayResponse{
+			description: "with_bgp_and_labels",
+			input: &vpn.GatewayResponse{
 				Id:          new("gateway-id"),
 				DisplayName: "test-gateway",
 				PlanId:      "p500",
@@ -66,7 +77,10 @@ func TestMapFields(t *testing.T) {
 				},
 				State: utils.Ptr(vpn.GATEWAYSTATUS_READY),
 			},
-			Model{
+			expected: Model{
+				ID:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectID:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
 				GatewayID:   types.StringValue("gateway-id"),
 				DisplayName: types.StringValue("test-gateway"),
 				PlanID:      types.StringValue("p500"),
@@ -77,35 +91,41 @@ func TestMapFields(t *testing.T) {
 				},
 				Bgp: &BGPGatewayConfigModel{
 					LocalAsn: types.Int64Value(65000),
+					OverrideAdvertisedRoutes: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("10.0.0.0/16"),
+						types.StringValue("192.168.0.0/24"),
+					}),
 				},
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"env":  types.StringValue("prod"),
+					"team": types.StringValue("network"),
+				}),
 				State: types.StringValue("READY"),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			nil,
-			Model{},
-			false,
+			description: "nil_response",
+			input:       nil,
+			expected:    Model{},
+			isValid:     false,
 		},
 		{
-			"nil_gateway_id",
-			&vpn.GatewayResponse{
+			description: "nil_gateway_id",
+			input: &vpn.GatewayResponse{
 				Id:          nil,
 				DisplayName: "test-gateway",
 			},
-			Model{},
-			false,
+			expected: Model{},
+			isValid:  false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var model Model
-			model.ProjectID = types.StringValue("test-project")
-			model.Region = types.StringValue("eu01")
+			model.ProjectID = types.StringValue(projectId)
 
-			err := mapFields(context.Background(), tt.input, &model, "eu01")
+			err := mapFields(context.Background(), tt.input, &model, region)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
@@ -113,39 +133,9 @@ func TestMapFields(t *testing.T) {
 			if tt.isValid && err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
-			if !tt.isValid {
-				return
-			}
-
-			if diff := cmp.Diff(model.GatewayID, tt.expected.GatewayID); diff != "" {
-				t.Fatalf("GatewayID mismatch (-got +want):\n%s", diff)
-			}
-			if diff := cmp.Diff(model.DisplayName, tt.expected.DisplayName); diff != "" {
-				t.Fatalf("DisplayName mismatch (-got +want):\n%s", diff)
-			}
-			if diff := cmp.Diff(model.PlanID, tt.expected.PlanID); diff != "" {
-				t.Fatalf("PlanID mismatch (-got +want):\n%s", diff)
-			}
-			if diff := cmp.Diff(model.RoutingType, tt.expected.RoutingType); diff != "" {
-				t.Fatalf("RoutingType mismatch (-got +want):\n%s", diff)
-			}
-			if diff := cmp.Diff(model.State, tt.expected.State); diff != "" {
-				t.Fatalf("State mismatch (-got +want):\n%s", diff)
-			}
-
-			if diff := cmp.Diff(model.AvailabilityZones.Tunnel1, tt.expected.AvailabilityZones.Tunnel1); diff != "" {
-				t.Fatalf("AZ Tunnel1 mismatch (-got +want):\n%s", diff)
-			}
-			if diff := cmp.Diff(model.AvailabilityZones.Tunnel2, tt.expected.AvailabilityZones.Tunnel2); diff != "" {
-				t.Fatalf("AZ Tunnel2 mismatch (-got +want):\n%s", diff)
-			}
-
-			if tt.expected.Bgp != nil {
-				if model.Bgp == nil {
-					t.Fatalf("expected BGP config, got nil")
-				}
-				if diff := cmp.Diff(model.Bgp.LocalAsn, tt.expected.Bgp.LocalAsn); diff != "" {
-					t.Fatalf("BGP LocalAsn mismatch (-got +want):\n%s", diff)
+			if tt.isValid {
+				if diff := cmp.Diff(tt.expected, model); diff != "" {
+					t.Fatalf("Data mismatch (-want +got):\n%s", diff)
 				}
 			}
 		})
@@ -155,12 +145,13 @@ func TestMapFields(t *testing.T) {
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       Model
+		input       *Model
+		expected    *vpn.CreateGatewayPayload
 		isValid     bool
 	}{
 		{
-			"basic_gateway",
-			Model{
+			description: "basic_gateway",
+			input: &Model{
 				DisplayName: types.StringValue("test-gateway"),
 				PlanID:      types.StringValue("p500"),
 				RoutingType: types.StringValue("ROUTE_BASED"),
@@ -169,11 +160,20 @@ func TestToCreatePayload(t *testing.T) {
 					Tunnel2: types.StringValue("eu01-2"),
 				},
 			},
-			true,
+			expected: &vpn.CreateGatewayPayload{
+				DisplayName: "test-gateway",
+				PlanId:      "p500",
+				RoutingType: vpn.RoutingType("ROUTE_BASED"),
+				AvailabilityZones: vpn.CreateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+			},
+			isValid: true,
 		},
 		{
-			"with_bgp",
-			Model{
+			description: "with_bgp",
+			input: &Model{
 				DisplayName: types.StringValue("test-gateway"),
 				PlanID:      types.StringValue("p500"),
 				RoutingType: types.StringValue("BGP_ROUTE_BASED"),
@@ -185,47 +185,42 @@ func TestToCreatePayload(t *testing.T) {
 					LocalAsn: types.Int64Value(65000),
 				},
 			},
-			true,
+			expected: &vpn.CreateGatewayPayload{
+				DisplayName: "test-gateway",
+				PlanId:      "p500",
+				RoutingType: vpn.RoutingType("BGP_ROUTE_BASED"),
+				AvailabilityZones: vpn.CreateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+				Bgp: &vpn.BGPGatewayConfig{
+					LocalAsn: utils.Ptr(int64(65000)),
+				},
+			},
+			isValid: true,
 		},
 		{
-			"nil_model",
-			Model{},
-			false,
+			description: "nil_model",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var model *Model
-			if tt.isValid {
-				model = &tt.input
-			}
-
-			payload, err := toCreatePayload(context.Background(), model)
+			payload, err := toCreatePayload(context.Background(), tt.input)
 
 			if !tt.isValid && err == nil {
-				t.Fatalf("expected error, got none")
+				t.Fatalf("Should have failed")
 			}
 			if tt.isValid && err != nil {
-				t.Fatalf("expected no error, got %v", err)
+				t.Fatalf("Should not have failed: %v", err)
 			}
-			if !tt.isValid {
-				return
-			}
-
-			if payload.DisplayName != tt.input.DisplayName.ValueString() {
-				t.Errorf("DisplayName mismatch: got %v, want %v", payload.DisplayName, tt.input.DisplayName.ValueString())
-			}
-			if payload.PlanId != tt.input.PlanID.ValueString() {
-				t.Errorf("PlanId mismatch: got %v, want %v", payload.PlanId, tt.input.PlanID.ValueString())
-			}
-			if string(payload.RoutingType) != tt.input.RoutingType.ValueString() {
-				t.Errorf("RoutingType mismatch: got %v, want %v", payload.RoutingType, tt.input.RoutingType.ValueString())
-			}
-
-			if tt.input.Bgp != nil {
-				if payload.Bgp == nil {
-					t.Errorf("expected BGP config, got nil")
+			if tt.isValid {
+				diff := cmp.Diff(tt.expected, payload)
+				if diff != "" {
+					t.Fatalf("Data does not match (-want +got):\n%s", diff)
 				}
 			}
 		})
@@ -235,12 +230,13 @@ func TestToCreatePayload(t *testing.T) {
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		input       Model
+		input       *Model
+		expected    *vpn.UpdateGatewayPayload
 		isValid     bool
 	}{
 		{
-			"basic_update",
-			Model{
+			description: "basic_update",
+			input: &Model{
 				DisplayName: types.StringValue("updated-gateway"),
 				PlanID:      types.StringValue("p1000"),
 				AvailabilityZones: &AvailabilityZonesModel{
@@ -248,39 +244,39 @@ func TestToUpdatePayload(t *testing.T) {
 					Tunnel2: types.StringValue("eu01-2"),
 				},
 			},
-			true,
+			expected: &vpn.UpdateGatewayPayload{
+				DisplayName: "updated-gateway",
+				PlanId:      "p1000",
+				AvailabilityZones: vpn.UpdateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+			},
+			isValid: true,
 		},
 		{
-			"nil_model",
-			Model{},
-			false,
+			description: "nil_model",
+			input:       nil,
+			expected:    nil,
+			isValid:     false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var model *Model
-			if tt.isValid {
-				model = &tt.input
-			}
-
-			payload, err := toUpdatePayload(context.Background(), model)
+			payload, err := toUpdatePayload(context.Background(), tt.input)
 
 			if !tt.isValid && err == nil {
-				t.Fatalf("expected error, got none")
+				t.Fatalf("Should have failed")
 			}
 			if tt.isValid && err != nil {
-				t.Fatalf("expected no error, got %v", err)
+				t.Fatalf("Should not have failed: %v", err)
 			}
-			if !tt.isValid {
-				return
-			}
-
-			if payload.DisplayName != tt.input.DisplayName.ValueString() {
-				t.Errorf("DisplayName mismatch: got %v, want %v", payload.DisplayName, tt.input.DisplayName.ValueString())
-			}
-			if payload.PlanId != tt.input.PlanID.ValueString() {
-				t.Errorf("PlanId mismatch: got %v, want %v", payload.PlanId, tt.input.PlanID.ValueString())
+			if tt.isValid {
+				diff := cmp.Diff(tt.expected, payload)
+				if diff != "" {
+					t.Fatalf("Data does not match (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
