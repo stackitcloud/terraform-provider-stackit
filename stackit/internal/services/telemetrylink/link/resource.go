@@ -36,10 +36,10 @@ const (
 )
 
 var (
-	_ resource.Resource                = &telemetryLinkInstanceResource{}
-	_ resource.ResourceWithConfigure   = &telemetryLinkInstanceResource{}
-	_ resource.ResourceWithImportState = &telemetryLinkInstanceResource{}
-	_ resource.ResourceWithModifyPlan  = &telemetryLinkInstanceResource{}
+	_ resource.Resource                = &telemetryLinkResource{}
+	_ resource.ResourceWithConfigure   = &telemetryLinkResource{}
+	_ resource.ResourceWithImportState = &telemetryLinkResource{}
+	_ resource.ResourceWithModifyPlan  = &telemetryLinkResource{}
 
 	resourceTypes = []string{resourceTypeOrganization, resourceTypeFolder, resourceTypeProject}
 )
@@ -78,16 +78,16 @@ type Model struct {
 	Status            types.String `tfsdk:"status"`
 }
 
-type telemetryLinkInstanceResource struct {
+type telemetryLinkResource struct {
 	client       *telemetrylink.APIClient
 	providerData core.ProviderData
 }
 
 func NewTelemetryLinkResource() resource.Resource {
-	return &telemetryLinkInstanceResource{}
+	return &telemetryLinkResource{}
 }
 
-func (r *telemetryLinkInstanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *telemetryLinkResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
@@ -102,7 +102,7 @@ func (r *telemetryLinkInstanceResource) Configure(ctx context.Context, req resou
 	tflog.Info(ctx, "TelemetryLink client configured")
 }
 
-func (r *telemetryLinkInstanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *telemetryLinkResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
 	var configModel Model
 	if req.Config.Raw.IsNull() {
 		return
@@ -129,11 +129,11 @@ func (r *telemetryLinkInstanceResource) ModifyPlan(ctx context.Context, req reso
 	}
 }
 
-func (r *telemetryLinkInstanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *telemetryLinkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_telemetrylink"
 }
 
-func (r *telemetryLinkInstanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("TelemetryLink instance resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
@@ -177,6 +177,10 @@ func (r *telemetryLinkInstanceResource) Schema(_ context.Context, _ resource.Sch
 					validate.NoSeparator(),
 				},
 			},
+			"telemetry_router_id": schema.StringAttribute{
+				Description: schemaDescriptions["telemetry_router_id"],
+				Required:    true,
+			},
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
@@ -184,10 +188,6 @@ func (r *telemetryLinkInstanceResource) Schema(_ context.Context, _ resource.Sch
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
-			},
-			"telemetry_router_id": schema.StringAttribute{
-				Description: schemaDescriptions["telemetry_router_id"],
-				Required:    true,
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
@@ -218,7 +218,7 @@ func (r *telemetryLinkInstanceResource) Schema(_ context.Context, _ resource.Sch
 	}
 }
 
-func (r *telemetryLinkInstanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -316,7 +316,7 @@ func (r *telemetryLinkInstanceResource) Create(ctx context.Context, req resource
 	tflog.Info(ctx, "TelemetryLink created")
 }
 
-func (r *telemetryLinkInstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -372,7 +372,7 @@ func (r *telemetryLinkInstanceResource) Read(ctx context.Context, req resource.R
 	})
 }
 
-func (r *telemetryLinkInstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -474,7 +474,7 @@ func (r *telemetryLinkInstanceResource) Update(ctx context.Context, req resource
 	})
 }
 
-func (r *telemetryLinkInstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -541,7 +541,7 @@ func (r *telemetryLinkInstanceResource) Delete(ctx context.Context, req resource
 	tflog.Info(ctx, "TelemetryLink deleted")
 }
 
-func (r *telemetryLinkInstanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *telemetryLinkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryLink", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`", req.ID))
