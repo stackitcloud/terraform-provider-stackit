@@ -45,14 +45,14 @@ var testConfigVarsMax = config.Variables{
 	"acl1":                   config.StringVariable("192.168.0.0/16"),
 	"flavor_cpu":             config.IntegerVariable(4),
 	"flavor_ram":             config.IntegerVariable(16),
-	"flavor_description":     config.StringVariable("SQLServer-Flex-4.16-Standard-EU01"),
+	"flavor_description":     config.StringVariable("SQLServer-Flex-4.16-Single-Standard-EU01"),
 	"storage_class":          config.StringVariable("premium-perf2-stackit"),
 	"storage_size":           config.IntegerVariable(40),
 	"server_version":         config.StringVariable("2022"),
 	"replicas":               config.IntegerVariable(1),
 	"options_retention_days": config.IntegerVariable(64),
 	"flavor_id":              config.StringVariable("4.16-Single"),
-	"backup_schedule":        config.StringVariable("00 6 * * *"),
+	"backup_schedule":        config.StringVariable("0 6 * * *"),
 	"username":               config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
 	"role":                   config.StringVariable("##STACKIT_LoginManager##"),
 	"region":                 config.StringVariable(testutil.Region),
@@ -66,7 +66,7 @@ func configVarsMinUpdated() config.Variables {
 
 func configVarsMaxUpdated() config.Variables {
 	temp := maps.Clone(testConfigVarsMax)
-	temp["backup_schedule"] = config.StringVariable("00 12 * * *")
+	temp["backup_schedule"] = config.StringVariable("0 12 * * *")
 	return temp
 }
 
