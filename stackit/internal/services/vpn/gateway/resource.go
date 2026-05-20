@@ -598,6 +598,9 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 				return fmt.Errorf("mapping BGP routes: %w", core.DiagsToError(diags))
 			}
 			bgpModel.OverrideAdvertisedRoutes = listVal
+		} else if model.Bgp != nil && !model.Bgp.OverrideAdvertisedRoutes.IsNull() {
+			// preserve empty list from plan/state to avoid inconsistent state
+			bgpModel.OverrideAdvertisedRoutes = types.ListValueMust(types.StringType, []attr.Value{})
 		} else {
 			bgpModel.OverrideAdvertisedRoutes = types.ListNull(types.StringType)
 		}
@@ -614,6 +617,8 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 			return fmt.Errorf("mapping labels: %w", core.DiagsToError(diags))
 		}
 		model.Labels = mapVal
+	} else if !model.Labels.IsNull() {
+		model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 	} else {
 		model.Labels = types.MapNull(types.StringType)
 	}

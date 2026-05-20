@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
@@ -19,24 +18,33 @@ var (
 )
 
 func TestMapFields(t *testing.T) {
+	type args struct {
+		state Model
+		input *vpn.GatewayResponse
+	}
 	tests := []struct {
 		description string
-		input       *vpn.GatewayResponse
+		args        args
 		expected    Model
 		isValid     bool
 	}{
 		{
 			description: "default_ok",
-			input: &vpn.GatewayResponse{
-				Id:          new("gateway-id"),
-				DisplayName: "test-gateway",
-				PlanId:      "p500",
-				RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
-				AvailabilityZones: vpn.GatewayAvailabilityZones{
-					Tunnel1: "eu01-1",
-					Tunnel2: "eu01-2",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
 				},
-				State: utils.Ptr(vpn.GATEWAYSTATUS_READY),
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					State: new(vpn.GatewayStatus("READY")),
+				},
 			},
 			expected: Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
@@ -58,24 +66,29 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			description: "with_bgp_and_labels",
-			input: &vpn.GatewayResponse{
-				Id:          new("gateway-id"),
-				DisplayName: "test-gateway",
-				PlanId:      "p500",
-				RoutingType: vpn.ROUTINGTYPE_BGP_ROUTE_BASED,
-				AvailabilityZones: vpn.GatewayAvailabilityZones{
-					Tunnel1: "eu01-1",
-					Tunnel2: "eu01-2",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
 				},
-				Bgp: &vpn.BGPGatewayConfig{
-					LocalAsn:                 new(int64(65000)),
-					OverrideAdvertisedRoutes: []string{"10.0.0.0/16", "192.168.0.0/24"},
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_BGP_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					Bgp: &vpn.BGPGatewayConfig{
+						LocalAsn:                 new(int64(65000)),
+						OverrideAdvertisedRoutes: []string{"10.0.0.0/16", "192.168.0.0/24"},
+					},
+					Labels: &map[string]string{
+						"env":  "prod",
+						"team": "network",
+					},
+					State: new(vpn.GatewayStatus("READY")),
 				},
-				Labels: &map[string]string{
-					"env":  "prod",
-					"team": "network",
-				},
-				State: utils.Ptr(vpn.GATEWAYSTATUS_READY),
 			},
 			expected: Model{
 				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
@@ -105,16 +118,71 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "preserve_empty_routes_and_labels_from_state",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
+					Bgp: &BGPGatewayConfigModel{
+						OverrideAdvertisedRoutes: types.ListValueMust(types.StringType, []attr.Value{}),
+					},
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				},
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_BGP_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					Bgp: &vpn.BGPGatewayConfig{
+						LocalAsn: new(int64(65000)),
+					},
+					Labels: nil,
+					State:  new(vpn.GatewayStatus("READY")),
+				},
+			},
+			expected: Model{
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
+				GatewayId:   types.StringValue("gateway-id"),
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("BGP_ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				Bgp: &BGPGatewayConfigModel{
+					LocalAsn:                 types.Int64Value(65000),
+					OverrideAdvertisedRoutes: types.ListValueMust(types.StringType, []attr.Value{}),
+				},
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				State:  types.StringValue("READY"),
+			},
+			isValid: true,
+		},
+		{
 			description: "nil_response",
-			input:       nil,
-			expected:    Model{},
-			isValid:     false,
+			args: args{
+				state: Model{},
+				input: nil,
+			},
+			expected: Model{},
+			isValid:  false,
 		},
 		{
 			description: "nil_gateway_id",
-			input: &vpn.GatewayResponse{
-				Id:          nil,
-				DisplayName: "test-gateway",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
+				},
+				input: &vpn.GatewayResponse{
+					Id:          nil,
+					DisplayName: "test-gateway",
+				},
 			},
 			expected: Model{},
 			isValid:  false,
@@ -122,10 +190,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			var model Model
-			model.ProjectId = types.StringValue(projectId)
-
-			err := mapFields(context.Background(), tt.input, &model, region)
+			err := mapFields(context.Background(), tt.args.input, &tt.args.state, region)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
@@ -134,7 +199,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("expected no error, got %v", err)
 			}
 			if tt.isValid {
-				if diff := cmp.Diff(tt.expected, model); diff != "" {
+				if diff := cmp.Diff(tt.expected, tt.args.state); diff != "" {
 					t.Fatalf("Data mismatch (-want +got):\n%s", diff)
 				}
 			}

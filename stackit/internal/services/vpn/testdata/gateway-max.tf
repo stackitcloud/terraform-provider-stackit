@@ -31,7 +31,7 @@ resource "stackit_vpn_gateway" "gateway" {
     override_advertised_routes = compact([var.advertised_route_1, var.advertised_route_2, var.advertised_route_3])
   }
 
-  labels = {
+  labels = var.label_key == "" ? {} : {
     (var.label_key) = var.label_value
   }
 }
