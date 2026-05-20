@@ -146,9 +146,9 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
+	projectId := model.ProjectId.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
-	gatewayId := model.GatewayID.ValueString()
+	gatewayId := model.GatewayId.ValueString()
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)

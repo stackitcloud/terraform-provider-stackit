@@ -50,12 +50,12 @@ type BGPGatewayConfigModel struct {
 }
 
 type Model struct {
-	ID                types.String            `tfsdk:"id"`
-	GatewayID         types.String            `tfsdk:"gateway_id"`
-	ProjectID         types.String            `tfsdk:"project_id"`
+	Id                types.String            `tfsdk:"id"` // needed by TF
+	GatewayId         types.String            `tfsdk:"gateway_id"`
+	ProjectId         types.String            `tfsdk:"project_id"`
 	Region            types.String            `tfsdk:"region"`
 	DisplayName       types.String            `tfsdk:"display_name"`
-	PlanID            types.String            `tfsdk:"plan_id"`
+	PlanId            types.String            `tfsdk:"plan_id"`
 	RoutingType       types.String            `tfsdk:"routing_type"`
 	AvailabilityZones *AvailabilityZonesModel `tfsdk:"availability_zones"`
 	Bgp               *BGPGatewayConfigModel  `tfsdk:"bgp"`
@@ -275,7 +275,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
+	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -339,8 +339,8 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
-	gatewayId := model.GatewayID.ValueString()
+	projectId := model.ProjectId.ValueString()
+	gatewayId := model.GatewayId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -383,8 +383,8 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
-	gatewayId := model.GatewayID.ValueString()
+	projectId := model.ProjectId.ValueString()
+	gatewayId := model.GatewayId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -434,8 +434,8 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
-	gatewayId := model.GatewayID.ValueString()
+	projectId := model.ProjectId.ValueString()
+	gatewayId := model.GatewayId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
@@ -468,7 +468,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 
 	payload := &vpn.CreateGatewayPayload{
 		DisplayName: model.DisplayName.ValueString(),
-		PlanId:      model.PlanID.ValueString(),
+		PlanId:      model.PlanId.ValueString(),
 		RoutingType: vpn.RoutingType(model.RoutingType.ValueString()),
 		AvailabilityZones: vpn.CreateGatewayPayloadAvailabilityZones{
 			Tunnel1: model.AvailabilityZones.Tunnel1.ValueString(),
@@ -517,7 +517,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 
 	payload := &vpn.UpdateGatewayPayload{
 		DisplayName: model.DisplayName.ValueString(),
-		PlanId:      model.PlanID.ValueString(),
+		PlanId:      model.PlanId.ValueString(),
 		AvailabilityZones: vpn.UpdateGatewayPayloadAvailabilityZones{
 			Tunnel1: model.AvailabilityZones.Tunnel1.ValueString(),
 			Tunnel2: model.AvailabilityZones.Tunnel2.ValueString(),
@@ -564,18 +564,18 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	}
 
 	var gatewayId string
-	if model.GatewayID.ValueString() != "" {
-		gatewayId = model.GatewayID.ValueString()
+	if model.GatewayId.ValueString() != "" {
+		gatewayId = model.GatewayId.ValueString()
 	} else if gateway.Id != nil {
 		gatewayId = *gateway.Id
 	} else {
 		return fmt.Errorf("gateway id not present")
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, gatewayId)
-	model.GatewayID = types.StringValue(gatewayId)
+	model.Id = tfutils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, gatewayId)
+	model.GatewayId = types.StringValue(gatewayId)
 	model.DisplayName = types.StringValue(gateway.DisplayName)
-	model.PlanID = types.StringValue(gateway.PlanId)
+	model.PlanId = types.StringValue(gateway.PlanId)
 	model.RoutingType = types.StringValue(string(gateway.RoutingType))
 	model.Region = types.StringValue(region)
 

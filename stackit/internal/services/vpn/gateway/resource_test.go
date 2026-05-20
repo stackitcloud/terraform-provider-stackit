@@ -39,12 +39,12 @@ func TestMapFields(t *testing.T) {
 				State: utils.Ptr(vpn.GATEWAYSTATUS_READY),
 			},
 			expected: Model{
-				ID:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
-				ProjectID:   types.StringValue(projectId),
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
 				Region:      types.StringValue(region),
-				GatewayID:   types.StringValue("gateway-id"),
+				GatewayId:   types.StringValue("gateway-id"),
 				DisplayName: types.StringValue("test-gateway"),
-				PlanID:      types.StringValue("p500"),
+				PlanId:      types.StringValue("p500"),
 				RoutingType: types.StringValue("ROUTE_BASED"),
 				AvailabilityZones: &AvailabilityZonesModel{
 					Tunnel1: types.StringValue("eu01-1"),
@@ -78,12 +78,12 @@ func TestMapFields(t *testing.T) {
 				State: utils.Ptr(vpn.GATEWAYSTATUS_READY),
 			},
 			expected: Model{
-				ID:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
-				ProjectID:   types.StringValue(projectId),
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
 				Region:      types.StringValue(region),
-				GatewayID:   types.StringValue("gateway-id"),
+				GatewayId:   types.StringValue("gateway-id"),
 				DisplayName: types.StringValue("test-gateway"),
-				PlanID:      types.StringValue("p500"),
+				PlanId:      types.StringValue("p500"),
 				RoutingType: types.StringValue("BGP_ROUTE_BASED"),
 				AvailabilityZones: &AvailabilityZonesModel{
 					Tunnel1: types.StringValue("eu01-1"),
@@ -123,7 +123,7 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var model Model
-			model.ProjectID = types.StringValue(projectId)
+			model.ProjectId = types.StringValue(projectId)
 
 			err := mapFields(context.Background(), tt.input, &model, region)
 
@@ -153,7 +153,7 @@ func TestToCreatePayload(t *testing.T) {
 			description: "basic_gateway",
 			input: &Model{
 				DisplayName: types.StringValue("test-gateway"),
-				PlanID:      types.StringValue("p500"),
+				PlanId:      types.StringValue("p500"),
 				RoutingType: types.StringValue("ROUTE_BASED"),
 				AvailabilityZones: &AvailabilityZonesModel{
 					Tunnel1: types.StringValue("eu01-1"),
@@ -175,7 +175,7 @@ func TestToCreatePayload(t *testing.T) {
 			description: "with_bgp",
 			input: &Model{
 				DisplayName: types.StringValue("test-gateway"),
-				PlanID:      types.StringValue("p500"),
+				PlanId:      types.StringValue("p500"),
 				RoutingType: types.StringValue("BGP_ROUTE_BASED"),
 				AvailabilityZones: &AvailabilityZonesModel{
 					Tunnel1: types.StringValue("eu01-1"),
@@ -238,7 +238,7 @@ func TestToUpdatePayload(t *testing.T) {
 			description: "basic_update",
 			input: &Model{
 				DisplayName: types.StringValue("updated-gateway"),
-				PlanID:      types.StringValue("p1000"),
+				PlanId:      types.StringValue("p1000"),
 				AvailabilityZones: &AvailabilityZonesModel{
 					Tunnel1: types.StringValue("eu01-1"),
 					Tunnel2: types.StringValue("eu01-2"),
