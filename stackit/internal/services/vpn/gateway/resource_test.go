@@ -194,7 +194,7 @@ func TestToCreatePayload(t *testing.T) {
 					Tunnel2: "eu01-2",
 				},
 				Bgp: &vpn.BGPGatewayConfig{
-					LocalAsn: utils.Ptr(int64(65000)),
+					LocalAsn: new(int64(65000)),
 				},
 			},
 			isValid: true,
