@@ -15,7 +15,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.26.0
 	github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.2
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.16.0
-	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.6.2
+	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.13.0
@@ -23,10 +23,10 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.13.0
-	github.com/stackitcloud/stackit-sdk-go/services/logme v0.28.2
+	github.com/stackitcloud/stackit-sdk-go/services/logme v0.29.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.28.2
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.9.2
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.29.0
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.3
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.21.2
@@ -46,7 +46,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.9.0
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/mod v0.35.0
+	golang.org/x/mod v0.36.0
 )
 
 require (
@@ -239,7 +239,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260209203927-2842357ff358 // indirect
-	golang.org/x/telemetry v0.0.0-20260311193753-579e4da9a98c // indirect
+	golang.org/x/telemetry v0.0.0-20260409153401-be6f6cb8b1fa // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -288,11 +288,11 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
-	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect

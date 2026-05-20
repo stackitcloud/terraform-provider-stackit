@@ -44,6 +44,7 @@ type dataSourceModel struct {
 	Region                         types.String         `tfsdk:"region"`
 	SnapshotsAreVisible            types.Bool           `tfsdk:"snapshots_are_visible"`
 	SnapshotPolicy                 *SnapshotPolicyModel `tfsdk:"snapshot_policy"`
+	Labels                         types.Map            `tfsdk:"labels"`
 }
 
 type resourcePoolDataSource struct {
@@ -210,7 +211,13 @@ func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				// the region cannot be found automatically, so it has to be passed
 				Optional:    true,
 				Description: "The resource region. Read-only attribute that reflects the provider region.",
-			}},
+			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource pool",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
+		},
 	}
 }
 
@@ -268,6 +275,12 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 			Name: types.StringPointerValue(snapshotPolicy.Name),
 		}
 	}
+
+	labels, err := utils.MapLabels(ctx, resourcePool.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+	model.Labels = labels
 
 	return nil
 }

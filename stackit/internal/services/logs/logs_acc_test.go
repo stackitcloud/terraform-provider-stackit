@@ -531,7 +531,6 @@ func TestAccLogsAccessTokenMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "description", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["description"])),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "lifetime", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["lifetime"])),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "id"),
-					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token_id"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "creator"),
 					resource.TestCheckResourceAttrSet("stackit_logs_access_token.accessToken", "access_token"),
 					resource.TestCheckResourceAttr("stackit_logs_access_token.accessToken", "expires", testutil.ConvertConfigVariable(testConfigAccessTokenVarsMax["expires"])),

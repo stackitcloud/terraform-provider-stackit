@@ -78,6 +78,7 @@ var testConfigExportPolicyVarsMax = config.Variables{
 	"second_rule_ip_acl_2":   config.StringVariable("172.16.0.250/32"),
 	"second_rule_read_only":  config.BoolVariable(true),
 	"second_rule_super_user": config.BoolVariable(false),
+	"label":                  config.StringVariable("foo"),
 }
 
 var testConfigExportPolicyVarsMaxUpdated = func() config.Variables {
@@ -87,6 +88,7 @@ var testConfigExportPolicyVarsMaxUpdated = func() config.Variables {
 	updatedConfig["first_rule_description"] = config.StringVariable("Some other description")
 	updatedConfig["first_rule_ip_acl_1"] = config.StringVariable("172.17.0.0/24")
 	updatedConfig["first_rule_ip_acl_2"] = config.StringVariable("172.17.0.250/32")
+	updatedConfig["label"] = config.StringVariable("bar")
 
 	return updatedConfig
 }
@@ -126,6 +128,7 @@ var testConfigResourcePoolVarsMax = config.Variables{
 	"size_gigabytes":        config.IntegerVariable(512),
 	"snapshots_are_visible": config.BoolVariable(true),
 	"snapshot_policy_id":    config.StringVariable("2b138c3b-2453-11f1-97cd-d039eac4b54e"),
+	"label":                 config.StringVariable("foo"),
 }
 
 var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
@@ -136,6 +139,7 @@ var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(1024)
 	updatedConfig["ip_acl_1"] = config.StringVariable("172.17.0.0/24")
 	updatedConfig["ip_acl_2"] = config.StringVariable("172.17.0.250/32")
+	updatedConfig["label"] = config.StringVariable("bar")
 	return updatedConfig
 }
 
@@ -164,12 +168,14 @@ var testConfigShareVarsMax = config.Variables{
 	"resource_pool_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"space_hard_limit_gigabytes": config.IntegerVariable(42),
 	"export_policy_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"label":                      config.StringVariable("foo"),
 }
 
 var testConfigShareVarsMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testConfigShareVarsMax)
 	updatedConfig["space_hard_limit_gigabytes"] = config.IntegerVariable(50)
+	updatedConfig["label"] = config.StringVariable("bar")
 	return updatedConfig
 }
 
@@ -196,6 +202,7 @@ func TestAccExportPolicyMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMin["name"])),
 
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "0"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "labels.%", "0"),
 				),
 			},
 			// Data source
@@ -225,6 +232,7 @@ func TestAccExportPolicyMin(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMin["name"])),
 
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "labels.%", "0"),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.#", "0"),
 				),
 			},
@@ -262,6 +270,7 @@ func TestAccExportPolicyMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_sfs_export_policy.exportpolicy", "policy_id"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "name", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMinUpdated()["name"])),
 
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "labels.%", "0"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "0"),
 				),
 			},
@@ -304,6 +313,8 @@ func TestAccExportPolicyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.read_only", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_read_only"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.set_uuid", "false"), // default value
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.super_user", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_super_user"])),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "labels.label", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["label"])),
 				),
 			},
 			// Data source
@@ -351,6 +362,8 @@ func TestAccExportPolicyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.read_only", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_read_only"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.set_uuid", "false"), // default value
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.super_user", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_super_user"])),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "labels.label", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["label"])),
 				),
 			},
 			// Import
@@ -405,6 +418,8 @@ func TestAccExportPolicyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.read_only", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["second_rule_read_only"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.set_uuid", "false"), // default value
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.super_user", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["second_rule_super_user"])),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "labels.label", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["label"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -435,6 +450,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
 					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.%", "0"),
 				),
 			},
 			// Data source
@@ -471,6 +487,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", "false"),
 					resource.TestCheckNoResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "labels.%", "0"),
 				),
 			},
 			// Import
@@ -514,6 +531,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
 					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.%", "0"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -545,6 +563,8 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name"),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.label", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["label"])),
 				),
 			},
 			// Data source
@@ -585,6 +605,8 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 						"data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy.name",
 						"stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name",
 					),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "labels.label", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["label"])),
 				),
 			},
 			// Import
@@ -628,7 +650,10 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["ip_acl_2"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["snapshots_are_visible"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
-					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name")),
+					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name"),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.label", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["label"])),
+				),
 			},
 			// Deletion is done by the framework implicitly
 		},
@@ -657,6 +682,7 @@ func TestAccShareResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMin["space_hard_limit_gigabytes"])),
 					resource.TestCheckNoResourceAttr("stackit_sfs_share.share", "export_policy"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "labels.%", "0"),
 				),
 			},
 			// Data source
@@ -693,6 +719,7 @@ func TestAccShareResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMin["space_hard_limit_gigabytes"])),
 					resource.TestCheckNoResourceAttr("data.stackit_sfs_share.share_ds", "export_policy"),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "mount_path"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "labels.%", "0"),
 				),
 			},
 			// Import
@@ -739,6 +766,7 @@ func TestAccShareResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_share.share", "space_hard_limit_gigabytes", testutil.ConvertConfigVariable(testConfigShareVarsMinUpdated()["space_hard_limit_gigabytes"])),
 					resource.TestCheckNoResourceAttr("stackit_sfs_share.share", "export_policy"),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "labels.%", "0"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -771,6 +799,8 @@ func TestAccShareResourceMax(t *testing.T) {
 						"stackit_sfs_export_policy.exportpolicy", "name",
 					),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "labels.label", testutil.ConvertConfigVariable(testConfigShareVarsMax["label"])),
 				),
 			},
 			// Data source
@@ -810,6 +840,8 @@ func TestAccShareResourceMax(t *testing.T) {
 						"stackit_sfs_export_policy.exportpolicy", "name",
 					),
 					resource.TestCheckResourceAttrSet("data.stackit_sfs_share.share_ds", "mount_path"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "labels.%", "1"),
+					resource.TestCheckResourceAttr("data.stackit_sfs_share.share_ds", "labels.label", testutil.ConvertConfigVariable(testConfigShareVarsMax["label"])),
 				),
 			},
 			// Import
@@ -859,6 +891,8 @@ func TestAccShareResourceMax(t *testing.T) {
 						"stackit_sfs_export_policy.exportpolicy", "name",
 					),
 					resource.TestCheckResourceAttrSet("stackit_sfs_share.share", "mount_path"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "labels.%", "1"),
+					resource.TestCheckResourceAttr("stackit_sfs_share.share", "labels.label", testutil.ConvertConfigVariable(testConfigShareVarsMaxUpdated()["label"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
