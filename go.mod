@@ -21,7 +21,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.11.1
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/kms v1.9.0
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v0.29.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.9.0
@@ -29,13 +29,13 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.3
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.21.2
-	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.27.2
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.22.0
+	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.28.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.2
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.2
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.23.0
-	github.com/stackitcloud/stackit-sdk-go/services/scf v0.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/scf v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.2
