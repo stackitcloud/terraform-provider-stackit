@@ -158,6 +158,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"region":          "The resource region. If not defined, the provider region is used.",
 		"backup_schedule": "The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.",
 		"replicas":        "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.",
+		"storage_class":   "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --storages --flavor-id FLAVOR_ID\n```",
 	}
 
 	resp.Schema = schema.Schema{
@@ -247,7 +248,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Required: true,
+						Description: descriptions["storage_class"],
+						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
