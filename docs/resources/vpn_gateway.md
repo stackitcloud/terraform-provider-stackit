@@ -40,21 +40,21 @@ import {
 
 - `availability_zones` (Attributes) Availability zones for the two tunnel endpoints. (see [below for nested schema](#nestedatt--availability_zones))
 - `display_name` (String) A user-friendly name for the VPN gateway.
-- `plan_id` (String) The service plan identifier (e.g. p500).
+- `plan_id` (String) The service plan identifier (e.g. `p500`). For guidance on finding available plans, see [List available service plans](https://docs.stackit.cloud/products/network/connectivity-hybrid-multi-cloud/vpn/getting-started/gateway-create/#list-available-service-plans).
 - `project_id` (String) STACKIT project ID associated with the VPN gateway.
-- `routing_type` (String) Routing architecture: POLICY_BASED, ROUTE_BASED, or BGP_ROUTE_BASED.
+- `routing_type` (String) Routing architecture. Possible values are: `POLICY_BASED`, `ROUTE_BASED`, `BGP_ROUTE_BASED`.
 
 ### Optional
 
 - `bgp` (Attributes) BGP configuration. Only applicable when routing_type is BGP_ROUTE_BASED. (see [below for nested schema](#nestedatt--bgp))
 - `labels` (Map of String) Map of custom labels (key-value string pairs).
-- `region` (String) STACKIT region (e.g. eu01).
+- `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `gateway_id` (String) The server-generated UUID of the VPN gateway.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`".
-- `state` (String) The current lifecycle state of the gateway (PENDING, READY, ERROR, DELETING).
+- `state` (String) The current lifecycle state of the gateway. Possible values are: `PENDING`, `READY`, `ERROR`, `DELETING`.
 
 <a id="nestedatt--availability_zones"></a>
 ### Nested Schema for `availability_zones`

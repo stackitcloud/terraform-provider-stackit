@@ -49,7 +49,7 @@ var schemaDescriptions = map[string]string{
 	"query_url":       "The Logs instance's query URL",
 	"retention_days":  "The log retention time in days",
 	"status": fmt.Sprintf(
-		"The status of the Logs instance, possible values: %s",
+		"The status of the Logs instance. %s",
 		tfutils.FormatPossibleValues("active", "deleting", "reconciling"),
 	),
 }

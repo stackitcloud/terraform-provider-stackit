@@ -23,6 +23,8 @@ import (
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api/wait"
 
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
@@ -36,7 +38,8 @@ var (
 	_ resource.ResourceWithImportState = &gatewayResource{}
 	_ resource.ResourceWithModifyPlan  = &gatewayResource{}
 
-	routingTypeOptions = []string{"POLICY_BASED", "ROUTE_BASED", "BGP_ROUTE_BASED"}
+	gatewayStates      = sdkUtils.EnumSliceToStringSlice(vpn.AllowedGatewayStatusEnumValues)
+	routingTypeOptions = sdkUtils.EnumSliceToStringSlice(vpn.AllowedRoutingTypeEnumValues)
 )
 
 type AvailabilityZonesModel struct {
@@ -67,18 +70,18 @@ var schemaDescriptions = map[string]string{
 	"id":                 "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`\".",
 	"gateway_id":         "The server-generated UUID of the VPN gateway.",
 	"project_id":         "STACKIT project ID associated with the VPN gateway.",
-	"region":             "STACKIT region (e.g. eu01).",
+	"region":             "STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"display_name":       "A user-friendly name for the VPN gateway.",
-	"plan_id":            "The service plan identifier (e.g. p500).",
-	"routing_type":       "Routing architecture: POLICY_BASED, ROUTE_BASED, or BGP_ROUTE_BASED.",
+	"plan_id":            "The service plan identifier (e.g. `p500`). For guidance on finding available plans, see [List available service plans](https://docs.stackit.cloud/products/network/connectivity-hybrid-multi-cloud/vpn/getting-started/gateway-create/#list-available-service-plans).",
+	"routing_type":       fmt.Sprintf("Routing architecture. %s", tfutils.FormatPossibleValues(routingTypeOptions...)),
 	"availability_zones": "Availability zones for the two tunnel endpoints.",
-	"bgp":                "BGP configuration. Only applicable when routing_type is BGP_ROUTE_BASED.",
+	"bgp":                fmt.Sprintf("BGP configuration. Only applicable when routing_type is %s.", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
 	"labels":             "Map of custom labels (key-value string pairs).",
-	"state":              "The current lifecycle state of the gateway (PENDING, READY, ERROR, DELETING).",
+	"state":              fmt.Sprintf("The current lifecycle state of the gateway. %s", tfutils.FormatPossibleValues(gatewayStates...)),
 }
 
 type gatewayResource struct {
-	client       *vpn.APIClient
+	apiClient    *vpn.APIClient
 	providerData core.ProviderData
 }
 
@@ -87,17 +90,16 @@ func NewGatewayResource() resource.Resource {
 }
 
 func (r *gatewayResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.apiClient = utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
-	r.providerData = providerData
 	tflog.Info(ctx, "VPN client configured")
 }
 
@@ -286,7 +288,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateGateway(ctx, projectId, vpn.Region(region)).CreateGatewayPayload(*payload).Execute()
+	createResp, err := r.apiClient.DefaultAPI.CreateGateway(ctx, projectId, vpn.Region(region)).CreateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -309,7 +311,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.apiClient.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Gateway creation waiting: %v", err))
 		return
@@ -346,7 +348,7 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	gatewayResp, err := r.client.DefaultAPI.GetGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
+	gatewayResp, err := r.apiClient.DefaultAPI.GetGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -396,7 +398,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	_, err = r.client.DefaultAPI.UpdateGateway(ctx, projectId, vpn.Region(region), gatewayId).UpdateGatewayPayload(*payload).Execute()
+	_, err = r.apiClient.DefaultAPI.UpdateGateway(ctx, projectId, vpn.Region(region), gatewayId).UpdateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", err.Error())
 		return
@@ -404,7 +406,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.apiClient.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Gateway update waiting: %v", err))
 		return
@@ -441,7 +443,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DeleteGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
+	err := r.apiClient.DefaultAPI.DeleteGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -449,7 +451,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
+	_, err = wait.DeleteGatewayWaitHandler(ctx, r.apiClient.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Gateway deletion waiting: %v", err))
 		return

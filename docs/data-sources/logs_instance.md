@@ -45,4 +45,4 @@ data "stackit_logs_instance" "logs" {
 - `query_range_url` (String) The Logs instance's query range URL
 - `query_url` (String) The Logs instance's query URL
 - `retention_days` (Number) The log retention time in days
-- `status` (String) The status of the Logs instance, possible values: Possible values are: `active`, `deleting`, `reconciling`.
+- `status` (String) The status of the Logs instance. Possible values are: `active`, `deleting`, `reconciling`.

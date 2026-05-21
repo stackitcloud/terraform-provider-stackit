@@ -27,10 +27,10 @@ VPN Gateway data source schema. Uses the `default_region` specified in the provi
 - `display_name` (String) A user-friendly name for the VPN gateway.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`".
 - `labels` (Map of String) Map of custom labels (key-value string pairs).
-- `plan_id` (String) The service plan identifier (e.g. p500).
-- `region` (String) STACKIT region (e.g. eu01).
-- `routing_type` (String) Routing architecture: POLICY_BASED, ROUTE_BASED, or BGP_ROUTE_BASED.
-- `state` (String) The current lifecycle state of the gateway (PENDING, READY, ERROR, DELETING).
+- `plan_id` (String) The service plan identifier (e.g. `p500`). For guidance on finding available plans, see [List available service plans](https://docs.stackit.cloud/products/network/connectivity-hybrid-multi-cloud/vpn/getting-started/gateway-create/#list-available-service-plans).
+- `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
+- `routing_type` (String) Routing architecture. Possible values are: `POLICY_BASED`, `ROUTE_BASED`, `BGP_ROUTE_BASED`.
+- `state` (String) The current lifecycle state of the gateway. Possible values are: `PENDING`, `READY`, `ERROR`, `DELETING`.
 
 <a id="nestedatt--availability_zones"></a>
 ### Nested Schema for `availability_zones`
