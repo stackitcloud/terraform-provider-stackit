@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -33,10 +34,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = &gatewayResource{}
-	_ resource.ResourceWithConfigure   = &gatewayResource{}
-	_ resource.ResourceWithImportState = &gatewayResource{}
-	_ resource.ResourceWithModifyPlan  = &gatewayResource{}
+	_ resource.Resource                   = &gatewayResource{}
+	_ resource.ResourceWithConfigure      = &gatewayResource{}
+	_ resource.ResourceWithImportState    = &gatewayResource{}
+	_ resource.ResourceWithModifyPlan     = &gatewayResource{}
+	_ resource.ResourceWithValidateConfig = &gatewayResource{}
 
 	gatewayStates      = sdkUtils.EnumSliceToStringSlice(vpn.AllowedGatewayStatusEnumValues)
 	routingTypeOptions = sdkUtils.EnumSliceToStringSlice(vpn.AllowedRoutingTypeEnumValues)
@@ -192,7 +194,7 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Attributes: map[string]schema.Attribute{
 					"local_asn": schema.Int64Attribute{
 						Description: "Local ASN for BGP (private ASN range, 64512-4294967294).",
-						Optional:    true,
+						Required:    true,
 						Validators: []validator.Int64{
 							int64validator.Between(64512, 4294967294),
 						},
@@ -219,6 +221,37 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:    true,
 			},
 		},
+	}
+}
+
+func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if model.RoutingType.IsNull() || model.RoutingType.IsUnknown() {
+		return
+	}
+
+	if model.RoutingType.ValueString() != string(vpn.ROUTINGTYPE_BGP_ROUTE_BASED) {
+		return
+	}
+
+	var bgp types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("bgp"), &bgp)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if bgp.IsNull() || bgp.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("bgp"),
+			"Missing required attribute",
+			fmt.Sprintf("`bgp` must be set when `routing_type` is set to `%s`", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
+		)
 	}
 }
 
