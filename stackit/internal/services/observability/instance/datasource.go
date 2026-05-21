@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -33,7 +33,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *observability.APIClient
+	client *observabilitySdk.APIClient
 }
 
 // Metadata returns the data source type name.
@@ -147,15 +147,15 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "Specifies for how many days the logs are kept. Default is set to `7`.",
 				Computed:    true,
 			},
-			"metrics_retention_days": schema.Int64Attribute{
+			"metrics_retention_days": schema.Int32Attribute{
 				Description: "Specifies for how many days the raw metrics are kept. Default is set to `90`.",
 				Computed:    true,
 			},
-			"metrics_retention_days_5m_downsampling": schema.Int64Attribute{
+			"metrics_retention_days_5m_downsampling": schema.Int32Attribute{
 				Description: "Specifies for how many days the 5m downsampled metrics are kept. must be less than the value of the general retention. Default is set to `90`.",
 				Computed:    true,
 			},
-			"metrics_retention_days_1h_downsampling": schema.Int64Attribute{
+			"metrics_retention_days_1h_downsampling": schema.Int32Attribute{
 				Description: "Specifies for how many days the 1h downsampled metrics are kept. must be less than the value of the 5m downsampling retention. Default is set to `90`.",
 				Computed:    true,
 			},
@@ -406,7 +406,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	instanceResp, err := d.client.GetInstance(ctx, instanceId, projectId).Execute()
+	instanceResp, err := d.client.DefaultAPI.GetInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -424,13 +424,13 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	if instanceResp != nil && instanceResp.Status != nil && *instanceResp.Status == observability.GETINSTANCERESPONSESTATUS_DELETE_SUCCEEDED {
+	if instanceResp != nil && instanceResp.Status != "" && instanceResp.Status == "DELETE_SUCCEEDED" {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
 		return
 	}
 
-	aclListResp, err := d.client.ListACL(ctx, instanceId, projectId).Execute()
+	aclListResp, err := d.client.DefaultAPI.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
@@ -471,7 +471,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
 	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
-		metricsRetentionResp, err := d.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+		metricsRetentionResp, err := d.client.DefaultAPI.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
 			return
@@ -490,7 +490,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 
 		// Handle Logs Retentions
-		logsRetentionResp, err := d.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+		logsRetentionResp, err := d.client.DefaultAPI.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
 			return
@@ -509,7 +509,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 
 		// Handle Traces Retentions
-		tracesRetentionResp, err := d.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+		tracesRetentionResp, err := d.client.DefaultAPI.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get traces retention: %v", err))
 			return
@@ -530,7 +530,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
 	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
-		alertConfigResp, err := d.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+		alertConfigResp, err := d.client.DefaultAPI.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
 			return
