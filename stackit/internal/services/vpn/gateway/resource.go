@@ -212,6 +212,7 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: schemaDescriptions["labels"],
 				Optional:    true,
 				ElementType: types.StringType,
+				Validators:  validate.LabelValidators(),
 			},
 			"state": schema.StringAttribute{
 				Description: schemaDescriptions["state"],
@@ -495,16 +496,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 		payload.Bgp = bgpConfig
 	}
 
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		labels := make(map[string]string)
-		diags := model.Labels.ElementsAs(ctx, &labels, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
-		}
-		if len(labels) > 0 {
-			payload.Labels = &labels
-		}
+	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
+	payload.Labels = &labels
 
 	return payload, nil
 }
@@ -545,14 +541,11 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 		payload.Bgp = bgpConfig
 	}
 
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		labels := make(map[string]string)
-		diags := model.Labels.ElementsAs(ctx, &labels, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
-		}
-		payload.Labels = &labels
+	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
+	payload.Labels = &labels
 
 	return payload, nil
 }
@@ -609,21 +602,11 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		model.Bgp = bgpModel
 	}
 
-	if gateway.Labels != nil && len(*gateway.Labels) > 0 {
-		labelsMap := make(map[string]attr.Value)
-		for k, v := range *gateway.Labels {
-			labelsMap[k] = types.StringValue(v)
-		}
-		mapVal, diags := types.MapValue(types.StringType, labelsMap)
-		if diags.HasError() {
-			return fmt.Errorf("mapping labels: %w", core.DiagsToError(diags))
-		}
-		model.Labels = mapVal
-	} else if !model.Labels.IsNull() {
-		model.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
-	} else {
-		model.Labels = types.MapNull(types.StringType)
+	labels, err := tfutils.MapLabels(ctx, gateway.Labels, model.Labels)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
 	}
+	model.Labels = labels
 
 	if gateway.State != nil {
 		model.State = types.StringValue(string(*gateway.State))
