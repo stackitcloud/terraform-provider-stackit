@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
 	tfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -17,7 +17,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       *Model
-		apiName     *string
+		apiName     string
 		expectError bool
 		expected    *authorization.AddMembersPayload
 	}{
@@ -27,14 +27,14 @@ func TestToCreatePayload(t *testing.T) {
 				Role:    types.StringValue("editor"),
 				Subject: types.StringValue("foo.bar@stackit.cloud"),
 			},
-			apiName:     &apiName,
+			apiName:     apiName,
 			expectError: false,
 			expected: &authorization.AddMembersPayload{
-				ResourceType: &apiName,
-				Members: &[]authorization.Member{
+				ResourceType: apiName,
+				Members: []authorization.Member{
 					{
-						Role:    new("editor"),
-						Subject: new("foo.bar@stackit.cloud"),
+						Role:    "editor",
+						Subject: "foo.bar@stackit.cloud",
 					},
 				},
 			},
@@ -42,7 +42,7 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			name:        "nil model",
 			input:       nil,
-			apiName:     &apiName,
+			apiName:     apiName,
 			expectError: true,
 		},
 		{
@@ -51,7 +51,7 @@ func TestToCreatePayload(t *testing.T) {
 				Role:    types.StringUnknown(),
 				Subject: types.StringValue("foo.bar@stackit.cloud"),
 			},
-			apiName:     &apiName,
+			apiName:     apiName,
 			expectError: true,
 		},
 		{
@@ -60,7 +60,7 @@ func TestToCreatePayload(t *testing.T) {
 				Role:    types.StringValue(""),
 				Subject: types.StringValue("foo.bar@stackit.cloud"),
 			},
-			apiName:     &apiName,
+			apiName:     apiName,
 			expectError: true,
 		},
 		{
@@ -69,7 +69,7 @@ func TestToCreatePayload(t *testing.T) {
 				Role:    types.StringValue("editor"),
 				Subject: types.StringUnknown(),
 			},
-			apiName:     &apiName,
+			apiName:     apiName,
 			expectError: true,
 		},
 		{
@@ -78,7 +78,7 @@ func TestToCreatePayload(t *testing.T) {
 				Role:    types.StringValue("editor"),
 				Subject: types.StringValue(""),
 			},
-			apiName:     &apiName,
+			apiName:     apiName,
 			expectError: true,
 		},
 	}
@@ -118,11 +118,11 @@ func TestMapListMembersResponse(t *testing.T) {
 		{
 			name: "successfully maps values",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
-				Members: &[]authorization.Member{
+				ResourceId: resourceID,
+				Members: []authorization.Member{
 					{
-						Role:    &role,
-						Subject: &subject,
+						Role:    role,
+						Subject: subject,
 					},
 				},
 			},
@@ -150,25 +150,8 @@ func TestMapListMembersResponse(t *testing.T) {
 		{
 			name: "nil members input",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
+				ResourceId: resourceID,
 				Members:    nil,
-			},
-			inputModel: &Model{
-				Role:    types.StringValue(role),
-				Subject: types.StringValue(subject),
-			},
-			expectError: true,
-		},
-		{
-			name: "nil resource_id input",
-			resp: &authorization.ListMembersResponse{
-				ResourceId: nil,
-				Members: &[]authorization.Member{
-					{
-						Role:    &role,
-						Subject: &subject,
-					},
-				},
 			},
 			inputModel: &Model{
 				Role:    types.StringValue(role),
@@ -179,11 +162,11 @@ func TestMapListMembersResponse(t *testing.T) {
 		{
 			name: "nil model input",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
-				Members: &[]authorization.Member{
+				ResourceId: resourceID,
+				Members: []authorization.Member{
 					{
-						Role:    &role,
-						Subject: &subject,
+						Role:    role,
+						Subject: subject,
 					},
 				},
 			},
@@ -193,11 +176,11 @@ func TestMapListMembersResponse(t *testing.T) {
 		{
 			name: "no matching role/subject pair",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
-				Members: &[]authorization.Member{
+				ResourceId: resourceID,
+				Members: []authorization.Member{
 					{
-						Role:    new("reader"),
-						Subject: new("foo.bar@stackit.cloud"),
+						Role:    "reader",
+						Subject: "foo.bar@stackit.cloud",
 					},
 				},
 			},
@@ -244,8 +227,8 @@ func TestCheckDuplicate(t *testing.T) {
 		{
 			name: "no members => no duplicate",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
-				Members:    &[]authorization.Member{},
+				ResourceId: resourceID,
+				Members:    []authorization.Member{},
 			},
 			inputModel: Model{
 				ResourceId: types.StringValue(resourceID),
@@ -257,15 +240,15 @@ func TestCheckDuplicate(t *testing.T) {
 		{
 			name: "members but no matching role/subject => no duplicate",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
-				Members: &[]authorization.Member{
+				ResourceId: resourceID,
+				Members: []authorization.Member{
 					{
-						Role:    new("reader"),
-						Subject: new("foo.bar@stackit.cloud"),
+						Role:    "reader",
+						Subject: "foo.bar@stackit.cloud",
 					},
 					{
-						Role:    new("editor"),
-						Subject: new("someoneelse@stackit.cloud"),
+						Role:    "editor",
+						Subject: "someoneelse@stackit.cloud",
 					},
 				},
 			},
@@ -279,11 +262,11 @@ func TestCheckDuplicate(t *testing.T) {
 		{
 			name: "matching role/subject exists => duplicate error",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
-				Members: &[]authorization.Member{
+				ResourceId: resourceID,
+				Members: []authorization.Member{
 					{
-						Role:    &role,
-						Subject: &subject,
+						Role:    role,
+						Subject: subject,
 					},
 				},
 			},
@@ -309,26 +292,8 @@ func TestCheckDuplicate(t *testing.T) {
 		{
 			name: "nil members input => propagated error",
 			resp: &authorization.ListMembersResponse{
-				ResourceId: &resourceID,
+				ResourceId: resourceID,
 				Members:    nil,
-			},
-			inputModel: Model{
-				ResourceId: types.StringValue(resourceID),
-				Role:       types.StringValue(role),
-				Subject:    types.StringValue(subject),
-			},
-			expectError: true,
-		},
-		{
-			name: "nil resource_id input => propagated error",
-			resp: &authorization.ListMembersResponse{
-				ResourceId: nil,
-				Members: &[]authorization.Member{
-					{
-						Role:    &role,
-						Subject: &subject,
-					},
-				},
 			},
 			inputModel: Model{
 				ResourceId: types.StringValue(resourceID),
