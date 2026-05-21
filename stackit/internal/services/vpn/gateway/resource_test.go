@@ -137,7 +137,8 @@ func TestMapFields(t *testing.T) {
 						Tunnel2: "eu01-2",
 					},
 					Bgp: &vpn.BGPGatewayConfig{
-						LocalAsn: new(int64(65000)),
+						LocalAsn:                 new(int64(65000)),
+						OverrideAdvertisedRoutes: nil,
 					},
 					Labels: nil,
 					State:  new(vpn.GatewayStatus("READY")),
@@ -233,11 +234,12 @@ func TestToCreatePayload(t *testing.T) {
 					Tunnel1: "eu01-1",
 					Tunnel2: "eu01-2",
 				},
+				Labels: &map[string]string{},
 			},
 			isValid: true,
 		},
 		{
-			description: "with_bgp",
+			description: "with_bgp_routes_and_labels",
 			input: &Model{
 				DisplayName: types.StringValue("test-gateway"),
 				PlanId:      types.StringValue("p500"),
@@ -249,6 +251,10 @@ func TestToCreatePayload(t *testing.T) {
 				Bgp: &BGPGatewayConfigModel{
 					LocalAsn: types.Int64Value(65000),
 				},
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"env":  types.StringValue("prod"),
+					"team": types.StringValue("network"),
+				}),
 			},
 			expected: &vpn.CreateGatewayPayload{
 				DisplayName: "test-gateway",
@@ -261,6 +267,10 @@ func TestToCreatePayload(t *testing.T) {
 				Bgp: &vpn.BGPGatewayConfig{
 					LocalAsn: new(int64(65000)),
 				},
+				Labels: &map[string]string{
+					"env":  "prod",
+					"team": "network",
+				},
 			},
 			isValid: true,
 		},
@@ -271,7 +281,6 @@ func TestToCreatePayload(t *testing.T) {
 			isValid:     false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			payload, err := toCreatePayload(context.Background(), tt.input)
@@ -316,6 +325,43 @@ func TestToUpdatePayload(t *testing.T) {
 					Tunnel1: "eu01-1",
 					Tunnel2: "eu01-2",
 				},
+				Labels: &map[string]string{},
+			},
+			isValid: true,
+		},
+		{
+			description: "with_bgp_routes_and_labels",
+			input: &Model{
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("BGP_ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				Bgp: &BGPGatewayConfigModel{
+					LocalAsn: types.Int64Value(65000),
+				},
+				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+					"env":  types.StringValue("prod"),
+					"team": types.StringValue("network"),
+				}),
+			},
+			expected: &vpn.UpdateGatewayPayload{
+				DisplayName: "test-gateway",
+				PlanId:      "p500",
+				RoutingType: vpn.RoutingType("BGP_ROUTE_BASED"),
+				AvailabilityZones: vpn.UpdateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+				Bgp: &vpn.BGPGatewayConfig{
+					LocalAsn: new(int64(65000)),
+				},
+				Labels: &map[string]string{
+					"env":  "prod",
+					"team": "network",
+				},
 			},
 			isValid: true,
 		},
@@ -326,7 +372,6 @@ func TestToUpdatePayload(t *testing.T) {
 			isValid:     false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			payload, err := toUpdatePayload(context.Background(), tt.input)
