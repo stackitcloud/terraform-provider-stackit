@@ -15,7 +15,6 @@ VPN Gateway resource schema. Uses the `default_region` specified in the provider
 ```terraform
 resource "stackit_vpn_gateway" "example" {
   project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  region       = "eu01"
   display_name = "example-vpn-gateway"
   plan_id      = "p500"
   routing_type = "ROUTE_BASED"
