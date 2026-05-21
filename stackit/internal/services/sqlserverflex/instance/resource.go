@@ -177,6 +177,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
 		"options":         "Custom parameters for the SQLServer Flex instance.",
 		"region":          "The resource region. If not defined, the provider region is used.",
+		"storage_class":   "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```",
 	}
 
 	resp.Schema = schema.Schema{
@@ -278,8 +279,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: descriptions["storage_class"],
+						Optional:    true,
+						Computed:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 							stringplanmodifier.UseStateForUnknown(),
