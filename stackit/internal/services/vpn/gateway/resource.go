@@ -465,9 +465,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if model.AvailabilityZones == nil {
-		return nil, fmt.Errorf("availability_zones is required")
-	}
 
 	payload := &vpn.CreateGatewayPayload{
 		DisplayName: model.DisplayName.ValueString(),
@@ -481,10 +478,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 
 	if model.Bgp != nil {
 		bgpConfig := &vpn.BGPGatewayConfig{}
-		if !model.Bgp.LocalAsn.IsNull() && !model.Bgp.LocalAsn.IsUnknown() {
+		if !model.Bgp.LocalAsn.IsNull() {
 			bgpConfig.LocalAsn = new(model.Bgp.LocalAsn.ValueInt64())
 		}
-		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() && !model.Bgp.OverrideAdvertisedRoutes.IsUnknown() {
+		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() {
 			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
 			if err != nil {
 				return nil, err
@@ -509,9 +506,6 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	if model.AvailabilityZones == nil {
-		return nil, fmt.Errorf("availability_zones is required")
-	}
 
 	payload := &vpn.UpdateGatewayPayload{
 		DisplayName: model.DisplayName.ValueString(),
@@ -525,11 +519,11 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 
 	if model.Bgp != nil {
 		bgpConfig := &vpn.BGPGatewayConfig{}
-		if !model.Bgp.LocalAsn.IsNull() && !model.Bgp.LocalAsn.IsUnknown() {
+		if !model.Bgp.LocalAsn.IsNull() {
 			asn := model.Bgp.LocalAsn.ValueInt64()
 			bgpConfig.LocalAsn = &asn
 		}
-		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() && !model.Bgp.OverrideAdvertisedRoutes.IsUnknown() {
+		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() {
 			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
 			if err != nil {
 				return nil, err
