@@ -172,7 +172,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 }
 
 func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
+	descriptions := map[string]string{ //nolint:gosec // no hardcoded credentials in here
 		"main":                       "Manages a STACKIT Dremio instance.",
 		"id":                         "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`dremio_id`\".",
 		"project_id":                 "STACKIT Project ID to which the resource is associated.",

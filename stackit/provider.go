@@ -30,7 +30,6 @@ import (
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
-	dremio "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/instance"
 	dremioInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/instance"
 	edgeCloudInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instance"
 	edgeCloudInstances "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instances"
@@ -670,7 +669,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		cdnCustomDomain.NewCustomDomainDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
-		dremio.NewInstanceDataSource,
+		dremioInstance.NewInstanceDataSource,
 		edgeCloudInstances.NewInstancesDataSource,
 		edgeCloudPlans.NewPlansDataSource,
 		gitInstance.NewGitDataSource,

@@ -12,11 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
+
+	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 )
 
 var (
@@ -51,7 +54,7 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // Metadata should return the full name of the data source, such as
 // examplecloud_thing.
-func (d *instanceDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_dremio_instance"
 }
 
@@ -73,7 +76,7 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 }
 
 // Schema should return the schema for this data source.
-func (d *instanceDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":                                "Manages a STACKIT Dremio instance.",
 		"id":                                  "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`dremio_id`\".",
@@ -225,7 +228,7 @@ func (d *instanceDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 // Read is called when the provider must read data source values in
 // order to update state. Config values should be read from the
 // ReadRequest and new state values set on the ReadResponse.
-func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// nolint:gocritic // function signature required by Terraform
 	var model InstanceDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
