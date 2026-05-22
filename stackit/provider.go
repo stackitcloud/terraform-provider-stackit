@@ -30,6 +30,7 @@ import (
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	dremioInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/instance"
 	edgeCloudInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instance"
 	edgeCloudInstances "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instances"
 	edgeCloudKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/kubeconfig"
@@ -367,6 +368,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["dns_custom_endpoint"],
+			},
+			"dremio_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["dremio_custom_endpoint"],
 			},
 			"edgecloud_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -766,6 +771,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		cdnCustomDomain.NewCustomDomainResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		dremioInstance.NewInstanceResource,
 		edgeCloudInstance.NewInstanceResource,
 		edgeCloudKubeconfig.NewKubeconfigResource,
 		edgeCloudToken.NewTokenResource,
