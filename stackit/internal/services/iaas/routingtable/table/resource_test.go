@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -29,7 +29,7 @@ func TestMapFields(t *testing.T) {
 			},
 			&iaas.RoutingTable{
 				Id:   new("rtid"),
-				Name: new("default_values"),
+				Name: "default_values",
 			},
 			Model{
 				Id:             types.StringValue(id),
@@ -50,9 +50,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&iaas.RoutingTable{
 				Id:          new("rtid"),
-				Name:        new("values_ok"),
+				Name:        "values_ok",
 				Description: new("Description"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
 			},
@@ -136,8 +136,8 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &iaas.AddRoutingTableToAreaPayload{
 				Description: new("Description"),
-				Name:        new("default_ok"),
-				Labels: &map[string]any{
+				Name:        "default_ok",
+				Labels: map[string]any{
 					"key": "value",
 				},
 				SystemRoutes:  new(true),
@@ -187,7 +187,7 @@ func TestToUpdatePayload(t *testing.T) {
 			&iaas.UpdateRoutingTableOfAreaPayload{
 				Description: new("Description"),
 				Name:        new("default_ok"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},

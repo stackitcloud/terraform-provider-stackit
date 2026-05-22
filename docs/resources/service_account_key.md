@@ -3,7 +3,7 @@
 page_title: "stackit_service_account_key Resource - stackit"
 subcategory: ""
 description: |-
-  Service account key schema.
+  Creates and manages a key for a STACKIT service account.
   Example Usage
   Automatically rotate service account keys
   
@@ -29,7 +29,7 @@ description: |-
 
 # stackit_service_account_key (Resource)
 
-Service account key schema.
+Creates and manages a key for a STACKIT service account.
 ## Example Usage
 
 

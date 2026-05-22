@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -354,7 +354,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network area route
-	routes, err := r.client.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRoutePayload(*payload).Execute()
+	routes, err := r.client.DefaultAPI.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -362,18 +362,18 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 
 	ctx = core.LogResponse(ctx)
 
-	if routes.Items == nil || len(*routes.Items) == 0 {
+	if len(routes.Items) == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "Empty response from API")
 		return
 	}
 
-	if len(*routes.Items) != 1 {
+	if len(routes.Items) != 1 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route.", "New static route not found or more than 1 route found in API response.")
 		return
 	}
 
 	// Gets the route ID from the first element, routes.Items[0]
-	routeItems := *routes.Items
+	routeItems := routes.Items
 	route := routeItems[0]
 	routeId := *route.Id
 
@@ -419,7 +419,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
-	networkAreaRouteResp, err := r.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
+	networkAreaRouteResp, err := r.client.DefaultAPI.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -470,7 +470,7 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
 	// Delete existing network
-	err := r.client.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
+	err := r.client.DefaultAPI.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -522,7 +522,7 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network area route
-	networkAreaRouteResp, err := r.client.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
+	networkAreaRouteResp, err := r.client.DefaultAPI.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -628,11 +628,11 @@ func toCreatePayload(ctx context.Context, model *ModelV1) (*iaas.CreateNetworkAr
 	}
 
 	return &iaas.CreateNetworkAreaRoutePayload{
-		Items: &[]iaas.Route{
+		Items: []iaas.Route{
 			{
-				Destination: destinationPayload,
-				Labels:      &labels,
-				Nexthop:     nextHopPayload,
+				Destination: *destinationPayload,
+				Labels:      labels,
+				Nexthop:     *nextHopPayload,
 			},
 		},
 	}, nil
@@ -649,7 +649,7 @@ func toUpdatePayload(ctx context.Context, model *ModelV1, currentLabels types.Ma
 	}
 
 	return &iaas.UpdateNetworkAreaRoutePayload{
-		Labels: &labels,
+		Labels: labels,
 	}, nil
 }
 
@@ -690,32 +690,25 @@ func toDestinationPayload(model *ModelV1) (*iaas.RouteDestination, error) {
 }
 
 func mapRouteNextHop(routeResp *iaas.Route) (*NexthopModelV1, error) {
-	if routeResp.Nexthop == nil {
-		return &NexthopModelV1{
-			Type:  types.StringNull(),
-			Value: types.StringNull(),
-		}, nil
-	}
-
 	switch i := routeResp.Nexthop.GetActualInstance().(type) {
 	case *iaas.NexthopIPv4:
 		return &NexthopModelV1{
-			Type:  types.StringPointerValue(i.Type),
-			Value: types.StringPointerValue(i.Value),
+			Type:  types.StringValue(i.Type),
+			Value: types.StringValue(i.Value),
 		}, nil
 	case *iaas.NexthopIPv6:
 		return &NexthopModelV1{
-			Type:  types.StringPointerValue(i.Type),
-			Value: types.StringPointerValue(i.Value),
+			Type:  types.StringValue(i.Type),
+			Value: types.StringValue(i.Value),
 		}, nil
 	case *iaas.NexthopBlackhole:
 		return &NexthopModelV1{
-			Type:  types.StringPointerValue(i.Type),
+			Type:  types.StringValue(i.Type),
 			Value: types.StringNull(),
 		}, nil
 	case *iaas.NexthopInternet:
 		return &NexthopModelV1{
-			Type:  types.StringPointerValue(i.Type),
+			Type:  types.StringValue(i.Type),
 			Value: types.StringNull(),
 		}, nil
 	default:
@@ -724,23 +717,16 @@ func mapRouteNextHop(routeResp *iaas.Route) (*NexthopModelV1, error) {
 }
 
 func mapRouteDestination(routeResp *iaas.Route) (*DestinationModelV1, error) {
-	if routeResp.Destination == nil {
-		return &DestinationModelV1{
-			Type:  types.StringNull(),
-			Value: types.StringNull(),
-		}, nil
-	}
-
 	switch i := routeResp.Destination.GetActualInstance().(type) {
 	case *iaas.DestinationCIDRv4:
 		return &DestinationModelV1{
-			Type:  types.StringPointerValue(i.Type),
-			Value: types.StringPointerValue(i.Value),
+			Type:  types.StringValue(i.Type),
+			Value: types.StringValue(i.Value),
 		}, nil
 	case *iaas.DestinationCIDRv6:
 		return &DestinationModelV1{
-			Type:  types.StringPointerValue(i.Type),
-			Value: types.StringPointerValue(i.Value),
+			Type:  types.StringValue(i.Type),
+			Value: types.StringValue(i.Value),
 		}, nil
 	default:
 		return nil, fmt.Errorf("unexpected Destionation type: %T", i)

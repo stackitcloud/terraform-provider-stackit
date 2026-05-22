@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -35,11 +35,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				region: "eu01",
 			},
 			expected: DataSourceModel{
-				Id:        types.StringValue("pid,eu01,iid"),
-				ProjectId: types.StringValue("pid"),
-				ImageId:   types.StringValue("iid"),
-				Labels:    types.MapNull(types.StringType),
-				Region:    types.StringValue("eu01"),
+				Id:         types.StringValue("pid,eu01,iid"),
+				ProjectId:  types.StringValue("pid"),
+				ImageId:    types.StringValue("iid"),
+				Labels:     types.MapNull(types.StringType),
+				Region:     types.StringValue("eu01"),
+				Name:       types.StringValue(""),
+				DiskFormat: types.StringValue(""),
 			},
 			isValid: true,
 		},
@@ -53,32 +55,32 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 				input: &iaas.Image{
 					Id:          new("iid"),
-					Name:        new("name"),
-					DiskFormat:  new("format"),
+					Name:        "name",
+					DiskFormat:  "format",
 					MinDiskSize: new(int64(1)),
 					MinRam:      new(int64(1)),
 					Protected:   new(true),
 					Scope:       new("scope"),
 					Config: &iaas.ImageConfig{
 						BootMenu:               new(true),
-						CdromBus:               iaas.NewNullableString(new("cdrom_bus")),
-						DiskBus:                iaas.NewNullableString(new("disk_bus")),
-						NicModel:               iaas.NewNullableString(new("model")),
+						CdromBus:               *iaas.NewNullableString(new("cdrom_bus")),
+						DiskBus:                *iaas.NewNullableString(new("disk_bus")),
+						NicModel:               *iaas.NewNullableString(new("model")),
 						OperatingSystem:        new("os"),
-						OperatingSystemDistro:  iaas.NewNullableString(new("os_distro")),
-						OperatingSystemVersion: iaas.NewNullableString(new("os_version")),
-						RescueBus:              iaas.NewNullableString(new("rescue_bus")),
-						RescueDevice:           iaas.NewNullableString(new("rescue_device")),
+						OperatingSystemDistro:  *iaas.NewNullableString(new("os_distro")),
+						OperatingSystemVersion: *iaas.NewNullableString(new("os_version")),
+						RescueBus:              *iaas.NewNullableString(new("rescue_bus")),
+						RescueDevice:           *iaas.NewNullableString(new("rescue_device")),
 						SecureBoot:             new(true),
 						Uefi:                   new(true),
-						VideoModel:             iaas.NewNullableString(new("model")),
+						VideoModel:             *iaas.NewNullableString(new("model")),
 						VirtioScsi:             new(true),
 					},
 					Checksum: &iaas.ImageChecksum{
-						Algorithm: new("algorithm"),
-						Digest:    new("digest"),
+						Algorithm: "algorithm",
+						Digest:    "digest",
 					},
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"key": "value",
 					},
 				},
@@ -134,11 +136,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				region: "eu01",
 			},
 			expected: DataSourceModel{
-				Id:        types.StringValue("pid,eu01,iid"),
-				ProjectId: types.StringValue("pid"),
-				ImageId:   types.StringValue("iid"),
-				Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
-				Region:    types.StringValue("eu01"),
+				Id:         types.StringValue("pid,eu01,iid"),
+				ProjectId:  types.StringValue("pid"),
+				ImageId:    types.StringValue("iid"),
+				Labels:     types.MapValueMust(types.StringType, map[string]attr.Value{}),
+				Region:     types.StringValue("eu01"),
+				Name:       types.StringValue(""),
+				DiskFormat: types.StringValue(""),
 			},
 			isValid: true,
 		},

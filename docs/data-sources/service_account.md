@@ -3,12 +3,12 @@
 page_title: "stackit_service_account Data Source - stackit"
 subcategory: ""
 description: |-
-  Service account data source schema.
+  Gets details about a STACKIT service account in a project by email.
 ---
 
 # stackit_service_account (Data Source)
 
-Service account data source schema.
+Gets details about a STACKIT service account in a project by email.
 
 ## Example Usage
 

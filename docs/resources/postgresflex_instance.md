@@ -24,7 +24,7 @@ resource "stackit_postgresflex_instance" "example" {
   }
   replicas = 3
   storage = {
-    class = "class"
+    class = "premium-perf2-stackit"
     size  = 5
   }
   version = 14
@@ -79,5 +79,8 @@ Read-Only:
 
 Required:
 
-- `class` (String)
+- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+```bash
+stackit postgresflex options --storages --flavor-id FLAVOR_ID
+```
 - `size` (Number)

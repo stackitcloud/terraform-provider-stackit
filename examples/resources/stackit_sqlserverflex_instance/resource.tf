@@ -8,7 +8,7 @@ resource "stackit_sqlserverflex_instance" "example" {
     ram = 16
   }
   storage = {
-    class = "class"
+    class = "premium-perf2-stackit"
     size  = 5
   }
   version = 2022

@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -182,7 +182,7 @@ func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
 	// Create new service account attachment
-	_, err := r.client.AddServiceAccountToServer(ctx, projectId, region, serverId, serviceAccountEmail).Execute()
+	_, err := r.client.DefaultAPI.AddServiceAccountToServer(ctx, projectId, region, serverId, serviceAccountEmail).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching service account to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -222,7 +222,7 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
-	serviceAccounts, err := r.client.ListServerServiceAccounts(ctx, projectId, region, serverId).Execute()
+	serviceAccounts, err := r.client.DefaultAPI.ListServerServiceAccounts(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -241,7 +241,7 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 	}
 
 	if serviceAccounts.Items != nil {
-		for _, mail := range *serviceAccounts.Items {
+		for _, mail := range serviceAccounts.Items {
 			if mail != serviceAccountEmail {
 				continue
 			}
@@ -290,7 +290,7 @@ func (r *serviceAccountAttachResource) Delete(ctx context.Context, req resource.
 	ctx = tflog.SetField(ctx, "service_account_email", service_accountId)
 
 	// Remove service_account from server
-	_, err := r.client.RemoveServiceAccountFromServer(ctx, projectId, region, serverId, service_accountId).Execute()
+	_, err := r.client.DefaultAPI.RemoveServiceAccountFromServer(ctx, projectId, region, serverId, service_accountId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
