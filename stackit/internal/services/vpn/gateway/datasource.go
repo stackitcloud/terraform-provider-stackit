@@ -99,11 +99,11 @@ func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"tunnel1": schema.StringAttribute{
-						Description: "Availability zone for tunnel 1.",
+						Description: schemaDescriptions["availability_zones_tunnel_1"],
 						Computed:    true,
 					},
 					"tunnel2": schema.StringAttribute{
-						Description: "Availability zone for tunnel 2.",
+						Description: schemaDescriptions["availability_zones_tunnel_2"],
 						Computed:    true,
 					},
 				},
@@ -113,11 +113,11 @@ func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"local_asn": schema.Int64Attribute{
-						Description: "Local ASN for BGP (private ASN range, 64512-4294967294).",
+						Description: schemaDescriptions["bgp_local_asn"],
 						Computed:    true,
 					},
 					"override_advertised_routes": schema.ListAttribute{
-						Description: "List of IPv4 CIDRs to advertise via BGP.",
+						Description: schemaDescriptions["bgp_override_advertised_routes"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},

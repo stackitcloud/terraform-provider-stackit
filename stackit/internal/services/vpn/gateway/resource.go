@@ -69,17 +69,21 @@ type Model struct {
 }
 
 var schemaDescriptions = map[string]string{
-	"id":                 "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`\".",
-	"gateway_id":         "The server-generated UUID of the VPN gateway.",
-	"project_id":         "STACKIT project ID associated with the VPN gateway.",
-	"region":             "STACKIT region name the resource is located in. If not defined, the provider region is used.",
-	"display_name":       "A user-friendly name for the VPN gateway.",
-	"plan_id":            "The service plan identifier (e.g. `p500`). For guidance on finding available plans, see [List available service plans](https://docs.stackit.cloud/products/network/connectivity-hybrid-multi-cloud/vpn/getting-started/gateway-create/#list-available-service-plans).",
-	"routing_type":       fmt.Sprintf("Routing architecture. %s", tfutils.FormatPossibleValues(routingTypeOptions...)),
-	"availability_zones": "Availability zones for the two tunnel endpoints.",
-	"bgp":                fmt.Sprintf("BGP configuration. Only applicable when routing_type is %s.", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
-	"labels":             "Map of custom labels (key-value string pairs).",
-	"state":              fmt.Sprintf("The current lifecycle state of the gateway. %s", tfutils.FormatPossibleValues(gatewayStates...)),
+	"id":                             "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`\".",
+	"gateway_id":                     "The server-generated UUID of the VPN gateway.",
+	"project_id":                     "STACKIT project ID associated with the VPN gateway.",
+	"region":                         "STACKIT region name the resource is located in. If not defined, the provider region is used.",
+	"display_name":                   "A user-friendly name for the VPN gateway.",
+	"plan_id":                        "The service plan identifier (e.g. `p500`). For guidance on finding available plans, see [List available service plans](https://docs.stackit.cloud/products/network/connectivity-hybrid-multi-cloud/vpn/getting-started/gateway-create/#list-available-service-plans).",
+	"routing_type":                   fmt.Sprintf("Routing architecture. %s", tfutils.FormatPossibleValues(routingTypeOptions...)),
+	"availability_zones":             "Availability zones for the two tunnel endpoints.",
+	"availability_zones_tunnel_1":    "Availability zone for tunnel 1.",
+	"availability_zones_tunnel_2":    "Availability zone for tunnel 2.",
+	"bgp":                            fmt.Sprintf("BGP configuration. Only applicable when routing_type is %s.", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
+	"bgp_local_asn":                  "Local ASN for BGP (private ASN range, 64512-4294967294).",
+	"bgp_override_advertised_routes": "List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.",
+	"labels":                         "Map of custom labels (key-value string pairs).",
+	"state":                          fmt.Sprintf("The current lifecycle state of the gateway. %s", tfutils.FormatPossibleValues(gatewayStates...)),
 }
 
 type gatewayResource struct {
@@ -179,11 +183,11 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:    true,
 				Attributes: map[string]schema.Attribute{
 					"tunnel1": schema.StringAttribute{
-						Description: "Availability zone for tunnel 1.",
+						Description: schemaDescriptions["availability_zones_tunnel_1"],
 						Required:    true,
 					},
 					"tunnel2": schema.StringAttribute{
-						Description: "Availability zone for tunnel 2.",
+						Description: schemaDescriptions["availability_zones_tunnel_2"],
 						Required:    true,
 					},
 				},
@@ -193,14 +197,14 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"local_asn": schema.Int64Attribute{
-						Description: "Local ASN for BGP (private ASN range, 64512-4294967294).",
+						Description: schemaDescriptions["bgp_local_asn"],
 						Required:    true,
 						Validators: []validator.Int64{
 							int64validator.Between(64512, 4294967294),
 						},
 					},
 					"override_advertised_routes": schema.ListAttribute{
-						Description: "List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.",
+						Description: schemaDescriptions["bgp_override_advertised_routes"],
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{

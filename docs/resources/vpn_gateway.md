@@ -67,7 +67,10 @@ Required:
 <a id="nestedatt--bgp"></a>
 ### Nested Schema for `bgp`
 
-Optional:
+Required:
 
 - `local_asn` (Number) Local ASN for BGP (private ASN range, 64512-4294967294).
+
+Optional:
+
 - `override_advertised_routes` (List of String) List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.

@@ -54,4 +54,4 @@ Read-Only:
 Read-Only:
 
 - `local_asn` (Number) Local ASN for BGP (private ASN range, 64512-4294967294).
-- `override_advertised_routes` (List of String) List of IPv4 CIDRs to advertise via BGP.
+- `override_advertised_routes` (List of String) List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.
