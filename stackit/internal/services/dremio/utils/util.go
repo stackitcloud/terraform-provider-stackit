@@ -16,6 +16,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),
 		utils.UserAgentConfigOption(providerData.Version),
+		config.WithRegion(providerData.DefaultRegion),
 	}
 	if providerData.DremioCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.DremioCustomEndpoint))
