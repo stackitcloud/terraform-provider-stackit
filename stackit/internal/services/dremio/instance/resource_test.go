@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
@@ -24,8 +23,10 @@ func TestMapFields(t *testing.T) {
 		{
 			"all_fields_filled",
 			&InstanceModel{
-				Region:    types.StringValue("rid"),
-				ProjectId: types.StringValue("pid"),
+				Model: Model{
+					Region:    types.StringValue("rid"),
+					ProjectId: types.StringValue("pid"),
+				},
 			},
 			&dremioSdk.DremioResponse{
 				Id:          instanceId,
@@ -65,13 +66,24 @@ func TestMapFields(t *testing.T) {
 				State: "active",
 			},
 			&InstanceModel{
-				Id: types.StringValue("pid,rid," + instanceId),
+				Model: Model{
+					Id: types.StringValue("pid,rid," + instanceId),
 
-				ProjectId:  types.StringValue("pid"),
-				Region:     types.StringValue("rid"),
-				InstanceId: types.StringValue(instanceId),
+					ProjectId:  types.StringValue("pid"),
+					Region:     types.StringValue("rid"),
+					InstanceId: types.StringValue(instanceId),
 
-				DisplayName: types.StringValue("greatName"),
+					DisplayName: types.StringValue("greatName"),
+					Description: types.StringValue("minimal-required-values"),
+
+					State:        types.StringValue("active"),
+					ErrorMessage: types.StringNull(),
+					Endpoints: &EndpointsModel{
+						ArrowFlight: types.StringValue("flight"),
+						Catalog:     types.StringValue("catalog"),
+						Ui:          types.StringValue("ui"),
+					},
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -97,36 +109,24 @@ func TestMapFields(t *testing.T) {
 					},
 					Type: types.StringValue("local-only"),
 				},
-				Description: types.StringValue("minimal-required-values"),
-
-				State:        types.StringValue("active"),
-				ErrorMessage: types.StringNull(),
-				Endpoints: types.ObjectValueMust(
-					map[string]attr.Type{
-						"arrow_flight": types.StringType,
-						"catalog":      types.StringType,
-						"ui":           types.StringType,
-					},
-					map[string]attr.Value{
-						"arrow_flight": types.StringValue("flight"),
-						"catalog":      types.StringValue("catalog"),
-						"ui":           types.StringValue("ui"),
-					},
-				),
 			},
 			false,
 		},
 		{
 			"nil response",
 			&InstanceModel{
-				Region:    types.StringValue("rid"),
-				ProjectId: types.StringValue("pid"),
+				Model: Model{
+					Region:    types.StringValue("rid"),
+					ProjectId: types.StringValue("pid"),
+				},
 			},
 			nil,
 			&InstanceModel{
-				Id:        types.StringValue("pid,rid,"),
-				ProjectId: types.StringValue("pid"),
-				Region:    types.StringValue("rid"),
+				Model: Model{
+					Id:        types.StringValue("pid,rid,"),
+					ProjectId: types.StringValue("pid"),
+					Region:    types.StringValue("rid"),
+				},
 			},
 			true,
 		},
@@ -147,7 +147,7 @@ func TestMapFields(t *testing.T) {
 			}
 			if !tt.wantErr {
 				if diff := cmp.Diff(tt.expected, tt.state); diff != "" {
-					t.Errorf("mapFields mismatch (-want +got):\n%s", diff)
+					t.Errorf("mapping mismatch (-want +got):\n%s", diff)
 				}
 			}
 		})
@@ -164,6 +164,10 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"success",
 			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -189,8 +193,6 @@ func TestToCreatePayload(t *testing.T) {
 					},
 					Type: types.StringValue("oauth"),
 				},
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
 			},
 			&dremioSdk.CreateDremioInstancePayload{
 				Authentication: &dremioSdk.Authentication{
@@ -257,6 +259,10 @@ func TestToUpdatePayload(t *testing.T) {
 		{
 			"success",
 			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -282,8 +288,6 @@ func TestToUpdatePayload(t *testing.T) {
 					},
 					Type: types.StringValue("oauth"),
 				},
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
 			},
 			&dremioSdk.UpdateDremioInstancePayload{
 				Authentication: &dremioSdk.Authentication{

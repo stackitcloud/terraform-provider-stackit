@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
@@ -38,8 +36,7 @@ var (
 	_ resource.ResourceWithModifyPlan  = &instanceResource{} // not needed for global APIs
 )
 
-// InstanceModel maps the resource schema data.
-type InstanceModel struct {
+type Model struct {
 	Id types.String `tfsdk:"id"`
 
 	ProjectId  types.String `tfsdk:"project_id"`
@@ -47,16 +44,23 @@ type InstanceModel struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 
 	// Required Fields
-	DisplayName    types.String         `tfsdk:"display_name"`
-	Authentication *AuthenticationModel `tfsdk:"authentication"`
+	DisplayName types.String `tfsdk:"display_name"`
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
 
 	// Read-only Fields
-	State        types.String `tfsdk:"state"`
-	ErrorMessage types.String `tfsdk:"error_message"`
-	Endpoints    types.Object `tfsdk:"endpoints"` // see endpointsTypes below
+	State        types.String    `tfsdk:"state"`
+	ErrorMessage types.String    `tfsdk:"error_message"`
+	Endpoints    *EndpointsModel `tfsdk:"endpoints"`
+}
+
+// InstanceModel maps the resource schema data.
+type InstanceModel struct {
+	Model
+
+	// Required Fields
+	Authentication *AuthenticationModel `tfsdk:"authentication"`
 
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
@@ -106,10 +110,10 @@ type AuthParameterModel struct {
 	Value types.String `tfsdk:"value"`
 }
 
-var endpointsTypes = map[string]attr.Type{
-	"arrow_flight": basetypes.StringType{},
-	"catalog":      basetypes.StringType{},
-	"ui":           basetypes.StringType{},
+type EndpointsModel struct {
+	ArrowFlight types.String `tfsdk:"arrow_flight"`
+	Catalog     types.String `tfsdk:"catalog"`
+	Ui          types.String `tfsdk:"ui"`
 }
 
 func NewInstanceResource() resource.Resource {
@@ -561,6 +565,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -633,11 +638,28 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Dremio instance state imported")
 }
 
-// Maps instance fields to the provider's internal model
 func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	err := mapModelFields(instanceResp, &model.Model)
+	if err != nil {
+		return fmt.Errorf("failed to map Model fields")
+	}
+	err = mapAuthentication(instanceResp, model)
+	if err != nil {
+		return fmt.Errorf("failed to map Authentication fields")
+	}
+
+	return nil
+}
+
+// Maps instance fields to the provider's internal model
+func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -656,17 +678,21 @@ func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) err
 	model.Description = types.StringPointerValue(instanceResp.Description)
 	model.ErrorMessage = types.StringPointerValue(instanceResp.ErrorMessage)
 
-	endpoints, diags := types.ObjectValue(endpointsTypes, map[string]attr.Value{
-		"arrow_flight": types.StringValue(instanceResp.Endpoints.ArrowFlight),
-		"catalog":      types.StringValue(instanceResp.Endpoints.Catalog),
-		"ui":           types.StringValue(instanceResp.Endpoints.Ui),
-	})
-	if diags.HasError() {
-		return fmt.Errorf("error mapping endpoints: %v", diags)
+	model.Endpoints = &EndpointsModel{
+		ArrowFlight: types.StringValue(instanceResp.Endpoints.ArrowFlight),
+		Catalog:     types.StringValue(instanceResp.Endpoints.Catalog),
+		Ui:          types.StringValue(instanceResp.Endpoints.Ui),
 	}
-	model.Endpoints = endpoints
 
-	authModel := &AuthenticationModel{
+	return nil
+}
+
+func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) error {
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	authModel := AuthenticationModel{
 		Type: types.StringValue(instanceResp.Authentication.Type),
 	}
 
@@ -707,7 +733,7 @@ func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) err
 		authModel.OAuth = oauthModel
 	}
 
-	model.Authentication = authModel
+	model.Authentication = &authModel
 
 	return nil
 }
