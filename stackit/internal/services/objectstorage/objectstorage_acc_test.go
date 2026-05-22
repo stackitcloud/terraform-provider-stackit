@@ -285,7 +285,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 
 func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint, true)...)
+	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
