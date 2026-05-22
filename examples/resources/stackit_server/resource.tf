@@ -4,7 +4,7 @@ resource "stackit_server" "example" {
   boot_volume = {
     size        = 64
     source_type = "image"
-    source_id   = "59838a89-51b1-4892-b57f-b3caf598ee2f" // Ubuntu 24.04
+    source_id   = "7b10e105-295b-4369-b6e0-567ec940a02b" // Ubuntu 24.04
   }
   availability_zone = "xxxx-x"
   machine_type      = "g2i.1"

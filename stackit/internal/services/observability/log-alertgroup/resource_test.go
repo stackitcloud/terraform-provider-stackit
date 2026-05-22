@@ -7,14 +7,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 )
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     *Model
-		expect    *observability.CreateLogsAlertgroupsPayload
+		expect    *observabilitySdk.CreateLogsAlertgroupsPayload
 		expectErr bool
 	}{
 		{
@@ -30,7 +30,7 @@ func TestToCreatePayload(t *testing.T) {
 				Interval: types.StringNull(),
 				Rules:    types.ListNull(types.StringType),
 			},
-			expect:    &observability.CreateLogsAlertgroupsPayload{},
+			expect:    &observabilitySdk.CreateLogsAlertgroupsPayload{},
 			expectErr: false,
 		},
 		{
@@ -39,8 +39,8 @@ func TestToCreatePayload(t *testing.T) {
 				Name:     types.StringValue("test-alertgroup"),
 				Interval: types.StringValue("5m"),
 			},
-			expect: &observability.CreateLogsAlertgroupsPayload{
-				Name:     new("test-alertgroup"),
+			expect: &observabilitySdk.CreateLogsAlertgroupsPayload{
+				Name:     "test-alertgroup",
 				Interval: new("5m"),
 			},
 			expectErr: false,
@@ -76,18 +76,18 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				),
 			},
-			expect: &observability.CreateLogsAlertgroupsPayload{
-				Name:     new("full-alertgroup"),
+			expect: &observabilitySdk.CreateLogsAlertgroupsPayload{
+				Name:     "full-alertgroup",
 				Interval: new("10m"),
-				Rules: &[]observability.CreateLogsAlertgroupsPayloadRulesInner{
+				Rules: []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{
 					{
 						Alert: new("alert"),
-						Annotations: &map[string]any{
+						Annotations: map[string]any{
 							"k": "v",
 						},
-						Expr: new("expression"),
+						Expr: "expression",
 						For:  new("10s"),
-						Labels: &map[string]any{
+						Labels: map[string]any{
 							"k": "v",
 						},
 					},
@@ -117,7 +117,7 @@ func TestToRulesPayload(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     *Model
-		expect    []observability.CreateLogsAlertgroupsPayloadRulesInner
+		expect    []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner
 		expectErr bool
 	}{
 		{
@@ -125,7 +125,7 @@ func TestToRulesPayload(t *testing.T) {
 			input: &Model{
 				Rules: types.ListNull(types.StringType), // Simulates a lack of rules
 			},
-			expect:    []observability.CreateLogsAlertgroupsPayloadRulesInner{},
+			expect:    []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{},
 			expectErr: false,
 		},
 		{
@@ -155,15 +155,15 @@ func TestToRulesPayload(t *testing.T) {
 					}),
 				}),
 			},
-			expect: []observability.CreateLogsAlertgroupsPayloadRulesInner{
+			expect: []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{
 				{
 					Alert: new("alert"),
-					Expr:  new("expr"),
+					Expr:  "expr",
 					For:   new("5s"),
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"key": "value",
 					},
-					Annotations: &map[string]any{
+					Annotations: map[string]any{
 						"note": "important",
 					},
 				},
@@ -194,20 +194,20 @@ func TestToRulesPayload(t *testing.T) {
 					}),
 				}),
 			},
-			expect: []observability.CreateLogsAlertgroupsPayloadRulesInner{
+			expect: []observabilitySdk.CreateLogsAlertgroupsPayloadRulesInner{
 				{
 					Alert: new("alert1"),
-					Expr:  new("expr1"),
+					Expr:  "expr1",
 					For:   new("5s"),
 				},
 				{
 					Alert: new("alert2"),
-					Expr:  new("expr2"),
+					Expr:  "expr2",
 					For:   new("10s"),
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"key": "value",
 					},
-					Annotations: &map[string]any{
+					Annotations: map[string]any{
 						"note": "important",
 					},
 				},
@@ -235,7 +235,7 @@ func TestToRulesPayload(t *testing.T) {
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		name         string
-		alertGroup   *observability.AlertGroup
+		alertGroup   *observabilitySdk.AlertGroup
 		model        *Model
 		expectedName string
 		expectedID   string
@@ -249,14 +249,14 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			name:       "Nil Model",
-			alertGroup: &observability.AlertGroup{},
+			alertGroup: &observabilitySdk.AlertGroup{},
 			model:      nil,
 			expectErr:  true,
 		},
 		{
 			name: "Interval Missing",
-			alertGroup: &observability.AlertGroup{
-				Name: new("alert-group-name"),
+			alertGroup: &observabilitySdk.AlertGroup{
+				Name: "alert-group-name",
 			},
 			model: &Model{
 				Name:       types.StringValue("alert-group-name"),
@@ -269,7 +269,7 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			name: "Name Missing",
-			alertGroup: &observability.AlertGroup{
+			alertGroup: &observabilitySdk.AlertGroup{
 				Interval: new("5m"),
 			},
 			model: &Model{
@@ -280,8 +280,8 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			name: "Complete Model and AlertGroup",
-			alertGroup: &observability.AlertGroup{
-				Name:     new("alert-group-name"),
+			alertGroup: &observabilitySdk.AlertGroup{
+				Name:     "alert-group-name",
 				Interval: new("10m"),
 			},
 			model: &Model{
@@ -321,25 +321,25 @@ func TestMapFields(t *testing.T) {
 func TestMapRules(t *testing.T) {
 	tests := []struct {
 		name       string
-		alertGroup *observability.AlertGroup
+		alertGroup *observabilitySdk.AlertGroup
 		model      *Model
 		expectErr  bool
 	}{
 		{
 			name: "Empty Rules",
-			alertGroup: &observability.AlertGroup{
-				Rules: &[]observability.AlertRuleRecord{},
+			alertGroup: &observabilitySdk.AlertGroup{
+				Rules: []observabilitySdk.AlertRuleRecord{},
 			},
 			model:     &Model{},
 			expectErr: false,
 		},
 		{
 			name: "Single Complete Rule",
-			alertGroup: &observability.AlertGroup{
-				Rules: &[]observability.AlertRuleRecord{
+			alertGroup: &observabilitySdk.AlertGroup{
+				Rules: []observabilitySdk.AlertRuleRecord{
 					{
 						Alert:       new("HighCPUUsage"),
-						Expr:        new("rate(cpu_usage[5m]) > 0.9"),
+						Expr:        "rate(cpu_usage[5m]) > 0.9",
 						For:         new("2m"),
 						Labels:      &map[string]string{"severity": "critical"},
 						Annotations: &map[string]string{"summary": "CPU usage high"},

@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -1050,7 +1050,7 @@ func TestAccNetworkAreaMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area" "network_area" {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
@@ -1153,12 +1153,12 @@ func TestAccNetworkAreaMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area" "network_area" {
 						organization_id  = stackit_network_area.network_area.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
 					}
-					
+
 					data "stackit_network_area_route" "network_area_route" {
 						organization_id  	  = stackit_network_area.network_area.organization_id
 						network_area_id  	  = stackit_network_area.network_area.network_area_id
@@ -1338,7 +1338,7 @@ func TestAccNetworkAreaRegionMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area_region" "network_area_region" {
 						organization_id  = stackit_network_area_region.network_area_region.organization_id
 						network_area_id  = stackit_network_area_region.network_area_region.network_area_id
@@ -1457,7 +1457,7 @@ func TestAccNetworkAreaRegionMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-						
+
 					data "stackit_network_area_region" "network_area_region" {
 						organization_id  = stackit_network_area_region.network_area_region.organization_id
 						network_area_id  = stackit_network_area_region.network_area_region.network_area_id
@@ -1585,7 +1585,7 @@ func TestAccVolumeMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_volume" "volume_size" {
 						project_id  = stackit_volume.volume_size.project_id
 						volume_id = stackit_volume.volume_size.volume_id
@@ -1838,7 +1838,7 @@ func TestAccVolumeMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_volume" "volume_size" {
 						project_id  = stackit_volume.volume_size.project_id
 						volume_id = stackit_volume.volume_size.volume_id
@@ -1848,17 +1848,17 @@ func TestAccVolumeMax(t *testing.T) {
 						project_id  = stackit_volume.volume_source.project_id
 						volume_id = stackit_volume.volume_source.volume_id
 					}
-					
+
 					data "stackit_volume" "volume_encrypted_no_key_payload" {
 						project_id  = stackit_volume.volume_encrypted_no_key_payload.project_id
 						volume_id = stackit_volume.volume_encrypted_no_key_payload.volume_id
 					}
-					
+
 					data "stackit_volume" "volume_encrypted_with_regular_key_payload" {
 						project_id  = stackit_volume.volume_encrypted_with_regular_key_payload.project_id
 						volume_id = stackit_volume.volume_encrypted_with_regular_key_payload.volume_id
 					}
-					
+
 					data "stackit_volume" "volume_encrypted_with_write_only_key_payload" {
 						project_id  = stackit_volume.volume_encrypted_with_write_only_key_payload.project_id
 						volume_id = stackit_volume.volume_encrypted_with_write_only_key_payload.volume_id
@@ -2209,7 +2209,6 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_server.server", "boot_volume.performance_class"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.size"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "image_id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "labels.%", "0"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
@@ -2254,7 +2253,6 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_id"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.size"),
 					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.performance_class"),
-					resource.TestCheckNoResourceAttr("data.stackit_server.server", "boot_volume.source_type"),
 					resource.TestCheckResourceAttr("data.stackit_server.server", "boot_volume.delete_on_termination", "true"),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_server.server", "boot_volume.id",
@@ -2317,7 +2315,6 @@ func TestAccServerMin(t *testing.T) {
 					resource.TestCheckNoResourceAttr("stackit_server.server", "boot_volume.performance_class"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.size"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "boot_volume.id"),
-					resource.TestCheckResourceAttr("stackit_server.server", "boot_volume.source_type", "image"),
 					resource.TestCheckNoResourceAttr("stackit_server.server", "image_id"),
 					resource.TestCheckResourceAttr("stackit_server.server", "labels.%", "0"),
 					resource.TestCheckResourceAttrSet("stackit_server.server", "server_id"),
@@ -2986,7 +2983,7 @@ func TestAccAffinityGroupMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_affinity_group" "affinity_group" {
 						project_id  = stackit_affinity_group.affinity_group.project_id
 						affinity_group_id = stackit_affinity_group.affinity_group.affinity_group_id
@@ -3064,7 +3061,7 @@ func TestAccIaaSSecurityGroupMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_security_group" "security_group" {
 						project_id  = stackit_security_group.security_group.project_id
 						security_group_id = stackit_security_group.security_group.security_group_id
@@ -3232,19 +3229,19 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 
 					// Security Group Rule (remote)
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "project_id",
 						"stackit_security_group.security_group", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_id",
 						"stackit_security_group.security_group", "security_group_id",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
 						"stackit_security_group.security_group_remote", "security_group_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_remote_security_group", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
 				),
 			},
 			// Data source
@@ -3253,7 +3250,7 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					data "stackit_security_group" "security_group" {
 						project_id  = stackit_security_group.security_group.project_id
 						security_group_id = stackit_security_group.security_group.security_group_id
@@ -3404,8 +3401,8 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 						"data.stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
 						"data.stackit_security_group.security_group_remote", "security_group_id",
 					),
-					resource.TestCheckResourceAttrSet("data.stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
+					resource.TestCheckResourceAttrSet("data.stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("data.stackit_security_group_rule.security_group_rule_remote_security_group", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMax["direction"])),
 				),
 			},
 			// Import
@@ -3504,19 +3501,19 @@ func TestAccIaaSSecurityGroupMax(t *testing.T) {
 
 					// Security Group Rule (remote)
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "project_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "project_id",
 						"stackit_security_group.security_group", "project_id",
 					),
 					resource.TestCheckResourceAttrPair(
-						"stackit_security_group_rule.security_group_rule", "security_group_id",
+						"stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_id",
 						"stackit_security_group.security_group", "security_group_id",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_security_group_rule.security_group_rule_remote_security_group", "remote_security_group_id",
 						"stackit_security_group.security_group_remote", "security_group_id",
 					),
-					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule", "security_group_rule_id"),
-					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["direction"])),
+					resource.TestCheckResourceAttrSet("stackit_security_group_rule.security_group_rule_remote_security_group", "security_group_rule_id"),
+					resource.TestCheckResourceAttr("stackit_security_group_rule.security_group_rule_remote_security_group", "direction", testutil.ConvertConfigVariable(testConfigSecurityGroupsVarsMaxUpdated()["direction"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -4241,8 +4238,6 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Data source
@@ -4270,8 +4265,6 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair("data.stackit_image.image", "protected", "stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 				),
@@ -4307,8 +4300,6 @@ func TestAccImageMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_image.image", "local_file_path", testutil.ConvertConfigVariable(testConfigImageVarsMinUpdated["local_file_path"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
@@ -4355,8 +4346,6 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
 			},
 			// Data source
@@ -4400,8 +4389,6 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMax["virtio_scsi"])),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("data.stackit_image.image", "checksum.digest"),
 				),
@@ -4453,8 +4440,6 @@ func TestAccImageMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_image.image", "config.virtio_scsi", testutil.ConvertConfigVariable(testConfigImageVarsMaxUpdated["virtio_scsi"])),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "protected"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "scope"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
-					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.algorithm"),
 					resource.TestCheckResourceAttrSet("stackit_image.image", "checksum.digest"),
 				),
@@ -4611,7 +4596,6 @@ func TestAccDatasourcePublicIpRanges(t *testing.T) {
 }
 
 func TestAccProject(t *testing.T) {
-	projectId := testutil.ProjectId
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -4629,8 +4613,8 @@ func TestAccProject(t *testing.T) {
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
-					resource.TestCheckResourceAttr("data.stackit_iaas_project.project", "project_id", projectId),
-					resource.TestCheckResourceAttr("data.stackit_iaas_project.project", "id", projectId),
+					resource.TestCheckResourceAttr("data.stackit_iaas_project.project", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_iaas_project.project", "id", testutil.ProjectId),
 					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "area_id"),
 					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "internet_access"),
 					resource.TestCheckResourceAttrSet("data.stackit_iaas_project.project", "state"),
@@ -4737,14 +4721,14 @@ func TestAccRoutingTableMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-			
+
 					# single routing table
 					data "stackit_routing_table" "routing_table" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
 						network_area_id  = stackit_network_area.network_area.network_area_id
 						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
 					}
-			
+
 					# all routing tables in network area
 					data "stackit_routing_tables" "routing_tables" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
@@ -4921,14 +4905,14 @@ func TestAccRoutingTableMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
+
 					# single routing table
 					data "stackit_routing_table" "routing_table" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
 						network_area_id  = stackit_routing_table.routing_table.network_area_id
 						routing_table_id  = stackit_routing_table.routing_table.routing_table_id
 					}
-					
+
 					# all routing tables in network area
 					data "stackit_routing_tables" "routing_tables" {
 						organization_id  = stackit_routing_table.routing_table.organization_id
@@ -5115,7 +5099,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
+
 					# single routing table route
 					data "stackit_routing_table_route" "route" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5123,7 +5107,7 @@ func TestAccRoutingTableRouteMin(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 						route_id         = stackit_routing_table_route.route.route_id
 					}
-					
+
 					# all routing table routes in routing table
 					data "stackit_routing_table_routes" "routes" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5314,7 +5298,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 				Config: fmt.Sprintf(`
 					%s
 					%s
-					
+
 					# single routing table route
 					data "stackit_routing_table_route" "route" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5322,7 +5306,7 @@ func TestAccRoutingTableRouteMax(t *testing.T) {
 						routing_table_id = stackit_routing_table_route.route.routing_table_id
 						route_id         = stackit_routing_table_route.route.route_id
 					}
-					
+
 					# all routing table routes in routing table
 					data "stackit_routing_table_routes" "routes" {
 						organization_id  = stackit_routing_table_route.route.organization_id
@@ -5503,7 +5487,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		}
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
 		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
-		err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, region, networkId)
+		err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -5513,7 +5497,7 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 			}
 			errs = append(errs, fmt.Errorf("cannot trigger network deletion %q: %w", networkId, err))
 		}
-		_, err = wait.DeleteNetworkWaitHandler(ctx, client, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
+		_, err = wait.DeleteNetworkWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, region, networkId).WaitWithContext(ctx)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot delete network %q: %w", networkId, err))
 		}
@@ -5539,7 +5523,7 @@ func testAccCheckNetworkInterfaceDestroy(s *terraform.State) error {
 		region := ids[1]
 		networkId := ids[2]
 		networkInterfaceId := ids[3]
-		err := client.DeleteNicExecute(ctx, testutil.ProjectId, region, networkId, networkInterfaceId)
+		err := client.DefaultAPI.DeleteNic(ctx, testutil.ProjectId, region, networkId, networkInterfaceId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -5574,18 +5558,18 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
 
-	networkAreasResp, err := client.ListNetworkAreasExecute(ctx, testutil.OrganizationId)
+	networkAreasResp, err := client.DefaultAPI.ListNetworkAreas(ctx, testutil.OrganizationId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting networkAreasResp: %w", err)
 	}
 
-	networkAreas := *networkAreasResp.Items
+	networkAreas := networkAreasResp.Items
 	for i := range networkAreas {
 		if networkAreas[i].Id == nil {
 			continue
 		}
 		if utils.Contains(networkAreasToDestroy, *networkAreas[i].Id) {
-			err := client.DeleteNetworkAreaRegionExecute(ctx, testutil.OrganizationId, *networkAreas[i].Id, testutil.Region)
+			err := client.DefaultAPI.DeleteNetworkAreaRegion(ctx, testutil.OrganizationId, *networkAreas[i].Id, testutil.Region).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkAreas[i].Id, err)
 			}
@@ -5611,18 +5595,18 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
 
-	networkAreasResp, err := client.ListNetworkAreasExecute(ctx, testutil.OrganizationId)
+	networkAreasResp, err := client.DefaultAPI.ListNetworkAreas(ctx, testutil.OrganizationId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting networkAreasResp: %w", err)
 	}
 
-	networkAreas := *networkAreasResp.Items
+	networkAreas := networkAreasResp.Items
 	for i := range networkAreas {
 		if networkAreas[i].Id == nil {
 			continue
 		}
 		if utils.Contains(networkAreasToDestroy, *networkAreas[i].Id) {
-			err := client.DeleteNetworkAreaExecute(ctx, testutil.OrganizationId, *networkAreas[i].Id)
+			err := client.DefaultAPI.DeleteNetworkArea(ctx, testutil.OrganizationId, *networkAreas[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying network area %s during CheckDestroy: %w", *networkAreas[i].Id, err)
 			}
@@ -5648,18 +5632,18 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 		volumesToDestroy = append(volumesToDestroy, volumeId)
 	}
 
-	volumesResp, err := client.ListVolumesExecute(ctx, testutil.ProjectId, testutil.Region)
+	volumesResp, err := client.DefaultAPI.ListVolumes(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting volumesResp: %w", err)
 	}
 
-	volumes := *volumesResp.Items
+	volumes := volumesResp.Items
 	for i := range volumes {
 		if volumes[i].Id == nil {
 			continue
 		}
 		if utils.Contains(volumesToDestroy, *volumes[i].Id) {
-			err := client.DeleteVolumeExecute(ctx, testutil.ProjectId, testutil.Region, *volumes[i].Id)
+			err := client.DefaultAPI.DeleteVolume(ctx, testutil.ProjectId, testutil.Region, *volumes[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying volume %s during CheckDestroy: %w", *volumes[i].Id, err)
 			}
@@ -5687,18 +5671,18 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		serversToDestroy = append(serversToDestroy, serverId)
 	}
 
-	serversResp, err := client.ListServersExecute(ctx, testutil.ProjectId, testutil.Region)
+	serversResp, err := client.DefaultAPI.ListServers(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting serversResp: %w", err)
 	}
 
-	servers := *serversResp.Items
+	servers := serversResp.Items
 	for i := range servers {
 		if servers[i].Id == nil {
 			continue
 		}
 		if utils.Contains(serversToDestroy, *servers[i].Id) {
-			err := client.DeleteServerExecute(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id)
+			err := client.DefaultAPI.DeleteServer(ctx, testutil.ProjectId, testutil.Region, *servers[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying server %s during CheckDestroy: %w", *servers[i].Id, err)
 			}
@@ -5717,20 +5701,17 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 
-	networksResp, err := client.ListNetworksExecute(ctx, testutil.ProjectId, testutil.Region)
+	networksResp, err := client.DefaultAPI.ListNetworks(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting networksResp: %w", err)
 	}
 
-	networks := *networksResp.Items
+	networks := networksResp.Items
 	for i := range networks {
-		if networks[i].Id == nil {
-			continue
-		}
-		if utils.Contains(networksToDestroy, *networks[i].Id) {
-			err := client.DeleteNetworkExecute(ctx, testutil.ProjectId, testutil.Region, *networks[i].Id)
+		if utils.Contains(networksToDestroy, networks[i].Id) {
+			err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, testutil.Region, networks[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("destroying network %s during CheckDestroy: %w", *networks[i].Id, err)
+				return fmt.Errorf("destroying network %s during CheckDestroy: %w", networks[i].Id, err)
 			}
 		}
 	}
@@ -5755,18 +5736,18 @@ func testAccCheckAffinityGroupDestroy(s *terraform.State) error {
 		affinityGroupsToDestroy = append(affinityGroupsToDestroy, affinityGroupId)
 	}
 
-	affinityGroupsResp, err := client.ListAffinityGroupsExecute(ctx, testutil.ProjectId, testutil.Region)
+	affinityGroupsResp, err := client.DefaultAPI.ListAffinityGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting securityGroupsResp: %w", err)
 	}
 
-	affinityGroups := *affinityGroupsResp.Items
+	affinityGroups := affinityGroupsResp.Items
 	for i := range affinityGroups {
 		if affinityGroups[i].Id == nil {
 			continue
 		}
 		if utils.Contains(affinityGroupsToDestroy, *affinityGroups[i].Id) {
-			err := client.DeleteAffinityGroupExecute(ctx, testutil.ProjectId, testutil.Region, *affinityGroups[i].Id)
+			err := client.DefaultAPI.DeleteAffinityGroup(ctx, testutil.ProjectId, testutil.Region, *affinityGroups[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying affinity group %s during CheckDestroy: %w", *affinityGroups[i].Id, err)
 			}
@@ -5792,18 +5773,18 @@ func testAccCheckIaaSSecurityGroupDestroy(s *terraform.State) error {
 		securityGroupsToDestroy = append(securityGroupsToDestroy, securityGroupId)
 	}
 
-	securityGroupsResp, err := client.ListSecurityGroupsExecute(ctx, testutil.ProjectId, testutil.Region)
+	securityGroupsResp, err := client.DefaultAPI.ListSecurityGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting securityGroupsResp: %w", err)
 	}
 
-	securityGroups := *securityGroupsResp.Items
+	securityGroups := securityGroupsResp.Items
 	for i := range securityGroups {
 		if securityGroups[i].Id == nil {
 			continue
 		}
 		if utils.Contains(securityGroupsToDestroy, *securityGroups[i].Id) {
-			err := client.DeleteSecurityGroupExecute(ctx, testutil.ProjectId, testutil.Region, *securityGroups[i].Id)
+			err := client.DefaultAPI.DeleteSecurityGroup(ctx, testutil.ProjectId, testutil.Region, *securityGroups[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying security group %s during CheckDestroy: %w", *securityGroups[i].Id, err)
 			}
@@ -5829,18 +5810,18 @@ func testAccCheckIaaSPublicIpDestroy(s *terraform.State) error {
 		publicIpsToDestroy = append(publicIpsToDestroy, publicIpId)
 	}
 
-	publicIpsResp, err := client.ListPublicIPsExecute(ctx, testutil.ProjectId, testutil.Region)
+	publicIpsResp, err := client.DefaultAPI.ListPublicIPs(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting publicIpsResp: %w", err)
 	}
 
-	publicIps := *publicIpsResp.Items
+	publicIps := publicIpsResp.Items
 	for i := range publicIps {
 		if publicIps[i].Id == nil {
 			continue
 		}
 		if utils.Contains(publicIpsToDestroy, *publicIps[i].Id) {
-			err := client.DeletePublicIPExecute(ctx, testutil.ProjectId, testutil.Region, *publicIps[i].Id)
+			err := client.DefaultAPI.DeletePublicIP(ctx, testutil.ProjectId, testutil.Region, *publicIps[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying public IP %s during CheckDestroy: %w", *publicIps[i].Id, err)
 			}
@@ -5865,18 +5846,18 @@ func testAccCheckIaaSKeyPairDestroy(s *terraform.State) error {
 		keyPairsToDestroy = append(keyPairsToDestroy, rs.Primary.ID)
 	}
 
-	keyPairsResp, err := client.ListKeyPairsExecute(ctx)
+	keyPairsResp, err := client.DefaultAPI.ListKeyPairs(ctx).Execute()
 	if err != nil {
 		return fmt.Errorf("getting key pairs: %w", err)
 	}
 
-	keyPairs := *keyPairsResp.Items
+	keyPairs := keyPairsResp.Items
 	for i := range keyPairs {
 		if keyPairs[i].Name == nil {
 			continue
 		}
 		if utils.Contains(keyPairsToDestroy, *keyPairs[i].Name) {
-			err := client.DeleteKeyPairExecute(ctx, *keyPairs[i].Name)
+			err := client.DefaultAPI.DeleteKeyPair(ctx, *keyPairs[i].Name).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying key pair %s during CheckDestroy: %w", *keyPairs[i].Name, err)
 			}
@@ -5902,18 +5883,18 @@ func testAccCheckIaaSImageDestroy(s *terraform.State) error {
 		imagesToDestroy = append(imagesToDestroy, imageId)
 	}
 
-	imagesResp, err := client.ListImagesExecute(ctx, testutil.ProjectId, testutil.Region)
+	imagesResp, err := client.DefaultAPI.ListImages(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting images: %w", err)
 	}
 
-	images := *imagesResp.Items
+	images := imagesResp.Items
 	for i := range images {
 		if images[i].Id == nil {
 			continue
 		}
 		if utils.Contains(imagesToDestroy, *images[i].Id) {
-			err := client.DeleteImageExecute(ctx, testutil.ProjectId, testutil.Region, *images[i].Id)
+			err := client.DefaultAPI.DeleteImage(ctx, testutil.ProjectId, testutil.Region, *images[i].Id).Execute()
 			if err != nil {
 				return fmt.Errorf("destroying image %s during CheckDestroy: %w", *images[i].Id, err)
 			}
@@ -5938,7 +5919,7 @@ func testAccCheckRoutingTableDestroy(s *terraform.State) error {
 		routingTableId := strings.Split(rs.Primary.ID, core.Separator)[3]
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
-		err := client.DeleteRoutingTableFromAreaExecute(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId)
+		err := client.DefaultAPI.DeleteRoutingTableFromArea(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {
@@ -5971,7 +5952,7 @@ func testAccCheckRoutingTableRouteDestroy(s *terraform.State) error {
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		region := strings.Split(rs.Primary.ID, core.Separator)[1]
 
-		err := client.DeleteRouteFromRoutingTableExecute(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId, routingTableRouteId)
+		err := client.DefaultAPI.DeleteRouteFromRoutingTable(ctx, testutil.OrganizationId, networkAreaId, region, routingTableId, routingTableRouteId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) {

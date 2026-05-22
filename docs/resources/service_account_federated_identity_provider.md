@@ -3,7 +3,7 @@
 page_title: "stackit_service_account_federated_identity_provider Resource - stackit"
 subcategory: ""
 description: |-
-  Service account federated identity provider schema.
+  Manages a federated identity provider for a STACKIT service account to enable workload identity federation.
   Example Usage
   Create a federated identity provider
   
@@ -35,7 +35,7 @@ description: |-
 
 # stackit_service_account_federated_identity_provider (Resource)
 
-Service account federated identity provider schema.
+Manages a federated identity provider for a STACKIT service account to enable workload identity federation.
 ## Example Usage
 
 

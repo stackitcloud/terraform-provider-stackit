@@ -53,7 +53,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClientLegacy(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -145,7 +145,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			&resp.Diagnostics,
 			err,
 			"Reading project",
-			fmt.Sprintf("Project with ID %q does not exists.", projectId),
+			fmt.Sprintf("Project with ID %q does not exists: %v", projectId, err),
 			nil,
 		)
 		resp.State.RemoveResource(ctx)

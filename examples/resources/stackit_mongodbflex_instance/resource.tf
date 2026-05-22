@@ -8,7 +8,7 @@ resource "stackit_mongodbflex_instance" "example" {
   }
   replicas = 1
   storage = {
-    class = "class"
+    class = "premium-perf2-mongodb"
     size  = 10
   }
   version = "7.0"

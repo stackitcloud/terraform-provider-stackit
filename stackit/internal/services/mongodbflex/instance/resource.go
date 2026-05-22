@@ -190,6 +190,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"monthly_snapshot_retention_months": "The number of months that monthly backups will be retained.",
 		"point_in_time_window_hours":        "The number of hours back in time the point-in-time recovery feature will be able to recover.",
 		"region":                            "The resource region. If not defined, the provider region is used.",
+		"storage_class":                     "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit mongodbflex options --storages --flavor-id FLAVOR_ID\n```",
 	}
 
 	resp.Schema = schema.Schema{
@@ -275,7 +276,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Required: true,
+						Description: descriptions["storage_class"],
+						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},

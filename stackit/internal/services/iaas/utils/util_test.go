@@ -13,7 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaasLegacy "github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -97,9 +98,82 @@ func TestConfigureClient(t *testing.T) {
 	}
 }
 
+func TestConfigureClientLegacy(t *testing.T) {
+	/* mock authentication by setting service account token env variable */
+	os.Clearenv()
+	err := os.Setenv(sdkClients.ServiceAccountToken, "mock-val")
+	if err != nil {
+		t.Errorf("error setting env variable: %v", err)
+	}
+
+	type args struct {
+		providerData *core.ProviderData
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantErr  bool
+		expected *iaasLegacy.APIClient
+	}{
+		{
+			name: "default endpoint",
+			args: args{
+				providerData: &core.ProviderData{
+					Version: testVersion,
+				},
+			},
+			expected: func() *iaasLegacy.APIClient {
+				apiClient, err := iaasLegacy.NewAPIClient(
+					utils.UserAgentConfigOption(testVersion),
+				)
+				if err != nil {
+					t.Errorf("error configuring client: %v", err)
+				}
+				return apiClient
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "custom endpoint",
+			args: args{
+				providerData: &core.ProviderData{
+					Version:            testVersion,
+					IaaSCustomEndpoint: testCustomEndpoint,
+				},
+			},
+			expected: func() *iaasLegacy.APIClient {
+				apiClient, err := iaasLegacy.NewAPIClient(
+					utils.UserAgentConfigOption(testVersion),
+					config.WithEndpoint(testCustomEndpoint),
+				)
+				if err != nil {
+					t.Errorf("error configuring client: %v", err)
+				}
+				return apiClient
+			}(),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			diags := diag.Diagnostics{}
+
+			actual := ConfigureClientLegacy(ctx, tt.args.providerData, &diags)
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
+			}
+
+			if !reflect.DeepEqual(actual, tt.expected) {
+				t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
+			}
+		})
+	}
+}
+
 func TestMapLabels(t *testing.T) {
 	type args struct {
-		responseLabels *map[string]any
+		responseLabels map[string]any
 		currentLabels  types.Map
 	}
 	tests := []struct {
@@ -111,7 +185,7 @@ func TestMapLabels(t *testing.T) {
 		{
 			name: "response labels is set",
 			args: args{
-				responseLabels: &map[string]any{
+				responseLabels: map[string]any{
 					"foo1": "bar1",
 					"foo2": "bar2",
 				},
@@ -126,7 +200,7 @@ func TestMapLabels(t *testing.T) {
 		{
 			name: "response labels is set but empty",
 			args: args{
-				responseLabels: &map[string]any{},
+				responseLabels: map[string]any{},
 				currentLabels:  types.MapUnknown(types.StringType),
 			},
 			wantErr: false,

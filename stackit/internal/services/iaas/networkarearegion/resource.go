@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -29,7 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -127,7 +127,7 @@ func (r *networkAreaRegionResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	r.resourceManagerClient = resourcemanagerUtils.ConfigureClientLegacy(ctx, &r.providerData, &resp.Diagnostics)
+	r.resourceManagerClient = resourcemanagerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -281,7 +281,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create new network area region configuration
-	networkAreaRegion, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
+	networkAreaRegion, err := r.client.DefaultAPI.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -297,7 +297,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	})
 
 	// wait for creation of network area region to complete
-	_, err = wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
+	_, err = wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
@@ -340,7 +340,7 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 
 	ctx = core.InitProviderContext(ctx)
 
-	networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	networkAreaRegionResp, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -401,7 +401,7 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Update existing network area region configuration
-	_, err = r.client.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).UpdateNetworkAreaRegionPayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).UpdateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -409,13 +409,13 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 
 	ctx = core.LogResponse(ctx)
 
-	err = updateIpv4NetworkRanges(ctx, organizationId, networkAreaId, model.Ipv4.NetworkRanges, r.client, region)
+	err = updateIpv4NetworkRanges(ctx, organizationId, networkAreaId, model.Ipv4.NetworkRanges, r.client.DefaultAPI, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Updating Network ranges: %v", err))
 		return
 	}
 
-	updatedNetworkAreaRegion, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	updatedNetworkAreaRegion, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -450,7 +450,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client.DefaultAPI, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return
@@ -459,7 +459,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete network area region configuration
-	err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	err = r.client.DefaultAPI.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -471,7 +471,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("network area deletion waiting: %v", err))
 		return
@@ -520,10 +520,10 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 	}
 
 	if networkAreaRegion.Ipv4 != nil {
-		model.Ipv4.TransferNetwork = types.StringPointerValue(networkAreaRegion.Ipv4.TransferNetwork)
-		model.Ipv4.DefaultPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.DefaultPrefixLen)
-		model.Ipv4.MaxPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.MaxPrefixLen)
-		model.Ipv4.MinPrefixLength = types.Int64PointerValue(networkAreaRegion.Ipv4.MinPrefixLen)
+		model.Ipv4.TransferNetwork = types.StringValue(networkAreaRegion.Ipv4.TransferNetwork)
+		model.Ipv4.DefaultPrefixLength = types.Int64Value(networkAreaRegion.Ipv4.DefaultPrefixLen)
+		model.Ipv4.MaxPrefixLength = types.Int64Value(networkAreaRegion.Ipv4.MaxPrefixLen)
+		model.Ipv4.MinPrefixLength = types.Int64Value(networkAreaRegion.Ipv4.MinPrefixLen)
 		// map network ranges
 		err := mapIpv4NetworkRanges(ctx, networkAreaRegion.Ipv4.NetworkRanges, model)
 		if err != nil {
@@ -535,7 +535,7 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 	if networkAreaRegion.Ipv4 == nil || networkAreaRegion.Ipv4.DefaultNameservers == nil {
 		model.Ipv4.DefaultNameservers = types.ListNull(types.StringType)
 	} else {
-		respDefaultNameservers := *networkAreaRegion.Ipv4.DefaultNameservers
+		respDefaultNameservers := networkAreaRegion.Ipv4.DefaultNameservers
 		modelDefaultNameservers, err := utils.ListValueToStringSlice(model.Ipv4.DefaultNameservers)
 		if err != nil {
 			return fmt.Errorf("get current network area default nameservers from model: %w", err)
@@ -555,11 +555,8 @@ func mapFields(ctx context.Context, networkAreaRegion *iaas.RegionalArea, model 
 }
 
 // mapFields maps the API ipv4 network ranges response values to the Terraform resource model fields
-func mapIpv4NetworkRanges(_ context.Context, networkAreaRangesList *[]iaas.NetworkRange, model *Model) error {
-	if networkAreaRangesList == nil {
-		return fmt.Errorf("nil network area ranges list")
-	}
-	if len(*networkAreaRangesList) == 0 {
+func mapIpv4NetworkRanges(_ context.Context, networkAreaRangesList []iaas.NetworkRange, model *Model) error {
+	if len(networkAreaRangesList) == 0 {
 		model.Ipv4.NetworkRanges = []networkRangeModel{}
 		return nil
 	}
@@ -570,8 +567,8 @@ func mapIpv4NetworkRanges(_ context.Context, networkAreaRangesList *[]iaas.Netwo
 	}
 
 	apiNetworkRangePrefixes := []string{}
-	for _, n := range *networkAreaRangesList {
-		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, *n.Prefix)
+	for _, n := range networkAreaRangesList {
+		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, n.Prefix)
 	}
 
 	reconciledRangePrefixes := utils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
@@ -579,8 +576,8 @@ func mapIpv4NetworkRanges(_ context.Context, networkAreaRangesList *[]iaas.Netwo
 	model.Ipv4.NetworkRanges = []networkRangeModel{}
 	for _, prefix := range reconciledRangePrefixes {
 		var networkRangeId string
-		for _, networkRangeElement := range *networkAreaRangesList {
-			if *networkRangeElement.Prefix == prefix {
+		for _, networkRangeElement := range networkAreaRangesList {
+			if networkRangeElement.Prefix == prefix {
 				networkRangeId = *networkRangeElement.Id
 				break
 			}
@@ -612,7 +609,7 @@ func toDefaultNameserversPayload(_ context.Context, model *Model) ([]string, err
 	return modelDefaultNameservers, nil
 }
 
-func toNetworkRangesPayload(_ context.Context, model *Model) (*[]iaas.NetworkRange, error) {
+func toNetworkRangesPayload(_ context.Context, model *Model) ([]iaas.NetworkRange, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
 	}
@@ -624,11 +621,11 @@ func toNetworkRangesPayload(_ context.Context, model *Model) (*[]iaas.NetworkRan
 	payload := []iaas.NetworkRange{}
 	for _, networkRange := range model.Ipv4.NetworkRanges {
 		payload = append(payload, iaas.NetworkRange{
-			Prefix: conversion.StringValueToPointer(networkRange.Prefix),
+			Prefix: networkRange.Prefix.ValueString(),
 		})
 	}
 
-	return &payload, nil
+	return payload, nil
 }
 
 func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkAreaRegionPayload, error) {
@@ -650,11 +647,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 
 	return &iaas.CreateNetworkAreaRegionPayload{
 		Ipv4: &iaas.RegionalAreaIPv4{
-			DefaultNameservers: &modelDefaultNameservers,
-			DefaultPrefixLen:   conversion.Int64ValueToPointer(model.Ipv4.DefaultPrefixLength),
-			MaxPrefixLen:       conversion.Int64ValueToPointer(model.Ipv4.MaxPrefixLength),
-			MinPrefixLen:       conversion.Int64ValueToPointer(model.Ipv4.MinPrefixLength),
-			TransferNetwork:    conversion.StringValueToPointer(model.Ipv4.TransferNetwork),
+			DefaultNameservers: modelDefaultNameservers,
+			DefaultPrefixLen:   model.Ipv4.DefaultPrefixLength.ValueInt64(),
+			MaxPrefixLen:       model.Ipv4.MaxPrefixLength.ValueInt64(),
+			MinPrefixLen:       model.Ipv4.MinPrefixLength.ValueInt64(),
+			TransferNetwork:    model.Ipv4.TransferNetwork.ValueString(),
 			NetworkRanges:      networkRangesPayload,
 		},
 	}, nil
@@ -672,7 +669,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*iaas.UpdateNetworkArea
 
 	return &iaas.UpdateNetworkAreaRegionPayload{
 		Ipv4: &iaas.UpdateRegionalAreaIPv4{
-			DefaultNameservers: &modelDefaultNameservers,
+			DefaultNameservers: modelDefaultNameservers,
 			DefaultPrefixLen:   conversion.Int64ValueToPointer(model.Ipv4.DefaultPrefixLength),
 			MaxPrefixLen:       conversion.Int64ValueToPointer(model.Ipv4.MaxPrefixLength),
 			MinPrefixLen:       conversion.Int64ValueToPointer(model.Ipv4.MinPrefixLength),
@@ -681,7 +678,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*iaas.UpdateNetworkArea
 }
 
 // updateIpv4NetworkRanges creates and deletes network ranges so that network area ranges are the ones in the model.
-func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []networkRangeModel, client *iaas.APIClient, region string) error {
+func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []networkRangeModel, client iaas.DefaultAPI, region string) error {
 	// Get network ranges current state
 	currentNetworkRangesResp, err := client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
@@ -701,8 +698,8 @@ func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId 
 		}
 	}
 
-	for _, networkRange := range *currentNetworkRangesResp.Items {
-		prefix := *networkRange.Prefix
+	for _, networkRange := range currentNetworkRangesResp.Items {
+		prefix := networkRange.Prefix
 		if _, ok := networkRangesState[prefix]; !ok {
 			networkRangesState[prefix] = &networkRangeState{}
 		}
@@ -724,9 +721,9 @@ func updateIpv4NetworkRanges(ctx context.Context, organizationId, networkAreaId 
 	for prefix, state := range networkRangesState {
 		if state.isInModel && !state.isCreated {
 			payload := iaas.CreateNetworkAreaRangePayload{
-				Ipv4: &[]iaas.NetworkRange{
+				Ipv4: []iaas.NetworkRange{
 					{
-						Prefix: new(prefix),
+						Prefix: prefix,
 					},
 				},
 			}

@@ -3,12 +3,12 @@
 page_title: "stackit_service_account_federated_identity_provider Data Source - stackit"
 subcategory: ""
 description: |-
-  Service account federated identity provider schema.
+  Gets details about a federated identity provider configured for a STACKIT service account.
 ---
 
 # stackit_service_account_federated_identity_provider (Data Source)
 
-Service account federated identity provider schema.
+Gets details about a federated identity provider configured for a STACKIT service account.
 
 ## Example Usage
 
