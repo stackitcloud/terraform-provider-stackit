@@ -17,3 +17,17 @@ resource "stackit_edgecloud_token" "by_id" {
   instance_id = stackit_edgecloud_instance.this.instance_id
   expiration  = 3600 # seconds
 }
+
+resource "time_rotating" "rotate" {
+  rotation_minutes = 1
+}
+
+resource "stackit_edgecloud_token" "by_id_rotate_example" {
+  project_id  = var.project_id
+  instance_id = stackit_edgecloud_instance.this.instance_id
+  expiration  = 60 # seconds
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }
+}

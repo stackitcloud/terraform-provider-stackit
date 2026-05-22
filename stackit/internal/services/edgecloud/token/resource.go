@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	edgeCloud "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	edgeCloudWait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
 
@@ -51,6 +52,11 @@ type Model struct {
 	ExpiresAt      types.String `tfsdk:"expires_at"`
 	CreationTime   types.String `tfsdk:"creation_time"`
 	Region         types.String `tfsdk:"region"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 var descriptions = map[string]string{
@@ -213,6 +219,18 @@ func (r *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description: descriptions["region"],
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
 				},
 			},
 		},
