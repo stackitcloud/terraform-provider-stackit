@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
+	telemetrylinkWait "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -281,7 +282,7 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 
 func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
-		testAccCheckLogsInstanceDestroy,
+		testAccCheckTelemetryLinkDestroy,
 	}
 
 	var errs []error
@@ -302,7 +303,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 	return errors.Join(errs...)
 }
 
-func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
+func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	client, err := telemetrylink.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
 	if err != nil {
@@ -333,13 +334,25 @@ func testAccCheckLogsInstanceDestroy(s *terraform.State) error {
 		switch l.resourceType {
 		case "organization":
 			err = client.DefaultAPI.DeleteOrganizationTelemetryLink(ctx, l.resourceId, l.region).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+			}
+			_, err = telemetrylinkWait.DeleteOrganizationTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "folder":
 			err = client.DefaultAPI.DeleteFolderTelemetryLink(ctx, l.resourceId, l.region).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+			}
+			_, err = telemetrylinkWait.DeleteFolderTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "project":
 			err = client.DefaultAPI.DeleteProjectTelemetryLink(ctx, l.resourceId, l.region).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+			}
+			_, err = telemetrylinkWait.DeleteProjectTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		}
 		if err != nil {
-			return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+			return fmt.Errorf("deleting link %s %s: waiting for deletion %w", l.resourceType, l.resourceId, err)
 		}
 	}
 	return nil
