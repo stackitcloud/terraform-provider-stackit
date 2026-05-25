@@ -34,12 +34,11 @@ var (
 )
 
 var testConfigVarsMin = config.Variables{
-	"resource_type":       config.StringVariable("project"),
-	"resource_id":         config.StringVariable(testutil.ProjectId),
-	"region":              config.StringVariable(testutil.Region),
-	"display_name":        config.StringVariable("tf-acc-test-link-min"),
-	"access_token":        config.StringVariable("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"),
-	"telemetry_router_id": config.StringVariable("97272f10-87ec-4715-b280-195a4ab1856c"),
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"resource_type": config.StringVariable("project"),
+	"resource_id":   config.StringVariable(testutil.ProjectId),
+	"region":        config.StringVariable(testutil.Region),
+	"display_name":  config.StringVariable("tf-acc-test-link-min"),
 }
 
 func testConfigVarsMinUpdated() config.Variables {
@@ -50,13 +49,12 @@ func testConfigVarsMinUpdated() config.Variables {
 }
 
 var testConfigVarsMax = config.Variables{
-	"resource_type":       config.StringVariable("project"),
-	"resource_id":         config.StringVariable(testutil.ProjectId),
-	"region":              config.StringVariable(testutil.Region),
-	"display_name":        config.StringVariable("tf-acc-test-link-max"),
-	"description":         config.StringVariable("tf-acc-test-link-description"),
-	"access_token":        config.StringVariable("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"),
-	"telemetry_router_id": config.StringVariable("97272f10-87ec-4715-b280-195a4ab1856c"),
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"resource_type": config.StringVariable("project"),
+	"resource_id":   config.StringVariable(testutil.ProjectId),
+	"region":        config.StringVariable(testutil.Region),
+	"display_name":  config.StringVariable("tf-acc-test-link-max"),
+	"description":   config.StringVariable("tf-acc-test-link-description"),
 }
 
 func testConfigVarsMaxUpdated() config.Variables {
@@ -81,8 +79,8 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMin["resource_id"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMin["display_name"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMin["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMin["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
@@ -160,8 +158,8 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "resource_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["resource_id"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["display_name"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
@@ -188,8 +186,8 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["display_name"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMax["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMax["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
@@ -272,8 +270,8 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["display_name"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["description"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["access_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "telemetry_router_id", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["telemetry_router_id"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
