@@ -8,10 +8,23 @@ variable "config_filter_level" {}
 variable "config_filter_matcher" {}
 variable "config_filter_value0" {}
 variable "config_filter_value1" {}
-variable "config_s3_id" {}
-variable "config_s3_secret" {}
 variable "config_s3_bucket" {}
-variable "config_s3_endpoint" {}
+variable "objectstorage_credentials_group_name" {}
+
+resource "stackit_objectstorage_bucket" "bucket" {
+  project_id = var.project_id
+  name       = var.config_s3_bucket
+}
+
+resource "stackit_objectstorage_credentials_group" "credentials_group" {
+  project_id = var.project_id
+  name       = var.objectstorage_credentials_group_name
+}
+
+resource "stackit_objectstorage_credential" "credential" {
+  project_id           = stackit_objectstorage_credentials_group.credentials_group.project_id
+  credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
+}
 
 resource "stackit_telemetryrouter_instance" "router" {
   project_id   = var.project_id
@@ -42,11 +55,11 @@ resource "stackit_telemetryrouter_destination" "destination" {
     config_type = "S3"
     s3 = {
       access_key = {
-        id     = var.config_s3_id
-        secret = var.config_s3_secret
+        id     = stackit_objectstorage_credential.credential.access_key
+        secret = stackit_objectstorage_credential.credential.secret_access_key
       }
       bucket   = var.config_s3_bucket
-      endpoint = var.config_s3_endpoint
+      endpoint = join("/", slice(split("/", stackit_objectstorage_bucket.bucket.url_path_style), 0, 3))
     }
   }
 }

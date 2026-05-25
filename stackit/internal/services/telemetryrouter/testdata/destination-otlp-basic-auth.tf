@@ -8,9 +8,20 @@ variable "config_filter_level" {}
 variable "config_filter_matcher" {}
 variable "config_filter_value0" {}
 variable "config_filter_value1" {}
-variable "config_opentelemetry_username" {}
-variable "config_opentelemetry_password" {}
-variable "config_opentelemetry_uri" {}
+variable "plan_name" {}
+variable "grafana_admin_enabled" {}
+
+resource "stackit_observability_instance" "instance" {
+  project_id            = var.project_id
+  name                  = var.display_name
+  plan_name             = var.plan_name
+  grafana_admin_enabled = var.grafana_admin_enabled
+}
+
+resource "stackit_observability_credential" "credential" {
+  project_id  = var.project_id
+  instance_id = stackit_observability_instance.instance.instance_id
+}
 
 resource "stackit_telemetryrouter_instance" "router" {
   project_id   = var.project_id
@@ -41,10 +52,10 @@ resource "stackit_telemetryrouter_destination" "destination" {
     config_type = "OpenTelemetry"
     opentelemetry = {
       basic_auth = {
-        username = var.config_opentelemetry_username
-        password = var.config_opentelemetry_password
+        username = stackit_observability_credential.credential.username
+        password = stackit_observability_credential.credential.password
       }
-      uri = var.config_opentelemetry_uri
+      uri = stackit_observability_instance.instance.otlp_http_logs_url
     }
   }
 }

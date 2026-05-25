@@ -8,11 +8,22 @@ variable "config_filter_level" {}
 variable "config_filter_matcher" {}
 variable "config_filter_value0" {}
 variable "config_filter_value1" {}
-variable "config_opentelemetry_bearer_token" {}
-variable "config_opentelemetry_uri" {}
 
 resource "stackit_telemetryrouter_instance" "router" {
   project_id   = var.project_id
+  region       = var.region
+  display_name = var.display_name
+}
+
+resource "stackit_telemetryrouter_instance" "destination" {
+  project_id   = var.project_id
+  region       = var.region
+  display_name = var.display_name
+}
+
+resource "stackit_telemetryrouter_access_token" "accessToken" {
+  project_id   = var.project_id
+  instance_id  = stackit_telemetryrouter_instance.destination.instance_id
   region       = var.region
   display_name = var.display_name
 }
@@ -39,8 +50,8 @@ resource "stackit_telemetryrouter_destination" "destination" {
     }
     config_type = "OpenTelemetry"
     opentelemetry = {
-      bearer_token = var.config_opentelemetry_bearer_token
-      uri          = var.config_opentelemetry_uri
+      bearer_token = stackit_telemetryrouter_access_token.accessToken.access_token
+      uri          = "https;//${stackit_telemetryrouter_instance.destination.uri}/v1/logs"
     }
   }
 }

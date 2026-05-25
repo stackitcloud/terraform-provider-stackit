@@ -16,7 +16,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	objectstorageWait "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api/wait"
+	observability "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
+	observabilityWait "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api/wait"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
+	telemetryrouterWait "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -116,18 +122,17 @@ func testConfigAccessTokenVarsMaxUpdated() config.Variables {
 }
 
 var testConfigDestinationVarsOTLPBasicAuth = config.Variables{
-	"project_id":                    config.StringVariable(testutil.ProjectId),
-	"region":                        config.StringVariable(testutil.Region),
-	"display_name":                  config.StringVariable("tf-acc-test-tlmr-dest"),
-	"description":                   config.StringVariable("Terraform Acceptance Test TelemetryRouter OTLP Destination"),
-	"config_filter_key":             config.StringVariable("key"),
-	"config_filter_level":           config.StringVariable("logRecord"),
-	"config_filter_matcher":         config.StringVariable("="),
-	"config_filter_value0":          config.StringVariable("value1"),
-	"config_filter_value1":          config.StringVariable("value2"),
-	"config_opentelemetry_username": config.StringVariable("user"),
-	"config_opentelemetry_password": config.StringVariable("password"),
-	"config_opentelemetry_uri":      config.StringVariable("https://localhost:8116"),
+	"project_id":            config.StringVariable(testutil.ProjectId),
+	"region":                config.StringVariable(testutil.Region),
+	"display_name":          config.StringVariable("tf-acc-test-tlmr-dest"),
+	"description":           config.StringVariable("Terraform Acceptance Test TelemetryRouter OTLP Destination"),
+	"config_filter_key":     config.StringVariable("key"),
+	"config_filter_level":   config.StringVariable("logRecord"),
+	"config_filter_matcher": config.StringVariable("="),
+	"config_filter_value0":  config.StringVariable("value1"),
+	"config_filter_value1":  config.StringVariable("value2"),
+	"plan_name":             config.StringVariable("Observability-Medium-EU01"),
+	"grafana_admin_enabled": config.StringVariable("true"),
 }
 
 func testConfigDestinationVarsOTLPBasicAuthUpdated() config.Variables {
@@ -140,25 +145,20 @@ func testConfigDestinationVarsOTLPBasicAuthUpdated() config.Variables {
 	newVars["config_filter_matcher"] = config.StringVariable("!=")
 	newVars["config_filter_value0"] = config.StringVariable("value3")
 	newVars["config_filter_value1"] = config.StringVariable("value4")
-	newVars["config_opentelemetry_username"] = config.StringVariable("user1")
-	newVars["config_opentelemetry_password"] = config.StringVariable("pass1")
-	newVars["config_opentelemetry_uri"] = config.StringVariable("https://localhost:8117")
 
 	return newVars
 }
 
 var testConfigDestinationVarsOTLPBearerToken = config.Variables{
-	"project_id":                        config.StringVariable(testutil.ProjectId),
-	"region":                            config.StringVariable(testutil.Region),
-	"display_name":                      config.StringVariable("tf-acc-test-tlmr-dest"),
-	"description":                       config.StringVariable("Terraform Acceptance Test TelemetryRouter OTLP Destination"),
-	"config_filter_key":                 config.StringVariable("key"),
-	"config_filter_level":               config.StringVariable("logRecord"),
-	"config_filter_matcher":             config.StringVariable("="),
-	"config_filter_value0":              config.StringVariable("value1"),
-	"config_filter_value1":              config.StringVariable("value2"),
-	"config_opentelemetry_bearer_token": config.StringVariable("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"),
-	"config_opentelemetry_uri":          config.StringVariable("https://localhost:8116"),
+	"project_id":            config.StringVariable(testutil.ProjectId),
+	"region":                config.StringVariable(testutil.Region),
+	"display_name":          config.StringVariable("tf-acc-test-tlmr-dest"),
+	"description":           config.StringVariable("Terraform Acceptance Test TelemetryRouter OTLP Destination"),
+	"config_filter_key":     config.StringVariable("key"),
+	"config_filter_level":   config.StringVariable("logRecord"),
+	"config_filter_matcher": config.StringVariable("="),
+	"config_filter_value0":  config.StringVariable("value1"),
+	"config_filter_value1":  config.StringVariable("value2"),
 }
 
 func testConfigDestinationVarsOTLPBearerTokenUpdated() config.Variables {
@@ -171,26 +171,22 @@ func testConfigDestinationVarsOTLPBearerTokenUpdated() config.Variables {
 	newVars["config_filter_matcher"] = config.StringVariable("!=")
 	newVars["config_filter_value0"] = config.StringVariable("value3")
 	newVars["config_filter_value1"] = config.StringVariable("value4")
-	newVars["config_opentelemetry_bearer_token"] = config.StringVariable("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV31")
-	newVars["config_opentelemetry_uri"] = config.StringVariable("https://localhost:8117")
 
 	return newVars
 }
 
 var testConfigDestinationVarsS3 = config.Variables{
-	"project_id":            config.StringVariable(testutil.ProjectId),
-	"region":                config.StringVariable(testutil.Region),
-	"display_name":          config.StringVariable("tf-acc-test-tlmr-dest"),
-	"description":           config.StringVariable("Terraform Acceptance Test TelemetryRouter OTLP Destination"),
-	"config_filter_key":     config.StringVariable("key"),
-	"config_filter_level":   config.StringVariable("logRecord"),
-	"config_filter_matcher": config.StringVariable("="),
-	"config_filter_value0":  config.StringVariable("value1"),
-	"config_filter_value1":  config.StringVariable("value2"),
-	"config_s3_id":          config.StringVariable("id"),
-	"config_s3_secret":      config.StringVariable("secret"),
-	"config_s3_bucket":      config.StringVariable("bucket"),
-	"config_s3_endpoint":    config.StringVariable("https://localhost:8116"),
+	"project_id":                           config.StringVariable(testutil.ProjectId),
+	"region":                               config.StringVariable(testutil.Region),
+	"display_name":                         config.StringVariable("tf-acc-test-tlmr-dest"),
+	"description":                          config.StringVariable("Terraform Acceptance Test TelemetryRouter OTLP Destination"),
+	"config_filter_key":                    config.StringVariable("key"),
+	"config_filter_level":                  config.StringVariable("logRecord"),
+	"config_filter_matcher":                config.StringVariable("="),
+	"config_filter_value0":                 config.StringVariable("value1"),
+	"config_filter_value1":                 config.StringVariable("value2"),
+	"objectstorage_credentials_group_name": config.StringVariable("tf-acc-test-group"),
+	"config_s3_bucket":                     config.StringVariable("bucket"),
 }
 
 func testConfigDestinationVarsS3Updated() config.Variables {
@@ -203,10 +199,6 @@ func testConfigDestinationVarsS3Updated() config.Variables {
 	newVars["config_filter_matcher"] = config.StringVariable("!=")
 	newVars["config_filter_value0"] = config.StringVariable("value3")
 	newVars["config_filter_value1"] = config.StringVariable("value4")
-	newVars["config_s3_id"] = config.StringVariable("id1")
-	newVars["config_s3_secret"] = config.StringVariable("secret1")
-	newVars["config_s3_bucket"] = config.StringVariable("bucket1")
-	newVars["config_s3_endpoint"] = config.StringVariable("https://localhost:8117")
 
 	return newVars
 }
@@ -694,9 +686,9 @@ func TestAccTelemetryRouterDestinationOTLPBasicAuth(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuth["config_filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuth["config_filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuth["config_filter_value1"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.username", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuth["config_opentelemetry_username"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.password", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuth["config_opentelemetry_password"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuth["config_opentelemetry_uri"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.username"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.password"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "destination_id"),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.config_type", "OpenTelemetry"),
@@ -774,9 +766,9 @@ func TestAccTelemetryRouterDestinationOTLPBasicAuth(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuthUpdated()["config_filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuthUpdated()["config_filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuthUpdated()["config_filter_value1"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.username", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuthUpdated()["config_opentelemetry_username"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.password", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuthUpdated()["config_opentelemetry_password"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBasicAuthUpdated()["config_opentelemetry_uri"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.username"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.basic_auth.password"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "destination_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "status"),
@@ -821,8 +813,8 @@ func TestAccTelemetryRouterDestinationOTLPBearerToken(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerToken["config_filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerToken["config_filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerToken["config_filter_value1"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.bearer_token", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerToken["config_opentelemetry_bearer_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerToken["config_opentelemetry_uri"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.bearer_token"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "destination_id"),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.config_type", "OpenTelemetry"),
@@ -900,8 +892,8 @@ func TestAccTelemetryRouterDestinationOTLPBearerToken(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerTokenUpdated()["config_filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerTokenUpdated()["config_filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerTokenUpdated()["config_filter_value1"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.bearer_token", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerTokenUpdated()["config_opentelemetry_bearer_token"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri", testutil.ConvertConfigVariable(testConfigDestinationVarsOTLPBearerTokenUpdated()["config_opentelemetry_uri"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.bearer_token"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.opentelemetry.uri"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "destination_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "status"),
@@ -946,10 +938,10 @@ func TestAccTelemetryRouterDestinationS3(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_filter_value1"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.access_key.id", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_s3_id"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.access_key.secret", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_s3_secret"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.s3.access_key.id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.s3.access_key.secret"),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.bucket", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_s3_bucket"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.endpoint", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_s3_endpoint"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.s3.endpoint"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "destination_id"),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.config_type", "S3"),
@@ -983,7 +975,7 @@ func TestAccTelemetryRouterDestinationS3(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_filter_value0"])),
 					resource.TestCheckResourceAttr("data.stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_filter_value1"])),
 					resource.TestCheckResourceAttr("data.stackit_telemetryrouter_destination.destination", "config.s3.bucket", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_s3_bucket"])),
-					resource.TestCheckResourceAttr("data.stackit_telemetryrouter_destination.destination", "config.s3.endpoint", testutil.ConvertConfigVariable(testConfigDestinationVarsS3["config_s3_endpoint"])),
+					resource.TestCheckResourceAttrSet("data.stackit_telemetryrouter_destination.destination", "config.s3.endpoint"),
 					resource.TestCheckResourceAttrSet("data.stackit_telemetryrouter_destination.destination", "status"),
 				),
 			},
@@ -1028,10 +1020,10 @@ func TestAccTelemetryRouterDestinationS3(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.matcher", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_filter_matcher"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.0", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_filter_value0"])),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.filter.attributes.0.values.1", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_filter_value1"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.access_key.id", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_s3_id"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.access_key.secret", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_s3_secret"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.s3.access_key.id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.s3.access_key.secret"),
 					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.bucket", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_s3_bucket"])),
-					resource.TestCheckResourceAttr("stackit_telemetryrouter_destination.destination", "config.s3.endpoint", testutil.ConvertConfigVariable(testConfigDestinationVarsS3Updated()["config_s3_endpoint"])),
+					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "config.s3.endpoint"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "destination_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetryrouter_destination.destination", "status"),
@@ -1048,6 +1040,8 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckTelemetryRouterInstanceDestroy,
 		testAccCheckTelemetryRouterAccessTokenDestroy,
 		testAccCheckTelemetryRouterDestinationDestroy,
+		testAccCheckObservabilityDestroy,
+		testAccCheckObjectStorageDestroy,
 	}
 
 	var errs []error
@@ -1076,6 +1070,7 @@ func testAccCheckTelemetryRouterInstanceDestroy(s *terraform.State) error {
 	}
 
 	var instancesToDestroy []string
+	// instances
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetryrouter_instance" {
 			continue
@@ -1096,6 +1091,11 @@ func testAccCheckTelemetryRouterInstanceDestroy(s *terraform.State) error {
 		err := client.DefaultAPI.DeleteTelemetryRouter(ctx, testutil.ProjectId, "eu01", response.TelemetryRouters[i].Id).Execute()
 		if err != nil {
 			return fmt.Errorf("deleting instance %s: %w", response.TelemetryRouters[i].Id, err)
+		}
+
+		_, err = telemetryrouterWait.DeleteTelemetryRouterWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", response.TelemetryRouters[i].Id).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", response.TelemetryRouters[i].Id, err)
 		}
 	}
 	return nil
@@ -1128,6 +1128,11 @@ func testAccCheckTelemetryRouterAccessTokenDestroy(s *terraform.State) error {
 			}
 			errs = append(errs, fmt.Errorf("cannot trigger access token deletion %q: %w", accessTokenId, err))
 		}
+
+		_, err = telemetryrouterWait.DeleteAccessTokenWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", instanceId, accessTokenId).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying acess token %s of instance %s during CheckDestroy: waiting for deletion %w", accessTokenId, instanceId, err)
+		}
 	}
 
 	return errors.Join(errs...)
@@ -1141,7 +1146,7 @@ func testAccCheckTelemetryRouterDestinationDestroy(s *terraform.State) error {
 	}
 
 	var errs []error
-	// access tokens
+	// destinations
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_telemetryrouter_destination" {
 			continue
@@ -1160,7 +1165,117 @@ func testAccCheckTelemetryRouterDestinationDestroy(s *terraform.State) error {
 			}
 			errs = append(errs, fmt.Errorf("cannot trigger destination deletion %q: %w", destinationId, err))
 		}
+
+		_, err = telemetryrouterWait.DeleteDestinationWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", instanceId, destinationId).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying destination %s of instance %s during CheckDestroy: waiting for deletion %w", destinationId, instanceId, err)
+		}
 	}
 
 	return errors.Join(errs...)
+}
+
+func testAccCheckObservabilityDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := observability.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint, true)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	instancesToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_observability_instance" {
+			continue
+		}
+		// instance terraform ID: = "[project_id],[instance_id],[name]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		instancesToDestroy = append(instancesToDestroy, instanceId)
+	}
+
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
+	if err != nil {
+		return fmt.Errorf("getting instancesResp: %w", err)
+	}
+
+	instances := instancesResp.Instances
+	for i := range instances {
+		if utils.Contains(instancesToDestroy, instances[i].Id) {
+			if instances[i].Status != "DELETE_SUCCEEDED" {
+				_, err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, instances[i].Id).Execute()
+				if err != nil {
+					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", instances[i].Id, err)
+				}
+				_, err = observabilityWait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, instances[i].Id).WaitWithContext(ctx)
+				if err != nil {
+					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", instances[i].Id, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckObjectStorageDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint, true)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	bucketsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_objectstorage_bucket" {
+			continue
+		}
+		// bucket terraform ID: "[project_id],[name]"
+		bucketName := strings.Split(rs.Primary.ID, core.Separator)[1]
+		bucketsToDestroy = append(bucketsToDestroy, bucketName)
+	}
+
+	bucketsResp, err := client.DefaultAPI.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting bucketsResp: %w", err)
+	}
+
+	buckets := bucketsResp.Buckets
+	for _, bucket := range buckets {
+		bucketName := bucket.Name
+		if utils.Contains(bucketsToDestroy, bucketName) {
+			_, err := client.DefaultAPI.DeleteBucket(ctx, testutil.ProjectId, testutil.Region, bucketName).Execute()
+			if err != nil {
+				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
+			}
+			_, err = objectstorageWait.DeleteBucketWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
+			}
+		}
+	}
+
+	credentialsGroupsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_objectstorage_credentials_group" {
+			continue
+		}
+		// credentials group terraform ID: "[project_id],[credentials_group_id]"
+		credentialsGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
+	}
+
+	credentialsGroupsResp, err := client.DefaultAPI.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting bucketsResp: %w", err)
+	}
+
+	groups := credentialsGroupsResp.CredentialsGroups
+	for _, group := range groups {
+		groupId := group.CredentialsGroupId
+		if utils.Contains(credentialsGroupsToDestroy, groupId) {
+			_, err := client.DefaultAPI.DeleteCredentialsGroup(ctx, testutil.ProjectId, testutil.Region, groupId).Execute()
+			if err != nil {
+				return fmt.Errorf("destroying credentials group %s during CheckDestroy: %w", groupId, err)
+			}
+		}
+	}
+	return nil
 }
