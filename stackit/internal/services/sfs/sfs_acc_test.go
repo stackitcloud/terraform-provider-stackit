@@ -127,7 +127,7 @@ var testConfigResourcePoolVarsMax = config.Variables{
 	"performance_class":     config.StringVariable("Standard"),
 	"size_gigabytes":        config.IntegerVariable(512),
 	"snapshots_are_visible": config.BoolVariable(true),
-	"snapshot_policy_id":    config.StringVariable("2b138c3b-2453-11f1-97cd-d039eac4b54e"),
+	"snapshot_policy_id":    config.StringVariable("78a4035a-2452-11f1-97cd-d039eac4b54e"),
 	"label":                 config.StringVariable("foo"),
 }
 

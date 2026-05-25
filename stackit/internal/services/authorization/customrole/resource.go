@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -177,7 +177,7 @@ func (r *customRoleResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	createResp, err := r.client.AddRole(ctx, r.resourceType, model.ResourceId.ValueString()).AddRolePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.AddRole(ctx, r.resourceType, model.ResourceId.ValueString()).AddRolePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating custom role", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -222,7 +222,7 @@ func (r *customRoleResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	roleResp, err := r.client.GetRoleExecute(ctx, r.resourceType, model.ResourceId.ValueString(), roleId)
+	roleResp, err := r.client.DefaultAPI.GetRole(ctx, r.resourceType, model.ResourceId.ValueString(), roleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 
@@ -273,7 +273,7 @@ func (r *customRoleResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Update existing custom role
-	roleResp, err := r.client.UpdateRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).UpdateRolePayload(*payload).Execute()
+	roleResp, err := r.client.DefaultAPI.UpdateRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).UpdateRolePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating custom role", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -311,7 +311,7 @@ func (r *customRoleResource) Delete(ctx context.Context, req resource.DeleteRequ
 
 	ctx = r.annotateLogger(ctx, &model)
 
-	_, err := r.client.DeleteRoleExecute(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString())
+	_, err := r.client.DefaultAPI.DeleteRole(ctx, r.resourceType, model.ResourceId.ValueString(), model.RoleId.ValueString()).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -351,10 +351,6 @@ func mapGetCustomRoleResponse(ctx context.Context, resp *authorization.GetRoleRe
 		return fmt.Errorf("response input is nil")
 	}
 
-	if resp.Role == nil {
-		return fmt.Errorf("response role is nil")
-	}
-
 	if resp.Role.Id == nil {
 		return fmt.Errorf("response role id is nil")
 	}
@@ -372,21 +368,21 @@ func mapGetCustomRoleResponse(ctx context.Context, resp *authorization.GetRoleRe
 		return err
 	}
 
-	model.Id = utils.BuildInternalTerraformId(*resp.ResourceId, *resp.Role.Id)
-	model.ResourceId = types.StringPointerValue(resp.ResourceId)
+	model.Id = utils.BuildInternalTerraformId(resp.ResourceId, *resp.Role.Id)
+	model.ResourceId = types.StringValue(resp.ResourceId)
 	model.RoleId = types.StringPointerValue(resp.Role.Id)
-	model.Name = types.StringPointerValue(resp.Role.Name)
-	model.Description = types.StringPointerValue(resp.Role.Description)
+	model.Name = types.StringValue(resp.Role.Name)
+	model.Description = types.StringValue(resp.Role.Description)
 
-	if len(*resp.Role.Permissions) == 0 {
+	if len(resp.Role.Permissions) == 0 {
 		model.Permissions = types.ListNull(types.StringType)
 		return nil
 	}
 
 	var respPermissions []string
-	for _, p := range *resp.Role.Permissions {
+	for _, p := range resp.Role.Permissions {
 		if name, ok := p.GetNameOk(); ok {
-			respPermissions = append(respPermissions, name)
+			respPermissions = append(respPermissions, *name)
 		}
 	}
 
@@ -436,13 +432,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*authorization.AddRoleP
 			return nil, fmt.Errorf("converting permission list entry to string: %w", err)
 		}
 
-		permissions = append(permissions, authorization.PermissionRequest{Name: &permission})
+		permissions = append(permissions, authorization.PermissionRequest{Name: permission})
 	}
 
 	return &authorization.AddRolePayload{
-		Name:        model.Name.ValueStringPointer(),
-		Description: model.Description.ValueStringPointer(),
-		Permissions: &permissions,
+		Name:        model.Name.ValueString(),
+		Description: model.Description.ValueString(),
+		Permissions: permissions,
 	}, nil
 }
 
@@ -463,13 +459,13 @@ func toUpdatePayload(ctx context.Context, model *Model) (*authorization.UpdateRo
 			return nil, fmt.Errorf("converting permission list entry to string: %w", err)
 		}
 
-		permissions = append(permissions, authorization.PermissionRequest{Name: &permission})
+		permissions = append(permissions, authorization.PermissionRequest{Name: permission})
 	}
 
 	return &authorization.UpdateRolePayload{
-		Name:        model.Name.ValueStringPointer(),
-		Description: model.Description.ValueStringPointer(),
-		Permissions: &permissions,
+		Name:        model.Name.ValueString(),
+		Description: model.Description.ValueString(),
+		Permissions: permissions,
 	}, nil
 }
 
