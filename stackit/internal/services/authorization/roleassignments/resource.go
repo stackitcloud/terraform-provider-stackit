@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -192,7 +192,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	unlock := authorizationUtils.LockAssignment(lockKey)
 	defer unlock()
 
-	listMemberResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listMemberResp, err := r.authorizationClient.DefaultAPI.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing current resource members", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -204,13 +204,13 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// Create new project role assignment
-	payload, err := toCreatePayload(&model, &r.apiName)
+	payload, err := toCreatePayload(&model, r.apiName)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
-	createResp, err := r.authorizationClient.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
+	createResp, err := r.authorizationClient.DefaultAPI.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 		return
@@ -257,7 +257,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "resource_type", r.apiName)
 	ctx = tflog.SetField(ctx, "resource_id", model.ResourceId.ValueString())
 
-	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listResp, err := r.authorizationClient.DefaultAPI.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -306,17 +306,17 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "resource_id", model.ResourceId.ValueString())
 
 	payload := authorization.RemoveMembersPayload{
-		ResourceType: &r.apiName,
-		Members: &[]authorization.Member{
+		ResourceType: r.apiName,
+		Members: []authorization.Member{
 			{
-				Role:    model.Role.ValueStringPointer(),
-				Subject: model.Subject.ValueStringPointer(),
+				Role:    model.Role.ValueString(),
+				Subject: model.Subject.ValueString(),
 			},
 		},
 	}
 
 	// Delete existing project role assignment
-	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
+	_, err := r.authorizationClient.DefaultAPI.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -353,7 +353,7 @@ func (r *roleAssignmentResource) ImportState(ctx context.Context, req resource.I
 }
 
 // toCreatePayload builds the payload to add a member to a resource
-func toCreatePayload(model *Model, apiName *string) (*authorization.AddMembersPayload, error) {
+func toCreatePayload(model *Model, apiName string) (*authorization.AddMembersPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -368,10 +368,10 @@ func toCreatePayload(model *Model, apiName *string) (*authorization.AddMembersPa
 
 	return &authorization.AddMembersPayload{
 		ResourceType: apiName,
-		Members: &[]authorization.Member{
+		Members: []authorization.Member{
 			{
-				Role:    model.Role.ValueStringPointer(),
-				Subject: model.Subject.ValueStringPointer(),
+				Role:    model.Role.ValueString(),
+				Subject: model.Subject.ValueString(),
 			},
 		},
 	}, nil
@@ -385,20 +385,17 @@ func mapListMembersResponse(resp *authorization.ListMembersResponse, model *Mode
 	if resp.Members == nil {
 		return fmt.Errorf("response members are nil")
 	}
-	if resp.ResourceId == nil {
-		return fmt.Errorf("response resource_id is nil")
-	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
-	model.ResourceId = types.StringPointerValue(resp.ResourceId)
+	model.ResourceId = types.StringValue(resp.ResourceId)
 	model.Id = utils.BuildInternalTerraformId(model.ResourceId.ValueString(), model.Role.ValueString(), model.Subject.ValueString())
 
-	for _, m := range *resp.Members {
-		if *m.Role == model.Role.ValueString() && *m.Subject == model.Subject.ValueString() {
-			model.Role = types.StringPointerValue(m.Role)
-			model.Subject = types.StringPointerValue(m.Subject)
+	for _, m := range resp.Members {
+		if m.Role == model.Role.ValueString() && m.Subject == model.Subject.ValueString() {
+			model.Role = types.StringValue(m.Role)
+			model.Subject = types.StringValue(m.Subject)
 			return nil
 		}
 	}

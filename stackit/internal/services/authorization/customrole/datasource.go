@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -132,7 +132,7 @@ func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 	ctx = tflog.SetField(ctx, "role_id", roleId)
 
-	roleResp, err := d.client.GetRole(ctx, d.resourceType, resourceId, roleId).Execute()
+	roleResp, err := d.client.DefaultAPI.GetRole(ctx, d.resourceType, resourceId, roleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 

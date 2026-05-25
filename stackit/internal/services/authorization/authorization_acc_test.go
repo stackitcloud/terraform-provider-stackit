@@ -17,9 +17,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager"
-	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/wait"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	"github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -803,27 +803,26 @@ func testAccCheckResourceManagerProjectsDestroy(s *terraform.State) error {
 	}
 	containerParentId := testutil.OrganizationId
 
-	projectsResp, err := client.ListProjects(ctx).ContainerParentId(containerParentId).Execute()
+	projectsResp, err := client.DefaultAPI.ListProjects(ctx).ContainerParentId(containerParentId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting projectsResp: %w", err)
 	}
 
-	items := *projectsResp.Items
-	for i := range items {
-		if *items[i].LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
+	for _, item := range projectsResp.Items {
+		if item.LifecycleState == resourcemanager.LIFECYCLESTATE_DELETING {
 			continue
 		}
-		if !utils.Contains(projectsToDestroy, *items[i].ContainerId) {
+		if !utils.Contains(projectsToDestroy, item.ContainerId) {
 			continue
 		}
 
-		err := client.DeleteProjectExecute(ctx, *items[i].ContainerId)
+		err := client.DefaultAPI.DeleteProject(ctx, item.ContainerId).Execute()
 		if err != nil {
-			return fmt.Errorf("destroying project %s during CheckDestroy: %w", *items[i].ContainerId, err)
+			return fmt.Errorf("destroying project %s during CheckDestroy: %w", item.ContainerId, err)
 		}
-		_, err = wait.DeleteProjectWaitHandler(ctx, client, *items[i].ContainerId).WaitWithContext(ctx)
+		_, err = wait.DeleteProjectWaitHandler(ctx, client.DefaultAPI, item.ContainerId).WaitWithContext(ctx)
 		if err != nil {
-			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", *items[i].ContainerId, err)
+			return fmt.Errorf("destroying project %s during CheckDestroy: waiting for deletion %w", item.ContainerId, err)
 		}
 	}
 	return nil
@@ -851,20 +850,19 @@ func testAccCheckResourceManagerFoldersDestroy(s *terraform.State) error {
 	}
 	containerParentId := testutil.OrganizationId
 
-	foldersResponse, err := client.ListFolders(ctx).ContainerParentId(containerParentId).Execute()
+	foldersResponse, err := client.DefaultAPI.ListFolders(ctx).ContainerParentId(containerParentId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting foldersResponse: %w", err)
 	}
 
-	items := *foldersResponse.Items
-	for i := range items {
-		if !utils.Contains(foldersToDestroy, *items[i].ContainerId) {
+	for _, item := range foldersResponse.Items {
+		if !utils.Contains(foldersToDestroy, item.ContainerId) {
 			continue
 		}
 
-		err := client.DeleteFolder(ctx, *items[i].ContainerId).Execute()
+		err := client.DefaultAPI.DeleteFolder(ctx, item.ContainerId).Execute()
 		if err != nil {
-			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", *items[i].ContainerId, err)
+			return fmt.Errorf("destroying folder %s during CheckDestroy: %w", item.ContainerId, err)
 		}
 	}
 	return nil
@@ -888,8 +886,8 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 		orgRoleAssignmentsToDestroy = append(
 			orgRoleAssignmentsToDestroy,
 			authorization.Member{
-				Role:    new(terraformId[1]),
-				Subject: new(terraformId[2]),
+				Role:    terraformId[1],
+				Subject: terraformId[2],
 			},
 		)
 	}
@@ -900,12 +898,12 @@ func testAccCheckOrganizationRoleAssignmentDestroy(s *terraform.State) error {
 	containerParentId := testutil.OrganizationId
 
 	payload := authorization.RemoveMembersPayload{
-		ResourceType: new("organization"),
-		Members:      &orgRoleAssignmentsToDestroy,
+		ResourceType: "organization",
+		Members:      orgRoleAssignmentsToDestroy,
 	}
 
 	// Ignore error. If this request errors the org role assignment has been successfully deleted by terraform itself.
-	_, _ = client.RemoveMembers(ctx, containerParentId).RemoveMembersPayload(payload).Execute()
+	_, _ = client.DefaultAPI.RemoveMembers(ctx, containerParentId).RemoveMembersPayload(payload).Execute()
 	return nil
 }
 
@@ -928,16 +926,16 @@ func testAccCheckServiceAccountRoleAssignmentDestroy(s *terraform.State) error {
 
 		resourceId := terraformId[0]
 		payload := authorization.RemoveMembersPayload{
-			ResourceType: new("service-account"),
-			Members: &[]authorization.Member{
+			ResourceType: "service-account",
+			Members: []authorization.Member{
 				{
-					Role:    new(terraformId[1]),
-					Subject: new(terraformId[2]),
+					Role:    terraformId[1],
+					Subject: terraformId[2],
 				},
 			},
 		}
 
-		_, err = client.RemoveMembers(ctx, resourceId).RemoveMembersPayload(payload).Execute()
+		_, err = client.DefaultAPI.RemoveMembers(ctx, resourceId).RemoveMembersPayload(payload).Execute()
 		if err != nil && !strings.Contains(err.Error(), "400") {
 			return fmt.Errorf("destroying assignment %s: %w", rs.Primary.ID, err)
 		}
