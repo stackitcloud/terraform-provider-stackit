@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -13,8 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 	telemetrylinkWait "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi/wait"
+	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
+	telemetryrouterWait "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -356,4 +360,78 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAccCheckTelemetryRouterAccessTokenDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := telemetryrouter.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryRouterCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var errs []error
+	// access tokens
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_telemetryrouter_access_token" {
+			continue
+		}
+		accessTokenId := strings.Split(rs.Primary.ID, core.Separator)[3]
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+
+		err := client.DefaultAPI.DeleteAccessToken(ctx, testutil.ProjectId, region, instanceId, accessTokenId).Execute()
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) {
+				if oapiErr.StatusCode == http.StatusNotFound {
+					continue
+				}
+			}
+			errs = append(errs, fmt.Errorf("cannot trigger access token deletion %q: %w", accessTokenId, err))
+		}
+
+		_, err = telemetryrouterWait.DeleteAccessTokenWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", instanceId, accessTokenId).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying acess token %s of instance %s during CheckDestroy: waiting for deletion %w", accessTokenId, instanceId, err)
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+func testAccCheckTelemetryRouterDestinationDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := telemetryrouter.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryRouterCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	var errs []error
+	// destinations
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_telemetryrouter_destination" {
+			continue
+		}
+		destinationId := strings.Split(rs.Primary.ID, core.Separator)[3]
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		region := strings.Split(rs.Primary.ID, core.Separator)[1]
+
+		err := client.DefaultAPI.DeleteDestination(ctx, testutil.ProjectId, region, instanceId, destinationId).Execute()
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			if errors.As(err, &oapiErr) {
+				if oapiErr.StatusCode == http.StatusNotFound {
+					continue
+				}
+			}
+			errs = append(errs, fmt.Errorf("cannot trigger destination deletion %q: %w", destinationId, err))
+		}
+
+		_, err = telemetryrouterWait.DeleteDestinationWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", instanceId, destinationId).WaitWithContext(ctx)
+		if err != nil {
+			return fmt.Errorf("destroying destination %s of instance %s during CheckDestroy: waiting for deletion %w", destinationId, instanceId, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }
