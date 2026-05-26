@@ -38,6 +38,7 @@ var (
 	_ resource.ResourceWithModifyPlan  = &telemetryRouterDestinationResource{}
 )
 
+//nolint:gosec // there is no G101: Potential hardcoded credentials
 var schemaDescriptions = map[string]string{
 	"id":                           "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`destionation_id`\".",
 	"instance_id":                  "The TelemetryRouter instance ID",
