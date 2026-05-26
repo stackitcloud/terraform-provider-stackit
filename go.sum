@@ -726,8 +726,8 @@ github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.2 h1:6C/iTPoYP
 github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.2/go.mod h1:/OHYZXQb9KXDdZK5J9C2YS6DJUD2i6ednZ1rK7zpDZ0=
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.19.0 h1:VDGfv4VUKo+yogizhjKLzcNa5CR28q6uWDLQs5ntgO0=
 github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.19.0/go.mod h1:xJNa86o89czK2o60+s46vz8+NSKDTbQduFGFaztJnsA=
-github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.5.3 h1:LM/u2bnB5B9xhSX8S3fC5gYu3VPvWZa+xDndhpI2jc4=
-github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.5.3/go.mod h1:fXq3TmVLb4JMSve989NFFViMFoYa83s7M3hJWgN6mdQ=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.6.0 h1:4ufJ4Iti/6ImdUfHVUToDgwBeDJZdr4Pqff60YAHsag=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.6.0/go.mod h1:fXq3TmVLb4JMSve989NFFViMFoYa83s7M3hJWgN6mdQ=
 github.com/stackitcloud/stackit-sdk-go/services/sfs v0.10.1 h1:t1kx4zz/6eHpJGOnWnX0+KsS3KLlPDFo2gE11pZkdqg=
 github.com/stackitcloud/stackit-sdk-go/services/sfs v0.10.1/go.mod h1:jMlBoXqrPNX5nXbo6oT7exalqilw1jiLPoIp4Cn0CdI=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.14.0 h1:Zy3yxmHzW+ydu1naeESMh8psXhUglkOHZ+/F3SJMwX8=
