@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/http"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -15,12 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 	telemetrylinkWait "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi/wait"
-	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
-	telemetryrouterWait "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -286,8 +280,6 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
 		testAccCheckTelemetryLinkDestroy,
-		testAccCheckTelemetryRouterAccessTokenDestroy,
-		testAccCheckTelemetryRouterInstanceDestroy,
 	}
 
 	var errs []error
@@ -358,82 +350,6 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 		}
 		if err != nil {
 			return fmt.Errorf("deleting link %s %s: waiting for deletion %w", l.resourceType, l.resourceId, err)
-		}
-	}
-	return nil
-}
-
-func testAccCheckTelemetryRouterAccessTokenDestroy(s *terraform.State) error {
-	ctx := context.Background()
-	client, err := telemetryrouter.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryRouterCustomEndpoint, false)...)
-	if err != nil {
-		return fmt.Errorf("creating client: %w", err)
-	}
-
-	var errs []error
-	// access tokens
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_telemetryrouter_access_token" {
-			continue
-		}
-		accessTokenId := strings.Split(rs.Primary.ID, core.Separator)[3]
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-		region := strings.Split(rs.Primary.ID, core.Separator)[1]
-
-		err := client.DefaultAPI.DeleteAccessToken(ctx, testutil.ProjectId, region, instanceId, accessTokenId).Execute()
-		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			if errors.As(err, &oapiErr) {
-				if oapiErr.StatusCode == http.StatusNotFound {
-					continue
-				}
-			}
-			errs = append(errs, fmt.Errorf("cannot trigger access token deletion %q: %w", accessTokenId, err))
-		}
-
-		_, err = telemetryrouterWait.DeleteAccessTokenWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", instanceId, accessTokenId).WaitWithContext(ctx)
-		if err != nil {
-			return fmt.Errorf("destroying acess token %s of instance %s during CheckDestroy: waiting for deletion %w", accessTokenId, instanceId, err)
-		}
-	}
-
-	return errors.Join(errs...)
-}
-
-func testAccCheckTelemetryRouterInstanceDestroy(s *terraform.State) error {
-	ctx := context.Background()
-	client, err := telemetryrouter.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryRouterCustomEndpoint, false)...)
-	if err != nil {
-		return fmt.Errorf("creating client: %w", err)
-	}
-
-	var instancesToDestroy []string
-	// instances
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_telemetryrouter_instance" {
-			continue
-		}
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
-		instancesToDestroy = append(instancesToDestroy, instanceId)
-	}
-
-	response, err := client.DefaultAPI.ListTelemetryRouters(ctx, testutil.ProjectId, "eu01").Execute()
-	if err != nil {
-		return fmt.Errorf("getting instances: %w", err)
-	}
-	for i := range response.TelemetryRouters {
-		if !slices.Contains(instancesToDestroy, response.TelemetryRouters[i].Id) {
-			continue
-		}
-
-		err := client.DefaultAPI.DeleteTelemetryRouter(ctx, testutil.ProjectId, "eu01", response.TelemetryRouters[i].Id).Execute()
-		if err != nil {
-			return fmt.Errorf("deleting instance %s: %w", response.TelemetryRouters[i].Id, err)
-		}
-
-		_, err = telemetryrouterWait.DeleteTelemetryRouterWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", response.TelemetryRouters[i].Id).WaitWithContext(ctx)
-		if err != nil {
-			return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", response.TelemetryRouters[i].Id, err)
 		}
 	}
 	return nil
