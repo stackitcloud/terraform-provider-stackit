@@ -16,6 +16,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	objectstorageWait "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api/wait"
+	observability "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
+	observabilityWait "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api/wait"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 	telemetryrouterWait "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
@@ -154,6 +159,7 @@ var testConfigDestinationVarsOTLPBearerToken = config.Variables{
 	"config_filter_matcher": config.StringVariable("="),
 	"config_filter_value0":  config.StringVariable("value1"),
 	"config_filter_value1":  config.StringVariable("value2"),
+	"token_display_name":    config.StringVariable("tf-acc-test-tlmr-dest"),
 }
 
 func testConfigDestinationVarsOTLPBearerTokenUpdated() config.Variables {
@@ -181,7 +187,7 @@ var testConfigDestinationVarsS3 = config.Variables{
 	"config_filter_value0":                 config.StringVariable("value1"),
 	"config_filter_value1":                 config.StringVariable("value2"),
 	"objectstorage_credentials_group_name": config.StringVariable("tf-acc-test-group"),
-	"config_s3_bucket":                     config.StringVariable("bucket"),
+	"config_s3_bucket":                     config.StringVariable("tf-acc-test-tlmr-dest"),
 }
 
 func testConfigDestinationVarsS3Updated() config.Variables {
@@ -1034,6 +1040,8 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckTelemetryRouterInstanceDestroy,
 		testAccCheckTelemetryRouterAccessTokenDestroy,
 		testAccCheckTelemetryRouterDestinationDestroy,
+		testAccCheckObjectStorageDestroy,
+		testAccCheckObservabilityDestroy,
 	}
 
 	var errs []error
@@ -1165,4 +1173,109 @@ func testAccCheckTelemetryRouterDestinationDestroy(s *terraform.State) error {
 	}
 
 	return errors.Join(errs...)
+}
+
+func testAccCheckObservabilityDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := observability.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint, true)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	instancesToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_observability_instance" {
+			continue
+		}
+		// instance terraform ID: = "[project_id],[instance_id],[name]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		instancesToDestroy = append(instancesToDestroy, instanceId)
+	}
+
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
+	if err != nil {
+		return fmt.Errorf("getting instancesResp: %w", err)
+	}
+
+	instances := instancesResp.Instances
+	for i := range instances {
+		if utils.Contains(instancesToDestroy, instances[i].Id) {
+			if instances[i].Status != "DELETE_SUCCEEDED" {
+				_, err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, instances[i].Id).Execute()
+				if err != nil {
+					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", instances[i].Id, err)
+				}
+				_, err = observabilityWait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, instances[i].Id).WaitWithContext(ctx)
+				if err != nil {
+					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", instances[i].Id, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func testAccCheckObjectStorageDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := objectstorage.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObjectStorageCustomEndpoint, true)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	bucketsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_objectstorage_bucket" {
+			continue
+		}
+		// bucket terraform ID: "[project_id],[name]"
+		bucketName := strings.Split(rs.Primary.ID, core.Separator)[1]
+		bucketsToDestroy = append(bucketsToDestroy, bucketName)
+	}
+
+	bucketsResp, err := client.DefaultAPI.ListBuckets(ctx, testutil.ProjectId, testutil.Region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting bucketsResp: %w", err)
+	}
+
+	buckets := bucketsResp.Buckets
+	for _, bucket := range buckets {
+		bucketName := bucket.Name
+		if utils.Contains(bucketsToDestroy, bucketName) {
+			_, err := client.DefaultAPI.DeleteBucket(ctx, testutil.ProjectId, testutil.Region, bucketName).Execute()
+			if err != nil {
+				return fmt.Errorf("destroying bucket %s during CheckDestroy: %w", bucketName, err)
+			}
+			_, err = objectstorageWait.DeleteBucketWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, bucketName).WaitWithContext(ctx)
+			if err != nil {
+				return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", bucketName, err)
+			}
+		}
+	}
+
+	credentialsGroupsToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_objectstorage_credentials_group" {
+			continue
+		}
+		// credentials group terraform ID: "[project_id],[credentials_group_id]"
+		credentialsGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
+	}
+
+	credentialsGroupsResp, err := client.DefaultAPI.ListCredentialsGroups(ctx, testutil.ProjectId, testutil.Region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting bucketsResp: %w", err)
+	}
+
+	groups := credentialsGroupsResp.CredentialsGroups
+	for _, group := range groups {
+		groupId := group.CredentialsGroupId
+		if utils.Contains(credentialsGroupsToDestroy, groupId) {
+			_, err := client.DefaultAPI.DeleteCredentialsGroup(ctx, testutil.ProjectId, testutil.Region, groupId).Execute()
+			if err != nil {
+				return fmt.Errorf("destroying credentials group %s during CheckDestroy: %w", groupId, err)
+			}
+		}
+	}
+	return nil
 }
