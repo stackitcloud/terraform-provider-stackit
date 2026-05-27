@@ -1,30 +1,30 @@
 resource "stackit_telemetryrouter_destination" "s3" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   display_name = "s3-destination"
-  description = "S3 destination description"
+  description  = "S3 destination description"
   config = {
     config_type = "S3"
     filter = {
       attributes = [
         {
-          key = "key"
-          level = "logRecord"
+          key     = "key"
+          level   = "logRecord"
           matcher = "!="
-          values = ["test1", "test2"]
+          values  = ["test1", "test2"]
         },
         {
-          key = "key2"
-          level = "resource"
+          key     = "key2"
+          level   = "resource"
           matcher = "="
-          values = ["test3"]
+          values  = ["test3"]
         }
       ]
     }
     s3 = {
       bucket = "test"
       access_key = {
-        id = "id"
+        id     = "id"
         secret = "secret"
       }
       endpoint = "http://localhost:8160"
@@ -33,10 +33,10 @@ resource "stackit_telemetryrouter_destination" "s3" {
 }
 
 resource "stackit_telemetryrouter_destination" "otlp" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   display_name = "s3-destination"
-  description = "S3 destination description"
+  description  = "S3 destination description"
   config = {
     config_type = "OpenTelemetry"
     filter = {
@@ -45,13 +45,13 @@ resource "stackit_telemetryrouter_destination" "otlp" {
           key     = "key"
           level   = "logRecord"
           matcher = "!="
-          values = ["test1", "test2"]
+          values  = ["test1", "test2"]
         },
         {
           key     = "key2"
           level   = "resource"
           matcher = "="
-          values = ["test3"]
+          values  = ["test3"]
         }
       ]
     }

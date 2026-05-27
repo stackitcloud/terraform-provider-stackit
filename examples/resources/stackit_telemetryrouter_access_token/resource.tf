@@ -10,8 +10,8 @@ resource "stackit_telemetryrouter_access_token" "accessToken2" {
   instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region       = "eu01"
   display_name = "telemetryrouter-access-token-example"
-  ttl     = 30
-  description = "Example description"
+  ttl          = 30
+  description  = "Example description"
 }
 
 # Only use the import statement, if you want to import an existing TelemetryRouter access token
