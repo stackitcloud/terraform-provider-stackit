@@ -32,7 +32,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.22.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.28.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.8.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.29.2
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.30.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.2
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.23.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.9.0
@@ -40,9 +40,9 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.6.2
 	github.com/stackitcloud/stackit-sdk-go/services/serverupdate v1.5.2
 	github.com/stackitcloud/stackit-sdk-go/services/serviceaccount v0.19.0
-	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.5.3
+	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.10.1
-	github.com/stackitcloud/stackit-sdk-go/services/ske v1.14.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v1.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.11.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.36.0
