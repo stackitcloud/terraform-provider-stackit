@@ -19,6 +19,20 @@ resource "stackit_objectstorage_credential" "example" {
   expiration_timestamp = "2027-01-02T03:04:05Z"
 }
 
+resource "time_rotating" "rotate" {
+  rotation_days = 80
+}
+
+resource "stackit_objectstorage_credential" "rotate_example" {
+  project_id           = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  credentials_group_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  expiration_timestamp = "2027-01-02T03:04:05Z"
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }
+}
+
 # Only use the import statement, if you want to import an existing objectstorage credential
 import {
   to = stackit_objectstorage_credential.import-example
@@ -38,6 +52,7 @@ import {
 
 - `expiration_timestamp` (String) Expiration timestamp, in RFC339 format without fractional seconds. Example: "2025-01-01T00:00:00Z". If not set, the credential never expires.
 - `region` (String) The resource region. If not defined, the provider region is used.
+- `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
 
