@@ -144,7 +144,7 @@ type distributionConfig struct {
 	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
 	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
 	Waf              types.Object    `tfsdk:"waf"`               // The WAF configuration
-	tls              tlsConfig       `tfsdk:"tls"`               // The TLS configuration
+	Tls              *tlsConfig      `tfsdk:"tls"`               // The TLS configuration
 }
 
 type optimizerConfig struct {
@@ -162,8 +162,8 @@ type backend struct {
 }
 
 type tlsConfig struct {
-	enabledTls10 types.Bool `tfsdk:"enabled_tls_10"`
-	enabledTls11 types.Bool `tfsdk:"enabled_tls_11"`
+	EnabledTls10 types.Bool `tfsdk:"enabled_tls_10"`
+	EnabledTls11 types.Bool `tfsdk:"enabled_tls_11"`
 }
 
 type wafConfig struct {
@@ -902,6 +902,15 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = tempBlockedCountries
 	}
 
+	//tls
+	var tlsConfig *cdnSdk.TlsConfigPatch
+	if configModel.Tls != nil {
+		tlsConfig = &cdnSdk.TlsConfigPatch{
+			EnableTls10: new(configModel.Tls.EnabledTls10.ValueBool()),
+			EnableTls11: new(configModel.Tls.EnabledTls11.ValueBool()),
+		}
+	}
+
 	// redirects
 	redirectsConfig := convertRedirectconfig(configModel.Redirects)
 
@@ -951,6 +960,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
 		Redirects:        redirectsConfig,
+		Tls:              tlsConfig,
 	}
 
 	configPatch.Waf = &cdnSdk.WafConfigPatch{
@@ -1394,6 +1404,17 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 			}
 		}
 	}
+
+	tlsObjAttrs := map[string]attr.Value{
+		"enabled_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
+		"enabled_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
+	}
+
+	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
+	if diagTls.HasError() {
+		return core.DiagsToError(diagWaf)
+	}
+
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           modelRegions,
@@ -1401,6 +1422,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		"optimizer":         optimizerVal,
 		"redirects":         redirectsVal,
 		"waf":               wafVal,
+		"tls":               tlsVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1472,6 +1494,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		optimizer = cdnSdk.NewOptimizer(cfg.Optimizer.GetEnabled())
 	}
 
+	var tls *cdnSdk.TlsConfig
+	// Leave the tls pointer as nil if the TLS configuration is empty.
+	if cfg.Tls.EnableTls10 == true || cfg.Tls.EnableTls11 == true {
+		tls = &cfg.Tls
+	}
+
 	var backend *cdnSdk.CreateDistributionPayloadBackend
 	if cfg.Backend.HttpBackend != nil {
 		backend = &cdnSdk.CreateDistributionPayloadBackend{
@@ -1514,7 +1542,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
 		Redirects:        cfg.Redirects,
-		Waf:              wafPayload, // Now passes nil if omitted
+		Waf:              wafPayload,
+		Tls:              tls,
 	}
 
 	return payload, nil
@@ -1589,6 +1618,15 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 			return nil, err
 		}
 		regions = append(regions, *regionEnum)
+	}
+
+	// tls
+	var tls cdnSdk.TlsConfig
+	if configModel.Tls != nil {
+		tls = cdnSdk.TlsConfig{
+			EnableTls10: configModel.Tls.EnabledTls10.ValueBool(),
+			EnableTls11: configModel.Tls.EnabledTls11.ValueBool(),
+		}
 	}
 
 	// blockedCountries
@@ -1670,6 +1708,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
 		Redirects:        redirectsConfig,
+		Tls:              tls,
 	}
 
 	if !utils.IsUndefined(configModel.Waf) {

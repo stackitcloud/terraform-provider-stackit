@@ -77,6 +77,11 @@ func TestToCreatePayload(t *testing.T) {
 		"disabled_rule_collection_ids":  emptyWafSet,
 		"log_only_rule_collection_ids":  emptyWafSet,
 	})
+	// defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
+	// 	"enabled_tls_10": types.BoolValue(false),
+	// 	"enabled_tls_11": types.BoolValue(false),
+	// })
+
 	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
 	if !ok {
 		t.Fatalf("configTypes[\"redirects\"] is not of type basetypes.ObjectType")
@@ -90,6 +95,7 @@ func TestToCreatePayload(t *testing.T) {
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"redirects":         types.ObjectNull(redirectsTypes),
 		"waf":               defaultWaf,
+		"tls":               types.ObjectNull(tlsTypes),
 	})
 
 	matcherValues := types.ListValueMust(types.StringType, []attr.Value{
@@ -197,6 +203,7 @@ func TestToCreatePayload(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               defaultWaf,
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.CreateDistributionPayload{
@@ -224,6 +231,7 @@ func TestToCreatePayload(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         redirectsConfigVal,
 					"waf":               defaultWaf,
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.CreateDistributionPayload{
@@ -280,6 +288,7 @@ func TestToCreatePayload(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               defaultWaf,
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.CreateDistributionPayload{
@@ -309,6 +318,7 @@ func TestToCreatePayload(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
 					"waf":               populatedWaf,
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.CreateDistributionPayload{
@@ -396,6 +406,7 @@ func TestConvertConfig(t *testing.T) {
 		"blocked_countries": blockedCountriesFixture,
 		"redirects":         types.ObjectNull(redirectsTypes),
 		"waf":               types.ObjectNull(wafTypes),
+		"tls":               types.ObjectNull(tlsTypes),
 	})
 
 	matcherValues := types.ListValueMust(types.StringType, []attr.Value{
@@ -508,6 +519,7 @@ func TestConvertConfig(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               types.ObjectNull(wafTypes),
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.Config{
@@ -538,6 +550,7 @@ func TestConvertConfig(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               populatedWaf,
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.Config{
@@ -569,6 +582,7 @@ func TestConvertConfig(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         redirectsConfigVal,
 					"waf":               types.ObjectNull(wafTypes),
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.Config{
@@ -629,6 +643,7 @@ func TestConvertConfig(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               types.ObjectNull(wafTypes),
+					"tls":               types.ObjectNull(tlsTypes),
 				})
 			}),
 			Expected: &cdnSdk.Config{
@@ -778,6 +793,11 @@ func TestMapFields(t *testing.T) {
 		"disabled_rule_collection_ids":  types.SetNull(types.StringType),
 		"log_only_rule_collection_ids":  types.SetNull(types.StringType),
 	})
+
+	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
+		"enabled_tls_10": types.BoolValue(false),
+		"enabled_tls_11": types.BoolValue(false),
+	})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
@@ -785,6 +805,7 @@ func TestMapFields(t *testing.T) {
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"redirects":         types.ObjectNull(redirectsAttrTypes),
 		"waf":               defaultWaf,
+		"tls":               defaultTls,
 	})
 
 	redirectsInput := &cdnSdk.RedirectConfig{
@@ -873,6 +894,10 @@ func TestMapFields(t *testing.T) {
 					Mode: cdnSdk.WAFMODE_DISABLED,
 					Type: cdnSdk.WAFTYPE_FREE,
 				},
+				Tls: cdnSdk.TlsConfig{
+					EnableTls10: false,
+					EnableTls11: false,
+				},
 			},
 			CreatedAt: createdAt,
 			Domains: []cdnSdk.Domain{
@@ -913,6 +938,7 @@ func TestMapFields(t *testing.T) {
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"redirects":         types.ObjectNull(redirectsAttrTypes),
 		"waf":               types.ObjectNull(wafTypes),
+		"tls":               types.ObjectNull(tlsTypes),
 	})
 	tests := map[string]struct {
 		Input        *cdnSdk.Distribution
@@ -934,6 +960,7 @@ func TestMapFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
 					"waf":               defaultWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -961,6 +988,7 @@ func TestMapFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
 					"waf":               defaultWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -977,6 +1005,7 @@ func TestMapFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         redirectsConfigExpected,
 					"waf":               defaultWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -1001,6 +1030,7 @@ func TestMapFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
 					"waf":               populatedWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -1062,6 +1092,7 @@ func TestMapFields(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"redirects":         types.ObjectNull(redirectsAttrTypes),
 					"waf":               defaultWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			IsValid: true,

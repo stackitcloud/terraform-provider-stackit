@@ -58,7 +58,10 @@ func TestMapDataSourceFields(t *testing.T) {
 		"disabled_rule_collection_ids":  emptyWafSet,
 		"log_only_rule_collection_ids":  emptyWafSet,
 	})
-
+	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
+		"enabled_tls_10": types.BoolValue(false),
+		"enabled_tls_11": types.BoolValue(false),
+	})
 	config := types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":           backend,
 		"regions":           regionsFixture,
@@ -66,6 +69,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		"optimizer":         types.ObjectNull(optimizerTypes),
 		"redirects":         types.ObjectNull(redirectsTypes),
 		"waf":               emptyWaf,
+		"tls":               defaultTls,
 	})
 	redirectsInput := cdnSdk.RedirectConfig{
 		Rules: []cdnSdk.RedirectRule{
@@ -239,6 +243,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               emptyWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -266,6 +271,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"optimizer":         types.ObjectNull(optimizerTypes),
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               emptyWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			IsValid: true,
@@ -287,6 +293,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               emptyWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -312,6 +319,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         redirectsConfigExpected,
 					"waf":               emptyWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -328,6 +336,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					"blocked_countries": blockedCountriesFixture,
 					"redirects":         types.ObjectNull(redirectsTypes),
 					"waf":               populatedWaf,
+					"tls":               defaultTls,
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {

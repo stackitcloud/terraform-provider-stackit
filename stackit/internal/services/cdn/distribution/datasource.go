@@ -46,6 +46,9 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"waf": types.ObjectType{
 		AttrTypes: wafTypes, // Shared from resource.go
 	},
+	"tls": types.ObjectType{
+		AttrTypes: tlsTypes, // Shared from resource.go
+	},
 }
 
 type distributionDataSource struct {
@@ -204,6 +207,20 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Computed: true,
+							},
+						},
+					},
+					"tls": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_tls_config"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled_tls_11": schema.BoolAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["config_tls_enable_tls_10"],
+							},
+							"enabled_tls_10": schema.BoolAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["config_tls_enable_tls_11"],
 							},
 						},
 					},
@@ -641,6 +658,16 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		}
 	}
 
+	tlsObjAttrs := map[string]attr.Value{
+		"enabled_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
+		"enabled_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
+	}
+
+	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
+	if diagTls.HasError() {
+		return core.DiagsToError(diagWaf)
+	}
+
 	// Use dataSourceConfigTypes
 	cfg, diags := types.ObjectValue(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":           backend,
@@ -649,6 +676,7 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		"optimizer":         optimizerVal,
 		"redirects":         redirectsVal,
 		"waf":               wafVal,
+		"tls":               tlsVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
