@@ -267,7 +267,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 	accessTokenId := waitResp.Id
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenId)
 
-	err = mapFields(ctx, createResp, &model)
+	err = mapFields(ctx, createResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -313,7 +313,7 @@ func (r *telemetryRouterAccessTokenResource) Read(ctx context.Context, req resou
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, accessTokenResponse, &model)
+	err = mapFields(ctx, accessTokenResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -366,7 +366,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 		return
 	}
 
-	err = mapFields(ctx, accessTokenResponse, &model)
+	err = mapFields(ctx, accessTokenResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -450,7 +450,7 @@ func toCreatePayload(_ context.Context, _ diag.Diagnostics, model *Model) (*tele
 	}, nil
 }
 
-func mapFields(_ context.Context, accessToken any, model *Model) error {
+func mapFields(_ context.Context, accessToken any, model *Model, region string) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
@@ -519,9 +519,9 @@ func mapFields(_ context.Context, accessToken any, model *Model) error {
 		return fmt.Errorf("access token id not present")
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
-	model.Region = types.StringValue(model.Region.ValueString())
+	model.Region = types.StringValue(region)
 	model.CreatorID = types.StringValue(creatorId)
 	model.Description = types.StringPointerValue(description)
 	model.DisplayName = types.StringValue(displayName)
