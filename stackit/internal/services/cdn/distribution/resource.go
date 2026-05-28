@@ -102,6 +102,9 @@ var schemaDescriptions = map[string]string{
 	"waf_enabled_rule_collection_ids":              "Set of WAF Collection IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
 	"waf_disabled_rule_collection_ids":             "Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
 	"waf_log_only_rule_collection_ids":             "Set of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"config_tls_config":                            "Configuration for TLS protocol versions. Note: Enabling older TLS versions (1.0, 1.1) is generally discouraged for security reasons.",
+	"config_tls_enable_tls_10":                     "If set to true, the distribution will accept connections using TLS 1.0.",
+	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
 }
 
 type Model struct {
@@ -141,6 +144,7 @@ type distributionConfig struct {
 	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
 	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
 	Waf              types.Object    `tfsdk:"waf"`               // The WAF configuration
+	tls              tlsConfig       `tfsdk:"tls"`               // The TLS configuration
 }
 
 type optimizerConfig struct {
@@ -155,6 +159,11 @@ type backend struct {
 	BucketURL            *string               `tfsdk:"bucket_url"`
 	Region               *string               `tfsdk:"region"`
 	Credentials          *backendCredentials   `tfsdk:"credentials"`
+}
+
+type tlsConfig struct {
+	enabledTls10 types.Bool `tfsdk:"enabled_tls_10"`
+	enabledTls11 types.Bool `tfsdk:"enabled_tls_11"`
 }
 
 type wafConfig struct {
@@ -193,6 +202,9 @@ var configTypes = map[string]attr.Type{
 	"waf": types.ObjectType{
 		AttrTypes: wafTypes,
 	},
+	"tls": types.ObjectType{
+		AttrTypes: tlsTypes,
+	},
 }
 
 var optimizerTypes = map[string]attr.Type{
@@ -227,6 +239,11 @@ var redirectsTypes = map[string]attr.Type{
 			AttrTypes: redirectRuleTypes,
 		},
 	},
+}
+
+var tlsTypes = map[string]attr.Type{
+	"enabled_tls_10": types.BoolType,
+	"enabled_tls_11": types.BoolType,
 }
 
 var wafTypes = map[string]attr.Type{
@@ -387,6 +404,23 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 						Validators: []validator.Object{
 							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+					},
+					"tls": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_tls_config"],
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled_tls_11": schema.BoolAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["config_tls_enable_tls_10"],
+							},
+							"enabled_tls_10": schema.BoolAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["config_tls_enable_tls_11"],
+							},
 						},
 					},
 					"redirects": schema.SingleNestedAttribute{
