@@ -165,7 +165,17 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Calling API: %v", err))
+		tfutils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading TelemetryLink",
+			fmt.Sprintf("TelemetryLink for resource type %q and resource ID %q does not exist.", resourceType, resourceID),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Resource with type %q ID %q not found or forbidden access", resourceType, resourceID),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	ctx = core.LogResponse(ctx)
