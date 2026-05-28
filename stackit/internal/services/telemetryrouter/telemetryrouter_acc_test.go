@@ -199,7 +199,7 @@ func testConfigDestinationVarsS3Updated() config.Variables {
 	return newVars
 }
 
-func TestTelemetryRouterInstanceMin(t *testing.T) {
+func TestAccTelemetryRouterInstanceMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
