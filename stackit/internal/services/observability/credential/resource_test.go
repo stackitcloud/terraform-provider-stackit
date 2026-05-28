@@ -22,11 +22,12 @@ func TestMapFields(t *testing.T) {
 				Password: "password",
 			},
 			Model{
-				Id:         types.StringValue("pid,iid,username"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("iid"),
-				Username:   types.StringValue("username"),
-				Password:   types.StringValue("password"),
+				Id:                types.StringValue("pid,iid,username"),
+				ProjectId:         types.StringValue("pid"),
+				InstanceId:        types.StringValue("iid"),
+				Username:          types.StringValue("username"),
+				Password:          types.StringValue("password"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -55,8 +56,9 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
-				ProjectId:  tt.expected.ProjectId,
-				InstanceId: tt.expected.InstanceId,
+				ProjectId:         tt.expected.ProjectId,
+				InstanceId:        tt.expected.InstanceId,
+				RotateWhenChanged: types.MapNull(types.StringType),
 			}
 			err := mapFields(tt.input, state)
 			if !tt.isValid && err == nil {

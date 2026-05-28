@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
@@ -39,6 +41,11 @@ type Model struct {
 	Description types.String `tfsdk:"description"`
 	Username    types.String `tfsdk:"username"`
 	Password    types.String `tfsdk:"password"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -125,6 +132,18 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
 				},
 			},
 		},
