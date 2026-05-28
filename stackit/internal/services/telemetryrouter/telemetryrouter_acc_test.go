@@ -299,7 +299,7 @@ func TestTelemetryRouterInstanceMin(t *testing.T) {
 	})
 }
 
-func TestTelemetryRouterInstanceMax(t *testing.T) {
+func TestAccTelemetryRouterInstanceMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
