@@ -166,7 +166,7 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapDataSourceFields(ctx, accessTokenResponse, &model)
+	err = mapDataSourceFields(ctx, accessTokenResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter access token", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -181,7 +181,7 @@ func (d *telemetryRouterAccessTokenDataSource) Read(ctx context.Context, req dat
 	})
 }
 
-func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *DataSourceModel) error {
+func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAccessTokenResponse, model *DataSourceModel, region string) error {
 	if accessToken == nil {
 		return fmt.Errorf("access token is nil")
 	}
@@ -198,9 +198,9 @@ func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAcce
 		return fmt.Errorf("access token id not present")
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), accessTokenID)
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.InstanceID.ValueString(), accessTokenID)
 	model.AccessTokenID = types.StringValue(accessTokenID)
-	model.Region = types.StringValue(model.Region.ValueString())
+	model.Region = types.StringValue(region)
 	model.CreatorID = types.StringValue(accessToken.CreatorId)
 	if accessToken.Description != nil && *accessToken.Description != "" {
 		model.Description = types.StringPointerValue(accessToken.Description)
