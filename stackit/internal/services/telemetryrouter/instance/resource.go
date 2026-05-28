@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -531,7 +532,7 @@ func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 	model.InstanceID = types.StringValue(instanceID)
 	model.DisplayName = types.StringValue(instance.DisplayName)
 	model.Description = types.StringPointerValue(instance.Description)
-	model.CreationTime = types.StringValue(instance.CreationTime.String())
+	model.CreationTime = types.StringValue(instance.CreationTime.Format(time.RFC3339))
 	model.URI = types.StringValue(instance.Uri)
 	model.Status = types.StringValue(instance.Status)
 
