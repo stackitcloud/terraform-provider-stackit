@@ -729,7 +729,7 @@ func toCreatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeTimeout:  model.ScrapeTimeout.ValueString(),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: new(float32(model.SampleLimit.ValueInt32())),
-		Scheme:      model.Scheme.ValueString(),
+		Scheme:      observabilitySdk.CreateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
 	}
 	setDefaultsCreateScrapeConfig(&sc, model, saml2Model)
 
@@ -818,7 +818,7 @@ func toUpdatePayload(ctx context.Context, model *Model, saml2Model *saml2Model, 
 		ScrapeTimeout:  model.ScrapeTimeout.ValueString(),
 		// potentially lossy conversion, depending on the allowed range for sample_limit
 		SampleLimit: new(float32(model.SampleLimit.ValueInt32())),
-		Scheme:      model.Scheme.ValueString(),
+		Scheme:      observabilitySdk.UpdateScrapeConfigPayloadScheme(model.Scheme.ValueString()),
 	}
 	setDefaultsUpdateScrapeConfig(&sc, model)
 
