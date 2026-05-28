@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -291,7 +290,25 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	waitResp, err := wait.CreateTelemetryRouterWaitHandler(ctx, r.client.DefaultAPI, projectId, regionId, createResp.Id).WaitWithContext(ctx)
+	ctx = core.LogResponse(ctx)
+
+	if createResp == nil || createResp.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter instance", "Create API response: Incomplete response (id missing)")
+		return
+	}
+
+	instanceId := createResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"region":      region,
+		"instance_id": instanceId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	waitResp, err := wait.CreateTelemetryRouterWaitHandler(ctx, r.client.DefaultAPI, projectId, regionId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Waiting for TelemetryRouter Instance to become active: %v", err))
 		return
@@ -388,6 +405,22 @@ func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
+	if updateResp == nil || updateResp.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", "Update API response: Incomplete response (id missing)")
+		return
+	}
+
+	instanceID = updateResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectID,
+		"region":      region,
+		"instance_id": instanceID,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.UpdateTelemetryRouterWaitHandler(ctx, r.client.DefaultAPI, projectID, region, updateResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter Instance", fmt.Sprintf("Waiting for TelemetryRouter Instance to become active: %v", err))
@@ -434,6 +467,17 @@ func (r *telemetryRouterInstanceResource) Delete(ctx context.Context, req resour
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectID,
+		"region":      region,
+		"instance_id": instanceID,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	_, err = wait.DeleteTelemetryRouterWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter Instance", fmt.Sprintf("Waiting for TelemetryRouter Instance to become deleted: %v", err))
@@ -449,9 +493,12 @@ func (r *telemetryRouterInstanceResource) ImportState(ctx context.Context, req r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter Instance", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`", req.ID))
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
+	})
+
 	tflog.Info(ctx, "TelemetryRouter Instance state imported")
 }
 

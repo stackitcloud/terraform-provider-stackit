@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -62,7 +61,10 @@ var schemaDescriptions = map[string]string{
 	"config.filter.attributes.values": "The TelemetryRouter destination's filter attribute values",
 	"config.config_type": fmt.Sprintf(
 		"The TelemetryRouter destinations's configuration type, possible values: %s",
-		tfutils.FormatPossibleValues("OpenTelemetry", "S3"),
+		tfutils.FormatPossibleValues(
+			string(telemetryrouter.DESTINATIONCONFIGTYPE_OPEN_TELEMETRY),
+			string(telemetryrouter.DESTINATIONCONFIGTYPE_S3),
+		),
 	),
 	"config.opentelemetry":                     "OpenTelemetry configuration",
 	"config.opentelemetry.basic_auth":          "OpenTelemetry basic auth configuration",
@@ -303,7 +305,10 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 							stringplanmodifier.RequiresReplace(),
 						},
 						Validators: []validator.String{
-							stringvalidator.OneOf("OpenTelemetry", "S3"),
+							stringvalidator.OneOf(
+								string(telemetryrouter.DESTINATIONCONFIGTYPE_OPEN_TELEMETRY),
+								string(telemetryrouter.DESTINATIONCONFIGTYPE_S3),
+							),
 						},
 					},
 					"filter": schema.SingleNestedAttribute{
@@ -457,7 +462,7 @@ func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Mod
 	}
 
 	switch conf.ConfigType.ValueString() {
-	case "OpenTelemetry":
+	case string(telemetryrouter.DESTINATIONCONFIGTYPE_OPEN_TELEMETRY):
 		if !tfutils.IsUndefined(conf.S3) {
 			core.LogAndAddError(
 				ctx,
@@ -490,7 +495,7 @@ func validateConfig(ctx context.Context, respDiags *diag.Diagnostics, model *Mod
 				"Basic Auth and Bearer Token can't be used at the same time with OpenTelemetry destination",
 			)
 		}
-	case "S3":
+	case string(telemetryrouter.DESTINATIONCONFIGTYPE_S3):
 		if !tfutils.IsUndefined(conf.OpenTelemetry) {
 			core.LogAndAddError(
 				ctx,
@@ -543,13 +548,32 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
+	if createResp == nil || createResp.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", "Create API response: Incomplete response (id missing)")
+		return
+	}
+
+	destinationId := createResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":     projectId,
+		"region":         region,
+		"instance_id":    instanceId,
+		"destination_id": destinationId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -595,7 +619,7 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, instanceResponse, &model)
+	err = mapFields(ctx, instanceResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -645,13 +669,30 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
+	if updateResp == nil || updateResp.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", "Update API response: Incomplete response (id missing)")
+		return
+	}
+
+	destinationId := updateResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":     projectID,
+		"region":         region,
+		"instance_id":    instanceID,
+		"destination_id": destinationId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.UpdateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, updateResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
 		return
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -694,6 +735,18 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":     projectID,
+		"region":         region,
+		"instance_id":    instanceID,
+		"destination_id": destinationID,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	_, err = wait.DeleteDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, destinationID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become deleted: %v", err))
@@ -709,10 +762,13 @@ func (r *telemetryRouterDestinationResource) ImportState(ctx context.Context, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter destination", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`destination_id`", req.ID))
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("destination_id"), idParts[3])...)
+
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":     idParts[0],
+		"region":         idParts[1],
+		"instance_id":    idParts[2],
+		"destination_id": idParts[3],
+	})
 	tflog.Info(ctx, "TelemetryRouter Destination state imported")
 }
 
@@ -884,7 +940,7 @@ func toS3(ctx context.Context, diags diag.Diagnostics, conf *config) (*telemetry
 	return nil, nil
 }
 
-func mapFields(ctx context.Context, destination *telemetryrouter.DestinationResponse, model *Model) error {
+func mapFields(ctx context.Context, destination *telemetryrouter.DestinationResponse, model *Model, region string) error {
 	if destination == nil {
 		return fmt.Errorf("destination is nil")
 	}
@@ -900,7 +956,8 @@ func mapFields(ctx context.Context, destination *telemetryrouter.DestinationResp
 		return fmt.Errorf("destination id not present")
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), destinationID)
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.InstanceID.ValueString(), destinationID)
+	model.Region = types.StringValue(region)
 	model.DestinationID = types.StringValue(destinationID)
 	model.DisplayName = types.StringValue(destination.DisplayName)
 	model.Description = types.StringPointerValue(destination.Description)

@@ -304,7 +304,17 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
+		tfutils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Error reading TelemetryRouter destination",
+			fmt.Sprintf("Destination with ID %q does not exist in project %q.", destinationID, projectID),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectID),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	ctx = core.LogResponse(ctx)
@@ -417,7 +427,7 @@ func mapDatasourceFilter(ctx context.Context, apiConf *telemetryrouter.Destinati
 		}
 	}
 
-	filterValue, diags := types.ObjectValueFrom(ctx, datasourceFilterTypes, filter{
+	filterValue, diags := types.ObjectValueFrom(ctx, datasourceFilterTypes, datasourceFilter{
 		Attributes: attrConfigs,
 	})
 	if diags.HasError() {

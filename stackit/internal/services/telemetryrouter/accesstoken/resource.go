@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
@@ -254,6 +253,23 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
+	if createResp == nil || createResp.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", "Create API response: Incomplete response (id missing)")
+		return
+	}
+
+	accessTokenId := createResp.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":      projectId,
+		"region":          region,
+		"instance_id":     instanceId,
+		"access_token_id": accessTokenId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	waitResp, err := wait.CreateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, createResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
@@ -264,7 +280,7 @@ func (r *telemetryRouterAccessTokenResource) Create(ctx context.Context, req res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter access token", "Got empty credential id")
 		return
 	}
-	accessTokenId := waitResp.Id
+	accessTokenId = waitResp.Id
 	ctx = tflog.SetField(ctx, "access_token_id", accessTokenId)
 
 	err = mapFields(ctx, createResp, &model, region)
@@ -360,6 +376,23 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 		return
 	}
 
+	if accessTokenResponse == nil || accessTokenResponse.Id == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", "Update API response: Incomplete response (id missing)")
+		return
+	}
+
+	accessTokenId := accessTokenResponse.Id
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":      projectID,
+		"region":          region,
+		"instance_id":     instanceID,
+		"access_token_id": accessTokenId,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	_, err = wait.UpdateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenResponse.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become active: %v", err))
@@ -410,6 +443,17 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":      projectID,
+		"region":          region,
+		"instance_id":     instanceID,
+		"access_token_id": accessTokenID,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	_, err = wait.DeleteAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenID).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryRouter access token", fmt.Sprintf("Waiting for TelemetryRouter access token to become deleted: %v", err))
@@ -425,10 +469,12 @@ func (r *telemetryRouterAccessTokenResource) ImportState(ctx context.Context, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error importing TelemetryRouter access token", fmt.Sprintf("Invalid import ID %q: expected format is `project_id`,`region`,`instance_id`,`access_token_id`", req.ID))
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("project_id"), idParts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("region"), idParts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("instance_id"), idParts[2])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("access_token_id"), idParts[3])...)
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":      idParts[0],
+		"region":          idParts[1],
+		"instance_id":     idParts[2],
+		"access_token_id": idParts[3],
+	})
 
 	core.LogAndAddWarning(ctx, &resp.Diagnostics,
 		"TelemetryRouter access token imported with empty token",
