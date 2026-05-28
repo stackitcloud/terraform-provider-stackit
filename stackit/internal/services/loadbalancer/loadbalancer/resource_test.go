@@ -419,10 +419,11 @@ func TestMapFields(t *testing.T) {
 						}),
 					}),
 				}),
-				PrivateAddress:  types.StringNull(),
-				SecurityGroupId: types.StringNull(),
-				TargetPools:     types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
-				Region:          types.StringValue(testRegion),
+				PrivateAddress:              types.StringNull(),
+				SecurityGroupId:             types.StringNull(),
+				LoadBalancerSecurityGroupId: types.StringNull(),
+				TargetPools:                 types.ListNull(types.ObjectType{AttrTypes: targetPoolTypes}),
+				Region:                      types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -477,6 +478,10 @@ func TestMapFields(t *testing.T) {
 					Id:   new("sg-id-12345"),
 					Name: new("sg-name-abcde"),
 				}),
+				LoadBalancerSecurityGroup: new(loadbalancer.SecurityGroup{
+					Id:   new("lb-sg-id-12345"),
+					Name: new("lb-sg-name-abcde"),
+				}),
 				TargetPools: []loadbalancer.TargetPool{
 					{
 						ActiveHealthCheck: new(loadbalancer.ActiveHealthCheck{
@@ -503,10 +508,11 @@ func TestMapFields(t *testing.T) {
 			nil,
 			testRegion,
 			&Model{
-				Id:              types.StringValue(id),
-				ProjectId:       types.StringValue("pid"),
-				ExternalAddress: types.StringValue("external_address"),
-				SecurityGroupId: types.StringValue("sg-id-12345"),
+				Id:                          types.StringValue(id),
+				ProjectId:                   types.StringValue("pid"),
+				ExternalAddress:             types.StringValue("external_address"),
+				SecurityGroupId:             types.StringValue("sg-id-12345"),
+				LoadBalancerSecurityGroupId: types.StringValue("lb-sg-id-12345"),
 				Listeners: types.ListValueMust(types.ObjectType{AttrTypes: listenerTypes}, []attr.Value{
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
