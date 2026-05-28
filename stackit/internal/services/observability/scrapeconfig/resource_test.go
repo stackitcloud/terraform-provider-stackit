@@ -47,7 +47,7 @@ func TestMapFields(t *testing.T) {
 					Username: "u",
 				},
 				Params:         &map[string][]string{"saml2": {"disabled"}, "x": {"y", "z"}},
-				Scheme:         new("http"),
+				Scheme:         observabilitySdk.SCHEME_HTTP.Ptr(),
 				ScrapeInterval: "1",
 				ScrapeTimeout:  "2",
 				SampleLimit:    new(int32(17)),

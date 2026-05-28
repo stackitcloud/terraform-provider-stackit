@@ -18,6 +18,19 @@ resource "stackit_redis_credential" "example" {
   instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
+resource "time_rotating" "rotate" {
+  rotation_days = 80
+}
+
+resource "stackit_redis_credential" "example_rotate" {
+  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }
+}
+
 # Only use the import statement, if you want to import an existing redis credential
 import {
   to = stackit_redis_credential.import-example
@@ -32,6 +45,10 @@ import {
 
 - `instance_id` (String) ID of the Redis instance.
 - `project_id` (String) STACKIT Project ID to which the instance is associated.
+
+### Optional
+
+- `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
 
