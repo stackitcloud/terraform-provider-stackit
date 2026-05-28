@@ -209,7 +209,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// prepare the payload struct for the create bar request
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -240,7 +240,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -285,7 +285,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -317,7 +317,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model, &state)
+	payload, err := toUpdatePayload(ctx, &model, &state)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -340,7 +340,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Map response body to schema
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -417,7 +417,7 @@ func (r *runnerResource) ImportState(ctx context.Context, req resource.ImportSta
 }
 
 // Maps runner fields to the provider internal model
-func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region string) error {
+func mapFields(ctx context.Context, runnerResp *intake.IntakeRunnerResponse, model *Model, region string) error {
 	if runnerResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -431,23 +431,16 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		runnerResp.Id,
 	)
 
-	model.RunnerId = types.StringValue(runnerResp.Id)
-
-	if len(runnerResp.Labels) == 0 {
-		model.Labels = types.MapNull(types.StringType)
-	} else {
-		labels, diags := types.MapValueFrom(context.Background(), types.StringType, runnerResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
-		}
-		model.Labels = labels
+	labels, err := utils.MapLabels(ctx, &runnerResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
+	model.RunnerId = types.StringValue(runnerResp.Id)
 	model.Name = types.StringValue(runnerResp.DisplayName)
-
+	model.Labels = labels
 	model.Description = types.StringPointerValue(runnerResp.Description)
 	model.Region = types.StringValue(region)
-
 	model.MaxMessageSizeKiB = types.Int32Value(runnerResp.MaxMessageSizeKiB)
 	model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
 
@@ -455,17 +448,14 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 }
 
 // Build CreateIntakeRunnerPayload from provider's model
-func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var labels map[string]string
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		diags := model.Labels.ElementsAs(context.Background(), &labels, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
-		}
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
 
 	return &intake.CreateIntakeRunnerPayload{
@@ -478,7 +468,7 @@ func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 }
 
 // Build UpdateIntakeRunnerPayload from provider's model
-func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, error) {
+func toUpdatePayload(ctx context.Context, model, state *Model) (*intake.UpdateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
 	}
@@ -499,14 +489,11 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	payload.DisplayName = conversion.StringValueToPointer(model.Name)
 	payload.Description = conversion.StringValueToPointer(model.Description)
 
-	var labels map[string]string
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		diags := model.Labels.ElementsAs(context.Background(), &labels, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
-		}
-		payload.Labels = labels
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
+	payload.Labels = labels
 
 	return payload, nil
 }

@@ -155,7 +155,7 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
