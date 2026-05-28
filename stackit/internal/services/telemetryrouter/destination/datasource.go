@@ -160,12 +160,6 @@ func (d *telemetryRouterDestinationDataSource) Schema(_ context.Context, _ datas
 					validate.NoSeparator(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
-				Optional:    true,
-				// must be computed to allow for storing the override value from the provider
-				Computed: true,
-			},
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
 				Required:    true,
@@ -174,13 +168,19 @@ func (d *telemetryRouterDestinationDataSource) Schema(_ context.Context, _ datas
 					validate.NoSeparator(),
 				},
 			},
-			"display_name": schema.StringAttribute{
-				Description: schemaDescriptions["display_name"],
-				Computed:    true,
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Computed:    true,
+			},
+			"display_name": schema.StringAttribute{
+				Description: schemaDescriptions["display_name"],
 				Computed:    true,
 			},
 			"config": schema.SingleNestedAttribute{

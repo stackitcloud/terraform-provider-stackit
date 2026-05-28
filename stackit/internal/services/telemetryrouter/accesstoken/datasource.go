@@ -91,11 +91,6 @@ func (d *telemetryRouterAccessTokenDataSource) Schema(_ context.Context, _ datas
 					validate.NoSeparator(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
-				// the region cannot be found, so it has to be passed
-				Optional: true,
-			},
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
 				Required:    true,
@@ -103,6 +98,11 @@ func (d *telemetryRouterAccessTokenDataSource) Schema(_ context.Context, _ datas
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				// the region cannot be found, so it has to be passed
+				Optional: true,
 			},
 			"creator_id": schema.StringAttribute{
 				Description: schemaDescriptions["creator_id"],

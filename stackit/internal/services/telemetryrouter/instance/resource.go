@@ -181,15 +181,6 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
-				Optional:    true,
-				// must be computed to allow for storing the override value from the provider
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
 				Required:    true,
@@ -204,6 +195,15 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+			},
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],

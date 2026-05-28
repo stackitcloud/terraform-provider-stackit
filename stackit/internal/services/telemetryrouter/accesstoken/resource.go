@@ -163,15 +163,6 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
-				Optional:    true,
-				// must be computed to allow for storing the override value from the provider
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
 				Required:    true,
@@ -182,6 +173,30 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"display_name": schema.StringAttribute{
+				Description: schemaDescriptions["display_name"],
+				Required:    true,
+			},
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Description: schemaDescriptions["description"],
+				Optional:    true,
+			},
+			"ttl": schema.Int32Attribute{
+				Description: schemaDescriptions["ttl"],
+				Optional:    true,
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"creator_id": schema.StringAttribute{
@@ -196,24 +211,9 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"description": schema.StringAttribute{
-				Description: schemaDescriptions["description"],
-				Optional:    true,
-			},
-			"display_name": schema.StringAttribute{
-				Description: schemaDescriptions["display_name"],
-				Required:    true,
-			},
 			"expiration_time": schema.StringAttribute{
 				Description: schemaDescriptions["expiration_time"],
 				Computed:    true,
-			},
-			"ttl": schema.Int32Attribute{
-				Description: schemaDescriptions["ttl"],
-				Optional:    true,
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
-				},
 			},
 			"status": schema.StringAttribute{
 				Description: schemaDescriptions["status"],

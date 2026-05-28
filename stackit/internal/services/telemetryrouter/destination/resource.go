@@ -277,15 +277,6 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 					validate.NoSeparator(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
-				Optional:    true,
-				// must be computed to allow for storing the override value from the provider
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
 			"project_id": schema.StringAttribute{
 				Description: schemaDescriptions["project_id"],
 				Required:    true,
@@ -300,10 +291,6 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
-			},
-			"description": schema.StringAttribute{
-				Description: schemaDescriptions["description"],
-				Optional:    true,
 			},
 			"config": schema.SingleNestedAttribute{
 				Description: schemaDescriptions["config"],
@@ -416,6 +403,19 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 						},
 					},
 				},
+			},
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Description: schemaDescriptions["description"],
+				Optional:    true,
 			},
 			"creation_time": schema.StringAttribute{
 				Description: schemaDescriptions["creation_time"],

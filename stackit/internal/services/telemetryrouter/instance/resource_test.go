@@ -34,7 +34,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		ProjectID:    types.StringValue("pid"),
 		DisplayName:  types.String{},
 		Description:  types.String{},
-		CreationTime: types.StringValue(testTime.String()),
+		CreationTime: types.StringValue(testTime.Format(time.RFC3339)),
 		URI:          types.StringValue("uri"),
 		Status:       types.StringValue("active"),
 	}
