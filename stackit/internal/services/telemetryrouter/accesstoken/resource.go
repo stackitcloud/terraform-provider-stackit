@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
@@ -35,12 +36,6 @@ var (
 	_ resource.ResourceWithModifyPlan  = &telemetryRouterAccessTokenResource{}
 )
 
-const (
-	AccessTokenStatusActive   = "active"
-	AccessTokenStatusExpired  = "expired"
-	AccessTokenStatusDeleting = "deleting"
-)
-
 var schemaDescriptions = map[string]string{
 	"id":              "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`access_token_id`\".",
 	"access_token_id": "The access token ID",
@@ -55,7 +50,7 @@ var schemaDescriptions = map[string]string{
 	"ttl":             "The time-to-live (TTL) in days for the access token. If not set, token will not expire",
 	"status": fmt.Sprintf(
 		"The status of the access token. %s",
-		tfutils.FormatPossibleValues(AccessTokenStatusActive, AccessTokenStatusExpired, AccessTokenStatusDeleting),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedAccessTokenBaseResponseStatusEnumValues)...),
 	),
 }
 
@@ -498,7 +493,7 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		creatorId = v.CreatorId
 		description = v.Description
 		displayName = v.DisplayName
-		status = v.Status
+		status = string(v.Status)
 		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
@@ -514,7 +509,7 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		creatorId = v.CreatorId
 		description = v.Description
 		displayName = v.DisplayName
-		status = v.Status
+		status = string(v.Status)
 		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()
@@ -527,7 +522,7 @@ func mapFields(_ context.Context, accessToken any, model *Model, region string) 
 		creatorId = v.CreatorId
 		description = v.Description
 		displayName = v.DisplayName
-		status = v.Status
+		status = string(v.Status)
 		hasExpirationTime = v.HasExpirationTime()
 		if hasExpirationTime {
 			expirationTime = v.ExpirationTime.Get()

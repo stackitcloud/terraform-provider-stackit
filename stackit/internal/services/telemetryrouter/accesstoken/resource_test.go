@@ -16,7 +16,7 @@ var testTime = time.Now()
 func fixtureGetAccessToken(mods ...func(accessToken *telemetryrouter.GetAccessTokenResponse)) *telemetryrouter.GetAccessTokenResponse {
 	accessToken := &telemetryrouter.GetAccessTokenResponse{
 		Id:     "atid",
-		Status: AccessTokenStatusActive,
+		Status: telemetryrouter.ACCESSTOKENBASERESPONSESTATUS_ACTIVE,
 	}
 	for _, mod := range mods {
 		mod(accessToken)
@@ -27,7 +27,7 @@ func fixtureGetAccessToken(mods ...func(accessToken *telemetryrouter.GetAccessTo
 func fixtureCreateAccessToken(mods ...func(accessToken *telemetryrouter.CreateAccessTokenResponse)) *telemetryrouter.CreateAccessTokenResponse {
 	accessToken := &telemetryrouter.CreateAccessTokenResponse{
 		Id:     "atid",
-		Status: AccessTokenStatusActive,
+		Status: telemetryrouter.ACCESSTOKENBASERESPONSESTATUS_ACTIVE,
 	}
 	for _, mod := range mods {
 		mod(accessToken)
@@ -38,7 +38,7 @@ func fixtureCreateAccessToken(mods ...func(accessToken *telemetryrouter.CreateAc
 func fixtureUpdateAccessToken(mods ...func(accessToken *telemetryrouter.UpdateAccessTokenResponse)) *telemetryrouter.UpdateAccessTokenResponse {
 	accessToken := &telemetryrouter.UpdateAccessTokenResponse{
 		Id:     "atid",
-		Status: AccessTokenStatusActive,
+		Status: telemetryrouter.ACCESSTOKENBASERESPONSESTATUS_ACTIVE,
 	}
 	for _, mod := range mods {
 		mod(accessToken)
@@ -58,7 +58,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		DisplayName:    types.StringValue(""),
 		ExpirationTime: types.String{},
 		Ttl:            types.Int32{},
-		Status:         types.StringValue(AccessTokenStatusActive),
+		Status:         types.StringValue(string(telemetryrouter.ACCESSTOKENBASERESPONSESTATUS_ACTIVE)),
 	}
 	for _, mod := range mods {
 		mod(model)

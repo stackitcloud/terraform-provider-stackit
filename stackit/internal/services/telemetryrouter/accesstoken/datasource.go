@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -115,7 +114,6 @@ func (d *telemetryRouterAccessTokenDataSource) Schema(_ context.Context, _ datas
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Computed:    true,
-				Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
 			},
 			"expiration_time": schema.StringAttribute{
 				Description: schemaDescriptions["expiration_time"],
@@ -206,7 +204,7 @@ func mapDataSourceFields(_ context.Context, accessToken *telemetryrouter.GetAcce
 		model.Description = types.StringPointerValue(accessToken.Description)
 	}
 	model.DisplayName = types.StringValue(accessToken.DisplayName)
-	model.Status = types.StringValue(accessToken.Status)
+	model.Status = types.StringValue(string(accessToken.Status))
 
 	model.ExpirationTime = types.StringNull()
 	if accessToken.HasExpirationTime() && accessToken.ExpirationTime.Get() != nil {

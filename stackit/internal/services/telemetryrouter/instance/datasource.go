@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -108,14 +109,14 @@ func (d *telemetryRouterInstanceDataSource) Schema(_ context.Context, _ datasour
 									Description: schemaDescriptions["filter.attributes.level"],
 									Computed:    true,
 									Validators: []validator.String{
-										stringvalidator.OneOf("resource", "scope", "logRecord"),
+										stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterLevelEnumValues)...),
 									},
 								},
 								"matcher": schema.StringAttribute{
 									Description: schemaDescriptions["filter.attributes.matcher"],
 									Computed:    true,
 									Validators: []validator.String{
-										stringvalidator.OneOf("=", "!="),
+										stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterMatcherEnumValues)...),
 									},
 								},
 								"values": schema.ListAttribute{

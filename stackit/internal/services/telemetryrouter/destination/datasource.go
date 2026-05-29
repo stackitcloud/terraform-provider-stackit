@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -211,14 +212,14 @@ func (d *telemetryRouterDestinationDataSource) Schema(_ context.Context, _ datas
 											Description: schemaDescriptions["config.filter.attributes.level"],
 											Computed:    true,
 											Validators: []validator.String{
-												stringvalidator.OneOf("resource", "scope", "logRecord"),
+												stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterLevelEnumValues)...),
 											},
 										},
 										"matcher": schema.StringAttribute{
 											Description: schemaDescriptions["config.filter.attributes.matcher"],
 											Computed:    true,
 											Validators: []validator.String{
-												stringvalidator.OneOf("=", "!="),
+												stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterMatcherEnumValues)...),
 											},
 										},
 										"values": schema.ListAttribute{
@@ -355,9 +356,9 @@ func mapDatasourceFields(ctx context.Context, destination *telemetryrouter.Desti
 	model.Region = types.StringValue(region)
 	model.DisplayName = types.StringValue(destination.DisplayName)
 	model.Description = types.StringPointerValue(destination.Description)
-	model.CredentialType = types.StringValue(destination.CredentialType)
+	model.CredentialType = types.StringValue(string(destination.CredentialType))
 	model.CreationTime = types.StringValue(destination.CreationTime.Format(time.RFC3339))
-	model.Status = types.StringValue(destination.Status)
+	model.Status = types.StringValue(string(destination.Status))
 
 	if err := mapDatasourceConfig(ctx, destination, model); err != nil {
 		return fmt.Errorf("map config: %w", err)

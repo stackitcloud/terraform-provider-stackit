@@ -61,7 +61,7 @@ var schemaDescriptions = map[string]string{
 	"uri":                      "The TelemetryRouter instance's URI",
 	"status": fmt.Sprintf(
 		"The status of the TelemetryRouter instance, possible values: %s",
-		tfutils.FormatPossibleValues("active", "deleting", "reconciling"),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedTelemetryRouterResponseStatusEnumValues)...),
 	),
 }
 
@@ -226,14 +226,14 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 									Description: schemaDescriptions["filter.attributes.level"],
 									Required:    true,
 									Validators: []validator.String{
-										stringvalidator.OneOf("resource", "scope", "logRecord"),
+										stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterLevelEnumValues)...),
 									},
 								},
 								"matcher": schema.StringAttribute{
 									Description: schemaDescriptions["filter.attributes.matcher"],
 									Required:    true,
 									Validators: []validator.String{
-										stringvalidator.OneOf("=", "!="),
+										stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterMatcherEnumValues)...),
 									},
 								},
 								"values": schema.ListAttribute{
@@ -562,7 +562,7 @@ func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 	model.Description = types.StringPointerValue(instance.Description)
 	model.CreationTime = types.StringValue(instance.CreationTime.Format(time.RFC3339))
 	model.URI = types.StringValue(instance.Uri)
-	model.Status = types.StringValue(instance.Status)
+	model.Status = types.StringValue(string(instance.Status))
 
 	if err := mapFilter(ctx, instance, model); err != nil {
 		return fmt.Errorf("map filter: %w", err)

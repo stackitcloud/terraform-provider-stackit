@@ -63,8 +63,7 @@ var schemaDescriptions = map[string]string{
 	"config.config_type": fmt.Sprintf(
 		"The TelemetryRouter destinations's configuration type, possible values: %s",
 		tfutils.FormatPossibleValues(
-			string(telemetryrouter.DESTINATIONCONFIGTYPE_OPEN_TELEMETRY),
-			string(telemetryrouter.DESTINATIONCONFIGTYPE_S3),
+			sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedDestinationConfigTypeEnumValues)...,
 		),
 	),
 	"config.opentelemetry":                     "OpenTelemetry configuration",
@@ -83,7 +82,7 @@ var schemaDescriptions = map[string]string{
 	"credential_type":                          "The TelemetryRouter destination's credential type",
 	"status": fmt.Sprintf(
 		"The status of the TelemetryRouter destination, possible values: %s",
-		tfutils.FormatPossibleValues("active", "deleting", "reconciling"),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedDestinationResponseStatusEnumValues)...),
 	),
 }
 
@@ -307,8 +306,7 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 						},
 						Validators: []validator.String{
 							stringvalidator.OneOf(
-								string(telemetryrouter.DESTINATIONCONFIGTYPE_OPEN_TELEMETRY),
-								string(telemetryrouter.DESTINATIONCONFIGTYPE_S3),
+								sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedDestinationConfigTypeEnumValues)...,
 							),
 						},
 					},
@@ -938,9 +936,9 @@ func mapFields(ctx context.Context, destination *telemetryrouter.DestinationResp
 	model.DestinationID = types.StringValue(destinationID)
 	model.DisplayName = types.StringValue(destination.DisplayName)
 	model.Description = types.StringPointerValue(destination.Description)
-	model.CredentialType = types.StringValue(destination.CredentialType)
+	model.CredentialType = types.StringValue(string(destination.CredentialType))
 	model.CreationTime = types.StringValue(destination.CreationTime.Format(time.RFC3339))
-	model.Status = types.StringValue(destination.Status)
+	model.Status = types.StringValue(string(destination.Status))
 
 	if err := mapConfig(ctx, destination, model); err != nil {
 		return fmt.Errorf("map config: %w", err)
