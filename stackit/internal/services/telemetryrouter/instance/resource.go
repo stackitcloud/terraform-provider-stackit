@@ -273,7 +273,7 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectID.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
@@ -282,9 +282,7 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-
-	regionId := r.providerData.GetRegionWithOverride(model.Region)
-	ctx = tflog.SetField(ctx, "region", regionId)
+	
 	createResp, err := r.client.DefaultAPI.CreateTelemetryRouter(ctx, projectId, regionId).CreateTelemetryRouterPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Calling API: %v", err))
