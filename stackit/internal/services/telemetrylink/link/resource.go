@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi/wait"
@@ -60,7 +61,7 @@ var schemaDescriptions = map[string]string{
 	"create_time":         "The time the Telemetry Link was created.",
 	"status": fmt.Sprintf(
 		"The status of the TelemetryLink, possible values: %s",
-		tfutils.FormatPossibleValues("active", "inactive", "failed"),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetrylink.AllowedTelemetryLinkResponseStatusEnumValues)...),
 	),
 }
 
@@ -712,7 +713,7 @@ func mapFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, mod
 	model.Description = types.StringPointerValue(link.Description)
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
-	model.Status = types.StringValue(link.Status)
+	model.Status = types.StringValue(string(link.Status))
 
 	return nil
 }

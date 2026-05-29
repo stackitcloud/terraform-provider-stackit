@@ -2,7 +2,6 @@ package link
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,8 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -109,7 +106,6 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Computed:    true,
-				Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
@@ -163,12 +159,6 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 		return
 	}
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
 		tfutils.LogError(
 			ctx,
 			&resp.Diagnostics,
@@ -221,7 +211,7 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	model.Description = types.StringPointerValue(link.Description)
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
-	model.Status = types.StringValue(link.Status)
+	model.Status = types.StringValue(string(link.Status))
 
 	return nil
 }
