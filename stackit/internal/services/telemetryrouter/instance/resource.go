@@ -282,8 +282,8 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	
-	createResp, err := r.client.DefaultAPI.CreateTelemetryRouter(ctx, projectId, regionId).CreateTelemetryRouterPayload(*payload).Execute()
+
+	createResp, err := r.client.DefaultAPI.CreateTelemetryRouter(ctx, projectId, region).CreateTelemetryRouterPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -307,7 +307,7 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	waitResp, err := wait.CreateTelemetryRouterWaitHandler(ctx, r.client.DefaultAPI, projectId, regionId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateTelemetryRouterWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Waiting for TelemetryRouter Instance to become active: %v", err))
 		return
