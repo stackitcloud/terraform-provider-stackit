@@ -279,7 +279,7 @@ func TestToUpdatePayload(t *testing.T) {
 			nil,
 			&resourcemanager.PartialUpdateFolderPayload{
 				ContainerParentId: nil,
-				Labels:            nil,
+				Labels:            &map[string]string{},
 				Name:              nil,
 			},
 			true,

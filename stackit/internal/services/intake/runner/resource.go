@@ -317,7 +317,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(ctx, &model, &state)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -468,12 +468,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakeRun
 }
 
 // Build UpdateIntakeRunnerPayload from provider's model
-func toUpdatePayload(ctx context.Context, model, state *Model) (*intake.UpdateIntakeRunnerPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*intake.UpdateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
-	}
-	if state == nil {
-		return nil, fmt.Errorf("state is nil")
 	}
 
 	payload := &intake.UpdateIntakeRunnerPayload{}
