@@ -318,7 +318,7 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapDatasourceFields(ctx, destinationResponse, &model)
+	err = mapDatasourceFields(ctx, destinationResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter destination", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -334,7 +334,7 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 	})
 }
 
-func mapDatasourceFields(ctx context.Context, destination *telemetryrouter.DestinationResponse, model *DatasourceModel) error {
+func mapDatasourceFields(ctx context.Context, destination *telemetryrouter.DestinationResponse, model *DatasourceModel, region string) error {
 	if destination == nil {
 		return fmt.Errorf("destination is nil")
 	}
@@ -350,8 +350,9 @@ func mapDatasourceFields(ctx context.Context, destination *telemetryrouter.Desti
 		return fmt.Errorf("destination id not present")
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), model.InstanceID.ValueString(), destinationID)
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.InstanceID.ValueString(), destinationID)
 	model.DestinationID = types.StringValue(destinationID)
+	model.Region = types.StringValue(region)
 	model.DisplayName = types.StringValue(destination.DisplayName)
 	model.Description = types.StringPointerValue(destination.Description)
 	model.CredentialType = types.StringValue(destination.CredentialType)
