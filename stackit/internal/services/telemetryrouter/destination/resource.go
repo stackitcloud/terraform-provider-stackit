@@ -57,7 +57,7 @@ var schemaDescriptions = map[string]string{
 	),
 	"config.filter.attributes.matcher": fmt.Sprintf(
 		"The TelemetryRouter destination's filter attribute matcher, possible values: %s",
-		tfutils.FormatPossibleValues("=", "!="),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterMatcherEnumValues)...),
 	),
 	"config.filter.attributes.values": "The TelemetryRouter destination's filter attribute values",
 	"config.config_type": fmt.Sprintf(

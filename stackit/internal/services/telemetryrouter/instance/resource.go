@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
@@ -49,11 +50,11 @@ var schemaDescriptions = map[string]string{
 	"filter.attributes.key": "The TelemetryRouter global filter attribute key",
 	"filter.attributes.level": fmt.Sprintf(
 		"The TelemetryRouter global filter attribute level, possible values: %s",
-		tfutils.FormatPossibleValues("resource", "scope", "logRecord"),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterLevelEnumValues)...),
 	),
 	"filter.attributes.matcher": fmt.Sprintf(
 		"The TelemetryRouter global filter attribute matcher, possible values: %s",
-		tfutils.FormatPossibleValues("=", "!="),
+		tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterMatcherEnumValues)...),
 	),
 	"filter.attributes.values": "The TelemetryRouter global filter attributes",
 	"creation_time":            "The date and time the creation of the TelemetryRouter instance was initiated",
