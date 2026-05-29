@@ -77,7 +77,7 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Computed:    true,
 			},
 			"link_id": schema.StringAttribute{
-				Description: schemaDescriptions["instance_id"],
+				Description: schemaDescriptions["link_id"],
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
