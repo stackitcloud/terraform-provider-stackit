@@ -669,23 +669,6 @@ func (r *telemetryRouterDestinationResource) Update(ctx context.Context, req res
 
 	ctx = core.LogResponse(ctx)
 
-	if updateResp == nil || updateResp.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", "Update API response: Incomplete response (id missing)")
-		return
-	}
-
-	destinationId := updateResp.Id
-	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"project_id":     projectID,
-		"region":         region,
-		"instance_id":    instanceID,
-		"destination_id": destinationId,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	waitResp, err := wait.UpdateDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, updateResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter destination", fmt.Sprintf("Waiting for TelemetryRouter destination to become active: %v", err))
@@ -736,16 +719,6 @@ func (r *telemetryRouterDestinationResource) Delete(ctx context.Context, req res
 	}
 
 	ctx = core.LogResponse(ctx)
-	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"project_id":     projectID,
-		"region":         region,
-		"instance_id":    instanceID,
-		"destination_id": destinationID,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
 	_, err = wait.DeleteDestinationWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, destinationID).WaitWithContext(ctx)
 	if err != nil {

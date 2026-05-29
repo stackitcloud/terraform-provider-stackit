@@ -376,22 +376,7 @@ func (r *telemetryRouterAccessTokenResource) Update(ctx context.Context, req res
 		return
 	}
 
-	if accessTokenResponse == nil || accessTokenResponse.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter access token", "Update API response: Incomplete response (id missing)")
-		return
-	}
-
-	accessTokenId := accessTokenResponse.Id
-	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"project_id":      projectID,
-		"region":          region,
-		"instance_id":     instanceID,
-		"access_token_id": accessTokenId,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	ctx = core.LogResponse(ctx)
 
 	_, err = wait.UpdateAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenResponse.Id).WaitWithContext(ctx)
 	if err != nil {
@@ -442,17 +427,6 @@ func (r *telemetryRouterAccessTokenResource) Delete(ctx context.Context, req res
 	}
 
 	ctx = core.LogResponse(ctx)
-
-	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"project_id":      projectID,
-		"region":          region,
-		"instance_id":     instanceID,
-		"access_token_id": accessTokenID,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
 	_, err = wait.DeleteAccessTokenWaitHandler(ctx, r.client.DefaultAPI, projectID, region, instanceID, accessTokenID).WaitWithContext(ctx)
 	if err != nil {
