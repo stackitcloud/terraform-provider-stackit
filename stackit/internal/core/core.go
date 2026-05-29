@@ -73,6 +73,7 @@ type ProviderData struct {
 	SfsCustomEndpoint               string
 	ServiceAccountCustomEndpoint    string
 	TelemetryLinkCustomEndpoint     string
+	TelemetryRouterCustomEndpoint   string
 	EnableBetaResources             bool
 	Experiments                     []string
 
