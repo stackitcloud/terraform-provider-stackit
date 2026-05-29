@@ -176,7 +176,6 @@ func (d *telemetryRouterDestinationDataSource) Schema(_ context.Context, _ datas
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
-				Optional:    true,
 				Computed:    true,
 			},
 			"display_name": schema.StringAttribute{
