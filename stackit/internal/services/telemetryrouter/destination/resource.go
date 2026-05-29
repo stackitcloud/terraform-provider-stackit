@@ -540,7 +540,7 @@ func (r *telemetryRouterDestinationResource) Create(ctx context.Context, req res
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResp, err := r.client.DefaultAPI.CreateDestination(ctx, projectId, regionId, instanceId).CreateDestinationPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateDestination(ctx, projectId, region, instanceId).CreateDestinationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter destination", fmt.Sprintf("Calling API: %v", err))
 		return
