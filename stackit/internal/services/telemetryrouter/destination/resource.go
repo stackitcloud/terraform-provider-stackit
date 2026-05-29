@@ -903,10 +903,10 @@ func toS3(ctx context.Context, diags diag.Diagnostics, conf *config) (*telemetry
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting access_key object: %v", diags.Errors())
 			}
-			result.AccessKey = telemetryrouter.NewDestinationConfigS3AccessKey(
-				accKey.ID.ValueString(),
-				accKey.Secret.ValueString(),
-			)
+			result.AccessKey = &telemetryrouter.DestinationConfigS3AccessKey{
+				Id:     accKey.ID.ValueString(),
+				Secret: accKey.Secret.ValueString(),
+			}
 		}
 		result.Bucket = s3Inst.Bucket.ValueString()
 		result.Endpoint = s3Inst.Endpoint.ValueString()
