@@ -68,7 +68,7 @@ import {
 - `creation_time` (String) The date and time the creation of the TelemetryRouter instance was initiated
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) The TelemetryRouter instance ID
-- `status` (String) The status of the TelemetryRouter instance, possible values: Possible values are: `active`, `deleting`, `reconciling`.
+- `status` (String) The status of the TelemetryRouter instance, possible values: Possible values are: `reconciling`, `active`, `deleting`.
 - `uri` (String) The TelemetryRouter instance's URI
 
 <a id="nestedatt--filter"></a>

@@ -42,7 +42,7 @@ data "stackit_telemetryrouter_destination" "destination" {
 - `description` (String) The description of the TelemetryRouter destination
 - `display_name` (String) The displayed name of the TelemetryRouter destination
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`destionation_id`".
-- `status` (String) The status of the TelemetryRouter destination, possible values: Possible values are: `active`, `deleting`, `reconciling`.
+- `status` (String) The status of the TelemetryRouter destination, possible values: Possible values are: `reconciling`, `active`, `deleting`.
 
 <a id="nestedatt--config"></a>
 ### Nested Schema for `config`
