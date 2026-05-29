@@ -601,6 +601,12 @@ func (r *telemetryRouterDestinationResource) Read(ctx context.Context, req resou
 	instanceID := model.InstanceID.ValueString()
 	destinationID := model.DestinationID.ValueString()
 
+	if destinationID == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	ctx = tflog.SetField(ctx, "project_id", projectID)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
