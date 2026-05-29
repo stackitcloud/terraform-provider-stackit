@@ -32,7 +32,6 @@ data "stackit_telemetryrouter_destination" "destination" {
 
 ### Optional
 
-- `description` (String) The description of the TelemetryRouter destination
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
@@ -40,6 +39,7 @@ data "stackit_telemetryrouter_destination" "destination" {
 - `config` (Attributes) The configuration of the TelemetryRouter destination (see [below for nested schema](#nestedatt--config))
 - `creation_time` (String) The date and time the creation of the TelemetryRouter destination was initiated
 - `credential_type` (String) The TelemetryRouter destination's credential type
+- `description` (String) The description of the TelemetryRouter destination
 - `display_name` (String) The displayed name of the TelemetryRouter destination
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`destionation_id`".
 - `status` (String) The status of the TelemetryRouter destination, possible values: Possible values are: `active`, `deleting`, `reconciling`.
