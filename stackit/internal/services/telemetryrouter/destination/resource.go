@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi"
 	"github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1betaapi/wait"
 
@@ -873,10 +874,10 @@ func toOpenTelemetry(ctx context.Context, diags diag.Diagnostics, conf *config) 
 			if diags.HasError() {
 				return nil, fmt.Errorf("converting basic_auth object: %v", diags.Errors())
 			}
-			result.BasicAuth = telemetryrouter.NewDestinationConfigOpenTelemetryBasicAuth(
-				basicAuthVal.Password.ValueString(),
-				basicAuthVal.Username.ValueString(),
-			)
+			result.BasicAuth = &telemetryrouter.DestinationConfigOpenTelemetryBasicAuth{
+				Username: basicAuthVal.Username.ValueString(),
+				Password: basicAuthVal.Password.ValueString(),
+			}
 		}
 		result.BearerToken = ot.BearerToken.ValueStringPointer()
 		result.Uri = ot.Uri.ValueString()
