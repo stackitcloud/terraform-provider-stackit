@@ -25,6 +25,6 @@ resource "stackit_telemetrylink" "link" {
   region              = var.region
   display_name        = var.display_name
   description         = var.description
-  access_token        = var.access_token
-  telemetry_router_id = var.telemetry_router_id
+  access_token        = stackit_telemetryrouter_access_token.accessToken.access_token
+  telemetry_router_id = stackit_telemetryrouter_instance.router.instance_id
 }
