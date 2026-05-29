@@ -38,7 +38,7 @@ func fixtureModel(mods ...func(model *Model)) *Model {
 		Description:       types.String{},
 		TelemetryRouterID: types.StringValue("tlmrid"),
 		AccessToken:       types.String{},
-		CreateTime:        types.StringValue(testTime.String()),
+		CreateTime:        types.StringValue(testTime.Format(time.RFC3339)),
 		Status:            types.StringValue("active"),
 	}
 	for _, mod := range mods {
@@ -274,7 +274,6 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 			model:       fixtureModel(),
 			expected: &telemetrylink.PartialUpdateOrganizationTelemetryLinkPayload{
 				DisplayName:       new("name"),
-				AccessToken:       new(""),
 				TelemetryRouterId: new("tlmrid"),
 			},
 		},
@@ -300,7 +299,7 @@ func TestToPartialUpdateOrganizationTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
+			got, err := toPartialUpdateOrganizationTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -327,7 +326,6 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 			model:       fixtureModel(),
 			expected: &telemetrylink.PartialUpdateFolderTelemetryLinkPayload{
 				DisplayName:       new("name"),
-				AccessToken:       new(""),
 				TelemetryRouterId: new("tlmrid"),
 			},
 		},
@@ -353,7 +351,7 @@ func TestToPartialUpdateFolderTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreateOrUpdateFolderTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
+			got, err := toPartialUpdateFolderTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
@@ -380,7 +378,6 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 			model:       fixtureModel(),
 			expected: &telemetrylink.PartialUpdateProjectTelemetryLinkPayload{
 				DisplayName:       new("name"),
-				AccessToken:       new(""),
 				TelemetryRouterId: new("tlmrid"),
 			},
 		},
@@ -406,7 +403,7 @@ func TestToPartialUpdateProjectTelemetryLinkPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			got, err := toCreateOrUpdateProjectTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
+			got, err := toPartialUpdateProjectTelemetryLinkPayload(t.Context(), diag.Diagnostics{}, tt.model)
 			if tt.wantErrMessage != "" && (err == nil || err.Error() != tt.wantErrMessage) {
 				t.Fatalf("Expected error: %v, got: %v", tt.wantErrMessage, err)
 			}
