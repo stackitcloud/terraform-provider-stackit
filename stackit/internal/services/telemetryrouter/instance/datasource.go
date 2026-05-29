@@ -86,7 +86,6 @@ func (d *telemetryRouterInstanceDataSource) Schema(_ context.Context, _ datasour
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Computed:    true,
-				Validators:  []validator.String{stringvalidator.LengthAtLeast(1)},
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
