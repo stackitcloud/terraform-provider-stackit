@@ -313,7 +313,7 @@ func (r *telemetryRouterInstanceResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryRouter Instance", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -363,7 +363,7 @@ func (r *telemetryRouterInstanceResource) Read(ctx context.Context, req resource
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, instanceResponse, &model)
+	err = mapFields(ctx, instanceResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter instance", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -416,7 +416,7 @@ func (r *telemetryRouterInstanceResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryRouter Instance", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -539,7 +539,7 @@ func toConfigFilter(ctx context.Context, diags diag.Diagnostics, model *Model) (
 	return nil, nil
 }
 
-func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterResponse, model *Model) error {
+func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterResponse, model *Model, region string) error {
 	if instance == nil {
 		return fmt.Errorf("instance is nil")
 	}
@@ -555,8 +555,9 @@ func mapFields(ctx context.Context, instance *telemetryrouter.TelemetryRouterRes
 		return fmt.Errorf("instance id not present")
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), model.Region.ValueString(), instanceID)
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, instanceID)
 	model.InstanceID = types.StringValue(instanceID)
+	model.Region = types.StringValue(region)
 	model.DisplayName = types.StringValue(instance.DisplayName)
 	model.Description = types.StringPointerValue(instance.Description)
 	model.CreationTime = types.StringValue(instance.CreationTime.Format(time.RFC3339))

@@ -185,7 +185,7 @@ func (d *telemetryRouterInstanceDataSource) Read(ctx context.Context, req dataso
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, instanceResponse, &model)
+	err = mapFields(ctx, instanceResponse, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryRouter instance", fmt.Sprintf("Processing response: %v", err))
 		return
