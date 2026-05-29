@@ -447,28 +447,13 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 
-		updateResp, err := r.client.DefaultAPI.PartialUpdateOrganizationTelemetryLink(ctx, resourceID, regionId).PartialUpdateOrganizationTelemetryLinkPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.PartialUpdateOrganizationTelemetryLink(ctx, resourceID, regionId).PartialUpdateOrganizationTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
 
 		ctx = core.LogResponse(ctx)
-
-		if updateResp == nil || updateResp.Id == "" {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error partially updating TelemetryLink", "Partial update API response: Incomplete response (id missing)")
-			return
-		}
-
-		// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-		ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-			"resource_type": resourceType,
-			"resource_id":   resourceID,
-			"region":        region,
-		})
-		if resp.Diagnostics.HasError() {
-			return
-		}
 
 		response, err = wait.PartialUpdateOrganizationTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
 		if err != nil {
@@ -482,28 +467,13 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 
-		updateResp, err := r.client.DefaultAPI.PartialUpdateFolderTelemetryLink(ctx, resourceID, regionId).PartialUpdateFolderTelemetryLinkPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.PartialUpdateFolderTelemetryLink(ctx, resourceID, regionId).PartialUpdateFolderTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
 
 		ctx = core.LogResponse(ctx)
-
-		if updateResp == nil || updateResp.Id == "" {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error partially updating TelemetryLink", "Partial update API response: Incomplete response (id missing)")
-			return
-		}
-
-		// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-		ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-			"resource_type": resourceType,
-			"resource_id":   resourceID,
-			"region":        region,
-		})
-		if resp.Diagnostics.HasError() {
-			return
-		}
 
 		response, err = wait.PartialUpdateFolderTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
 		if err != nil {
@@ -517,28 +487,13 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			return
 		}
 
-		updateResp, err := r.client.DefaultAPI.PartialUpdateProjectTelemetryLink(ctx, resourceID, regionId).PartialUpdateProjectTelemetryLinkPayload(*payload).Execute()
+		_, err = r.client.DefaultAPI.PartialUpdateProjectTelemetryLink(ctx, resourceID, regionId).PartialUpdateProjectTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
 		}
 
 		ctx = core.LogResponse(ctx)
-
-		if updateResp == nil || updateResp.Id == "" {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error partially updating TelemetryLink", "Partial update API response: Incomplete response (id missing)")
-			return
-		}
-
-		// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-		ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-			"resource_type": resourceType,
-			"resource_id":   resourceID,
-			"region":        region,
-		})
-		if resp.Diagnostics.HasError() {
-			return
-		}
 
 		response, err = wait.PartialUpdateProjectTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
 		if err != nil {
@@ -593,16 +548,6 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 
 		ctx = core.LogResponse(ctx)
 
-		// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-		ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-			"resource_type": resourceType,
-			"resource_id":   resourceID,
-			"region":        region,
-		})
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
 		_, err = wait.DeleteOrganizationTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become deleted: %v", err))
@@ -617,16 +562,6 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 
 		ctx = core.LogResponse(ctx)
 
-		// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-		ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-			"resource_type": resourceType,
-			"resource_id":   resourceID,
-			"region":        region,
-		})
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
 		_, err = wait.DeleteFolderTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become deleted: %v", err))
@@ -640,16 +575,6 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 		}
 
 		ctx = core.LogResponse(ctx)
-
-		// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
-		ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-			"resource_type": resourceType,
-			"resource_id":   resourceID,
-			"region":        region,
-		})
-		if resp.Diagnostics.HasError() {
-			return
-		}
 
 		_, err = wait.DeleteProjectTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
