@@ -3,6 +3,7 @@ package link
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,7 +20,7 @@ func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceMod
 		DisplayName:       types.StringValue("name"),
 		Description:       types.String{},
 		TelemetryRouterID: types.StringValue("tlmrid"),
-		CreateTime:        types.StringValue(testTime.String()),
+		CreateTime:        types.StringValue(testTime.Format(time.RFC3339)),
 		Status:            types.StringValue("active"),
 	}
 	for _, mod := range mods {
@@ -67,7 +68,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				ResourceID:   tt.expected.ResourceID,
 				Region:       tt.expected.Region,
 			}
-			err := mapDataSourceFields(context.Background(), tt.input, state)
+			err := mapDataSourceFields(context.Background(), tt.input, state, tt.expected.Region.ValueString())
 			if tt.wantErr && err == nil {
 				t.Fatalf("Should have failed")
 			}

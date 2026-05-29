@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -157,6 +158,9 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 		response, err = d.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
 	case resourceTypeProject:
 		response, err = d.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
+	default:
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
+		return
 	}
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -180,7 +184,7 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapDataSourceFields(ctx, response, &model)
+	err = mapDataSourceFields(ctx, response, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -196,7 +200,7 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	})
 }
 
-func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, model *DataSourceModel) error {
+func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, model *DataSourceModel, region string) error {
 	if link == nil {
 		return fmt.Errorf("link is nil")
 	}
@@ -210,12 +214,13 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 		linkID = link.Id
 	}
 
-	model.ID = tfutils.BuildInternalTerraformId(model.ResourceType.ValueString(), model.ResourceID.ValueString(), model.Region.ValueString())
+	model.ID = tfutils.BuildInternalTerraformId(model.ResourceType.ValueString(), model.ResourceID.ValueString(), region)
 	model.LinkID = types.StringValue(linkID)
+	model.Region = types.StringValue(region)
 	model.DisplayName = types.StringValue(link.DisplayName)
 	model.Description = types.StringPointerValue(link.Description)
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
-	model.CreateTime = types.StringValue(link.CreateTime.String())
+	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
 	model.Status = types.StringValue(link.Status)
 
 	return nil

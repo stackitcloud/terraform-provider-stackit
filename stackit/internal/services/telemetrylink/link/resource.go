@@ -346,6 +346,9 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
 		}
+	default:
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", model.ResourceType.ValueString()))
+		return
 	}
 
 	err := mapFields(ctx, response, &model, region)
@@ -388,6 +391,9 @@ func (r *telemetryLinkResource) Read(ctx context.Context, req resource.ReadReque
 		response, err = r.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
 	case resourceTypeProject:
 		response, err = r.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
+	default:
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", model.ResourceType.ValueString()))
+		return
 	}
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -500,6 +506,9 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
 		}
+	default:
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", model.ResourceType.ValueString()))
+		return
 	}
 
 	err := mapFields(ctx, response, &model, region)
@@ -581,6 +590,9 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become deleted: %v", err))
 			return
 		}
+	default:
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
+		return
 	}
 
 	tflog.Info(ctx, "TelemetryLink deleted")
