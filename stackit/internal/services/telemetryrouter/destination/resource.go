@@ -328,7 +328,7 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 											Description: schemaDescriptions["config.filter.attributes.level"],
 											Required:    true,
 											Validators: []validator.String{
-												stringvalidator.OneOf("resource", "scope", "logRecord"),
+												stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(telemetryrouter.AllowedConfigFilterLevelEnumValues)...),
 											},
 										},
 										"matcher": schema.StringAttribute{
