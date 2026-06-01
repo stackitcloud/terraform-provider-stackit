@@ -59,8 +59,8 @@ func TestMapDataSourceFields(t *testing.T) {
 		"log_only_rule_collection_ids":  emptyWafSet,
 	})
 	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
-		"enabled_tls_10": types.BoolValue(false),
-		"enabled_tls_11": types.BoolValue(false),
+		"enable_tls_10": types.BoolValue(false),
+		"enable_tls_11": types.BoolValue(false),
 	})
 	config := types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":           backend,

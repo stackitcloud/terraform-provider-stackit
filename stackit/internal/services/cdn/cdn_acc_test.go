@@ -122,6 +122,8 @@ var testConfigVarsHttp = config.Variables{
 	"waf_log_only_rule_ids_0":             config.StringVariable(wafRule3),
 	"waf_log_only_rule_group_ids_0":       config.StringVariable(wafRule3),
 	"waf_log_only_rule_collection_ids_0":  config.StringVariable(wafRule3),
+	"tls_enable_tls_10":                   config.BoolVariable(true),
+	"tls_enable_tls_11":                   config.BoolVariable(true),
 }
 
 func configVarsHttpUpdated() config.Variables {
@@ -136,6 +138,17 @@ func configVarsHttpUpdated() config.Variables {
 	updatedConfig["waf_allowed_request_content_types_0"] = config.StringVariable("text/plain")
 	updatedConfig["waf_allowed_http_versions_0"] = config.StringVariable("HTTP/1.1")
 	updatedConfig["waf_paranoia_level"] = config.StringVariable("L3")
+
+	// Update TLS
+	updatedConfig["tls_enable_tls_10"] = config.BoolVariable(false)
+	updatedConfig["tls_enable_tls_11"] = config.BoolVariable(false)
+
+	// Update WAF rules
+	updatedConfig["waf_disabled_rule_ids_0"] = config.StringVariable(wafRule3)
+	updatedConfig["waf_disabled_rule_group_ids_0"] = config.StringVariable(wafRule3)
+	updatedConfig["waf_disabled_rule_collection_ids_0"] = config.StringVariable(wafRule3)
+
+	updatedConfig["waf_enabled_rule_ids_0"] = config.StringVariable(wafRule1)
 
 	updatedConfig["waf_enabled_rule_ids_0"] = config.StringVariable(wafRule2)
 	updatedConfig["waf_enabled_rule_group_ids_0"] = config.StringVariable(wafRule2)
@@ -233,6 +246,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 						"DE",
 					),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
+
+					// TLS Checks
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_10", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_10"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_11", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_11"])),
 
 					// WAF Checks
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
@@ -371,6 +388,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 
+					// TLS Checks inside Data Source
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.tls.enable_tls_10", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_10"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.tls.enable_tls_11", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_11"])),
+
 					// WAF Checks inside Data Source
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
@@ -444,6 +465,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.#", "1"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.blocked_countries.0", "CU"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
+
+					// TLS Configuration
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_10", testutil.ConvertConfigVariable(configVarsHttpUpdated()["tls_enable_tls_10"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_11", testutil.ConvertConfigVariable(configVarsHttpUpdated()["tls_enable_tls_11"])),
 
 					// Checking WAF Mutated Configurations
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_mode"])),

@@ -144,7 +144,7 @@ type distributionConfig struct {
 	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
 	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
 	Waf              types.Object    `tfsdk:"waf"`               // The WAF configuration
-	Tls              *tlsConfig      `tfsdk:"tls"`               // The TLS configuration
+	Tls              types.Object    `tfsdk:"tls"`               // The TLS configuration
 }
 
 type optimizerConfig struct {
@@ -162,8 +162,8 @@ type backend struct {
 }
 
 type tlsConfig struct {
-	EnabledTls10 types.Bool `tfsdk:"enabled_tls_10"`
-	EnabledTls11 types.Bool `tfsdk:"enabled_tls_11"`
+	EnableTls10 types.Bool `tfsdk:"enable_tls_10"`
+	EnableTls11 types.Bool `tfsdk:"enable_tls_11"`
 }
 
 type wafConfig struct {
@@ -242,8 +242,8 @@ var redirectsTypes = map[string]attr.Type{
 }
 
 var tlsTypes = map[string]attr.Type{
-	"enabled_tls_10": types.BoolType,
-	"enabled_tls_11": types.BoolType,
+	"enable_tls_10": types.BoolType,
+	"enable_tls_11": types.BoolType,
 }
 
 var wafTypes = map[string]attr.Type{
@@ -411,12 +411,12 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Optional:    true,
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
-							"enabled_tls_11": schema.BoolAttribute{
+							"enable_tls_11": schema.BoolAttribute{
 								Optional:    true,
 								Computed:    true,
 								Description: schemaDescriptions["config_tls_enable_tls_10"],
 							},
-							"enabled_tls_10": schema.BoolAttribute{
+							"enable_tls_10": schema.BoolAttribute{
 								Optional:    true,
 								Computed:    true,
 								Description: schemaDescriptions["config_tls_enable_tls_11"],
@@ -903,11 +903,17 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	//tls
-	var tlsConfig *cdnSdk.TlsConfigPatch
-	if configModel.Tls != nil {
-		tlsConfig = &cdnSdk.TlsConfigPatch{
-			EnableTls10: new(configModel.Tls.EnabledTls10.ValueBool()),
-			EnableTls11: new(configModel.Tls.EnabledTls11.ValueBool()),
+	var tls *cdnSdk.TlsConfigPatch
+	if !utils.IsUndefined(configModel.Tls) {
+		var tlsValue tlsConfig
+		diags = configModel.Tls.As(ctx, &tlsValue, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping TLS config")
+			return
+		}
+		tls = &cdnSdk.TlsConfigPatch{
+			EnableTls10: new(tlsValue.EnableTls10.ValueBool()),
+			EnableTls11: new(tlsValue.EnableTls10.ValueBool()),
 		}
 	}
 
@@ -960,7 +966,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
 		Redirects:        redirectsConfig,
-		Tls:              tlsConfig,
+		Tls:              tls,
 	}
 
 	configPatch.Waf = &cdnSdk.WafConfigPatch{
@@ -1406,8 +1412,8 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	}
 
 	tlsObjAttrs := map[string]attr.Value{
-		"enabled_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
-		"enabled_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
+		"enable_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
+		"enable_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
 	}
 
 	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
@@ -1622,11 +1628,17 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 	// tls
 	var tls cdnSdk.TlsConfig
-	if configModel.Tls != nil {
-		tls = cdnSdk.TlsConfig{
-			EnableTls10: configModel.Tls.EnabledTls10.ValueBool(),
-			EnableTls11: configModel.Tls.EnabledTls11.ValueBool(),
+	if !utils.IsUndefined(configModel.Tls) {
+		var tlsValue tlsConfig
+		diags := configModel.Tls.As(ctx, &tlsValue, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
 		}
+		tls = cdnSdk.TlsConfig{
+			EnableTls10: tlsValue.EnableTls10.ValueBool(),
+			EnableTls11: tlsValue.EnableTls11.ValueBool(),
+		}
+
 	}
 
 	// blockedCountries

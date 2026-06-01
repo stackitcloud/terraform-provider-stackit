@@ -31,6 +31,8 @@ variable "waf_log_only_rule_group_ids_0" {}
 variable "waf_enabled_rule_collection_ids_0" {}
 variable "waf_disabled_rule_collection_ids_0" {}
 variable "waf_log_only_rule_collection_ids_0" {}
+variable "tls_enable_tls_10" {}
+variable "tls_enable_tls_11" {}
 
 # dns
 variable "dns_zone_name" {}
@@ -77,6 +79,10 @@ resource "stackit_cdn_distribution" "distribution" {
           ]
         }
       ]
+    }
+    tls = {
+      enable_tls_10 = var.tls_enable_tls_10
+      enable_tls_11 = var.tls_enable_tls_11
     }
     waf = {
       mode                          = var.waf_mode

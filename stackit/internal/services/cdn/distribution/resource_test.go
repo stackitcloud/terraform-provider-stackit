@@ -78,8 +78,8 @@ func TestToCreatePayload(t *testing.T) {
 		"log_only_rule_collection_ids":  emptyWafSet,
 	})
 	// defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
-	// 	"enabled_tls_10": types.BoolValue(false),
-	// 	"enabled_tls_11": types.BoolValue(false),
+	// 	"enable_tls_10": types.BoolValue(false),
+	// 	"enable_tls_11": types.BoolValue(false),
 	// })
 
 	redirectsObjType, ok := configTypes["redirects"].(basetypes.ObjectType)
@@ -795,8 +795,8 @@ func TestMapFields(t *testing.T) {
 	})
 
 	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
-		"enabled_tls_10": types.BoolValue(false),
-		"enabled_tls_11": types.BoolValue(false),
+		"enable_tls_10": types.BoolValue(false),
+		"enable_tls_11": types.BoolValue(false),
 	})
 	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
 		"backend":           backend,

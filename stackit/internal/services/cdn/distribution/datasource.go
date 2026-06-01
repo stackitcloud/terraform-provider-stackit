@@ -214,11 +214,11 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Description: schemaDescriptions["config_tls_config"],
 						Computed:    true,
 						Attributes: map[string]schema.Attribute{
-							"enabled_tls_11": schema.BoolAttribute{
+							"enable_tls_11": schema.BoolAttribute{
 								Computed:    true,
 								Description: schemaDescriptions["config_tls_enable_tls_10"],
 							},
-							"enabled_tls_10": schema.BoolAttribute{
+							"enable_tls_10": schema.BoolAttribute{
 								Computed:    true,
 								Description: schemaDescriptions["config_tls_enable_tls_11"],
 							},
@@ -659,8 +659,8 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 	}
 
 	tlsObjAttrs := map[string]attr.Value{
-		"enabled_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
-		"enabled_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
+		"enable_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
+		"enable_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
 	}
 
 	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
