@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
@@ -78,11 +79,18 @@ func TestMapFields(t *testing.T) {
 
 					State:        types.StringValue("active"),
 					ErrorMessage: types.StringNull(),
-					Endpoints: &EndpointsModel{
-						ArrowFlight: types.StringValue("flight"),
-						Catalog:     types.StringValue("catalog"),
-						Ui:          types.StringValue("ui"),
-					},
+					Endpoints: types.ObjectValueMust(
+						map[string]attr.Type{
+							"arrow_flight": types.StringType,
+							"catalog":      types.StringType,
+							"ui":           types.StringType,
+						},
+						map[string]attr.Value{
+							"arrow_flight": types.StringValue("flight"),
+							"catalog":      types.StringValue("catalog"),
+							"ui":           types.StringValue("ui"),
+						},
+					),
 				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
@@ -162,19 +170,33 @@ func TestToCreatePayload(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			"success",
+			"success-local",
 			&InstanceModel{
 				Model: Model{
 					Description: types.StringValue("test description"),
 					DisplayName: types.StringValue("displayName"),
 				},
 				Authentication: &AuthenticationModel{
-					AzureAD: &AzureADModel{
-						AuthorityUrl: types.StringValue("azure-authority"),
-						ClientId:     types.StringValue("azure-client"),
-						ClientSecret: types.StringValue("azure-secret"),
-						RedirectUrl:  types.StringValue("azure-redirect"),
-					},
+					Type: types.StringValue("local-only"),
+				},
+			},
+			&dremioSdk.CreateDremioInstancePayload{
+				Authentication: &dremioSdk.Authentication{
+					Type: "local-only",
+				},
+				Description: utils.Ptr("test description"),
+				DisplayName: "displayName",
+			},
+			false,
+		},
+		{
+			"success-oauth",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
 					OAuth: &OAuthModel{
 						AuthorityUrl: types.StringValue("oauth-authority"),
 						ClientId:     types.StringValue("oauth-client"),
@@ -196,12 +218,6 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&dremioSdk.CreateDremioInstancePayload{
 				Authentication: &dremioSdk.Authentication{
-					Azuread: &dremioSdk.Azuread{
-						AuthorityUrl: "azure-authority",
-						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
-						RedirectUrl:  utils.Ptr("azure-redirect"),
-					},
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
@@ -224,6 +240,86 @@ func TestToCreatePayload(t *testing.T) {
 				DisplayName: "displayName",
 			},
 			false,
+		},
+		{
+			"success-azuread",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					AzureAD: &AzureADModel{
+						AuthorityUrl: types.StringValue("azure-authority"),
+						ClientId:     types.StringValue("azure-client"),
+						ClientSecret: types.StringValue("azure-secret"),
+						RedirectUrl:  types.StringValue("azure-redirect"),
+					},
+					Type: types.StringValue("azuread"),
+				},
+			},
+			&dremioSdk.CreateDremioInstancePayload{
+				Authentication: &dremioSdk.Authentication{
+					Azuread: &dremioSdk.Azuread{
+						AuthorityUrl: "azure-authority",
+						ClientId:     "azure-client",
+						ClientSecret: "azure-secret",
+						RedirectUrl:  utils.Ptr("azure-redirect"),
+					},
+					Type: "azuread",
+				},
+				Description: utils.Ptr("test description"),
+				DisplayName: "displayName",
+			},
+			false,
+		},
+		{
+			"idp-config-mismatch-local",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					AzureAD: &AzureADModel{
+						AuthorityUrl: types.StringValue("azure-authority"),
+						ClientId:     types.StringValue("azure-client"),
+						ClientSecret: types.StringValue("azure-secret"),
+						RedirectUrl:  types.StringValue("azure-redirect"),
+					},
+					Type: types.StringValue("local-only"),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"missing-idp-config-oauth",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					Type: types.StringValue("oauth"),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"missing-idp-config-azuread",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					Type: types.StringValue("azuread"),
+				},
+			},
+			nil,
+			true,
 		},
 		{
 			"nil model",
@@ -264,12 +360,26 @@ func TestToUpdatePayload(t *testing.T) {
 					DisplayName: types.StringValue("displayName"),
 				},
 				Authentication: &AuthenticationModel{
-					AzureAD: &AzureADModel{
-						AuthorityUrl: types.StringValue("azure-authority"),
-						ClientId:     types.StringValue("azure-client"),
-						ClientSecret: types.StringValue("azure-secret"),
-						RedirectUrl:  types.StringValue("azure-redirect"),
-					},
+					Type: types.StringValue("local-only"),
+				},
+			},
+			&dremioSdk.UpdateDremioInstancePayload{
+				Authentication: &dremioSdk.Authentication{
+					Type: "local-only",
+				},
+				Description: utils.Ptr("test description"),
+				DisplayName: utils.Ptr("displayName"),
+			},
+			false,
+		},
+		{
+			"success-oauth",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
 					OAuth: &OAuthModel{
 						AuthorityUrl: types.StringValue("oauth-authority"),
 						ClientId:     types.StringValue("oauth-client"),
@@ -291,12 +401,6 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&dremioSdk.UpdateDremioInstancePayload{
 				Authentication: &dremioSdk.Authentication{
-					Azuread: &dremioSdk.Azuread{
-						AuthorityUrl: "azure-authority",
-						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
-						RedirectUrl:  utils.Ptr("azure-redirect"),
-					},
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
@@ -319,6 +423,86 @@ func TestToUpdatePayload(t *testing.T) {
 				DisplayName: utils.Ptr("displayName"),
 			},
 			false,
+		},
+		{
+			"success-azuread",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					AzureAD: &AzureADModel{
+						AuthorityUrl: types.StringValue("azure-authority"),
+						ClientId:     types.StringValue("azure-client"),
+						ClientSecret: types.StringValue("azure-secret"),
+						RedirectUrl:  types.StringValue("azure-redirect"),
+					},
+					Type: types.StringValue("azuread"),
+				},
+			},
+			&dremioSdk.UpdateDremioInstancePayload{
+				Authentication: &dremioSdk.Authentication{
+					Azuread: &dremioSdk.Azuread{
+						AuthorityUrl: "azure-authority",
+						ClientId:     "azure-client",
+						ClientSecret: "azure-secret",
+						RedirectUrl:  utils.Ptr("azure-redirect"),
+					},
+					Type: "azuread",
+				},
+				Description: utils.Ptr("test description"),
+				DisplayName: utils.Ptr("displayName"),
+			},
+			false,
+		},
+		{
+			"idp-config-mismatch-local",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					AzureAD: &AzureADModel{
+						AuthorityUrl: types.StringValue("azure-authority"),
+						ClientId:     types.StringValue("azure-client"),
+						ClientSecret: types.StringValue("azure-secret"),
+						RedirectUrl:  types.StringValue("azure-redirect"),
+					},
+					Type: types.StringValue("local-only"),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"missing-idp-config-oauth",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					Type: types.StringValue("oauth"),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"missing-idp-config-azuread",
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
+				Authentication: &AuthenticationModel{
+					Type: types.StringValue("azuread"),
+				},
+			},
+			nil,
+			true,
 		},
 		{
 			"nil model",

@@ -8,10 +8,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -50,9 +52,9 @@ type Model struct {
 	Description types.String `tfsdk:"description"`
 
 	// Read-only Fields
-	State        types.String    `tfsdk:"state"`
-	ErrorMessage types.String    `tfsdk:"error_message"`
-	Endpoints    *EndpointsModel `tfsdk:"endpoints"`
+	State        types.String `tfsdk:"state"`
+	ErrorMessage types.String `tfsdk:"error_message"`
+	Endpoints    types.Object `tfsdk:"endpoints"` // see EdnpointsModel
 }
 
 // InstanceModel maps the resource schema data.
@@ -114,6 +116,12 @@ type EndpointsModel struct {
 	ArrowFlight types.String `tfsdk:"arrow_flight"`
 	Catalog     types.String `tfsdk:"catalog"`
 	Ui          types.String `tfsdk:"ui"`
+}
+
+var endpointsAttrTypes = map[string]attr.Type{
+	"arrow_flight": types.StringType,
+	"catalog":      types.StringType,
+	"ui":           types.StringType,
 }
 
 func NewInstanceResource() resource.Resource {
@@ -248,6 +256,8 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Optional:    true,
+				Computed:    true, // Must be computed if a default is applied
+				Default:     stringdefault.StaticString(""),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -314,7 +324,7 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 							"client_secret": schema.StringAttribute{
 								Description: descriptions["azuread_client_secret"],
 								Required:    true,
-								Sensitive:   true,
+								// Sensitive:   true,
 							},
 							"redirect_url": schema.StringAttribute{
 								Description: descriptions["azuread_redirect_url"],
@@ -337,7 +347,7 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 							"client_secret": schema.StringAttribute{
 								Description: descriptions["oauth_client_secret"],
 								Required:    true,
-								Sensitive:   true,
+								// Sensitive:   true,
 							},
 							"scope": schema.StringAttribute{
 								Description: descriptions["oauth_scope"],
@@ -678,11 +688,16 @@ func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model) error 
 	model.Description = types.StringPointerValue(instanceResp.Description)
 	model.ErrorMessage = types.StringPointerValue(instanceResp.ErrorMessage)
 
-	model.Endpoints = &EndpointsModel{
+	endpoints := &EndpointsModel{
 		ArrowFlight: types.StringValue(instanceResp.Endpoints.ArrowFlight),
 		Catalog:     types.StringValue(instanceResp.Endpoints.Catalog),
 		Ui:          types.StringValue(instanceResp.Endpoints.Ui),
 	}
+	endpointsObj, diags := types.ObjectValueFrom(context.Background(), endpointsAttrTypes, endpoints)
+	if diags.HasError() {
+		return fmt.Errorf("failed to parse endpoints")
+	}
+	model.Endpoints = endpointsObj
 
 	return nil
 }
@@ -744,8 +759,13 @@ func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePaylo
 		return nil, fmt.Errorf("nil model")
 	}
 
+	authentication, err := parseAuthentication(model)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse authentication: %v", err)
+	}
+
 	return &dremioSdk.UpdateDremioInstancePayload{
-		Authentication: parseAuthentication(model),
+		Authentication: authentication,
 		Description:    model.Description.ValueStringPointer(),
 		DisplayName:    model.DisplayName.ValueStringPointer(),
 	}, nil
@@ -757,26 +777,41 @@ func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePaylo
 		return nil, fmt.Errorf("nil model")
 	}
 
+	authentication, err := parseAuthentication(model)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse authentication: %v", err)
+	}
+
 	return &dremioSdk.CreateDremioInstancePayload{
-		Authentication: parseAuthentication(model),
+		Authentication: authentication,
 		Description:    model.Description.ValueStringPointer(),
 		DisplayName:    model.DisplayName.ValueString(),
 	}, nil
 }
 
-func parseAuthentication(model *InstanceModel) *dremioSdk.Authentication {
-	var azureAdPayload *dremioSdk.Azuread
-	if model.Authentication.AzureAD != nil {
-		azureAdPayload = &dremioSdk.Azuread{
-			AuthorityUrl: model.Authentication.AzureAD.AuthorityUrl.ValueString(),
-			ClientId:     model.Authentication.AzureAD.ClientId.ValueString(),
-			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueString(),
-			RedirectUrl:  model.Authentication.AzureAD.RedirectUrl.ValueStringPointer(),
-		}
-	}
+func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error) {
+	// API only saves the block of the stated type. The other one is omitted.
+	// Keeping the block in TF leads to inconsistent state. Therefore we have
+	// make sure the type matches the existing block.
 
-	var oAuthPayload *dremioSdk.Oauth
-	if model.Authentication.OAuth != nil {
+	switch model.Authentication.Type.ValueString() {
+	case "local-only":
+		if !(model.Authentication.OAuth == nil) || !(model.Authentication.AzureAD == nil) {
+			return nil, fmt.Errorf("can't state idp config if auth type is local-only")
+		}
+		return &dremioSdk.Authentication{
+			Azuread: nil,
+			Oauth:   nil,
+			Type:    model.Authentication.Type.ValueString(),
+		}, nil
+	case "oauth":
+		if !(model.Authentication.AzureAD == nil) {
+			return nil, fmt.Errorf("can't state azure idp config if auth type is oauth")
+		}
+		if model.Authentication.OAuth == nil {
+			return nil, fmt.Errorf("missing oauth idp config")
+		}
+
 		oAuthParams := []dremioSdk.AuthParameters{}
 		if len(model.Authentication.OAuth.Parameters) > 0 {
 			parameters := model.Authentication.OAuth.Parameters
@@ -788,7 +823,7 @@ func parseAuthentication(model *InstanceModel) *dremioSdk.Authentication {
 			}
 		}
 
-		oAuthPayload = &dremioSdk.Oauth{
+		oAuthPayload := &dremioSdk.Oauth{
 			AuthorityUrl: model.Authentication.OAuth.AuthorityUrl.ValueString(),
 			ClientId:     model.Authentication.OAuth.ClientId.ValueString(),
 			ClientSecret: model.Authentication.OAuth.ClientSecret.ValueString(),
@@ -799,11 +834,32 @@ func parseAuthentication(model *InstanceModel) *dremioSdk.Authentication {
 			Scope:       model.Authentication.OAuth.Scope.ValueStringPointer(),
 			Parameters:  oAuthParams,
 		}
-	}
 
-	return &dremioSdk.Authentication{
-		Azuread: azureAdPayload,
-		Oauth:   oAuthPayload,
-		Type:    model.Authentication.Type.ValueString(),
+		return &dremioSdk.Authentication{
+			Azuread: nil,
+			Oauth:   oAuthPayload,
+			Type:    model.Authentication.Type.ValueString(),
+		}, nil
+	case "azuread":
+		if !(model.Authentication.OAuth == nil) {
+			return nil, fmt.Errorf("can't state oauth idp config if auth type is azuread")
+		}
+		if model.Authentication.AzureAD == nil {
+			return nil, fmt.Errorf("missing azuread config")
+		}
+
+		azureAdPayload := &dremioSdk.Azuread{
+			AuthorityUrl: model.Authentication.AzureAD.AuthorityUrl.ValueString(),
+			ClientId:     model.Authentication.AzureAD.ClientId.ValueString(),
+			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueString(),
+			RedirectUrl:  model.Authentication.AzureAD.RedirectUrl.ValueStringPointer(),
+		}
+		return &dremioSdk.Authentication{
+			Azuread: azureAdPayload,
+			Oauth:   nil,
+			Type:    model.Authentication.Type.ValueString(),
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown authentication type: %s", model.Authentication.Type)
 	}
 }

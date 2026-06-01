@@ -71,6 +71,7 @@ var (
 	ALBCertCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_ALB_CERT_CUSTOM_ENDPOINT", providerName: "alb_certificates_custom_endpoint"}
 	CdnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
 	DnsCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
+	DremioCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_DREMIO_CUSTOM_ENDPOINT", providerName: "dremio_custom_endpoint"}
 	EdgeCloudCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
 	GitCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_GIT_CUSTOM_ENDPOINT", providerName: "git_custom_endpoint"}
 	IaaSCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_IAAS_CUSTOM_ENDPOINT", providerName: "iaas_custom_endpoint"}

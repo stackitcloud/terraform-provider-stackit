@@ -301,11 +301,6 @@ func mapDataSourceAuthentication(instanceResp *dremioSdk.DremioResponse, model *
 
 	authModel.Type = types.StringValue(authResp.Type)
 
-	if instanceResp.Authentication.Type == "local-only" {
-		// On local auth we don't need to map IDP fields
-		return nil
-	}
-
 	if authResp.Type == "azuread" {
 		azureADResp := authResp.Azuread
 		authModel.AuthorityUrl = types.StringValue(azureADResp.AuthorityUrl)
