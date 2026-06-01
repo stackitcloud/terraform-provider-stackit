@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
@@ -939,6 +940,138 @@ func TestModelIsIPv4ConfigSet(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.model.isIPv4UpdateConfigSet(); got != tt.want {
 				t.Errorf("isIPv4ConfigSet() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		model   Model
+		wantErr bool
+	}{
+		{
+			name: "happy case: IPv4 only with prefix",
+			model: Model{
+				IPv4Prefix:  types.StringValue("192.168.0.0/24"),
+				IPv4Gateway: types.StringValue("192.168.0.1"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: IPv4 only with prefix_length",
+			model: Model{
+				IPv4PrefixLength: types.Int64Value(24),
+				NoIPv4Gateway:    types.BoolValue(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: IPv6 only with prefix",
+			model: Model{
+				IPv6Prefix:  types.StringValue("2001:db8::/64"),
+				IPv6Gateway: types.StringValue("2001:db8::1"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: IPv6 only with prefix_length",
+			model: Model{
+				IPv6PrefixLength: types.Int64Value(64),
+				NoIPv6Gateway:    types.BoolValue(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: both IPv4 and IPv6 configured correctly",
+			model: Model{
+				IPv4Prefix:    types.StringValue("192.168.0.0/24"),
+				NoIPv4Gateway: types.BoolValue(true),
+				IPv6Prefix:    types.StringValue("2001:db8::/64"),
+				NoIPv6Gateway: types.BoolValue(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: only IPv4 prefix",
+			model: Model{
+				IPv4Prefix: types.StringValue("192.168.0.0/24"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: only IPv6 prefix",
+			model: Model{
+				IPv6Prefix: types.StringValue("2001:db8::/64"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: only IPv4 prefix_length",
+			model: Model{
+				IPv4PrefixLength: types.Int64Value(24),
+			},
+			wantErr: false,
+		},
+		{
+			name: "happy case: only IPv6 prefix_length",
+			model: Model{
+				IPv6PrefixLength: types.Int64Value(64),
+			},
+			wantErr: false,
+		},
+		{
+			name: "error case: IPv4 active via gateway but missing prefix and prefix_length",
+			model: Model{
+				IPv4Gateway: types.StringValue("192.168.0.1"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "error case: IPv6 active via no_gateway but missing prefix and prefix_length",
+			model: Model{
+				NoIPv6Gateway: types.BoolValue(true),
+			},
+			wantErr: true,
+		},
+		{
+			name: "error case: IPv4 active via nameservers but missing prefix and prefix_length",
+			model: Model{
+				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("1.1.1.1"),
+				}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "error case: IPv6 active via nameservers but missing prefix and prefix_length",
+			model: Model{
+				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("2606:4700:4700::1111"),
+				}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "error case: dual-stack failure (both active via nameservers, both missing prefixes)",
+			model: Model{
+				IPv4Nameservers: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("8.8.8.8")}),
+				IPv6Nameservers: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("2001:4860:4860::8888")}),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			diags := diag.Diagnostics{}
+
+			validateConfig(ctx, &diags, &tt.model)
+
+			if diags.HasError() != tt.wantErr {
+				t.Errorf("validateConfig() error = %v, wantErr %v. Diagnostics: %v", diags.HasError(), tt.wantErr, diags)
 			}
 		})
 	}
