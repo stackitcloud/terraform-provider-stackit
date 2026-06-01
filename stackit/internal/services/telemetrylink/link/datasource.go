@@ -163,7 +163,7 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 			ctx,
 			&resp.Diagnostics,
 			err,
-			"Reading TelemetryLink",
+			"Error reading TelemetryLink",
 			fmt.Sprintf("TelemetryLink for resource type %q and resource ID %q does not exist.", resourceType, resourceID),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Resource with type %q ID %q not found or forbidden access", resourceType, resourceID),
