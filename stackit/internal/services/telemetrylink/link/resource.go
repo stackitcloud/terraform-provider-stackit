@@ -67,7 +67,6 @@ var schemaDescriptions = map[string]string{
 
 type Model struct {
 	ID                types.String `tfsdk:"id"` // Required by Terraform
-	LinkID            types.String `tfsdk:"link_id"`
 	Region            types.String `tfsdk:"region"`
 	ResourceType      types.String `tfsdk:"resource_type"`
 	ResourceID        types.String `tfsdk:"resource_id"`
@@ -192,17 +191,6 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description: schemaDescriptions["access_token"],
 				Optional:    true,
 				Sensitive:   true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"link_id": schema.StringAttribute{
-				Description: schemaDescriptions["link_id"],
-				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -696,16 +684,9 @@ func mapFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, mod
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
-	var linkID string
-	if model.LinkID.ValueString() != "" {
-		linkID = model.LinkID.ValueString()
-	} else {
-		linkID = link.Id
-	}
 
 	model.ID = tfutils.BuildInternalTerraformId(model.ResourceType.ValueString(), model.ResourceID.ValueString(), region)
 	model.Region = types.StringValue(region)
-	model.LinkID = types.StringValue(linkID)
 	model.DisplayName = types.StringValue(link.DisplayName)
 	model.Description = types.StringPointerValue(link.Description)
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)

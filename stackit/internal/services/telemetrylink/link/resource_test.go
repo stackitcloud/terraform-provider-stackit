@@ -30,7 +30,6 @@ func fixtureLink(mods ...func(link *telemetrylink.TelemetryLinkResponse)) *telem
 func fixtureModel(mods ...func(model *Model)) *Model {
 	model := &Model{
 		ID:                types.StringValue("rtp,rid,reg"),
-		LinkID:            types.StringValue("lid"),
 		Region:            types.StringValue("reg"),
 		ResourceType:      types.StringValue("rtp"),
 		ResourceID:        types.StringValue("rid"),

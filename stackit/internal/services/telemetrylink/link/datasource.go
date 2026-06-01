@@ -31,7 +31,6 @@ func NewTelemetryLinkDataSource() datasource.DataSource {
 
 type DataSourceModel struct {
 	ID                types.String `tfsdk:"id"` // Required by Terraform
-	LinkID            types.String `tfsdk:"link_id"`
 	Region            types.String `tfsdk:"region"`
 	ResourceType      types.String `tfsdk:"resource_type"`
 	ResourceID        types.String `tfsdk:"resource_id"`
@@ -73,14 +72,6 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			"id": schema.StringAttribute{
 				Description: schemaDescriptions["id"],
 				Computed:    true,
-			},
-			"link_id": schema.StringAttribute{
-				Description: schemaDescriptions["link_id"],
-				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
 			},
 			"resource_type": schema.StringAttribute{
 				Description: schemaDescriptions["resource_type"],
@@ -199,7 +190,6 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	}
 
 	model.ID = tfutils.BuildInternalTerraformId(model.ResourceType.ValueString(), model.ResourceID.ValueString(), region)
-	model.LinkID = types.StringValue(link.Id)
 	model.Region = types.StringValue(region)
 	model.DisplayName = types.StringValue(link.DisplayName)
 	model.Description = types.StringPointerValue(link.Description)

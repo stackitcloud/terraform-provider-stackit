@@ -13,7 +13,6 @@ import (
 func fixtureDataSourceModel(mods ...func(model *DataSourceModel)) *DataSourceModel {
 	model := &DataSourceModel{
 		ID:                types.StringValue("rtp,rid,reg"),
-		LinkID:            types.StringValue("lid"),
 		Region:            types.StringValue("reg"),
 		ResourceType:      types.StringValue("rtp"),
 		ResourceID:        types.StringValue("rid"),
