@@ -122,6 +122,7 @@ import (
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
+	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
@@ -202,6 +203,7 @@ type providerModel struct {
 	SfsCustomEndpoint               types.String `tfsdk:"sfs_custom_endpoint"`
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
+	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
 	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
@@ -258,9 +260,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"secretsmanager_custom_endpoint":       "Custom endpoint for the Secrets Manager service",
 		"sqlserverflex_custom_endpoint":        "Custom endpoint for the SQL Server Flex service",
 		"ske_custom_endpoint":                  "Custom endpoint for the Kubernetes Engine (SKE) service",
-		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"service_enablement_custom_endpoint":   "Custom endpoint for the Service Enablement API",
 		"sfs_custom_endpoint":                  "Custom endpoint for the Stackit Filestorage API",
+		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
+		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
@@ -476,6 +479,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["telemetryrouter_custom_endpoint"],
 			},
+			"telemetrylink_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["telemetrylink_custom_endpoint"],
+			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
@@ -564,6 +571,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -728,6 +736,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenDataSource,
 		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
+		telemetryLink.NewTelemetryLinkDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -824,6 +833,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenResource,
 		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
+		telemetryLink.NewTelemetryLinkResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

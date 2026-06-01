@@ -100,6 +100,7 @@ var (
 	SKECustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SKE_CUSTOM_ENDPOINT", providerName: "ske_custom_endpoint"}
 	IntakeCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_INTAKE_CUSTOM_ENDPOINT", providerName: "intake_custom_endpoint"}
 	TelemetryRouterCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYROUTER_CUSTOM_ENDPOINT", providerName: "telemetryrouter_custom_endpoint"}
+	TelemetryLinkCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYLINK_CUSTOM_ENDPOINT", providerName: "telemetrylink_custom_endpoint"}
 
 	allCustomEndpoints = []customEndpointConfig{
 		ALBCustomEndpoint,
@@ -134,6 +135,7 @@ var (
 		TokenCustomEndpoint,
 		SKECustomEndpoint,
 		TelemetryRouterCustomEndpoint,
+		TelemetryLinkCustomEndpoint,
 	}
 )
 
