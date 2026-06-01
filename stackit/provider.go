@@ -19,8 +19,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 
-	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -124,6 +122,7 @@ import (
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
+	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
