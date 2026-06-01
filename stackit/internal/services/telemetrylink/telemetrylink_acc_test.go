@@ -303,7 +303,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 
 func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := telemetrylink.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogsCustomEndpoint, false)...)
+	client, err := telemetrylink.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.TelemetryLinkCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
