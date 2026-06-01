@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
 	telemetrylinkWait "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi/wait"
 
@@ -77,7 +79,6 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
@@ -102,10 +103,6 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_telemetrylink.link", "id",
 						"data.stackit_telemetrylink.link", "id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink.link", "link_id",
-						"data.stackit_telemetrylink.link", "link_id",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_telemetrylink.link", "display_name",
@@ -156,7 +153,6 @@ func TestAccTelemetryLinkMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
@@ -184,7 +180,6 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
@@ -209,10 +204,6 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_telemetrylink.link", "id",
 						"data.stackit_telemetrylink.link", "id",
-					),
-					resource.TestCheckResourceAttrPair(
-						"stackit_telemetrylink.link", "link_id",
-						"data.stackit_telemetrylink.link", "link_id",
 					),
 					resource.TestCheckResourceAttrPair(
 						"stackit_telemetrylink.link", "display_name",
@@ -268,7 +259,6 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "link_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
 				),
@@ -327,31 +317,53 @@ func testAccCheckTelemetryLinkDestroy(s *terraform.State) error {
 		})
 	}
 
+	var errs []error
 	for _, l := range linksToDestroy {
 		var err error
 		switch l.resourceType {
 		case "organization":
 			err = client.DefaultAPI.DeleteOrganizationTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
-				return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+				var oapiErr *oapierror.GenericOpenAPIError
+				if errors.As(err, &oapiErr) {
+					if oapiErr.StatusCode == http.StatusNotFound {
+						continue
+					}
+				}
+				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+				continue
 			}
 			_, err = telemetrylinkWait.DeleteOrganizationTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "folder":
 			err = client.DefaultAPI.DeleteFolderTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
-				return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+				var oapiErr *oapierror.GenericOpenAPIError
+				if errors.As(err, &oapiErr) {
+					if oapiErr.StatusCode == http.StatusNotFound {
+						continue
+					}
+				}
+				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+				continue
 			}
 			_, err = telemetrylinkWait.DeleteFolderTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		case "project":
 			err = client.DefaultAPI.DeleteProjectTelemetryLink(ctx, l.resourceId, l.region).Execute()
 			if err != nil {
-				return fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err)
+				var oapiErr *oapierror.GenericOpenAPIError
+				if errors.As(err, &oapiErr) {
+					if oapiErr.StatusCode == http.StatusNotFound {
+						continue
+					}
+				}
+				errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
+				continue
 			}
 			_, err = telemetrylinkWait.DeleteProjectTelemetryLinkWaitHandler(ctx, client.DefaultAPI, l.resourceId, l.region).WaitWithContext(ctx)
 		}
 		if err != nil {
-			return fmt.Errorf("deleting link %s %s: waiting for deletion %w", l.resourceType, l.resourceId, err)
+			errs = append(errs, fmt.Errorf("deleting link %s %s: %w", l.resourceType, l.resourceId, err))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
