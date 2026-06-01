@@ -218,7 +218,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 
 	resourceType := model.ResourceType.ValueString()
 	resourceID := model.ResourceID.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "resource_type", resourceType)
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -522,7 +522,7 @@ func (r *telemetryLinkResource) Delete(ctx context.Context, req resource.DeleteR
 
 	resourceType := model.ResourceType.ValueString()
 	resourceID := model.ResourceID.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "resource_type", resourceType)
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
