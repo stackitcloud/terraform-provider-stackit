@@ -46,9 +46,8 @@ var (
 )
 
 var schemaDescriptions = map[string]string{
-	"id":      "Terraform's internal resource identifier. It is structured as \"`resource_type`, `resource_id`,`region`\".",
-	"link_id": "The TelemetryLink ID",
-	"region":  "STACKIT region name the resource is located in. If not defined, the provider region is used.",
+	"id":     "Terraform's internal resource identifier. It is structured as \"`resource_type`, `resource_id`,`region`\".",
+	"region": "STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"resource_type": fmt.Sprintf(
 		"The resource type of the TelemetryLink resource, possible values: %s",
 		tfutils.FormatPossibleValues(resourceTypes...),
