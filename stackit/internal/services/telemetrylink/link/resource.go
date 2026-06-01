@@ -145,17 +145,6 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"link_id": schema.StringAttribute{
-				Description: schemaDescriptions["link_id"],
-				Computed:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
 			"resource_type": schema.StringAttribute{
 				Description: schemaDescriptions["resource_type"],
 				Required:    true,
@@ -203,6 +192,17 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description: schemaDescriptions["access_token"],
 				Optional:    true,
 				Sensitive:   true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"link_id": schema.StringAttribute{
+				Description: schemaDescriptions["link_id"],
+				Computed:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
