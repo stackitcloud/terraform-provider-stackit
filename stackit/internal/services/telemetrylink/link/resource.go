@@ -236,9 +236,6 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	regionId := r.providerData.GetRegionWithOverride(model.Region)
-	ctx = tflog.SetField(ctx, "region", regionId)
-
 	var response *telemetrylink.TelemetryLinkResponse
 	switch model.ResourceType.ValueString() {
 	case resourceTypeOrganization:
@@ -248,7 +245,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 
-		createResp, err := r.client.DefaultAPI.CreateOrUpdateOrganizationTelemetryLink(ctx, resourceID, regionId).CreateOrUpdateOrganizationTelemetryLinkPayload(*payload).Execute()
+		createResp, err := r.client.DefaultAPI.CreateOrUpdateOrganizationTelemetryLink(ctx, resourceID, region).CreateOrUpdateOrganizationTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -271,7 +268,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 
-		response, err = wait.CreateOrUpdateOrganizationTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
+		response, err = wait.CreateOrUpdateOrganizationTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
@@ -284,7 +281,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 
-		createResp, err := r.client.DefaultAPI.CreateOrUpdateFolderTelemetryLink(ctx, resourceID, regionId).CreateOrUpdateFolderTelemetryLinkPayload(*payload).Execute()
+		createResp, err := r.client.DefaultAPI.CreateOrUpdateFolderTelemetryLink(ctx, resourceID, region).CreateOrUpdateFolderTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -307,7 +304,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 
-		response, err = wait.CreateOrUpdateFolderTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
+		response, err = wait.CreateOrUpdateFolderTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
@@ -319,7 +316,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 
-		createResp, err := r.client.DefaultAPI.CreateOrUpdateProjectTelemetryLink(ctx, resourceID, regionId).CreateOrUpdateProjectTelemetryLinkPayload(*payload).Execute()
+		createResp, err := r.client.DefaultAPI.CreateOrUpdateProjectTelemetryLink(ctx, resourceID, region).CreateOrUpdateProjectTelemetryLinkPayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -342,7 +339,7 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 
-		response, err = wait.CreateOrUpdateProjectTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, regionId).WaitWithContext(ctx)
+		response, err = wait.CreateOrUpdateProjectTelemetryLinkWaitHandler(ctx, r.client.DefaultAPI, resourceID, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Waiting for TelemetryLink to become active: %v", err))
 			return
