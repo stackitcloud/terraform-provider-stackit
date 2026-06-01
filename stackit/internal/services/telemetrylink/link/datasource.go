@@ -197,15 +197,9 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	if model == nil {
 		return fmt.Errorf("model is nil")
 	}
-	var linkID string
-	if model.LinkID.ValueString() != "" {
-		linkID = model.LinkID.ValueString()
-	} else {
-		linkID = link.Id
-	}
 
 	model.ID = tfutils.BuildInternalTerraformId(model.ResourceType.ValueString(), model.ResourceID.ValueString(), region)
-	model.LinkID = types.StringValue(linkID)
+	model.LinkID = types.StringValue(link.Id)
 	model.Region = types.StringValue(region)
 	model.DisplayName = types.StringValue(link.DisplayName)
 	model.Description = types.StringPointerValue(link.Description)
