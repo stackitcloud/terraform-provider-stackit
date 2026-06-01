@@ -59,5 +59,4 @@ import {
 
 - `create_time` (String) The time the Telemetry Link was created.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`resource_type`, `resource_id`,`region`".
-- `link_id` (String) The TelemetryLink ID
 - `status` (String) The status of the TelemetryLink, possible values: Possible values are: `active`, `inactive`, `failed`, `reconciling`, `deleting`.
