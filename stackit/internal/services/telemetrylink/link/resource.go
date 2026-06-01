@@ -420,7 +420,7 @@ func (r *telemetryLinkResource) Update(ctx context.Context, req resource.UpdateR
 
 	resourceType := model.ResourceType.ValueString()
 	resourceID := model.ResourceID.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "resource_type", resourceType)
 	ctx = tflog.SetField(ctx, "resource_id", resourceID)
