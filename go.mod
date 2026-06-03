@@ -29,7 +29,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.3
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
-	github.com/stackitcloud/stackit-sdk-go/services/observability v0.22.0
+	github.com/stackitcloud/stackit-sdk-go/services/observability v0.23.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.28.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.8.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.30.0
@@ -44,6 +44,8 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.10.1
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0
+	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.3.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.36.0
 )
