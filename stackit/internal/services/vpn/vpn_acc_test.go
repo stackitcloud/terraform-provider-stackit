@@ -311,7 +311,7 @@ func testAccCheckVpnGatewayDestroy(s *terraform.State) error {
 		gatewaysToDestroy = append(gatewaysToDestroy, gatewayId)
 	}
 
-	gatewaysResp, err := client.DefaultAPI.ListGateways(ctx, testutil.ProjectId, vpn.Region(testutil.Region)).Execute()
+	gatewaysResp, err := client.DefaultAPI.ListGateways(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting gateways: %w", err)
 	}
@@ -323,7 +323,7 @@ func testAccCheckVpnGatewayDestroy(s *terraform.State) error {
 		}
 		for _, gatewayId := range gatewaysToDestroy {
 			if *gateway.Id == gatewayId {
-				err := client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, vpn.Region(testutil.Region), *gateway.Id).Execute()
+				err := client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying gateway %s during CheckDestroy: %w", gatewayId, err)
 				}

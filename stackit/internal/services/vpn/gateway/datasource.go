@@ -154,7 +154,7 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 
-	gatewayResponse, err := d.client.DefaultAPI.GetGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
+	gatewayResponse, err := d.client.DefaultAPI.GetGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

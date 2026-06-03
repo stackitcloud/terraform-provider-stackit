@@ -80,7 +80,7 @@ func TestMapFields(t *testing.T) {
 						Tunnel2: "eu01-2",
 					},
 					Bgp: &vpn.BGPGatewayConfig{
-						LocalAsn:                 new(int64(65000)),
+						LocalAsn:                 int64(65000),
 						OverrideAdvertisedRoutes: []string{"10.0.0.0/16", "192.168.0.0/24"},
 					},
 					Labels: &map[string]string{
@@ -137,7 +137,7 @@ func TestMapFields(t *testing.T) {
 						Tunnel2: "eu01-2",
 					},
 					Bgp: &vpn.BGPGatewayConfig{
-						LocalAsn:                 new(int64(65000)),
+						LocalAsn:                 int64(65000),
 						OverrideAdvertisedRoutes: []string{},
 					},
 					Labels: nil,
@@ -265,7 +265,7 @@ func TestToCreatePayload(t *testing.T) {
 					Tunnel2: "eu01-2",
 				},
 				Bgp: &vpn.BGPGatewayConfig{
-					LocalAsn: new(int64(65000)),
+					LocalAsn: int64(65000),
 				},
 				Labels: &map[string]string{
 					"env":  "prod",
@@ -356,7 +356,7 @@ func TestToUpdatePayload(t *testing.T) {
 					Tunnel2: "eu01-2",
 				},
 				Bgp: &vpn.BGPGatewayConfig{
-					LocalAsn: new(int64(65000)),
+					LocalAsn: int64(65000),
 				},
 				Labels: &map[string]string{
 					"env":  "prod",
