@@ -40,7 +40,7 @@ func TestMapFields(t *testing.T) {
 								ExpirationDate: &timestamp,
 								Cri: []ske.CRI{
 									{
-										Name: new("containerd"),
+										Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 									},
 								},
 							},
@@ -89,7 +89,7 @@ func TestMapFields(t *testing.T) {
 								ExpirationDate: &timestamp,
 								Cri: []ske.CRI{
 									{
-										Name: new("containerd"),
+										Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 									},
 								},
 							},
@@ -155,7 +155,7 @@ func TestMapFields(t *testing.T) {
 								ExpirationDate: &timestamp,
 								Cri: []ske.CRI{
 									{
-										Name: new("containerd"),
+										Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 									},
 								},
 							},
@@ -165,7 +165,7 @@ func TestMapFields(t *testing.T) {
 								ExpirationDate: nil, // no expiration
 								Cri: []ske.CRI{
 									{
-										Name: new("containerd"),
+										Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 									},
 								},
 							},
@@ -175,7 +175,7 @@ func TestMapFields(t *testing.T) {
 								ExpirationDate: nil,
 								Cri: []ske.CRI{
 									{
-										Name: new("containerd"),
+										Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 									},
 								},
 							},

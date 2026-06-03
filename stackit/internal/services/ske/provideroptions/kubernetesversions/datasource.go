@@ -134,7 +134,9 @@ func (d *kubernetesVersionsDataSource) Read(ctx context.Context, req datasource.
 	listProviderOptionsReq := d.client.DefaultAPI.ListProviderOptions(ctx, region)
 
 	if !utils.IsUndefined(model.VersionState) {
-		listProviderOptionsReq = listProviderOptionsReq.VersionState(model.VersionState.ValueString())
+		listProviderOptionsReq = listProviderOptionsReq.VersionState(
+			ske.ListProviderOptionsVersionStateParameter(model.VersionState.ValueString()),
+		)
 	}
 
 	optionsResp, err := listProviderOptionsReq.Execute()
