@@ -33,6 +33,8 @@ variable "waf_disabled_rule_collection_ids_0" {}
 variable "waf_log_only_rule_collection_ids_0" {}
 variable "tls_enable_tls_10" {}
 variable "tls_enable_tls_11" {}
+variable "strip_response_cookies" {}
+variable "forward_host_header" {}
 
 # dns
 variable "dns_zone_name" {}
@@ -84,6 +86,8 @@ resource "stackit_cdn_distribution" "distribution" {
       enable_tls_10 = var.tls_enable_tls_10
       enable_tls_11 = var.tls_enable_tls_11
     }
+    strip_response_cookies = var.strip_response_cookies
+    forward_host_header    = var.forward_host_header
     waf = {
       mode                          = var.waf_mode
       type                          = var.waf_type

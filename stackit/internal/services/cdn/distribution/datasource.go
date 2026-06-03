@@ -49,6 +49,8 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes, // Shared from resource.go
 	},
+	"strip_response_cookies": types.BoolType,
+	"forward_host_header":    types.BoolType,
 }
 
 type distributionDataSource struct {
@@ -209,6 +211,16 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 								Computed: true,
 							},
 						},
+					},
+					"strip_response_cookies": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_strip_response_cookies"],
+					},
+					"forward_host_header": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_forward_host_header"],
 					},
 					"tls": schema.SingleNestedAttribute{
 						Description: schemaDescriptions["config_tls_config"],
@@ -670,13 +682,15 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 
 	// Use dataSourceConfigTypes
 	cfg, diags := types.ObjectValue(dataSourceConfigTypes, map[string]attr.Value{
-		"backend":           backend,
-		"regions":           modelRegions,
-		"blocked_countries": modelBlockedCountries,
-		"optimizer":         optimizerVal,
-		"redirects":         redirectsVal,
-		"waf":               wafVal,
-		"tls":               tlsVal,
+		"backend":                backend,
+		"regions":                modelRegions,
+		"blocked_countries":      modelBlockedCountries,
+		"optimizer":              optimizerVal,
+		"redirects":              redirectsVal,
+		"waf":                    wafVal,
+		"tls":                    tlsVal,
+		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
+		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)

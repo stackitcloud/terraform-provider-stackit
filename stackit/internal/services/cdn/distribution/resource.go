@@ -105,6 +105,8 @@ var schemaDescriptions = map[string]string{
 	"config_tls_config":                            "Configuration for TLS protocol versions. Note: Enabling older TLS versions (1.0, 1.1) is generally discouraged for security reasons.",
 	"config_tls_enable_tls_10":                     "If set to true, the distribution will accept connections using TLS 1.0.",
 	"config_tls_enable_tls_11":                     "If set to true, the distribution will accept connections using TLS 1.1.",
+	"config_strip_response_cookies":                "Enable this to prevent origin-level cookies from being forwarded to the end user.",
+	"config_forward_host_header":                   "Enable this allows the 'Host' header to be passed through to the origin.",
 }
 
 type Model struct {
@@ -138,13 +140,15 @@ type redirectConfig struct {
 }
 
 type distributionConfig struct {
-	Backend          backend         `tfsdk:"backend"`           // The backend associated with the distribution
-	Redirects        *redirectConfig `tfsdk:"redirects"`         // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
-	Regions          *[]string       `tfsdk:"regions"`           // The regions in which data will be cached
-	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
-	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
-	Waf              types.Object    `tfsdk:"waf"`               // The WAF configuration
-	Tls              types.Object    `tfsdk:"tls"`               // The TLS configuration
+	Backend              backend         `tfsdk:"backend"`                // The backend associated with the distribution
+	Redirects            *redirectConfig `tfsdk:"redirects"`              // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
+	Regions              *[]string       `tfsdk:"regions"`                // The regions in which data will be cached
+	BlockedCountries     *[]string       `tfsdk:"blocked_countries"`      // The countries for which content will be blocked
+	Optimizer            types.Object    `tfsdk:"optimizer"`              // The optimizer configuration
+	Waf                  types.Object    `tfsdk:"waf"`                    // The WAF configuration
+	Tls                  types.Object    `tfsdk:"tls"`                    // The TLS configuration
+	StripResponseCookies types.Bool      `tfsdk:"strip_response_cookies"` // The Enable this to prevent origin-level cookies from being forwarded to the end user
+	ForwardHostHeader    types.Bool      `tfsdk:"forward_host_header"`    // The Enable this allows the 'Host' header to be passed through to the origin.
 }
 
 type optimizerConfig struct {
@@ -205,6 +209,8 @@ var configTypes = map[string]attr.Type{
 	"tls": types.ObjectType{
 		AttrTypes: tlsTypes,
 	},
+	"strip_response_cookies": types.BoolType,
+	"forward_host_header":    types.BoolType,
 }
 
 var optimizerTypes = map[string]attr.Type{
@@ -405,6 +411,16 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Validators: []validator.Object{
 							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
 						},
+					},
+					"strip_response_cookies": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_strip_response_cookies"],
+					},
+					"forward_host_header": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_forward_host_header"],
 					},
 					"tls": schema.SingleNestedAttribute{
 						Description: schemaDescriptions["config_tls_config"],
@@ -902,7 +918,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = tempBlockedCountries
 	}
 
-	//tls
+	// tls
 	var tls *cdnSdk.TlsConfigPatch
 	if !utils.IsUndefined(configModel.Tls) {
 		var tlsValue tlsConfig
@@ -967,6 +983,15 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		BlockedCountries: blockedCountries,
 		Redirects:        redirectsConfig,
 		Tls:              tls,
+	}
+
+	// forwardHostHeader
+	if !utils.IsUndefined(configModel.ForwardHostHeader) {
+		configPatch.ForwardHostHeader = new(configModel.ForwardHostHeader.ValueBool())
+	}
+	// stripResponseCookies
+	if !utils.IsUndefined(configModel.StripResponseCookies) {
+		configPatch.StripResponseCookies = new(configModel.StripResponseCookies.ValueBool())
 	}
 
 	configPatch.Waf = &cdnSdk.WafConfigPatch{
@@ -1422,13 +1447,15 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 	}
 
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
-		"backend":           backend,
-		"regions":           modelRegions,
-		"blocked_countries": modelBlockedCountries,
-		"optimizer":         optimizerVal,
-		"redirects":         redirectsVal,
-		"waf":               wafVal,
-		"tls":               tlsVal,
+		"backend":                backend,
+		"regions":                modelRegions,
+		"blocked_countries":      modelBlockedCountries,
+		"optimizer":              optimizerVal,
+		"redirects":              redirectsVal,
+		"waf":                    wafVal,
+		"tls":                    tlsVal,
+		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
+		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -1501,8 +1528,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	}
 
 	var tls *cdnSdk.TlsConfig
-	// Leave the tls pointer as nil if the TLS configuration is empty.
-	if cfg.Tls.EnableTls10 == true || cfg.Tls.EnableTls11 == true {
+	if !utils.IsUndefined(rawConfig.Tls) {
 		tls = &cfg.Tls
 	}
 
@@ -1550,6 +1576,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		Redirects:        cfg.Redirects,
 		Waf:              wafPayload,
 		Tls:              tls,
+	}
+
+	if !utils.IsUndefined(rawConfig.ForwardHostHeader) {
+		payload.ForwardHostHeader = new(rawConfig.ForwardHostHeader.ValueBool())
+	}
+	if !utils.IsUndefined(rawConfig.StripResponseCookies) {
+		payload.StripResponseCookies = new(rawConfig.StripResponseCookies.ValueBool())
 	}
 
 	return payload, nil
@@ -1638,7 +1671,6 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 			EnableTls10: tlsValue.EnableTls10.ValueBool(),
 			EnableTls11: tlsValue.EnableTls11.ValueBool(),
 		}
-
 	}
 
 	// blockedCountries

@@ -124,6 +124,8 @@ var testConfigVarsHttp = config.Variables{
 	"waf_log_only_rule_collection_ids_0":  config.StringVariable(wafRule3),
 	"tls_enable_tls_10":                   config.BoolVariable(true),
 	"tls_enable_tls_11":                   config.BoolVariable(true),
+	"strip_response_cookies":              config.BoolVariable(false),
+	"forward_host_header":                 config.BoolVariable(true),
 }
 
 func configVarsHttpUpdated() config.Variables {
@@ -142,6 +144,10 @@ func configVarsHttpUpdated() config.Variables {
 	// Update TLS
 	updatedConfig["tls_enable_tls_10"] = config.BoolVariable(false)
 	updatedConfig["tls_enable_tls_11"] = config.BoolVariable(false)
+
+	// Update small features
+	updatedConfig["strip_response_cookies"] = config.BoolVariable(true)
+	updatedConfig["forward_host_header"] = config.BoolVariable(false)
 
 	// Update WAF rules
 	updatedConfig["waf_disabled_rule_ids_0"] = config.StringVariable(wafRule3)
@@ -250,6 +256,8 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					// TLS Checks
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_10", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_10"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_11", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_11"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.forward_host_header", testutil.ConvertConfigVariable(testConfigVarsHttp["forward_host_header"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(testConfigVarsHttp["strip_response_cookies"])),
 
 					// WAF Checks
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
@@ -391,6 +399,8 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					// TLS Checks inside Data Source
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.tls.enable_tls_10", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_10"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.tls.enable_tls_11", testutil.ConvertConfigVariable(testConfigVarsHttp["tls_enable_tls_11"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.forward_host_header", testutil.ConvertConfigVariable(testConfigVarsHttp["forward_host_header"])),
+					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(testConfigVarsHttp["strip_response_cookies"])),
 
 					// WAF Checks inside Data Source
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
@@ -469,6 +479,8 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					// TLS Configuration
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_10", testutil.ConvertConfigVariable(configVarsHttpUpdated()["tls_enable_tls_10"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.tls.enable_tls_11", testutil.ConvertConfigVariable(configVarsHttpUpdated()["tls_enable_tls_11"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.forward_host_header", testutil.ConvertConfigVariable(configVarsHttpUpdated()["forward_host_header"])),
+					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.strip_response_cookies", testutil.ConvertConfigVariable(configVarsHttpUpdated()["strip_response_cookies"])),
 
 					// Checking WAF Mutated Configurations
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_mode"])),
