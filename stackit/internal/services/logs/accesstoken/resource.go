@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -72,6 +73,11 @@ type Model struct {
 	Lifetime      types.Int32  `tfsdk:"lifetime"`
 	Permissions   types.List   `tfsdk:"permissions"`
 	Status        types.String `tfsdk:"status"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 type logsAccessTokenResource struct {
@@ -232,6 +238,18 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 			"status": schema.StringAttribute{
 				Description: schemaDescriptions["status"],
 				Computed:    true,
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 	}

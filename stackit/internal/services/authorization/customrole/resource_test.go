@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 )
 
 var (
@@ -40,19 +40,19 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("full_input_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
-					Role: new(authorization.Role{
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
+					Role: authorization.Role{
 						Id:          &testRoleId,
-						Name:        new("role-name"),
-						Description: new("Some description"),
-						Permissions: new([]authorization.Permission{
+						Name:        "role-name",
+						Description: "Some description",
+						Permissions: []authorization.Permission{
 							{
-								Name:        new("iam.subject.get"),
-								Description: new("Can read subjects."),
+								Name:        "iam.subject.get",
+								Description: "Can read subjects.",
 							},
-						}),
-					}),
+						},
+					},
 				},
 				expected: &Model{
 					Id:          types.StringValue(fmt.Sprintf("%s,%s", testResourceId, testRoleId)),
@@ -69,21 +69,25 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("partial_input_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
-					Role: new(authorization.Role{
-						Id: &testRoleId,
-						Permissions: new([]authorization.Permission{
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
+					Role: authorization.Role{
+						Id:          &testRoleId,
+						Name:        "role-name",
+						Description: "Some description",
+						Permissions: []authorization.Permission{
 							{
-								Name: new("iam.subject.get"),
+								Name: "iam.subject.get",
 							},
-						}),
-					}),
+						},
+					},
 				},
 				expected: &Model{
-					Id:         types.StringValue(fmt.Sprintf("%s,%s", testResourceId, testRoleId)),
-					RoleId:     types.StringValue(testRoleId),
-					ResourceId: types.StringValue(testResourceId),
+					Id:          types.StringValue(fmt.Sprintf("%s,%s", testResourceId, testRoleId)),
+					RoleId:      types.StringValue(testRoleId),
+					ResourceId:  types.StringValue(testResourceId),
+					Name:        types.StringValue("role-name"),
+					Description: types.StringValue("Some description"),
 					Permissions: types.ListValueMust(types.StringType, []attr.Value{
 						types.StringValue("iam.subject.get"),
 					}),
@@ -93,8 +97,8 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("missing_role_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
 				},
 				expected: nil,
 				isValid:  false,
@@ -102,11 +106,11 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("missing_permissions_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
-					Role: new(authorization.Role{
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
+					Role: authorization.Role{
 						Id: &testRoleId,
-					}),
+					},
 				},
 				expected: nil,
 				isValid:  false,
@@ -114,11 +118,11 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("missing_role_id_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
-					Role: new(authorization.Role{
-						Permissions: new([]authorization.Permission{}),
-					}),
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
+					Role: authorization.Role{
+						Permissions: []authorization.Permission{},
+					},
 				},
 				expected: nil,
 				isValid:  false,
@@ -126,8 +130,8 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("missing_role_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
 				},
 				expected: nil,
 				isValid:  false,
@@ -135,11 +139,11 @@ func TestMapFields(t *testing.T) {
 			{
 				description: fmt.Sprintf("missing_permissions_%s", resourceType),
 				input: &authorization.GetRoleResponse{
-					ResourceId:   &testResourceId,
-					ResourceType: &resourceType,
-					Role: new(authorization.Role{
+					ResourceId:   testResourceId,
+					ResourceType: resourceType,
+					Role: authorization.Role{
 						Id: &testRoleId,
-					}),
+					},
 				},
 				expected: nil,
 				isValid:  false,
@@ -201,20 +205,20 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: authorization.AddRolePayload{
-				Name:        new("role-name"),
-				Description: new("Some description"),
-				Permissions: new([]authorization.PermissionRequest{
+				Name:        "role-name",
+				Description: "Some description",
+				Permissions: []authorization.PermissionRequest{
 					{
-						Name: new("iam.subject.get"),
+						Name: "iam.subject.get",
 					},
-				}),
+				},
 			},
 		},
 		{
 			description: "empty values still valid",
 			input:       &Model{},
 			expected: authorization.AddRolePayload{
-				Permissions: new([]authorization.PermissionRequest{}),
+				Permissions: []authorization.PermissionRequest{},
 			},
 			expectError: false,
 		},

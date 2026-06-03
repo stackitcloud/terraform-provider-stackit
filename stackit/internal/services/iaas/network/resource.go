@@ -174,6 +174,47 @@ func (r *networkResource) ConfigValidators(_ context.Context) []resource.ConfigV
 	}
 }
 
+func (r *networkResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var model Model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// validation is done in extracted func so it's easier to unit-test it
+	validateConfig(ctx, &resp.Diagnostics, &model)
+}
+
+func validateConfig(ctx context.Context, diags *diag.Diagnostics, model *Model) {
+	// IPv4 is used when any of those attributes is set
+	ipv4IsActive := !model.IPv4Prefix.IsNull() ||
+		!model.IPv4PrefixLength.IsNull() ||
+		!model.IPv4Gateway.IsNull() ||
+		!model.NoIPv4Gateway.IsNull() ||
+		!model.IPv4Nameservers.IsNull()
+
+	if ipv4IsActive {
+		if model.IPv4Prefix.IsNull() && model.IPv4PrefixLength.IsNull() {
+			core.LogAndAddError(ctx, diags, "Invalid IPv4 configuration",
+				"When IPv4 is configured, you must provide either 'ipv4_prefix' or 'ipv4_prefix_length'.")
+		}
+	}
+
+	// IPv6 is used when any of those attributes is set
+	ipv6IsActive := !model.IPv6Prefix.IsNull() ||
+		!model.IPv6PrefixLength.IsNull() ||
+		!model.IPv6Gateway.IsNull() ||
+		!model.NoIPv6Gateway.IsNull() ||
+		!model.IPv6Nameservers.IsNull()
+
+	if ipv6IsActive {
+		if model.IPv6Prefix.IsNull() && model.IPv6PrefixLength.IsNull() {
+			core.LogAndAddError(ctx, diags, "Invalid IPv6 configuration",
+				"When IPv6 is configured, you must provide either 'ipv6_prefix' or 'ipv6_prefix_length'.")
+		}
+	}
+}
+
 // Schema defines the schema for the resource.
 func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	description := "Network resource schema. Must have a `region` specified in the provider configuration."

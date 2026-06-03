@@ -35,6 +35,26 @@ resource "stackit_logs_access_token" "accessToken2" {
   description = "Example description"
 }
 
+resource "time_rotating" "rotate" {
+  rotation_days = 10
+}
+
+resource "stackit_logs_access_token" "accessToken_rotate" {
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  region       = "eu01"
+  display_name = "logs-access-token-example"
+  lifetime     = 30
+  permissions = [
+    "write"
+  ]
+  description = "Example description"
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }
+}
+
 # Only use the import statement, if you want to import an existing logs access token
 # Note: The generated access token is only available upon creation.
 # Since this attribute is not fetched from the API call, to prevent the conflicts, you need to add:
@@ -62,6 +82,7 @@ import {
 - `description` (String) The description of the access token
 - `lifetime` (Number) A lifetime period for an access token in days. If unset the token will not expire.
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
+- `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
 
