@@ -34,7 +34,7 @@ func MapLabels(ctx context.Context, responseLabels *map[string]string, currentLa
 func LabelsToPayload(ctx context.Context, modelLabels types.Map) (map[string]string, error) {
 	labels := map[string]string{}
 
-	if !modelLabels.IsNull() && !modelLabels.IsUnknown() {
+	if !IsUndefined(modelLabels) {
 		diags := modelLabels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting from MapValue: %w", core.DiagsToError(diags))
