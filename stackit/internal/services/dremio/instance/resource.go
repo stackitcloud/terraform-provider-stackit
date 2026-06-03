@@ -35,7 +35,7 @@ var (
 	_ resource.Resource                = &instanceResource{}
 	_ resource.ResourceWithConfigure   = &instanceResource{}
 	_ resource.ResourceWithImportState = &instanceResource{}
-	_ resource.ResourceWithModifyPlan  = &instanceResource{} // not needed for global APIs
+	_ resource.ResourceWithModifyPlan  = &instanceResource{}
 )
 
 type Model struct {
@@ -130,7 +130,7 @@ func NewInstanceResource() resource.Resource {
 
 type instanceResource struct {
 	client       *dremioSdk.APIClient
-	providerData core.ProviderData // not needed for global APIs
+	providerData core.ProviderData
 }
 
 func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -182,7 +182,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // no hardcoded credentials in here
 		"main":                       "Manages a STACKIT Dremio instance.",
-		"id":                         "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`dremio_id`\".",
+		"id":                         "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"project_id":                 "STACKIT Project ID to which the resource is associated.",
 		"instance_id":                "The Dremio instance ID.",
 		"region":                     "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
@@ -422,7 +422,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// prepare the payload struct for the create instance request
 	payload, err := toCreatePayload(&model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
