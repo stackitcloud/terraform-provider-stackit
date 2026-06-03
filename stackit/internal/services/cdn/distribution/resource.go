@@ -929,7 +929,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 		tls = &cdnSdk.TlsConfigPatch{
 			EnableTls10: new(tlsValue.EnableTls10.ValueBool()),
-			EnableTls11: new(tlsValue.EnableTls10.ValueBool()),
+			EnableTls11: new(tlsValue.EnableTls11.ValueBool()),
 		}
 	}
 
