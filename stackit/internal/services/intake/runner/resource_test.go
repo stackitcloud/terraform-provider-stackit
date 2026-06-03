@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -93,7 +94,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, tt.model, tt.region)
+			err := mapFields(context.Background(), tt.input, tt.model, tt.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -144,7 +145,7 @@ func TestToCreatePayload(t *testing.T) {
 			&intake.CreateIntakeRunnerPayload{
 				DisplayName:        "",
 				Description:        nil,
-				Labels:             nil,
+				Labels:             map[string]string{},
 				MaxMessageSizeKiB:  0,
 				MaxMessagesPerHour: 0,
 			},
@@ -153,7 +154,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toCreatePayload(tt.model)
+			payload, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -171,7 +172,6 @@ func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
 		model       *Model
-		state       *Model
 		expected    *intake.UpdateIntakeRunnerPayload
 		wantErr     bool
 	}{
@@ -184,7 +184,6 @@ func TestToUpdatePayload(t *testing.T) {
 				MaxMessageSizeKiB:  types.Int32Value(1024),
 				MaxMessagesPerHour: types.Int32Value(100),
 			},
-			&Model{},
 			&intake.UpdateIntakeRunnerPayload{
 				DisplayName:        conversion.StringValueToPointer(types.StringValue("name")),
 				Description:        conversion.StringValueToPointer(types.StringValue("description")),
@@ -197,22 +196,15 @@ func TestToUpdatePayload(t *testing.T) {
 		{
 			"nil model",
 			nil,
-			&Model{},
-			nil,
-			true,
-		},
-		{
-			"nil state",
-			&Model{},
-			nil,
 			nil,
 			true,
 		},
 		{
 			"empty model",
 			&Model{},
-			&Model{},
-			&intake.UpdateIntakeRunnerPayload{},
+			&intake.UpdateIntakeRunnerPayload{
+				Labels: map[string]string{},
+			},
 			false,
 		},
 		{
@@ -224,14 +216,15 @@ func TestToUpdatePayload(t *testing.T) {
 				MaxMessageSizeKiB:  types.Int32Unknown(),
 				MaxMessagesPerHour: types.Int32Unknown(),
 			},
-			&Model{},
-			&intake.UpdateIntakeRunnerPayload{},
+			&intake.UpdateIntakeRunnerPayload{
+				Labels: map[string]string{},
+			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toUpdatePayload(tt.model, tt.state)
+			payload, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return
