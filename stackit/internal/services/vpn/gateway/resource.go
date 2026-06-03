@@ -245,7 +245,6 @@ func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.Valid
 	}
 
 	if model.RoutingType.ValueString() == string(vpn.ROUTINGTYPE_BGP_ROUTE_BASED) {
-
 		var bgp types.Object
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("bgp"), &bgp)...)
 		if resp.Diagnostics.HasError() {
@@ -259,7 +258,6 @@ func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.Valid
 				fmt.Sprintf("`bgp` must be set when `routing_type` is set to `%s`", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
 			)
 		}
-
 	}
 }
 
@@ -614,9 +612,7 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	}
 
 	if gateway.Bgp != nil {
-
 		bgpModel := &BGPGatewayConfigModel{}
-
 		bgpModel.LocalAsn = types.Int64Value(int64(gateway.Bgp.LocalAsn))
 
 		listVal, diags := types.ListValueFrom(ctx, types.StringType, gateway.Bgp.OverrideAdvertisedRoutes)
