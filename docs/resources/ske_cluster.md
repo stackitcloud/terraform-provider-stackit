@@ -78,6 +78,7 @@ To keep your Terraform plans clean and readable, always append new node pools to
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`name`".
 - `kubernetes_version_used` (String) Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/).
 - `pod_address_ranges` (List of String) The network ranges (in CIDR notation) used by pods of the cluster.
+- `service_account_issuer` (String) Service Account Issuer of the cluster.
 
 <a id="nestedatt--node_pools"></a>
 ### Nested Schema for `node_pools`
