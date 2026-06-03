@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -87,7 +88,7 @@ var schemaDescriptions = map[string]string{
 }
 
 type gatewayResource struct {
-	apiClient    *vpn.APIClient
+	client       *vpn.APIClient
 	providerData core.ProviderData
 }
 
@@ -102,10 +103,11 @@ func (r *gatewayResource) Configure(ctx context.Context, req resource.ConfigureR
 		return
 	}
 
-	r.apiClient = utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	r.client = apiClient
 	tflog.Info(ctx, "VPN client configured")
 }
 
@@ -206,6 +208,8 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"override_advertised_routes": schema.ListAttribute{
 						Description: schemaDescriptions["bgp_override_advertised_routes"],
 						Optional:    true,
+						Computed:    true,
+						Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 						ElementType: types.StringType,
 						Validators: []validator.List{
 							listvalidator.SizeAtMost(100),
@@ -236,26 +240,26 @@ func (r *gatewayResource) ValidateConfig(ctx context.Context, req resource.Valid
 		return
 	}
 
-	if model.RoutingType.IsNull() || model.RoutingType.IsUnknown() {
+	if tfutils.IsUndefined(model.RoutingType) {
 		return
 	}
 
-	if model.RoutingType.ValueString() != string(vpn.ROUTINGTYPE_BGP_ROUTE_BASED) {
-		return
-	}
+	if model.RoutingType.ValueString() == string(vpn.ROUTINGTYPE_BGP_ROUTE_BASED) {
 
-	var bgp types.Object
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("bgp"), &bgp)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+		var bgp types.Object
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("bgp"), &bgp)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	if bgp.IsNull() || bgp.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("bgp"),
-			"Missing required attribute",
-			fmt.Sprintf("`bgp` must be set when `routing_type` is set to `%s`", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
-		)
+		if tfutils.IsUndefined(bgp) {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("bgp"),
+				"Missing required attribute",
+				fmt.Sprintf("`bgp` must be set when `routing_type` is set to `%s`", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
+			)
+		}
+
 	}
 }
 
@@ -326,7 +330,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	createResp, err := r.apiClient.DefaultAPI.CreateGateway(ctx, projectId, vpn.Region(region)).CreateGatewayPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateGateway(ctx, projectId, vpn.Region(region)).CreateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -349,7 +353,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.apiClient.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Gateway creation waiting: %v", err))
 		return
@@ -386,7 +390,7 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	gatewayResp, err := r.apiClient.DefaultAPI.GetGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
+	gatewayResp, err := r.client.DefaultAPI.GetGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -436,7 +440,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	_, err = r.apiClient.DefaultAPI.UpdateGateway(ctx, projectId, vpn.Region(region), gatewayId).UpdateGatewayPayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.UpdateGateway(ctx, projectId, vpn.Region(region), gatewayId).UpdateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", err.Error())
 		return
@@ -444,7 +448,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.apiClient.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Gateway update waiting: %v", err))
 		return
@@ -481,7 +485,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.apiClient.DefaultAPI.DeleteGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
+	err := r.client.DefaultAPI.DeleteGateway(ctx, projectId, vpn.Region(region), gatewayId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -489,7 +493,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteGatewayWaitHandler(ctx, r.apiClient.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
+	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, vpn.Region(region), gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Gateway deletion waiting: %v", err))
 		return
@@ -515,10 +519,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 
 	if model.Bgp != nil {
 		bgpConfig := &vpn.BGPGatewayConfig{}
-		if !model.Bgp.LocalAsn.IsNull() {
+		if !tfutils.IsUndefined(model.Bgp.LocalAsn) {
 			bgpConfig.LocalAsn = new(model.Bgp.LocalAsn.ValueInt64())
 		}
-		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() {
+		if !tfutils.IsUndefined(model.Bgp.OverrideAdvertisedRoutes) {
 			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
 			if err != nil {
 				return nil, err
@@ -556,11 +560,11 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 
 	if model.Bgp != nil {
 		bgpConfig := &vpn.BGPGatewayConfig{}
-		if !model.Bgp.LocalAsn.IsNull() {
+		if !tfutils.IsUndefined(model.Bgp.LocalAsn) {
 			asn := model.Bgp.LocalAsn.ValueInt64()
 			bgpConfig.LocalAsn = &asn
 		}
-		if !model.Bgp.OverrideAdvertisedRoutes.IsNull() {
+		if !tfutils.IsUndefined(model.Bgp.OverrideAdvertisedRoutes) {
 			routes, err := tfutils.ListValueToStringSlice(model.Bgp.OverrideAdvertisedRoutes)
 			if err != nil {
 				return nil, err
@@ -611,25 +615,19 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 	}
 
 	if gateway.Bgp != nil {
+
 		bgpModel := &BGPGatewayConfigModel{}
+
 		if gateway.Bgp.LocalAsn != nil {
 			bgpModel.LocalAsn = types.Int64Value(int64(*gateway.Bgp.LocalAsn))
-		} else {
-			bgpModel.LocalAsn = types.Int64Null()
 		}
-		if len(gateway.Bgp.OverrideAdvertisedRoutes) > 0 {
-			routes := gateway.Bgp.OverrideAdvertisedRoutes
-			listVal, diags := types.ListValueFrom(ctx, types.StringType, routes)
-			if diags.HasError() {
-				return fmt.Errorf("mapping BGP routes: %w", core.DiagsToError(diags))
-			}
-			bgpModel.OverrideAdvertisedRoutes = listVal
-		} else if model.Bgp != nil && !model.Bgp.OverrideAdvertisedRoutes.IsNull() {
-			// preserve empty list from plan/state to avoid inconsistent state
-			bgpModel.OverrideAdvertisedRoutes = types.ListValueMust(types.StringType, []attr.Value{})
-		} else {
-			bgpModel.OverrideAdvertisedRoutes = types.ListNull(types.StringType)
+
+		listVal, diags := types.ListValueFrom(ctx, types.StringType, gateway.Bgp.OverrideAdvertisedRoutes)
+		if diags.HasError() {
+			return fmt.Errorf("mapping BGP routes: %w", core.DiagsToError(diags))
 		}
+		bgpModel.OverrideAdvertisedRoutes = listVal
+
 		model.Bgp = bgpModel
 	}
 

@@ -138,7 +138,7 @@ func TestMapFields(t *testing.T) {
 					},
 					Bgp: &vpn.BGPGatewayConfig{
 						LocalAsn:                 new(int64(65000)),
-						OverrideAdvertisedRoutes: nil,
+						OverrideAdvertisedRoutes: []string{},
 					},
 					Labels: nil,
 					State:  new(vpn.GatewayStatus("READY")),
