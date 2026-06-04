@@ -46,7 +46,8 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 
 	// Required Fields
-	DisplayName types.String `tfsdk:"display_name"`
+	DisplayName    types.String         `tfsdk:"display_name"`
+	Authentication *AuthenticationModel `tfsdk:"authentication"`
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
@@ -60,9 +61,6 @@ type Model struct {
 // InstanceModel maps the resource schema data.
 type InstanceModel struct {
 	Model
-
-	// Required Fields
-	Authentication *AuthenticationModel `tfsdk:"authentication"`
 
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
@@ -420,7 +418,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// prepare the payload struct for the create instance request
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -450,7 +448,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -503,7 +501,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -540,7 +538,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -570,7 +568,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -648,7 +646,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Dremio instance state imported")
 }
 
-func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) error {
+func mapFields(instanceResp *dremioSdk.DremioResponse, model *Model) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -656,7 +654,7 @@ func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) err
 		return fmt.Errorf("model input is nil")
 	}
 
-	err := mapModelFields(instanceResp, &model.Model)
+	err := mapModelFields(instanceResp, model)
 	if err != nil {
 		return fmt.Errorf("failed to map Model fields")
 	}
@@ -702,7 +700,7 @@ func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model) error 
 	return nil
 }
 
-func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *InstanceModel) error {
+func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -754,7 +752,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *InstanceMo
 }
 
 // Build UpdateDremioInstancePayload from provider's model
-func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePayload, error) {
+func toUpdatePayload(model *Model) (*dremioSdk.UpdateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -772,7 +770,7 @@ func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePaylo
 }
 
 // Build CreateDremioInstancePayload from provider's model
-func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePayload, error) {
+func toCreatePayload(model *Model) (*dremioSdk.CreateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -789,7 +787,7 @@ func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePaylo
 	}, nil
 }
 
-func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error) {
+func parseAuthentication(model *Model) (*dremioSdk.Authentication, error) {
 	// API only saves the block of the stated type. The other one is omitted.
 	// Keeping the block in TF leads to inconsistent state. Therefore we have
 	// make sure the type matches the existing block.

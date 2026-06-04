@@ -8,14 +8,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
 
@@ -29,19 +26,6 @@ var (
 
 type InstanceDataSourceModel struct {
 	Model
-
-	// Required Fields
-	Authentication *DataSourceAuthenticationModel `tfsdk:"authentication"`
-}
-
-type DataSourceAuthenticationModel struct {
-	Type         types.String         `tfsdk:"type"`
-	AuthorityUrl types.String         `tfsdk:"authority_url"`
-	ClientId     types.String         `tfsdk:"client_id"`
-	JwtClaims    *JwtClaimsModel      `tfsdk:"jwt_claims"`
-	Scope        types.String         `tfsdk:"scope"`
-	Parameters   []AuthParameterModel `tfsdk:"parameters"`
-	RedirectUrl  types.String         `tfsdk:"redirect_url"`
 }
 
 type instanceDataSource struct {
@@ -77,31 +61,38 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 
 // Schema should return the schema for this data source.
 func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main":                                "Manages a STACKIT Dremio instance.",
-		"id":                                  "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`dremio_id`\".",
-		"project_id":                          "STACKIT Project ID to which the resource is associated.",
-		"instance_id":                         "The Dremio instance ID.",
-		"region":                              "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
-		"display_name":                        "The display name is a short name chosen by the user to identify the resource.",
-		"description":                         "The description is a longer text chosen by the user to provide more context for the resource.",
-		"state":                               "The current state of the resource.",
-		"error_message":                       "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
-		"endpoints":                           "The available endpoints of the Dremio instance.",
-		"endpoints_arrow_flight":              "The arrow flight endpoint of the Dremio instance.",
-		"endpoints_catalog":                   "The Apache Iceberg endpoint of the Dremio instance.",
-		"endpoints_ui":                        "The UI endpoint of the Dremio instance.",
-		"authentication":                      "Dremio instance authentication settings. A change here triggers a Dremio restart and will incur downtime.",
-		"authentication_type":                 "Type of authentication (local-only, azuread, oauth).",
-		"authentication_authority_url":        "The Issuer location URI, where the OIDC provider configuration can be found.",
-		"authentication_client_id":            "The client ID assigned by the Identity Provider.",
-		"authentication_scope":                "A list of space-separated scopes. The `openid` scope is always required; other scopes can vary by provider.",
-		"authentication_redirect_url":         "The URL where the Dremio instance is hosted. The URL must match the redirect URL set in the Identity Provider.",
-		"authentication_jwt_claims":           "Maps fields from the JWT token to fields Dremio requires.",
-		"authentication_jwt_claims_user_name": "Mapped user name claim (e.g. email).",
-		"authentication_parameters":           "Any additional parameters the Identity Provider requires.",
-		"authentication_parameters_name":      "Parameter name.",
-		"authentication_parameters_value":     "Parameter value.",
+	descriptions := map[string]string{ //nolint:gosec // no hardcoded credentials in here
+		"main":                       "Manages a STACKIT Dremio instance.",
+		"id":                         "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"project_id":                 "STACKIT Project ID to which the resource is associated.",
+		"instance_id":                "The Dremio instance ID.",
+		"region":                     "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
+		"display_name":               "The display name is a short name chosen by the user to identify the resource.",
+		"description":                "The description is a longer text chosen by the user to provide more context for the resource.",
+		"state":                      "The current state of the resource.",
+		"error_message":              "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
+		"endpoints":                  "The available endpoints of the Dremio instance.",
+		"endpoints_arrow_flight":     "The arrow flight endpoint of the Dremio instance.",
+		"endpoints_catalog":          "The Apache Iceberg endpoint of the Dremio instance.",
+		"endpoints_ui":               "The UI endpoint of the Dremio instance.",
+		"authentication":             "Dremio instance authentication settings. A change here triggers a Dremio restart and will incur downtime.",
+		"authentication_type":        "Type of authentication (local-only, azuread, oauth).",
+		"azuread":                    "Azure Active Directory authentication configuration.",
+		"azuread_authority_url":      "The Azure AD authority URL.",
+		"azuread_client_id":          "The Azure AD client ID.",
+		"azuread_client_secret":      "The Azure AD client secret.",
+		"azuread_redirect_url":       "The Azure AD redirect URL.",
+		"oauth":                      "OIDC authentication configuration.",
+		"oauth_authority_url":        "The Issuer location URI, where the OIDC provider configuration can be found.",
+		"oauth_client_id":            "The client ID assigned by the Identity Provider.",
+		"oauth_client_secret":        "The client secret generated by the Identity Provider.",
+		"oauth_scope":                "A list of space-separated scopes. The `openid` scope is always required; other scopes can vary by provider.",
+		"oauth_redirect_url":         "The URL where the Dremio instance is hosted. The URL must match the redirect URL set in the Identity Provider.",
+		"oauth_jwt_claims":           "Maps fields from the JWT token to fields Dremio requires.",
+		"oauth_jwt_claims_user_name": "Mapped user name claim (e.g. email).",
+		"oauth_parameters":           "Any additional parameters the Identity Provider requires.",
+		"oauth_parameters_name":      "Parameter name.",
+		"oauth_parameters_value":     "Parameter value.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -114,18 +105,14 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
 				Required:    true,
-				Validators: []validator.String{
-					validate.UUID(),
-					validate.NoSeparator(),
-				},
 			},
 			"instance_id": schema.StringAttribute{
 				Description: descriptions["instance_id"],
 				Required:    true,
 			},
 			"region": schema.StringAttribute{
-				Description: descriptions["region"],
 				Required:    true,
+				Description: descriptions["region"],
 			},
 			"display_name": schema.StringAttribute{
 				Description: descriptions["display_name"],
@@ -133,8 +120,8 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
-				Computed:    true,
 				Optional:    true,
+				Computed:    true,
 			},
 			"state": schema.StringAttribute{
 				Description: descriptions["state"],
@@ -142,8 +129,8 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"error_message": schema.StringAttribute{
 				Description: descriptions["error_message"],
-				Computed:    true,
 				Optional:    true,
+				Computed:    true,
 			},
 			"endpoints": schema.SingleNestedAttribute{
 				Description: descriptions["endpoints"],
@@ -171,50 +158,82 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: descriptions["authentication_type"],
 						Computed:    true,
 					},
-					"authority_url": schema.StringAttribute{
-						Description: descriptions["oauth_authority_url"],
-						Computed:    true,
+					"azuread": schema.SingleNestedAttribute{
+						Description: descriptions["azuread"],
 						Optional:    true,
-					},
-					"client_id": schema.StringAttribute{
-						Description: descriptions["oauth_client_id"],
 						Computed:    true,
-						Optional:    true,
-					},
-					"scope": schema.StringAttribute{
-						Description: descriptions["oauth_scope"],
-						Computed:    true,
-						Optional:    true,
-					},
-					"redirect_url": schema.StringAttribute{
-						Description: descriptions["oauth_redirect_url"],
-						Computed:    true,
-						Optional:    true,
-					},
-					"jwt_claims": schema.SingleNestedAttribute{
-						Description: descriptions["oauth_jwt_claims"],
-						Computed:    true,
-						Optional:    true,
 						Attributes: map[string]schema.Attribute{
-							"user_name": schema.StringAttribute{
-								Description: descriptions["oauth_jwt_claims_user_name"],
+							"authority_url": schema.StringAttribute{
+								Description: descriptions["azuread_authority_url"],
+								Computed:    true,
+							},
+							"client_id": schema.StringAttribute{
+								Description: descriptions["azuread_client_id"],
+								Computed:    true,
+							},
+							"client_secret": schema.StringAttribute{
+								Description: descriptions["azuread_client_secret"],
+								Computed:    true,
+								Sensitive:   true,
+							},
+							"redirect_url": schema.StringAttribute{
+								Description: descriptions["azuread_redirect_url"],
 								Computed:    true,
 							},
 						},
 					},
-					"parameters": schema.ListNestedAttribute{
-						Description: descriptions["oauth_parameters"],
-						Computed:    true,
+					"oauth": schema.SingleNestedAttribute{
+						Description: descriptions["oauth"],
 						Optional:    true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"name": schema.StringAttribute{
-									Description: descriptions["oauth_parameters_name"],
-									Computed:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"authority_url": schema.StringAttribute{
+								Description: descriptions["oauth_authority_url"],
+								Computed:    true,
+							},
+							"client_id": schema.StringAttribute{
+								Description: descriptions["oauth_client_id"],
+								Computed:    true,
+							},
+							"client_secret": schema.StringAttribute{
+								Description: descriptions["oauth_client_secret"],
+								Computed:    true,
+								Sensitive:   true,
+							},
+							"scope": schema.StringAttribute{
+								Description: descriptions["oauth_scope"],
+								Optional:    true,
+								Computed:    true,
+							},
+							"redirect_url": schema.StringAttribute{
+								Description: descriptions["oauth_redirect_url"],
+								Computed:    true,
+							},
+							"jwt_claims": schema.SingleNestedAttribute{
+								Description: descriptions["oauth_jwt_claims"],
+								Computed:    true,
+								Attributes: map[string]schema.Attribute{
+									"user_name": schema.StringAttribute{
+										Description: descriptions["oauth_jwt_claims_user_name"],
+										Computed:    true,
+									},
 								},
-								"value": schema.StringAttribute{
-									Description: descriptions["oauth_parameters_value"],
-									Computed:    true,
+							},
+							"parameters": schema.ListNestedAttribute{
+								Description: descriptions["oauth_parameters"],
+								Optional:    true,
+								Computed:    true,
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"name": schema.StringAttribute{
+											Description: descriptions["oauth_parameters_name"],
+											Computed:    true,
+										},
+										"value": schema.StringAttribute{
+											Description: descriptions["oauth_parameters_value"],
+											Computed:    true,
+										},
+									},
 								},
 							},
 						},
@@ -260,7 +279,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapDataSourceFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -272,65 +291,4 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 	tflog.Info(ctx, "Dremio instance read")
-}
-
-func mapDataSourceFields(instanceResp *dremioSdk.DremioResponse, model *InstanceDataSourceModel) error {
-	if instanceResp == nil {
-		return fmt.Errorf("response input is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model input is nil")
-	}
-
-	err := mapModelFields(instanceResp, &model.Model)
-	if err != nil {
-		return fmt.Errorf("failed to map Model fields")
-	}
-	err = mapDataSourceAuthentication(instanceResp, model)
-	if err != nil {
-		return fmt.Errorf("failed to map Authentication fields")
-	}
-
-	return nil
-}
-
-func mapDataSourceAuthentication(instanceResp *dremioSdk.DremioResponse, model *InstanceDataSourceModel) error {
-	authResp := instanceResp.Authentication
-
-	authModel := DataSourceAuthenticationModel{}
-
-	authModel.Type = types.StringValue(authResp.Type)
-
-	if authResp.Type == "azuread" {
-		azureADResp := authResp.Azuread
-		authModel.AuthorityUrl = types.StringValue(azureADResp.AuthorityUrl)
-		authModel.ClientId = types.StringValue(azureADResp.ClientId)
-		authModel.RedirectUrl = types.StringPointerValue(azureADResp.RedirectUrl)
-	}
-
-	if authResp.Type == "oauth" {
-		oauthResp := authResp.Oauth
-		authModel.AuthorityUrl = types.StringValue(oauthResp.AuthorityUrl)
-		authModel.ClientId = types.StringValue(oauthResp.ClientId)
-		authModel.Scope = types.StringPointerValue(oauthResp.Scope)
-		authModel.RedirectUrl = types.StringPointerValue(oauthResp.RedirectUrl)
-		authModel.JwtClaims = &JwtClaimsModel{
-			UserName: types.StringValue(oauthResp.JwtClaims.UserName),
-		}
-
-		if len(oauthResp.Parameters) > 0 {
-			var params []AuthParameterModel
-			for _, p := range oauthResp.Parameters {
-				params = append(params, AuthParameterModel{
-					Name:  types.StringValue(p.Name),
-					Value: types.StringValue(p.Value),
-				})
-			}
-			authModel.Parameters = params
-		}
-	}
-
-	model.Authentication = &authModel
-
-	return nil
 }
