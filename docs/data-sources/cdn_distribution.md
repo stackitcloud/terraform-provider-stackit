@@ -46,6 +46,8 @@ data "stackit_cdn_distribution" "example" {
 Optional:
 
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
+- `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
+- `strip_response_cookies` (Boolean) Enable this to prevent origin-level cookies from being forwarded to the end user.
 
 Read-Only:
 
@@ -53,6 +55,7 @@ Read-Only:
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 - `regions` (List of String) The configured regions where content will be hosted
+- `tls` (Attributes) Configuration for TLS protocol versions. Note: Enabling older TLS versions (1.0, 1.1) is generally discouraged for security reasons. (see [below for nested schema](#nestedatt--config--tls))
 - `waf` (Attributes) Configures the Web Application Firewall (WAF) for the distribution. If this block is undefined or removed from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API; if they were never defined, the API will apply its default settings. (see [below for nested schema](#nestedatt--config--waf))
 
 <a id="nestedatt--config--backend"></a>
@@ -104,6 +107,15 @@ Read-Only:
 - `values` (List of String) A list of glob patterns to match against the request path. At least one value is required. Examples: "/shop/*" or "*/img/*"
 
 
+
+
+<a id="nestedatt--config--tls"></a>
+### Nested Schema for `config.tls`
+
+Read-Only:
+
+- `enable_tls_10` (Boolean) If set to true, the distribution will accept connections using TLS 1.1.
+- `enable_tls_11` (Boolean) If set to true, the distribution will accept connections using TLS 1.0.
 
 
 <a id="nestedatt--config--waf"></a>
