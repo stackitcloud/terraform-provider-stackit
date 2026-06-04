@@ -129,8 +129,8 @@ func TestDremioInstanceMin(t *testing.T) {
 						dremioInstanceDataResource, "endpoints.arrow_flight",
 					),
 					resource.TestCheckResourceAttrPair(
-						dremioInstanceResource, "catalog",
-						dremioInstanceDataResource, "catalog",
+						dremioInstanceResource, "endpoints.catalog",
+						dremioInstanceDataResource, "endpoints.catalog",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "endpoints.ui",
@@ -162,10 +162,10 @@ func TestDremioInstanceMin(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceDremioInstanceMin,
 				ConfigVariables: testDremioInstanceConfigVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(dremioInstanceResource, "project_id", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr(dremioInstanceResource, "project_id", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "region", testutil.Region),
-					resource.TestCheckResourceAttr(dremioInstanceResource, "display_name", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMin["display_name"])),
-					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.type", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMin["authentication_type"])),
+					resource.TestCheckResourceAttr(dremioInstanceResource, "display_name", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMinUpdated()["display_name"])),
+					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.type", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMinUpdated()["authentication_type"])),
 
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "id"),
@@ -248,23 +248,23 @@ func TestDremioInstanceMax(t *testing.T) {
 					// which is oauth for the config here. Hence why we test for the oauth value here.
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "authentication.oauth.authority_url",
-						dremioInstanceDataResource, "authentication.authority_url",
+						dremioInstanceDataResource, "authentication.oauth.authority_url",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "authentication.oauth.client_id",
-						dremioInstanceDataResource, "authentication.client_id",
+						dremioInstanceDataResource, "authentication.oauth.client_id",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "authentication.oauth.scope",
-						dremioInstanceDataResource, "authentication.scope",
+						dremioInstanceDataResource, "authentication.oauth.scope",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "authentication.oauth.parameters",
-						dremioInstanceDataResource, "authentication.parameters",
+						dremioInstanceDataResource, "authentication.oauth.parameters",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "authentication.oauth.redirect_url",
-						dremioInstanceDataResource, "authentication.redirect_url",
+						dremioInstanceDataResource, "authentication.oauth.redirect_url",
 					),
 
 					resource.TestCheckResourceAttrPair(
@@ -272,8 +272,8 @@ func TestDremioInstanceMax(t *testing.T) {
 						dremioInstanceDataResource, "endpoints.arrow_flight",
 					),
 					resource.TestCheckResourceAttrPair(
-						dremioInstanceResource, "catalog",
-						dremioInstanceDataResource, "catalog",
+						dremioInstanceResource, "endpoints.catalog",
+						dremioInstanceDataResource, "endpoints.catalog",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioInstanceResource, "endpoints.ui",
