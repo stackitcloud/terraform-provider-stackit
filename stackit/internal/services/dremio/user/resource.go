@@ -35,7 +35,7 @@ var (
 )
 
 type Model struct {
-	ID types.String `tfsdk:"id"`
+	Id types.String `tfsdk:"id"`
 
 	ProjectId  types.String `tfsdk:"project_id"`
 	Region     types.String `tfsdk:"region"`
@@ -80,7 +80,7 @@ func (r *userResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 		return
 	}
 
-	var planModel Model
+	var planModel UserModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -210,6 +210,7 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"timeouts": timeouts.AttributesAll(ctx),
 		},
 	}
 }
@@ -419,6 +420,14 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *UserModel) error {
 	}
 
 	model.UserId = types.StringValue(userResp.Id)
+
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(),
+		model.Region.ValueString(),
+		model.InstanceId.ValueString(),
+		model.Id.ValueString(),
+	)
+
 	model.Description = types.StringPointerValue(userResp.Description)
 	model.Email = types.StringValue(userResp.Email)
 	model.FirstName = types.StringValue(userResp.FirstName)
@@ -444,7 +453,3 @@ func toCreatePayload(model *UserModel) (*dremioSdk.CreateDremioUserPayload, erro
 
 	return payload, nil
 }
-
-// func toUpdatePayload(model *UserModel) (*dremioSdk.UpdateDremioUserPayload, error) {
-// 	return nil, nil
-// }

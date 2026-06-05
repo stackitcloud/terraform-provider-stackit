@@ -31,6 +31,7 @@ import (
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
 	dremioInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/instance"
+	dremioUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/user"
 	edgeCloudInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instance"
 	edgeCloudInstances "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instances"
 	edgeCloudKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/kubeconfig"
@@ -773,6 +774,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
 		dremioInstance.NewInstanceResource,
+		dremioUser.NewUserResource,
 		edgeCloudInstance.NewInstanceResource,
 		edgeCloudKubeconfig.NewKubeconfigResource,
 		edgeCloudToken.NewTokenResource,
