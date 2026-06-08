@@ -16,5 +16,5 @@ resource "stackit_security_group_rule" "example" {
 # Attribute "protocol.number" cannot be specified when "protocol.name" is specified.
 import {
   to = stackit_security_group_rule.import-example
-  id = "${var.project_id},${var.security_group_id},${var.security_group_rule_id}"
+  id = "${var.project_id},${var.region},${var.security_group_id},${var.security_group_rule_id}"
 }
