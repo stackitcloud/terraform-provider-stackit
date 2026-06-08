@@ -98,23 +98,25 @@ func TestToCreatePayload(t *testing.T) {
 	instanceId := uuid.New().String()
 	tests := []struct {
 		description string
-		state       *Model
+		state       *UserModel
 		expected    *dremioSdk.CreateDremioUserPayload
 		wantErr     bool
 	}{
 		{
 			"success",
-			&Model{
-				ProjectId:  types.StringValue("pid"),
-				Region:     types.StringValue("rid"),
-				InstanceId: types.StringValue(instanceId),
+			&UserModel{
+				Model: Model{
+					ProjectId:  types.StringValue("pid"),
+					Region:     types.StringValue("rid"),
+					InstanceId: types.StringValue(instanceId),
 
-				Email:       types.StringValue("example@stackit.cloud"),
-				Description: types.StringValue("test description"),
-				FirstName:   types.StringValue("Test"),
-				LastName:    types.StringValue("User"),
-				Name:        types.StringValue("testUser"),
-				Password:    types.StringValue("test-password"),
+					Email:       types.StringValue("example@stackit.cloud"),
+					Description: types.StringValue("test description"),
+					FirstName:   types.StringValue("Test"),
+					LastName:    types.StringValue("User"),
+					Name:        types.StringValue("testUser"),
+				},
+				Password: types.StringValue("test-password"),
 			},
 			&dremioSdk.CreateDremioUserPayload{
 				Email:       "example@stackit.cloud",

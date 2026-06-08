@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
+
 	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 
 	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait/wait"
@@ -47,7 +49,6 @@ type Model struct {
 	FirstName types.String `tfsdk:"first_name"`
 	LastName  types.String `tfsdk:"last_name"`
 	Name      types.String `tfsdk:"name"`
-	Password  types.String `tfsdk:"password"`
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
@@ -59,6 +60,9 @@ type Model struct {
 
 type UserModel struct {
 	Model
+
+	// Required Fields
+	Password types.String `tfsdk:"password"`
 
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
@@ -259,7 +263,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// prepare the payload struct for the create user request
-	payload, err := toCreatePayload(&model.Model)
+	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -458,7 +462,7 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model) error {
 	return nil
 }
 
-func toCreatePayload(model *Model) (*dremioSdk.CreateDremioUserPayload, error) {
+func toCreatePayload(model *UserModel) (*dremioSdk.CreateDremioUserPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model input is nil")
 	}

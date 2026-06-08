@@ -671,6 +671,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
 		dremioInstance.NewInstanceDataSource,
+		dremioUser.NewUserDataSource,
 		edgeCloudInstances.NewInstancesDataSource,
 		edgeCloudPlans.NewPlansDataSource,
 		gitInstance.NewGitDataSource,
