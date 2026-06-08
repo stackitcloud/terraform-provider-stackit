@@ -42,12 +42,19 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	UserId     types.String `tfsdk:"user_id"`
 
+	// Required Fields
+	Email     types.String `tfsdk:"email"`
+	FirstName types.String `tfsdk:"first_name"`
+	LastName  types.String `tfsdk:"last_name"`
+	Name      types.String `tfsdk:"name"`
+	Password  types.String `tfsdk:"password"`
+
+	// Optional Fields
 	Description types.String `tfsdk:"description"`
-	Email       types.String `tfsdk:"email"`
-	FirstName   types.String `tfsdk:"first_name"`
-	LastName    types.String `tfsdk:"last_name"`
-	Name        types.String `tfsdk:"name"`
-	Password    types.String `tfsdk:"password"`
+
+	// Read-only Fields
+	State        types.String `tfsdk:"state"`
+	ErrorMessage types.String `tfsdk:"error_message"`
 }
 
 type UserModel struct {
@@ -113,18 +120,20 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Manages a STACKIT Dremio instances user.",
-		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
-		"project_id":  "STACKIT Project ID to which the resource is associated.",
-		"instance_id": "The Dremio instance ID.",
-		"region":      "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
-		"user_id":     "The Dremio user ID.",
-		"description": "The description of the user.",
-		"email":       "The email address of the user.",
-		"first_name":  "The first name of the user.",
-		"last_name":   "The last name of the user.",
-		"name":        "The username of the user.",
-		"password":    "The password of the user. Only used for creation and updates. Must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.",
+		"main":          "Manages a STACKIT Dremio instances user.",
+		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
+		"project_id":    "STACKIT Project ID to which the resource is associated.",
+		"instance_id":   "The Dremio instance ID.",
+		"region":        "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
+		"user_id":       "The Dremio user ID.",
+		"description":   "The description of the user.",
+		"email":         "The email address of the user.",
+		"first_name":    "The first name of the user.",
+		"last_name":     "The last name of the user.",
+		"name":          "The username of the user.",
+		"password":      "The password of the user. Only used for creation and updates. Must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.",
+		"state":         "The current state of the resource.",
+		"error_message": "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -210,6 +219,15 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"state": schema.StringAttribute{
+				Description: descriptions["state"],
+				Computed:    true,
+			},
+			"error_message": schema.StringAttribute{
+				Description: descriptions["error_message"],
+				Optional:    true,
+				Computed:    true,
+			},
 			"timeouts": timeouts.AttributesAll(ctx),
 		},
 	}
@@ -241,7 +259,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// prepare the payload struct for the create user request
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(&model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -271,7 +289,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	err = mapFields(userResp, &model)
+	err = mapFields(userResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -326,7 +344,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(userResp, &model)
+	err = mapFields(userResp, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -411,7 +429,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "Dremio user state imported")
 }
 
-func mapFields(userResp *dremioSdk.DremioUserResponse, model *UserModel) error {
+func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model) error {
 	if userResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -425,7 +443,7 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *UserModel) error {
 		model.ProjectId.ValueString(),
 		model.Region.ValueString(),
 		model.InstanceId.ValueString(),
-		model.Id.ValueString(),
+		model.UserId.ValueString(),
 	)
 
 	model.Description = types.StringPointerValue(userResp.Description)
@@ -434,10 +452,13 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *UserModel) error {
 	model.LastName = types.StringValue(userResp.LastName)
 	model.Name = types.StringValue(userResp.Name)
 
+	model.State = types.StringValue(userResp.State)
+	model.ErrorMessage = types.StringPointerValue(userResp.ErrorMessage)
+
 	return nil
 }
 
-func toCreatePayload(model *UserModel) (*dremioSdk.CreateDremioUserPayload, error) {
+func toCreatePayload(model *Model) (*dremioSdk.CreateDremioUserPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model input is nil")
 	}
