@@ -269,7 +269,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
 			if oapiErr.StatusCode == http.StatusNotFound {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Dremio instance with ID %s not found in project %s and region %s", instanceId, projectId, region))
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Dremio instance with ID %s not found in project %s and region %s", instanceId, projectId, region))
 				return
 			}
 		}
