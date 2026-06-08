@@ -7,7 +7,7 @@ page_title: "Using AWS Provider for STACKIT Object Storage (S3 compatible)"
 
 This guide outlines the process of utilizing the [AWS Terraform Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) alongside the STACKIT provider to create and manage STACKIT Object Storage (S3 compatible) resources.
 
->Note: AWS Provider uses the region as cache key to manage the connection efficiently. Therefore, the region must be set to the desired one in all the resources explicitly to ensure proper functionality when multiple regions are used.
+>Note: AWS Provider uses the `region` as cache key to manage the connection efficiently. Therefore, the `region` must be set to the desired one in all the resources explicitly to ensure proper functionality when multiple regions are used.
 
 
 ## Steps
