@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -215,6 +216,11 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Optional:    true,
+				Computed:    true, // Must be computed if a default is applied
+				Default:     stringdefault.StaticString(""),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"error_message": schema.StringAttribute{
 				Description: descriptions["error_message"],
