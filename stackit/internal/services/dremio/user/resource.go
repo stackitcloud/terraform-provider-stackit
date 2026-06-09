@@ -26,7 +26,7 @@ import (
 
 	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 
-	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait/wait"
+	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait"
 )
 
 var (
@@ -65,6 +65,23 @@ type UserModel struct {
 	Password types.String `tfsdk:"password"`
 
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
+}
+
+var descriptions = map[string]string{
+	"main":          "Manages a STACKIT Dremio instances user.",
+	"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
+	"project_id":    "STACKIT Project ID to which the resource is associated.",
+	"instance_id":   "The Dremio instance ID.",
+	"region":        "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
+	"user_id":       "The Dremio user ID.",
+	"email":         "The email address of the user.",
+	"first_name":    "The first name of the user.",
+	"last_name":     "The last name of the user.",
+	"name":          "The username of the user.",
+	"password":      "The password of the user. Only used for creation and updates. Must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.",
+	"description":   "The description of the user.",
+	"state":         "The current state of the resource.",
+	"error_message": "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
 }
 
 type userResource struct {
@@ -123,23 +140,6 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main":          "Manages a STACKIT Dremio instances user.",
-		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
-		"project_id":    "STACKIT Project ID to which the resource is associated.",
-		"instance_id":   "The Dremio instance ID.",
-		"region":        "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
-		"user_id":       "The Dremio user ID.",
-		"description":   "The description of the user.",
-		"email":         "The email address of the user.",
-		"first_name":    "The first name of the user.",
-		"last_name":     "The last name of the user.",
-		"name":          "The username of the user.",
-		"password":      "The password of the user. Only used for creation and updates. Must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.",
-		"state":         "The current state of the resource.",
-		"error_message": "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
-	}
-
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -167,24 +167,6 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-			},
-			"region": schema.StringAttribute{
-				Description: descriptions["region"],
-				Optional:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"user_id": schema.StringAttribute{
-				Description: descriptions["user_id"],
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"description": schema.StringAttribute{
-				Description: descriptions["description"],
-				Optional:    true,
 			},
 			"email": schema.StringAttribute{
 				Description: descriptions["email"],
@@ -216,21 +198,39 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 			},
 			"password": schema.StringAttribute{
 				Description: descriptions["password"],
-				Optional:    true,
+				Required:    true,
 				Sensitive:   true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
-				Computed:    true,
+			"region": schema.StringAttribute{
+				Description: descriptions["region"],
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Description: descriptions["description"],
+				Optional:    true,
 			},
 			"error_message": schema.StringAttribute{
 				Description: descriptions["error_message"],
 				Optional:    true,
 				Computed:    true,
+			},
+			"state": schema.StringAttribute{
+				Description: descriptions["state"],
+				Computed:    true,
+			},
+			"user_id": schema.StringAttribute{
+				Description: descriptions["user_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"timeouts": timeouts.AttributesAll(ctx),
 		},
@@ -256,7 +256,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString() // not needed for global APIs
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -293,7 +293,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	err = mapFields(userResp, &model.Model)
+	err = mapFields(userResp, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -348,7 +348,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(userResp, &model.Model)
+	err = mapFields(userResp, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -385,7 +385,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -433,7 +433,7 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "Dremio user state imported")
 }
 
-func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model) error {
+func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model, region string) error {
 	if userResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -445,7 +445,7 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model) error {
 
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(),
-		model.Region.ValueString(),
+		region,
 		model.InstanceId.ValueString(),
 		model.UserId.ValueString(),
 	)
@@ -456,7 +456,7 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model) error {
 	model.LastName = types.StringValue(userResp.LastName)
 	model.Name = types.StringValue(userResp.Name)
 
-	model.State = types.StringValue(userResp.State)
+	model.State = types.StringValue(string(userResp.State))
 	model.ErrorMessage = types.StringPointerValue(userResp.ErrorMessage)
 
 	return nil

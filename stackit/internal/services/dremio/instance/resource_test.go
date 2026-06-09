@@ -55,7 +55,7 @@ func TestMapFields(t *testing.T) {
 						RedirectUrl: utils.Ptr("oauth-redirect"),
 						Scope:       utils.Ptr("oauth-scope"),
 					},
-					Type: "local-only",
+					Type: dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY,
 				},
 				Endpoints: dremioSdk.Endpoints{
 					ArrowFlight: "flight",
@@ -97,7 +97,7 @@ func TestMapFields(t *testing.T) {
 						RedirectUrl: types.StringValue("oauth-redirect"),
 						Scope:       types.StringValue("oauth-scope"),
 					},
-					Type: types.StringValue("local-only"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
 
 				State:        types.StringValue("active"),
@@ -141,7 +141,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, tt.state)
+			err := mapFields(tt.input, tt.state, "rid")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -168,12 +168,12 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("test description"),
 				DisplayName: types.StringValue("displayName"),
 				Authentication: &AuthenticationModel{
-					Type: types.StringValue("local-only"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
 			},
 			&dremioSdk.CreateDremioInstancePayload{
 				Authentication: &dremioSdk.Authentication{
-					Type: "local-only",
+					Type: dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY,
 				},
 				Description: utils.Ptr("test description"),
 				DisplayName: "displayName",
@@ -202,7 +202,7 @@ func TestToCreatePayload(t *testing.T) {
 						RedirectUrl: types.StringValue("oauth-redirect"),
 						Scope:       types.StringValue("oauth-scope"),
 					},
-					Type: types.StringValue("oauth"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 				},
 			},
 			&dremioSdk.CreateDremioInstancePayload{
@@ -223,7 +223,7 @@ func TestToCreatePayload(t *testing.T) {
 						RedirectUrl: utils.Ptr("oauth-redirect"),
 						Scope:       utils.Ptr("oauth-scope"),
 					},
-					Type: "oauth",
+					Type: dremioSdk.AUTHENTICATIONTYPE_OAUTH,
 				},
 				Description: utils.Ptr("test description"),
 				DisplayName: "displayName",
@@ -242,7 +242,7 @@ func TestToCreatePayload(t *testing.T) {
 						ClientSecret: types.StringValue("azure-secret"),
 						RedirectUrl:  types.StringValue("azure-redirect"),
 					},
-					Type: types.StringValue("azuread"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 				},
 			},
 			&dremioSdk.CreateDremioInstancePayload{
@@ -253,7 +253,7 @@ func TestToCreatePayload(t *testing.T) {
 						ClientSecret: "azure-secret",
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
-					Type: "azuread",
+					Type: dremioSdk.AUTHENTICATIONTYPE_AZUREAD,
 				},
 				Description: utils.Ptr("test description"),
 				DisplayName: "displayName",
@@ -272,7 +272,53 @@ func TestToCreatePayload(t *testing.T) {
 						ClientSecret: types.StringValue("azure-secret"),
 						RedirectUrl:  types.StringValue("azure-redirect"),
 					},
-					Type: types.StringValue("local-only"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"idp-config-mismatch-oauth",
+			&Model{
+				Description: types.StringValue("test description"),
+				DisplayName: types.StringValue("displayName"),
+				Authentication: &AuthenticationModel{
+					AzureAD: &AzureADModel{
+						AuthorityUrl: types.StringValue("azure-authority"),
+						ClientId:     types.StringValue("azure-client"),
+						ClientSecret: types.StringValue("azure-secret"),
+						RedirectUrl:  types.StringValue("azure-redirect"),
+					},
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"idp-config-mismatch-azuread",
+			&Model{
+				Description: types.StringValue("test description"),
+				DisplayName: types.StringValue("displayName"),
+				Authentication: &AuthenticationModel{
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
+					OAuth: &OAuthModel{
+						AuthorityUrl: types.StringValue("oauth-authority"),
+						ClientId:     types.StringValue("oauth-client"),
+						ClientSecret: types.StringValue("oauth-secret"),
+						JwtClaims: &JwtClaimsModel{
+							UserName: types.StringValue("oauth-username"),
+						},
+						Parameters: []AuthParameterModel{
+							{
+								Name:  types.StringValue("oauth-parameter"),
+								Value: types.StringValue("oauth-value"),
+							},
+						},
+						RedirectUrl: types.StringValue("oauth-redirect"),
+						Scope:       types.StringValue("oauth-scope"),
+					},
 				},
 			},
 			nil,
@@ -284,7 +330,7 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("test description"),
 				DisplayName: types.StringValue("displayName"),
 				Authentication: &AuthenticationModel{
-					Type: types.StringValue("oauth"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 				},
 			},
 			nil,
@@ -296,7 +342,7 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("test description"),
 				DisplayName: types.StringValue("displayName"),
 				Authentication: &AuthenticationModel{
-					Type: types.StringValue("azuread"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 				},
 			},
 			nil,
@@ -339,12 +385,12 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("test description"),
 				DisplayName: types.StringValue("displayName"),
 				Authentication: &AuthenticationModel{
-					Type: types.StringValue("local-only"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
 			},
 			&dremioSdk.UpdateDremioInstancePayload{
 				Authentication: &dremioSdk.Authentication{
-					Type: "local-only",
+					Type: dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY,
 				},
 				Description: utils.Ptr("test description"),
 				DisplayName: utils.Ptr("displayName"),
@@ -373,7 +419,7 @@ func TestToUpdatePayload(t *testing.T) {
 						RedirectUrl: types.StringValue("oauth-redirect"),
 						Scope:       types.StringValue("oauth-scope"),
 					},
-					Type: types.StringValue("oauth"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 				},
 			},
 			&dremioSdk.UpdateDremioInstancePayload{
@@ -394,7 +440,7 @@ func TestToUpdatePayload(t *testing.T) {
 						RedirectUrl: utils.Ptr("oauth-redirect"),
 						Scope:       utils.Ptr("oauth-scope"),
 					},
-					Type: "oauth",
+					Type: dremioSdk.AUTHENTICATIONTYPE_OAUTH,
 				},
 				Description: utils.Ptr("test description"),
 				DisplayName: utils.Ptr("displayName"),
@@ -413,7 +459,7 @@ func TestToUpdatePayload(t *testing.T) {
 						ClientSecret: types.StringValue("azure-secret"),
 						RedirectUrl:  types.StringValue("azure-redirect"),
 					},
-					Type: types.StringValue("azuread"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 				},
 			},
 			&dremioSdk.UpdateDremioInstancePayload{
@@ -424,7 +470,7 @@ func TestToUpdatePayload(t *testing.T) {
 						ClientSecret: "azure-secret",
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
-					Type: "azuread",
+					Type: dremioSdk.AUTHENTICATIONTYPE_AZUREAD,
 				},
 				Description: utils.Ptr("test description"),
 				DisplayName: utils.Ptr("displayName"),
@@ -443,7 +489,53 @@ func TestToUpdatePayload(t *testing.T) {
 						ClientSecret: types.StringValue("azure-secret"),
 						RedirectUrl:  types.StringValue("azure-redirect"),
 					},
-					Type: types.StringValue("local-only"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"idp-config-mismatch-oauth",
+			&Model{
+				Description: types.StringValue("test description"),
+				DisplayName: types.StringValue("displayName"),
+				Authentication: &AuthenticationModel{
+					AzureAD: &AzureADModel{
+						AuthorityUrl: types.StringValue("azure-authority"),
+						ClientId:     types.StringValue("azure-client"),
+						ClientSecret: types.StringValue("azure-secret"),
+						RedirectUrl:  types.StringValue("azure-redirect"),
+					},
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
+				},
+			},
+			nil,
+			true,
+		},
+		{
+			"idp-config-mismatch-azuread",
+			&Model{
+				Description: types.StringValue("test description"),
+				DisplayName: types.StringValue("displayName"),
+				Authentication: &AuthenticationModel{
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
+					OAuth: &OAuthModel{
+						AuthorityUrl: types.StringValue("oauth-authority"),
+						ClientId:     types.StringValue("oauth-client"),
+						ClientSecret: types.StringValue("oauth-secret"),
+						JwtClaims: &JwtClaimsModel{
+							UserName: types.StringValue("oauth-username"),
+						},
+						Parameters: []AuthParameterModel{
+							{
+								Name:  types.StringValue("oauth-parameter"),
+								Value: types.StringValue("oauth-value"),
+							},
+						},
+						RedirectUrl: types.StringValue("oauth-redirect"),
+						Scope:       types.StringValue("oauth-scope"),
+					},
 				},
 			},
 			nil,
@@ -455,7 +547,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("test description"),
 				DisplayName: types.StringValue("displayName"),
 				Authentication: &AuthenticationModel{
-					Type: types.StringValue("oauth"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 				},
 			},
 			nil,
@@ -467,7 +559,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Description: types.StringValue("test description"),
 				DisplayName: types.StringValue("displayName"),
 				Authentication: &AuthenticationModel{
-					Type: types.StringValue("azuread"),
+					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 				},
 			},
 			nil,

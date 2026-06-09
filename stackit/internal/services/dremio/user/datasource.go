@@ -32,7 +32,7 @@ type userDataSource struct {
 	providerData core.ProviderData
 }
 
-func NewInstanceDataSource() datasource.DataSource {
+func NewUserDataSource() datasource.DataSource {
 	return &userDataSource{}
 }
 
@@ -59,22 +59,6 @@ func (d *userDataSource) Configure(ctx context.Context, req datasource.Configure
 }
 
 func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main":          "Manages a STACKIT Dremio instances user.",
-		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
-		"project_id":    "STACKIT Project ID to which the resource is associated.",
-		"instance_id":   "The Dremio instance ID.",
-		"region":        "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
-		"user_id":       "The Dremio user ID.",
-		"description":   "The description of the user.",
-		"email":         "The email address of the user.",
-		"first_name":    "The first name of the user.",
-		"last_name":     "The last name of the user.",
-		"name":          "The username of the user.",
-		"state":         "The current state of the resource.",
-		"error_message": "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
-	}
-
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -92,7 +76,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
-				Required:    true,
+				Optional:    true,
 			},
 			"user_id": schema.StringAttribute{
 				Description: descriptions["user_id"],
@@ -100,6 +84,11 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
+				Optional:    true,
+				Computed:    true,
+			},
+			"error_message": schema.StringAttribute{
+				Description: descriptions["error_message"],
 				Optional:    true,
 				Computed:    true,
 			},
@@ -121,11 +110,6 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"state": schema.StringAttribute{
 				Description: descriptions["state"],
-				Computed:    true,
-			},
-			"error_message": schema.StringAttribute{
-				Description: descriptions["error_message"],
-				Optional:    true,
 				Computed:    true,
 			},
 		},
@@ -172,7 +156,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(userResp, &model.Model)
+	err = mapFields(userResp, &model.Model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio user", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -80,7 +80,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(tt.input, tt.state)
+			err := mapFields(tt.input, tt.state, "rid")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mapFields error = %v, wantErr %v", err, tt.wantErr)
 				return

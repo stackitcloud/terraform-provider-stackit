@@ -14,7 +14,7 @@ import (
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
-	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait/wait"
+	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -37,7 +37,7 @@ var testDremioConfigVarsMin = config.Variables{
 	"region":     config.StringVariable(testutil.Region),
 	//Instance
 	"display_name":        config.StringVariable("dremioMinInstance"),
-	"authentication_type": config.StringVariable("local-only"),
+	"authentication_type": config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 	//User
 	"email":      config.StringVariable("minInstanceUser@example.com"),
 	"first_name": config.StringVariable("Min"),
@@ -52,7 +52,7 @@ var testDremioConfigVarsMax = config.Variables{
 	//Instance
 	"display_name":                                     config.StringVariable("dremioMaxInstance"),
 	"description":                                      config.StringVariable("description"),
-	"authentication_type":                              config.StringVariable("oauth"),
+	"authentication_type":                              config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 	"authentication_oauth_authority_url":               config.StringVariable("oauth-authority-url"),
 	"authentication_oauth_client_id":                   config.StringVariable("oauth-client-id"),
 	"authentication_oauth_client_secret":               config.StringVariable("oauth-client-secret"),
@@ -83,7 +83,7 @@ func testDremioInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig["description"] = config.StringVariable("description-upd")
 
 	// switching idp to azuread
-	tempConfig["authentication_type"] = config.StringVariable("azuread")
+	tempConfig["authentication_type"] = config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD))
 
 	tempConfig["authentication_azuread_authority_url"] = config.StringVariable("azuread-authority-url-upd")
 	tempConfig["authentication_azuread_client_id"] = config.StringVariable("azuread-client-id-upd")
