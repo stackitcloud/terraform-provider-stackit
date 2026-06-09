@@ -680,8 +680,8 @@ github.com/stackitcloud/stackit-sdk-go/services/certificates v1.7.0 h1:J7BVVHjRT
 github.com/stackitcloud/stackit-sdk-go/services/certificates v1.7.0/go.mod h1:eJpB3/pukz+KzVPVHQ4g3DVtQkxGga18VbFBhq9ugdY=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2 h1:nMJRg1dKioOlMwXJnZZgIRwfTWYCksVA9GyfAVmib1g=
 github.com/stackitcloud/stackit-sdk-go/services/dns v0.20.2/go.mod h1:FiYSv3D9rzgEVzi8Mpq5oYZBosrasa5uUYqVdEIbM1U=
-github.com/stackitcloud/stackit-sdk-go/services/dremio v0.1.0 h1:yNFIU1+1dA2uK8ERdBb1Ut74Kt2szn4qgelBbM93JXA=
-github.com/stackitcloud/stackit-sdk-go/services/dremio v0.1.0/go.mod h1:iMoiM8fM1mXC1Nz8FBiiQ08Yh+0C3yN0GPCdAbOlRXo=
+github.com/stackitcloud/stackit-sdk-go/services/dremio v0.3.0 h1:LKreLAR425+EMYbKrPIAzeoTEQlDF8EpIMTVBpOhjmA=
+github.com/stackitcloud/stackit-sdk-go/services/dremio v0.3.0/go.mod h1:iMoiM8fM1mXC1Nz8FBiiQ08Yh+0C3yN0GPCdAbOlRXo=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.11.0 h1:/JUxaJSGmg+PRj90e4fngWkXNQkRKHOYpVykJ3zoy7w=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.11.0/go.mod h1:Ylse6gqGJtsd5TVmvha+hoLd1QQHLKvhY5dO15+q5kg=
 github.com/stackitcloud/stackit-sdk-go/services/git v0.13.0 h1:BdamSnGYhDkDqUWQQcJ8Kqik90laTK1IlG5CQqyLVgA=
