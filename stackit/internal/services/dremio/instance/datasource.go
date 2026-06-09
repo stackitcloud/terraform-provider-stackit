@@ -2,17 +2,16 @@ package dremio
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
 
@@ -29,15 +28,15 @@ type InstanceDataSourceModel struct {
 }
 
 type instanceDataSource struct {
-	client *dremioSdk.APIClient
+	client       *dremioSdk.APIClient
+	providerData core.ProviderData
 }
 
 func NewInstanceDataSource() datasource.DataSource {
 	return &instanceDataSource{}
 }
 
-// Metadata should return the full name of the data source, such as
-// examplecloud_thing.
+// Metadata returns the data source type name.
 func (d *instanceDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_dremio_instance"
 }
@@ -258,7 +257,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -266,14 +265,17 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	instanceResp, err := d.client.DefaultAPI.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
-			if oapiErr.StatusCode == http.StatusNotFound {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Dremio instance with ID %s not found in project %s and region %s", instanceId, projectId, region))
-				return
-			}
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio instance", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Error reading Dremio instance",
+			fmt.Sprintf("Dremio instance with ID %q does not exist in project %q and region %q", instanceId, projectId, region),
+			map[int]string{
+				http.StatusNotFound: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 

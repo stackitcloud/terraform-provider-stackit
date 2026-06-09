@@ -2,17 +2,16 @@ package dremio
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
 
@@ -29,15 +28,15 @@ type UserDataSourceModel struct {
 }
 
 type userDataSource struct {
-	client *dremioSdk.APIClient
+	client       *dremioSdk.APIClient
+	providerData core.ProviderData
 }
 
 func NewInstanceDataSource() datasource.DataSource {
 	return &userDataSource{}
 }
 
-// Metadata should return the full name of the data source, such as
-// examplecloud_thing.
+// Metadata returns the data source type name.
 func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_dremio_user"
 }
@@ -147,7 +146,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
-	region := model.Region.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -157,14 +156,17 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	userResp, err := d.client.DefaultAPI.GetDremioUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
-			if oapiErr.StatusCode == http.StatusNotFound {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Dremio user with ID %s not found in project %s and region %s in instance %s", userId, projectId, region, instanceId))
-				return
-			}
-		}
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio user", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Error reading Dremio user",
+			fmt.Sprintf("Dremio user with ID %q does not exist in project %q and region %q in instance %q", userId, projectId, region, instanceId),
+			map[int]string{
+				http.StatusNotFound: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
