@@ -27,7 +27,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v0.29.0
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.8.3
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.23.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.28.0
