@@ -63,4 +63,4 @@ import {
 - `instance_id` (String) The Logs instance ID
 - `query_range_url` (String) The Logs instance's query range URL
 - `query_url` (String) The Logs instance's query URL
-- `status` (String) The status of the Logs instance, possible values: Possible values are: `active`, `deleting`, `reconciling`.
+- `status` (String) The status of the Logs instance. Possible values are: `active`, `deleting`, `reconciling`.

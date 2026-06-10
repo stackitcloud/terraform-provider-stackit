@@ -74,6 +74,7 @@ type ProviderData struct {
 	ServiceAccountCustomEndpoint    string
 	TelemetryLinkCustomEndpoint     string
 	TelemetryRouterCustomEndpoint   string
+	VpnCustomEndpoint               string
 	EnableBetaResources             bool
 	Experiments                     []string
 

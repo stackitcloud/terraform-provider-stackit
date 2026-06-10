@@ -738,6 +738,8 @@ github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0 h1:U1mQoCk0
 github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0/go.mod h1:hgw8janWmDfP2bnuZensxqcAePr49BX5ug8Rq85o+h8=
 github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.3.0 h1:MEvzGItcbig+9A4JvK2E5W6/mqXDPafiGkDZ1BprBAI=
 github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.3.0/go.mod h1:WUmgKtwpe90Yq3YbgNxc2clTTULVxCu0ha6lMTjUnII=
+github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0 h1:LMgbzhPunuelsIsfyEj/5O/aYfNcg/eGHsnZ7AZOhYg=
+github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0/go.mod h1:toIjQk1dhxdUFVyCWJJja0w/0nFpDid8MWX0ukQfvfo=
 github.com/stbenjam/no-sprintf-host-port v0.3.1 h1:AyX7+dxI4IdLBPtDbsGAyqiTSLpCP9hWRrXQDU4Cm/g=
 github.com/stbenjam/no-sprintf-host-port v0.3.1/go.mod h1:ODbZesTCHMVKthBHskvUUexdcNHAQRXk9NpSsL8p/HQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
