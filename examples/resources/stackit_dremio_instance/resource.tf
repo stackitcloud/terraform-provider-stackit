@@ -27,7 +27,6 @@ resource "stackit_dremio_instance" "example" {
   }
 }
 
-# Only use the import statement, if you want to import an existing dns zone
 import {
   to = stackit_dremio_instance.import_example
   id = "${var.project_id},${var.region},${var.instance_id}"
