@@ -22,6 +22,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
@@ -203,6 +204,11 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.DremioExperiment, "stackit_dremio_instance", core.Resource, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	apiClient := dremioUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -213,7 +219,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: features.AddExperimentDescription(descriptions["main"], features.DremioExperiment, core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

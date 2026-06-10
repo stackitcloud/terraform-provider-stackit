@@ -99,7 +99,7 @@ func TestAccDremioInstanceMin(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceDremioInstanceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentDremio).BuildProviderConfig() + resourceDremioInstanceMin,
 				ConfigVariables: testDremioConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -277,7 +277,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 			// 1) Creation
 			{
 				ConfigVariables: testDremioConfigVarsMax,
-				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceDremioInstanceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentDremio).BuildProviderConfig() + resourceDremioInstanceMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr(dremioInstanceResource, "project_id", testutil.ConvertConfigVariable(testDremioConfigVarsMax["project_id"])),

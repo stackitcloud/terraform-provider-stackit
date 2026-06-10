@@ -16,6 +16,7 @@ const (
 	RoutingTablesExperiment = "routing-tables"
 	NetworkExperiment       = "network"
 	IamExperiment           = "iam"
+	DremioExperiment        = "dremio"
 )
 
 var AvailableExperiments = []string{IamExperiment, RoutingTablesExperiment, NetworkExperiment}

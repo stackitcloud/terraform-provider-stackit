@@ -148,6 +148,7 @@ const (
 	ExperimentRoutingTables Experiment = "routing-tables"
 	ExperimentNetwork       Experiment = "network"
 	ExperimentIAM           Experiment = "iam"
+	ExperimentDremio        Experiment = "dremio"
 )
 
 type customEndpointConfig struct {
