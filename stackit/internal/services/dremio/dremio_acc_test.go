@@ -134,7 +134,7 @@ func TestAccDremioInstanceMin(t *testing.T) {
 			},
 			// 2) Data Source
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceDremioInstanceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentDremio).BuildProviderConfig() + resourceDremioInstanceMin,
 				ConfigVariables: testDremioConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -249,7 +249,7 @@ func TestAccDremioInstanceMin(t *testing.T) {
 			},
 			// 4) Update
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceDremioInstanceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentDremio).BuildProviderConfig() + resourceDremioInstanceMin,
 				ConfigVariables: testDremioInstanceConfigVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dremioInstanceResource, "project_id", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMinUpdated()["project_id"])),
@@ -322,7 +322,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 			},
 			// 2) Data Source
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceDremioInstanceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentDremio).BuildProviderConfig() + resourceDremioInstanceMax,
 				ConfigVariables: testDremioConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
@@ -465,7 +465,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 			},
 			// 4) Update
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceDremioInstanceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentDremio).BuildProviderConfig() + resourceDremioInstanceMax,
 				ConfigVariables: testDremioInstanceConfigVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dremioInstanceResource, "project_id", testutil.ConvertConfigVariable(testDremioInstanceConfigVarsMaxUpdated()["project_id"])),
