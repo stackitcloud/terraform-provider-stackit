@@ -124,10 +124,14 @@ import (
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
+<<<<<<< HEAD
 	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+=======
+	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
+>>>>>>> 2fb59bdf (feat(vpn): Onboarding VPN Connection)
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -757,6 +761,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
+		vpnConnection.NewVPNConnectionDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -852,10 +857,14 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
 		serverUpdateEnable.NewServerUpdateEnableResource,
+<<<<<<< HEAD
 		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenResource,
 		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
 		telemetryLink.NewTelemetryLinkResource,
+=======
+		vpnConnection.NewVpnConnectionResource,
+>>>>>>> 2fb59bdf (feat(vpn): Onboarding VPN Connection)
 		vpnGateway.NewGatewayResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
