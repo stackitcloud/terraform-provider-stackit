@@ -245,6 +245,7 @@ func TestDremioInstanceMin(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, userId), nil
 				},
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			// 4) Update
 			{
@@ -310,7 +311,7 @@ func TestDremioInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet(dremioUserResource, "id"),
 
 					resource.TestCheckResourceAttr(dremioUserResource, "email", testutil.ConvertConfigVariable(testDremioConfigVarsMax["email"])),
-					resource.TestCheckResourceAttr(dremioUserResource, "user_description", testutil.ConvertConfigVariable(testDremioConfigVarsMax["user_description"])),
+					resource.TestCheckResourceAttr(dremioUserResource, "description", testutil.ConvertConfigVariable(testDremioConfigVarsMax["user_description"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "first_name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["first_name"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "last_name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["last_name"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["name"])),
@@ -403,8 +404,8 @@ func TestDremioInstanceMax(t *testing.T) {
 						dremioUserDataResource, "email",
 					),
 					resource.TestCheckResourceAttrPair(
-						dremioUserResource, "user_description",
-						dremioUserDataResource, "user_description",
+						dremioUserResource, "description",
+						dremioUserDataResource, "description",
 					),
 					resource.TestCheckResourceAttrPair(
 						dremioUserResource, "first_name",
@@ -437,7 +438,31 @@ func TestDremioInstanceMax(t *testing.T) {
 					}
 
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
-				}},
+				},
+			},
+			{
+				ConfigVariables:   testDremioConfigVarsMax,
+				ResourceName:      dremioUserResource,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources[dremioUserResource]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource %s", dremioUserResource)
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instanceId")
+					}
+					userId, ok := r.Primary.Attributes["user_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute userId")
+					}
+
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, userId), nil
+				},
+				ImportStateVerifyIgnore: []string{"password"},
+			},
 			// 4) Update
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceDremioInstanceMax,
