@@ -36,7 +36,7 @@ var testDremioConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable(testutil.Region),
 	// Instance
-	"display_name":        config.StringVariable("dremioMinInstance"),
+	"display_name":        config.StringVariable("tfAccDremioMinInstance"),
 	"authentication_type": config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 	// User
 	"email":      config.StringVariable("minInstanceUser@example.com"),
@@ -50,7 +50,7 @@ var testDremioConfigVarsMax = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable("eu01"),
 	// Instance
-	"display_name":                                     config.StringVariable("dremioMaxInstance"),
+	"display_name":                                     config.StringVariable("tfAccDremioMaxInstance"),
 	"description":                                      config.StringVariable("description"),
 	"authentication_type":                              config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 	"authentication_oauth_authority_url":               config.StringVariable("oauth-authority-url"),
@@ -72,14 +72,14 @@ var testDremioConfigVarsMax = config.Variables{
 func testDremioInstanceConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testDremioConfigVarsMin))
 	maps.Copy(tempConfig, testDremioConfigVarsMin)
-	tempConfig["display_name"] = config.StringVariable("dremioMinInstanceUpd")
+	tempConfig["display_name"] = config.StringVariable("tfAccDremioMinInstanceUpd")
 	return tempConfig
 }
 
 func testDremioInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testDremioConfigVarsMax))
 	maps.Copy(tempConfig, testDremioConfigVarsMax)
-	tempConfig["display_name"] = config.StringVariable("dremioMaxInstanceUpd")
+	tempConfig["display_name"] = config.StringVariable("tfAccDremioMaxInstanceUpd")
 	tempConfig["description"] = config.StringVariable("description-upd")
 
 	// switching idp to azuread
@@ -92,7 +92,7 @@ func testDremioInstanceConfigVarsMaxUpdated() config.Variables {
 	return tempConfig
 }
 
-func TestDremioInstanceMin(t *testing.T) {
+func TestAccDremioInstanceMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDremioInstanceDestroy,
@@ -269,7 +269,7 @@ func TestDremioInstanceMin(t *testing.T) {
 	})
 }
 
-func TestDremioInstanceMax(t *testing.T) {
+func TestAccDremioInstanceMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDremioInstanceDestroy,

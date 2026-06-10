@@ -55,7 +55,7 @@ type Model struct {
 	// Read-only Fields
 	State        types.String `tfsdk:"state"`
 	ErrorMessage types.String `tfsdk:"error_message"`
-	Endpoints    types.Object `tfsdk:"endpoints"` // see EdnpointsModel
+	Endpoints    types.Object `tfsdk:"endpoints"` // see EndpointsModel
 }
 
 // InstanceModel maps the resource schema data.
@@ -430,6 +430,10 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+	if instanceResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
 
 	ctx = core.LogResponse(ctx)
 
@@ -548,6 +552,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	instanceResp, err := r.client.DefaultAPI.UpdateDremioInstance(ctx, projectId, region, instanceId).UpdateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+	if instanceResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Empty response", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
