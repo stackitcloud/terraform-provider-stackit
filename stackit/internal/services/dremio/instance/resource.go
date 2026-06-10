@@ -212,7 +212,6 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 }
 
 func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -763,7 +762,7 @@ func toUpdatePayload(model *Model) (*dremioSdk.UpdateDremioInstancePayload, erro
 
 	authentication, err := parseAuthentication(model)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse authentication: %v", err)
+		return nil, fmt.Errorf("failed to parse authentication: %w", err)
 	}
 
 	return &dremioSdk.UpdateDremioInstancePayload{
@@ -781,7 +780,7 @@ func toCreatePayload(model *Model) (*dremioSdk.CreateDremioInstancePayload, erro
 
 	authentication, err := parseAuthentication(model)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse authentication: %v", err)
+		return nil, fmt.Errorf("failed to parse authentication: %w", err)
 	}
 
 	return &dremioSdk.CreateDremioInstancePayload{

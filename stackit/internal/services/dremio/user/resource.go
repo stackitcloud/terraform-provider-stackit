@@ -367,7 +367,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	tflog.Info(ctx, "Dremio user read")
 }
 
-func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *userResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// We don't allow updates on Dremio users.
 }
 

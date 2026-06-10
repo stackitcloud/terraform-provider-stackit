@@ -35,10 +35,10 @@ const dremioUserDataResource = "data.stackit_dremio_user.example"
 var testDremioConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable(testutil.Region),
-	//Instance
+	// Instance
 	"display_name":        config.StringVariable("dremioMinInstance"),
 	"authentication_type": config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
-	//User
+	// User
 	"email":      config.StringVariable("minInstanceUser@example.com"),
 	"first_name": config.StringVariable("Min"),
 	"last_name":  config.StringVariable("InstanceUser"),
@@ -49,7 +49,7 @@ var testDremioConfigVarsMin = config.Variables{
 var testDremioConfigVarsMax = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable("eu01"),
-	//Instance
+	// Instance
 	"display_name":                                     config.StringVariable("dremioMaxInstance"),
 	"description":                                      config.StringVariable("description"),
 	"authentication_type":                              config.StringVariable(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
@@ -60,7 +60,7 @@ var testDremioConfigVarsMax = config.Variables{
 	"authentication_oauth_scope":                       config.StringVariable("oauth-scope"),
 	"authentication_oauth_parameter_name":              config.StringVariable("oauth-parameter-name"),
 	"authentication_oauth_parameter_value":             config.StringVariable("oauth-parameter-value"),
-	//User
+	// User
 	"email":            config.StringVariable("maxInstanceUser@example.com"),
 	"user_description": config.StringVariable("Max Instance User Description"),
 	"first_name":       config.StringVariable("Max"),
