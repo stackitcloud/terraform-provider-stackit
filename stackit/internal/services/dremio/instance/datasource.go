@@ -51,7 +51,7 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &d.providerData, features.DremioExperiment, "stackit_dremio_instance", core.Datasource, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_instance", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

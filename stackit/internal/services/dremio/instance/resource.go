@@ -204,7 +204,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &r.providerData, features.DremioExperiment, "stackit_dremio_instance", core.Resource, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_instance", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

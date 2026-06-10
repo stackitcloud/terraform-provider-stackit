@@ -133,7 +133,7 @@ func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &r.providerData, features.DremioExperiment, "stackit_dremio_user", core.Resource, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.DremioExperiment, "stackit_dremio_user", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
