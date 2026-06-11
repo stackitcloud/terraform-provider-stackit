@@ -53,7 +53,6 @@ import {
 
 - `gateway_id` (String) The server-generated UUID of the VPN gateway.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`".
-- `state` (String) The current lifecycle state of the gateway. Possible values are: `PENDING`, `READY`, `ERROR`, `DELETING`.
 
 <a id="nestedatt--availability_zones"></a>
 ### Nested Schema for `availability_zones`
