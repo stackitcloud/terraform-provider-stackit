@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
+
+	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 var (
@@ -624,6 +626,7 @@ func TestToCreatePayload(t *testing.T) {
 					},
 				},
 				Enabled: new(true),
+				Labels:  &map[string]string{},
 			},
 			isValid: true,
 		},
@@ -708,6 +711,7 @@ func TestToCreatePayload(t *testing.T) {
 						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
 					},
 				},
+				Labels:  &map[string]string{},
 				Enabled: new(true),
 			},
 			isValid: true,
@@ -821,6 +825,7 @@ func TestToUpdatePayload(t *testing.T) {
 						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
 					},
 				},
+				Labels:  &map[string]string{},
 				Enabled: new(false),
 			},
 			isValid: true,
@@ -900,6 +905,7 @@ func TestToUpdatePayload(t *testing.T) {
 						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
 					},
 				},
+				Labels:  &map[string]string{},
 				Enabled: new(false),
 			},
 			isValid: true,
@@ -1034,7 +1040,7 @@ func TestToTunnelConfiguration(t *testing.T) {
 			if config.RemoteAddress != tt.input.RemoteAddress.ValueString() {
 				t.Errorf("RemoteAddress mismatch: got %v, want %v", config.RemoteAddress, tt.input.RemoteAddress.ValueString())
 			}
-			if !tt.input.PreSharedKeyWo.IsNull() && !tt.input.PreSharedKeyWo.IsUnknown() {
+			if !tfutils.IsUndefined(tt.input.PreSharedKeyWo) {
 				if config.PreSharedKey == nil || *config.PreSharedKey != tt.input.PreSharedKeyWo.ValueString() {
 					t.Errorf("PreSharedKey mismatch")
 				}

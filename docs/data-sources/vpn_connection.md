@@ -51,8 +51,6 @@ Read-Only:
 - `peering` (Attributes) Tunnel interface peering configuration. (see [below for nested schema](#nestedatt--tunnel1--peering))
 - `phase1` (Attributes) IKE Phase 1 configuration. (see [below for nested schema](#nestedatt--tunnel1--phase1))
 - `phase2` (Attributes) IKE Phase 2 configuration. (see [below for nested schema](#nestedatt--tunnel1--phase2))
-- `pre_shared_key_wo` (String, Sensitive)
-- `pre_shared_key_wo_version` (Number)
 - `remote_address` (String) Remote peer IPv4 address for this tunnel.
 
 <a id="nestedatt--tunnel1--bgp"></a>
@@ -106,8 +104,6 @@ Read-Only:
 - `peering` (Attributes) Tunnel interface peering configuration. (see [below for nested schema](#nestedatt--tunnel2--peering))
 - `phase1` (Attributes) IKE Phase 1 configuration. (see [below for nested schema](#nestedatt--tunnel2--phase1))
 - `phase2` (Attributes) IKE Phase 2 configuration. (see [below for nested schema](#nestedatt--tunnel2--phase2))
-- `pre_shared_key_wo` (String, Sensitive)
-- `pre_shared_key_wo_version` (Number)
 - `remote_address` (String) Remote peer IPv4 address for this tunnel.
 
 <a id="nestedatt--tunnel2--bgp"></a>

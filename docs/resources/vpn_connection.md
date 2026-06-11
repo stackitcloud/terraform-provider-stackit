@@ -68,8 +68,12 @@ import {
 - `display_name` (String) A user-friendly name for the connection. Must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long.
 - `gateway_id` (String) The UUID of the parent VPN gateway.
 - `project_id` (String) STACKIT project ID.
-- `tunnel1` (Attributes) (see [below for nested schema](#nestedatt--tunnel1))
-- `tunnel2` (Attributes) (see [below for nested schema](#nestedatt--tunnel2))
+- `tunnel1` (Attributes) Configuration for the IPsec tunnel. 
+
+-> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--tunnel1))
+- `tunnel2` (Attributes) Configuration for the IPsec tunnel. 
+
+-> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--tunnel2))
 
 ### Optional
 
@@ -92,6 +96,7 @@ Required:
 
 - `phase1` (Attributes) (see [below for nested schema](#nestedatt--tunnel1--phase1))
 - `phase2` (Attributes) (see [below for nested schema](#nestedatt--tunnel1--phase2))
+- `pre_shared_key` (String, Sensitive) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.
 - `pre_shared_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.
 - `remote_address` (String) Remote IPv4 address for the tunnel endpoint.
 
@@ -156,6 +161,7 @@ Required:
 
 - `phase1` (Attributes) (see [below for nested schema](#nestedatt--tunnel2--phase1))
 - `phase2` (Attributes) (see [below for nested schema](#nestedatt--tunnel2--phase2))
+- `pre_shared_key` (String, Sensitive) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.
 - `pre_shared_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.
 - `remote_address` (String) Remote IPv4 address for the tunnel endpoint.
 
