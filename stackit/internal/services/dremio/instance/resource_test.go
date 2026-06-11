@@ -62,7 +62,6 @@ func TestMapFields(t *testing.T) {
 					Catalog:     "catalog",
 					Ui:          "ui",
 				},
-				State: "active",
 			},
 			&Model{
 				Id: types.StringValue("pid,rid," + instanceId),
@@ -100,8 +99,6 @@ func TestMapFields(t *testing.T) {
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
 
-				State:        types.StringValue("active"),
-				ErrorMessage: types.StringNull(),
 				Endpoints: types.ObjectValueMust(
 					map[string]attr.Type{
 						"arrow_flight": types.StringType,

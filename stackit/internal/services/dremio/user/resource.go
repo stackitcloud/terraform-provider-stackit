@@ -54,10 +54,6 @@ type Model struct {
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
-
-	// Read-only Fields
-	State        types.String `tfsdk:"state"`
-	ErrorMessage types.String `tfsdk:"error_message"`
 }
 
 type UserModel struct {
@@ -70,20 +66,18 @@ type UserModel struct {
 }
 
 var descriptions = map[string]string{
-	"main":          "Manages a STACKIT Dremio instances user.",
-	"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
-	"project_id":    "STACKIT Project ID to which the resource is associated.",
-	"instance_id":   "The Dremio instance ID.",
-	"region":        "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
-	"user_id":       "The Dremio user ID.",
-	"email":         "The email address of the user.",
-	"first_name":    "The first name of the user.",
-	"last_name":     "The last name of the user.",
-	"name":          "The username of the user.",
-	"password":      "The password of the user. Only used for creation and updates. Must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.",
-	"description":   "The description of the user.",
-	"state":         "The current state of the resource.",
-	"error_message": "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
+	"main":        "Manages a STACKIT Dremio instances user.",
+	"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`user_id`\".",
+	"project_id":  "STACKIT Project ID to which the resource is associated.",
+	"instance_id": "The Dremio instance ID.",
+	"region":      "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
+	"user_id":     "The Dremio user ID.",
+	"email":       "The email address of the user.",
+	"first_name":  "The first name of the user.",
+	"last_name":   "The last name of the user.",
+	"name":        "The username of the user.",
+	"password":    "The password of the user. Only used for creation and updates. Must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character.",
+	"description": "The description of the user.",
 }
 
 type userResource struct {
@@ -215,6 +209,8 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
 				Optional:    true,
+				// must be computed to allow for storing the override value from the provider
+				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -227,15 +223,6 @@ func (r *userResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"error_message": schema.StringAttribute{
-				Description: descriptions["error_message"],
-				Optional:    true,
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
-				Computed:    true,
 			},
 			"user_id": schema.StringAttribute{
 				Description: descriptions["user_id"],
@@ -471,9 +458,6 @@ func mapFields(userResp *dremioSdk.DremioUserResponse, model *Model, region stri
 	model.FirstName = types.StringValue(userResp.FirstName)
 	model.LastName = types.StringValue(userResp.LastName)
 	model.Name = types.StringValue(userResp.Name)
-
-	model.State = types.StringValue(string(userResp.State))
-	model.ErrorMessage = types.StringPointerValue(userResp.ErrorMessage)
 
 	return nil
 }

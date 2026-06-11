@@ -93,7 +93,7 @@ func testDremioInstanceConfigVarsMaxUpdated() config.Variables {
 }
 
 func TestAccDremioInstanceMin(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDremioInstanceDestroy,
 		Steps: []resource.TestStep{
@@ -111,7 +111,6 @@ func TestAccDremioInstanceMin(t *testing.T) {
 					resource.TestCheckResourceAttr(dremioInstanceResource, "display_name", testutil.ConvertConfigVariable(testDremioConfigVarsMin["display_name"])),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.type", testutil.ConvertConfigVariable(testDremioConfigVarsMin["authentication_type"])),
 
-					resource.TestCheckResourceAttrSet(dremioInstanceResource, "state"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.ui"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.arrow_flight"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.catalog"),
@@ -128,8 +127,6 @@ func TestAccDremioInstanceMin(t *testing.T) {
 					resource.TestCheckResourceAttr(dremioUserResource, "last_name", testutil.ConvertConfigVariable(testDremioConfigVarsMin["last_name"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "name", testutil.ConvertConfigVariable(testDremioConfigVarsMin["name"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "password", testutil.ConvertConfigVariable(testDremioConfigVarsMin["password"])),
-
-					resource.TestCheckResourceAttrSet(dremioUserResource, "state"),
 				),
 			},
 			// 2) Data Source
@@ -259,7 +256,6 @@ func TestAccDremioInstanceMin(t *testing.T) {
 
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "id"),
-					resource.TestCheckResourceAttrSet(dremioInstanceResource, "state"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.ui"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.arrow_flight"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.catalog"),
@@ -270,7 +266,7 @@ func TestAccDremioInstanceMin(t *testing.T) {
 }
 
 func TestAccDremioInstanceMax(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccDremioInstanceDestroy,
 		Steps: []resource.TestStep{
@@ -298,7 +294,6 @@ func TestAccDremioInstanceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "id"),
-					resource.TestCheckResourceAttrSet(dremioInstanceResource, "state"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.ui"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.arrow_flight"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.catalog"),
@@ -316,8 +311,6 @@ func TestAccDremioInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttr(dremioUserResource, "last_name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["last_name"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["name"])),
 					resource.TestCheckResourceAttr(dremioUserResource, "password", testutil.ConvertConfigVariable(testDremioConfigVarsMax["password"])),
-
-					resource.TestCheckResourceAttrSet(dremioUserResource, "state"),
 				),
 			},
 			// 2) Data Source
@@ -482,7 +475,6 @@ func TestAccDremioInstanceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "id"),
-					resource.TestCheckResourceAttrSet(dremioInstanceResource, "state"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.ui"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.arrow_flight"),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "endpoints.catalog"),

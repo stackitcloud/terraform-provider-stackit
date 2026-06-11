@@ -54,9 +54,7 @@ type Model struct {
 	Description types.String `tfsdk:"description"`
 
 	// Read-only Fields
-	State        types.String `tfsdk:"state"`
-	ErrorMessage types.String `tfsdk:"error_message"`
-	Endpoints    types.Object `tfsdk:"endpoints"` // see EndpointsModel
+	Endpoints types.Object `tfsdk:"endpoints"` // see EndpointsModel
 }
 
 // InstanceModel maps the resource schema data.
@@ -131,8 +129,6 @@ var descriptions = map[string]string{ //nolint:gosec // no hardcoded credentials
 	"region":                     "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"display_name":               "The display name is a short name chosen by the user to identify the resource.",
 	"description":                "The description is a longer text chosen by the user to provide more context for the resource.",
-	"state":                      "The current state of the resource.",
-	"error_message":              "A message describing an actionable error the user can resolve. This field is empty if no such error exists.",
 	"endpoints":                  "The available endpoints of the Dremio instance.",
 	"endpoints_arrow_flight":     "The arrow flight endpoint of the Dremio instance.",
 	"endpoints_catalog":          "The Apache Iceberg endpoint of the Dremio instance.",
@@ -247,7 +243,9 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"region": schema.StringAttribute{
-				Optional:    true,
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
 				Description: descriptions["region"],
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -355,15 +353,6 @@ func (r *instanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"error_message": schema.StringAttribute{
-				Description: descriptions["error_message"],
-				Optional:    true,
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
-				Computed:    true,
 			},
 			"endpoints": schema.SingleNestedAttribute{
 				Description: descriptions["endpoints"],
@@ -698,10 +687,7 @@ func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model, region
 	)
 
 	model.DisplayName = types.StringValue(instanceResp.DisplayName)
-	model.State = types.StringValue(string(instanceResp.State))
-
 	model.Description = types.StringPointerValue(instanceResp.Description)
-	model.ErrorMessage = types.StringPointerValue(instanceResp.ErrorMessage)
 
 	endpoints := &EndpointsModel{
 		ArrowFlight: types.StringValue(instanceResp.Endpoints.ArrowFlight),

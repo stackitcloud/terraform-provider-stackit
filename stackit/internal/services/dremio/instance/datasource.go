@@ -94,15 +94,6 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Optional:    true,
 				Computed:    true,
 			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
-				Computed:    true,
-			},
-			"error_message": schema.StringAttribute{
-				Description: descriptions["error_message"],
-				Optional:    true,
-				Computed:    true,
-			},
 			"endpoints": schema.SingleNestedAttribute{
 				Description: descriptions["endpoints"],
 				Computed:    true,

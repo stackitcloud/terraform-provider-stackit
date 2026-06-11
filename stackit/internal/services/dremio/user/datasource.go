@@ -93,11 +93,6 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 			},
-			"error_message": schema.StringAttribute{
-				Description: descriptions["error_message"],
-				Optional:    true,
-				Computed:    true,
-			},
 			"email": schema.StringAttribute{
 				Description: descriptions["email"],
 				Computed:    true,
@@ -112,10 +107,6 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: descriptions["state"],
 				Computed:    true,
 			},
 		},
