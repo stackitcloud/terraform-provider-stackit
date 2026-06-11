@@ -506,7 +506,7 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateGatewayConnection(ctx, projectId, vpn.Region(region), gatewayId).CreateGatewayConnectionPayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateGatewayConnection(ctx, projectId, region, gatewayId).CreateGatewayConnectionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -530,7 +530,7 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, vpn.Region(region), gatewayId, connectionId).Execute()
+	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Reading created connection: %v", err))
 		return
@@ -569,7 +569,7 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "connection_id", connectionId)
 
-	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, vpn.Region(region), gatewayId, connectionId).Execute()
+	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -676,7 +676,7 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	_, err = r.client.DefaultAPI.UpdateGatewayConnection(ctx, projectId, vpn.Region(region), gatewayId, connectionId).UpdateGatewayConnectionPayload(*payload).Execute()
+	_, err = r.client.DefaultAPI.UpdateGatewayConnection(ctx, projectId, region, gatewayId, connectionId).UpdateGatewayConnectionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", err.Error())
 		return
@@ -684,7 +684,7 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	ctx = core.LogResponse(ctx)
 
-	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, vpn.Region(region), gatewayId, connectionId).Execute()
+	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Reading updated connection: %v", err))
 		return
@@ -723,7 +723,7 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "connection_id", connectionId)
 
-	err := r.client.DefaultAPI.DeleteGatewayConnection(ctx, projectId, vpn.Region(region), gatewayId, connectionId).Execute()
+	err := r.client.DefaultAPI.DeleteGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -883,18 +883,30 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 			if err != nil {
 				return nil, fmt.Errorf("converting phase1 dh_groups: %w", err)
 			}
-			phase1.DhGroups = dhGroups
+			dhGroupsInner := []vpn.PhaseDhGroupsInner{}
+			for _, item := range dhGroups {
+				dhGroupsInner = append(dhGroupsInner, vpn.PhaseDhGroupsInner(item))
+			}
+			phase1.DhGroups = dhGroupsInner
 		}
 		encAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase1.EncryptionAlgorithms)
 		if err != nil {
 			return nil, fmt.Errorf("converting phase1 encryption_algorithms: %w", err)
 		}
-		phase1.EncryptionAlgorithms = encAlgs
+		encAlgsInner := []vpn.PhaseEncryptionAlgorithmsInner{}
+		for _, item := range encAlgs {
+			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
+		}
+		phase1.EncryptionAlgorithms = encAlgsInner
 		intAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase1.IntegrityAlgorithms)
 		if err != nil {
 			return nil, fmt.Errorf("converting phase1 integrity_algorithms: %w", err)
 		}
-		phase1.IntegrityAlgorithms = intAlgs
+		intAlgsInner := []vpn.PhaseIntegrityAlgorithmsInner{}
+		for _, item := range intAlgs {
+			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
+		}
+		phase1.IntegrityAlgorithms = intAlgsInner
 		if !tunnel.Phase1.RekeyTime.IsNull() && !tunnel.Phase1.RekeyTime.IsUnknown() {
 			rekeyTime := tunnel.Phase1.RekeyTime.ValueInt32()
 			phase1.RekeyTime = &rekeyTime
@@ -909,29 +921,41 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 			if err != nil {
 				return nil, fmt.Errorf("converting phase2 dh_groups: %w", err)
 			}
-			phase2.DhGroups = dhGroups
+			dhGroupsInner := []vpn.PhaseDhGroupsInner{}
+			for _, item := range dhGroups {
+				dhGroupsInner = append(dhGroupsInner, vpn.PhaseDhGroupsInner(item))
+			}
+			phase2.DhGroups = dhGroupsInner
 		}
 		encAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase2.EncryptionAlgorithms)
 		if err != nil {
 			return nil, fmt.Errorf("converting phase2 encryption_algorithms: %w", err)
 		}
-		phase2.EncryptionAlgorithms = encAlgs
+		encAlgsInner := []vpn.PhaseEncryptionAlgorithmsInner{}
+		for _, item := range encAlgs {
+			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
+		}
+		phase2.EncryptionAlgorithms = encAlgsInner
 		intAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase2.IntegrityAlgorithms)
 		if err != nil {
 			return nil, fmt.Errorf("converting phase2 integrity_algorithms: %w", err)
 		}
-		phase2.IntegrityAlgorithms = intAlgs
+		intAlgsInner := []vpn.PhaseIntegrityAlgorithmsInner{}
+		for _, item := range intAlgs {
+			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
+		}
+		phase2.IntegrityAlgorithms = intAlgsInner
 		if !tunnel.Phase2.RekeyTime.IsNull() && !tunnel.Phase2.RekeyTime.IsUnknown() {
 			rekeyTime := tunnel.Phase2.RekeyTime.ValueInt32()
 			phase2.RekeyTime = &rekeyTime
 		}
 		if !tunnel.Phase2.StartAction.IsNull() && !tunnel.Phase2.StartAction.IsUnknown() {
 			startAction := tunnel.Phase2.StartAction.ValueString()
-			phase2.StartAction = &startAction
+			phase2.StartAction = vpn.TunnelConfigurationPhase2AllOfStartAction(startAction).Ptr()
 		}
 		if !tunnel.Phase2.DpdAction.IsNull() && !tunnel.Phase2.DpdAction.IsUnknown() {
 			dpdAction := tunnel.Phase2.DpdAction.ValueString()
-			phase2.DpdAction = &dpdAction
+			phase2.DpdAction = vpn.TunnelConfigurationPhase2AllOfDpdAction(dpdAction).Ptr()
 		}
 		config.Phase2 = phase2
 	}
@@ -1107,12 +1131,12 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, cuurrent
 		phase2.RekeyTime = types.Int32Null()
 	}
 	if apiTunnel.Phase2.StartAction != nil {
-		phase2.StartAction = types.StringValue(*apiTunnel.Phase2.StartAction)
+		phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
 	} else {
 		phase2.StartAction = types.StringNull()
 	}
 	if apiTunnel.Phase2.DpdAction != nil {
-		phase2.DpdAction = types.StringValue(*apiTunnel.Phase2.DpdAction)
+		phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
 	} else {
 		phase2.DpdAction = types.StringNull()
 	}
