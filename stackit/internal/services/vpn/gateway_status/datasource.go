@@ -31,8 +31,7 @@ var (
 	_ datasource.DataSource              = &vpnGatewayStatusDataSource{}
 	_ datasource.DataSourceWithConfigure = &vpnGatewayStatusDataSource{}
 
-	gatewayStates = sdkUtils.EnumSliceToStringSlice(vpn.AllowedGatewayStatusEnumValues)
-	tunnelNames   = sdkUtils.EnumSliceToStringSlice(vpn.AllowedVPNTunnelsNameEnumValues)
+	tunnelNames = sdkUtils.EnumSliceToStringSlice(vpn.AllowedVPNTunnelsNameEnumValues)
 )
 
 type vpnGatewayStatusDataSource struct {
@@ -41,25 +40,21 @@ type vpnGatewayStatusDataSource struct {
 }
 
 type Model struct {
-	Id            types.String `tfsdk:"id"` // needed by TF
-	GatewayId     types.String `tfsdk:"gateway_id"`
-	ProjectId     types.String `tfsdk:"project_id"`
-	Region        types.String `tfsdk:"region"`
-	DisplayName   types.String `tfsdk:"display_name"`
-	GatewayStatus types.String `tfsdk:"state"`
-	ErrorMessage  types.String `tfsdk:"error_message"`
-	Tunnels       types.List   `tfsdk:"tunnels"`
+	Id          types.String `tfsdk:"id"` // needed by TF
+	GatewayId   types.String `tfsdk:"gateway_id"`
+	ProjectId   types.String `tfsdk:"project_id"`
+	Region      types.String `tfsdk:"region"`
+	DisplayName types.String `tfsdk:"display_name"`
+	Tunnels     types.List   `tfsdk:"tunnels"`
 }
 
 type Tunnel struct {
-	InstanceState     types.String `tfsdk:"instance_state"`
 	InternalNextHopIP types.String `tfsdk:"internal_next_hop_ip"`
 	Name              types.String `tfsdk:"name"`
 	PublicIP          types.String `tfsdk:"public_ip"`
 }
 
 var tunnelsType = map[string]attr.Type{
-	"instance_state":       basetypes.StringType{},
 	"internal_next_hop_ip": basetypes.StringType{},
 	"name":                 basetypes.StringType{},
 	"public_ip":            basetypes.StringType{},
@@ -93,10 +88,7 @@ var schemaDescriptions = map[string]string{
 	"project_id":                  "STACKIT project ID associated with the VPN gateway.",
 	"region":                      "STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"display_name":                "A user-friendly name for the VPN gateway.",
-	"error_message":               "A descriptive message provided when the gateway is in an error state.",
-	"state":                       fmt.Sprintf("The current life cycle state of the gateway. %s", tfutils.FormatPossibleValues(gatewayStates...)),
 	"tunnels":                     "List of the VPN tunnels in the gateway.",
-	"tunnel_instance_state":       fmt.Sprintf("The current life cycle state of the tunnel. %s", tfutils.FormatPossibleValues(gatewayStates...)),
 	"tunnel_internal_next_hop_ip": "The IPv4 address of the endpoint in the SNA.",
 	"tunnel_name":                 fmt.Sprintf("The name of the VPN tunnel. %s", tfutils.FormatPossibleValues(tunnelNames...)),
 	"tunnel_public_ip":            "The public IPv4 address of this endpoint.",
@@ -134,23 +126,11 @@ func (d *vpnGatewayStatusDataSource) Schema(_ context.Context, _ datasource.Sche
 				Description: schemaDescriptions["display_name"],
 				Computed:    true,
 			},
-			"error_message": schema.StringAttribute{
-				Description: schemaDescriptions["error_message"],
-				Computed:    true,
-			},
-			"state": schema.StringAttribute{
-				Description: schemaDescriptions["state"],
-				Computed:    true,
-			},
 			"tunnels": schema.ListNestedAttribute{
 				Description: schemaDescriptions["tunnels"],
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"instance_state": schema.StringAttribute{
-							Description: schemaDescriptions["tunnel_instance_state"],
-							Computed:    true,
-						},
 						"internal_next_hop_ip": schema.StringAttribute{
 							Description: schemaDescriptions["tunnel_internal_next_hop_ip"],
 							Computed:    true,
@@ -242,14 +222,6 @@ func mapFields(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, mo
 		model.DisplayName = types.StringValue(*gatewayStatus.DisplayName)
 	}
 
-	if gatewayStatus.GatewayStatus != nil {
-		model.GatewayStatus = types.StringValue(string(*gatewayStatus.GatewayStatus))
-	}
-
-	if gatewayStatus.ErrorMessage != nil {
-		model.ErrorMessage = types.StringValue(*gatewayStatus.ErrorMessage)
-	}
-
 	if err := mapTunnels(ctx, gatewayStatus, model); err != nil {
 		return fmt.Errorf("map tunnels: %w", err)
 	}
@@ -270,9 +242,6 @@ func mapTunnels(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, m
 	for _, tunnelItem := range gatewayStatus.Tunnels {
 		tunnel := Tunnel{}
 
-		if tunnelItem.InstanceState != nil {
-			tunnel.InstanceState = types.StringValue(string(*tunnelItem.InstanceState))
-		}
 		if tunnelItem.InternalNextHopIP != nil {
 			tunnel.InternalNextHopIP = types.StringValue(string(*tunnelItem.InternalNextHopIP))
 		}

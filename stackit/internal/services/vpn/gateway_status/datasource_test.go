@@ -21,25 +21,20 @@ var (
 	testTunnel1PublicIP          = "98.76.54.32"
 	testTunnel2InternalNextHopIP = "123.45.67.89"
 	testTunnel2PublicIP          = "98.76.54.32"
-	testErrorMessage             = "foo bar"
 )
 
 func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatusResponse {
 	resp := &vpn.GatewayStatusResponse{
-		Id:            &testGatewayId,
-		Connections:   []vpn.ConnectionStatusResponse{},
-		DisplayName:   &testDisplayName,
-		GatewayStatus: vpn.GATEWAYSTATUS_READY.Ptr(),
-		ErrorMessage:  &testErrorMessage,
+		Id:          &testGatewayId,
+		Connections: []vpn.ConnectionStatusResponse{},
+		DisplayName: &testDisplayName,
 		Tunnels: []vpn.VPNTunnels{
 			{
-				InstanceState:     vpn.GATEWAYSTATUS_READY.Ptr(),
 				InternalNextHopIP: &testTunnel1InternalNextHopIP,
 				Name:              vpn.VPNTUNNELSNAME_TUNNEL1.Ptr(),
 				PublicIP:          &testTunnel1PublicIP,
 			},
 			{
-				InstanceState:     vpn.GATEWAYSTATUS_READY.Ptr(),
 				InternalNextHopIP: &testTunnel2InternalNextHopIP,
 				Name:              vpn.VPNTUNNELSNAME_TUNNEL2.Ptr(),
 				PublicIP:          &testTunnel2PublicIP,
@@ -54,22 +49,18 @@ func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatus
 
 func fixtureModel(mods ...func(m *Model)) *Model {
 	resp := &Model{
-		ProjectId:     types.StringValue(testProjectId),
-		Region:        types.StringValue(testRegion),
-		Id:            types.StringValue(testId),
-		GatewayId:     types.StringValue(testGatewayId),
-		DisplayName:   types.StringValue(testDisplayName),
-		GatewayStatus: types.StringValue(string(vpn.GATEWAYSTATUS_READY)),
-		ErrorMessage:  types.StringValue(testErrorMessage),
+		ProjectId:   types.StringValue(testProjectId),
+		Region:      types.StringValue(testRegion),
+		Id:          types.StringValue(testId),
+		GatewayId:   types.StringValue(testGatewayId),
+		DisplayName: types.StringValue(testDisplayName),
 		Tunnels: types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{
 			types.ObjectValueMust(tunnelsType, map[string]attr.Value{
-				"instance_state":       types.StringValue(string(vpn.GATEWAYSTATUS_READY)),
 				"internal_next_hop_ip": types.StringValue(testTunnel1InternalNextHopIP),
 				"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL1)),
 				"public_ip":            types.StringValue(testTunnel1PublicIP),
 			}),
 			types.ObjectValueMust(tunnelsType, map[string]attr.Value{
-				"instance_state":       types.StringValue(string(vpn.GATEWAYSTATUS_READY)),
 				"internal_next_hop_ip": types.StringValue(testTunnel2InternalNextHopIP),
 				"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL2)),
 				"public_ip":            types.StringValue(testTunnel2PublicIP),
