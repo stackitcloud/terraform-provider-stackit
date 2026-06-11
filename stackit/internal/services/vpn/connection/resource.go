@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -23,6 +24,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
+
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -64,6 +67,7 @@ type BGPTunnelConfigModel struct {
 }
 
 type TunnelModel struct {
+	PreSharedKey          types.String          `tfsdk:"pre_shared_key"`
 	PreSharedKeyWo        types.String          `tfsdk:"pre_shared_key_wo"`
 	PreSharedKeyWoVersion types.Int64           `tfsdk:"pre_shared_key_wo_version"`
 	RemoteAddress         types.String          `tfsdk:"remote_address"`
@@ -90,11 +94,11 @@ type Model struct {
 }
 
 var (
-	dhGroupValues             = []string{"modp1024", "modp2048", "ecp256", "ecp384", "modp2048s256"}
-	encryptionAlgorithmValues = []string{"aes256", "aes128gcm16", "aes256gcm16"}
-	integrityAlgorithmValues  = []string{"sha1", "sha2_256", "sha2_384"}
-	startActionValues         = []string{"none", "start"}
-	dpdActionValues           = []string{"clear", "restart"}
+	dhGroupValues             = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseDhGroupsInnerEnumValues)
+	encryptionAlgorithmValues = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseEncryptionAlgorithmsInnerEnumValues)
+	integrityAlgorithmValues  = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseIntegrityAlgorithmsInnerEnumValues)
+	startActionValues         = sdkUtils.EnumSliceToStringSlice(vpn.AllowedTunnelConfigurationPhase2AllOfStartActionEnumValues)
+	dpdActionValues           = sdkUtils.EnumSliceToStringSlice(vpn.AllowedTunnelConfigurationPhase2AllOfDpdActionEnumValues)
 )
 
 var schemaDescriptions = map[string]string{
@@ -114,6 +118,8 @@ var schemaDescriptions = map[string]string{
 }
 
 var tunnelSchemaDescriptions = map[string]string{
+	"tunnel":                       "Configuration for the IPsec tunnel.",
+	"pre_shared_key":               "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.",
 	"pre_shared_key_wo":            "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.",
 	"pre_shared_key_wo_version":    "User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.",
 	"remote_address":               "Remote IPv4 address for the tunnel endpoint.",
@@ -162,8 +168,29 @@ func (r *vpnConnectionResource) Metadata(_ context.Context, req resource.Metadat
 
 func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	tunnelSchema := schema.SingleNestedAttribute{
-		Required: true,
+		Description:         tunnelSchemaDescriptions["tunnel"],
+		MarkdownDescription: fmt.Sprintf("%s \n\n-> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", tunnelSchemaDescriptions["tunnel"]),
+		Required:            true,
+		Validators: []validator.Object{
+			objectvalidator.ExactlyOneOf(
+				path.MatchRelative().AtName("pre_shared_key"),
+				path.MatchRelative().AtName("pre_shared_key_wo"),
+			),
+		},
 		Attributes: map[string]schema.Attribute{
+			"pre_shared_key": schema.StringAttribute{
+				Description: tunnelSchemaDescriptions["pre_shared_key"],
+				Required:    true,
+				Sensitive:   true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(20),
+					stringvalidator.ConflictsWith(
+						path.MatchRelative().AtParent().AtName("pre_shared_key_wo"),
+						path.MatchRelative().AtParent().AtName("pre_shared_key_wo_version"),
+					),
+					stringvalidator.PreferWriteOnlyAttribute(path.MatchRelative().AtParent().AtName("key_payload_base64_wo")),
+				},
+			},
 			"pre_shared_key_wo": schema.StringAttribute{
 				Description: tunnelSchemaDescriptions["pre_shared_key_wo"],
 				Required:    true,
@@ -171,11 +198,16 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				WriteOnly:   true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(20),
+					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
 				},
 			},
 			"pre_shared_key_wo_version": schema.Int64Attribute{
 				Description: tunnelSchemaDescriptions["pre_shared_key_wo_version"],
 				Optional:    true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo")),
+					int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
+				},
 			},
 			"remote_address": schema.StringAttribute{
 				Description: tunnelSchemaDescriptions["remote_address"],
@@ -488,7 +520,9 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	model.Tunnel1.PreSharedKey = configModel.Tunnel1.PreSharedKey
 	model.Tunnel1.PreSharedKeyWo = configModel.Tunnel1.PreSharedKeyWo
+	model.Tunnel2.PreSharedKey = configModel.Tunnel2.PreSharedKey
 	model.Tunnel2.PreSharedKeyWo = configModel.Tunnel2.PreSharedKeyWo
 
 	ctx = core.InitProviderContext(ctx)
@@ -571,8 +605,8 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 
 	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -619,17 +653,14 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// tunnel1 PSK rotation
-	if !model.Tunnel1.PreSharedKeyWoVersion.IsNull() {
+	if !tfutils.IsUndefined(model.Tunnel1.PreSharedKeyWoVersion) {
 		pv := model.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
 		sv := stateModel.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
 		if pv < sv {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("tunnel1").AtName("pre_shared_key_wo_version"),
 				"Version must not decrease",
-				fmt.Sprintf(
-					"`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).",
-					pv, sv,
-				),
+				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", pv, sv),
 			)
 			return
 		}
@@ -640,21 +671,19 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// tunnel2 PSK rotation
-	if !model.Tunnel2.PreSharedKeyWoVersion.IsNull() {
+	if !tfutils.IsUndefined(model.Tunnel2.PreSharedKeyWoVersion) {
 		pv := model.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
 		sv := stateModel.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
 		if pv < sv {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("tunnel2").AtName("pre_shared_key_wo_version"),
 				"Version must not decrease",
-				fmt.Sprintf(
-					"`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).",
-					pv, sv,
-				),
+				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", pv, sv),
 			)
 			return
 		}
 		if pv > sv {
+			// Secret must be read from Config, not Plan — write-only values are always null in plan.
 			model.Tunnel2.PreSharedKeyWo = configModel.Tunnel2.PreSharedKeyWo
 		}
 	}
@@ -738,26 +767,15 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	tflog.Info(ctx, "VPN connection deleted")
 }
 
-func toCreatePayload(_ context.Context, model *Model) (*vpn.CreateGatewayConnectionPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayConnectionPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	fields, err := toConnectionFields(model)
+	fields, err := toConnectionFields(ctx, model)
 	if err != nil {
 		return nil, err
 	}
-
-	// The spec's Connection schema `#/components/schemas/Connection` (used for create) has no labels field,
-	// unlike ConnectionResponse which does. The API does accept labels on create despite the omission, but because
-	// CreateGatewayConnectionPayload is generated from Connection, there is no Labels field on the
-	// struct. Once the spec is corrected and the SDK regenerated, uncomment the block below.
-
-	// nolint:gocritic // commented-out code (blocked by spec/SDK gap — see comment above)
-	// labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	return &vpn.CreateGatewayConnectionPayload{
 		DisplayName:   fields.displayName,
@@ -767,30 +785,19 @@ func toCreatePayload(_ context.Context, model *Model) (*vpn.CreateGatewayConnect
 		RemoteSubnets: fields.remoteSubnets,
 		LocalSubnets:  fields.localSubnets,
 		StaticRoutes:  fields.staticRoutes,
-		// Labels: &labels, // blocked by spec/SDK gap — see comment above
+		Labels:        &fields.labels,
 	}, nil
 }
 
-func toUpdatePayload(_ context.Context, model *Model) (*vpn.UpdateGatewayConnectionPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayConnectionPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	fields, err := toConnectionFields(model)
+	fields, err := toConnectionFields(ctx, model)
 	if err != nil {
 		return nil, err
 	}
-
-	// The spec's Connection schema `#/components/schemas/Connection` (used for update) has no labels field,
-	// unlike ConnectionResponse which does. The API does accept labels on update despite the omission, but because
-	// UpdateGatewayConnectionPayload is generated from Connection, there is no Labels field on the
-	// struct. Once the spec is corrected and the SDK regenerated, uncomment the block below.
-
-	// nolint:gocritic // commented-out code (blocked by spec/SDK gap — see comment above)
-	// labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	return &vpn.UpdateGatewayConnectionPayload{
 		DisplayName:   fields.displayName,
@@ -800,7 +807,7 @@ func toUpdatePayload(_ context.Context, model *Model) (*vpn.UpdateGatewayConnect
 		RemoteSubnets: fields.remoteSubnets,
 		LocalSubnets:  fields.localSubnets,
 		StaticRoutes:  fields.staticRoutes,
-		// Labels: &labels, // blocked by spec/SDK gap — see comment above
+		Labels:        &fields.labels,
 	}, nil
 }
 
@@ -812,9 +819,10 @@ type connectionFields struct {
 	remoteSubnets []string
 	localSubnets  []string
 	staticRoutes  []string
+	labels        map[string]string
 }
 
-func toConnectionFields(model *Model) (*connectionFields, error) {
+func toConnectionFields(ctx context.Context, model *Model) (*connectionFields, error) {
 	tunnel1, err := toTunnelConfiguration(model.Tunnel1)
 	if err != nil {
 		return nil, fmt.Errorf("converting tunnel1: %w", err)
@@ -831,12 +839,12 @@ func toConnectionFields(model *Model) (*connectionFields, error) {
 		tunnel2:     *tunnel2,
 	}
 
-	if !model.Enabled.IsNull() && !model.Enabled.IsUnknown() {
+	if !tfutils.IsUndefined(model.Enabled) {
 		enabled := model.Enabled.ValueBool()
 		fields.enabled = &enabled
 	}
 
-	if !model.RemoteSubnet.IsNull() && !model.RemoteSubnet.IsUnknown() {
+	if !tfutils.IsUndefined(model.RemoteSubnet) {
 		remoteSubnets, err := tfutils.ListValueToStringSlice(model.RemoteSubnet)
 		if err != nil {
 			return nil, fmt.Errorf("converting remote_subnet: %w", err)
@@ -844,7 +852,7 @@ func toConnectionFields(model *Model) (*connectionFields, error) {
 		fields.remoteSubnets = remoteSubnets
 	}
 
-	if !model.LocalSubnet.IsNull() && !model.LocalSubnet.IsUnknown() {
+	if !tfutils.IsUndefined(model.LocalSubnet) {
 		localSubnets, err := tfutils.ListValueToStringSlice(model.LocalSubnet)
 		if err != nil {
 			return nil, fmt.Errorf("converting local_subnet: %w", err)
@@ -852,12 +860,17 @@ func toConnectionFields(model *Model) (*connectionFields, error) {
 		fields.localSubnets = localSubnets
 	}
 
-	if !model.StaticRoutes.IsNull() {
+	if !tfutils.IsUndefined(model.StaticRoutes) {
 		staticRoutes, err := tfutils.ListValueToStringSlice(model.StaticRoutes)
 		if err != nil {
 			return nil, fmt.Errorf("converting static_routes: %w", err)
 		}
 		fields.staticRoutes = staticRoutes
+	}
+
+	fields.labels, err = tfutils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
 
 	return fields, nil
@@ -871,14 +884,17 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 	config := &vpn.TunnelConfiguration{
 		RemoteAddress: tunnel.RemoteAddress.ValueString(),
 	}
-	if !tunnel.PreSharedKeyWo.IsNull() {
-		preSharedKey := tunnel.PreSharedKeyWo.ValueString()
-		config.PreSharedKey = &preSharedKey
+
+	if !tfutils.IsUndefined(tunnel.PreSharedKeyWo) {
+		config.PreSharedKey = tunnel.PreSharedKeyWo.ValueStringPointer()
+	} else if !tfutils.IsUndefined(tunnel.PreSharedKey) {
+		config.PreSharedKey = tunnel.PreSharedKey.ValueStringPointer()
 	}
 
 	if tunnel.Phase1 != nil {
 		phase1 := vpn.TunnelConfigurationPhase1{}
-		if !tunnel.Phase1.DhGroups.IsNull() {
+
+		if !tfutils.IsUndefined(tunnel.Phase1.DhGroups) {
 			dhGroups, err := tfutils.ListValueToStringSlice(tunnel.Phase1.DhGroups)
 			if err != nil {
 				return nil, fmt.Errorf("converting phase1 dh_groups: %w", err)
@@ -889,6 +905,7 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 			}
 			phase1.DhGroups = dhGroupsInner
 		}
+
 		encAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase1.EncryptionAlgorithms)
 		if err != nil {
 			return nil, fmt.Errorf("converting phase1 encryption_algorithms: %w", err)
@@ -898,6 +915,7 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
 		}
 		phase1.EncryptionAlgorithms = encAlgsInner
+
 		intAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase1.IntegrityAlgorithms)
 		if err != nil {
 			return nil, fmt.Errorf("converting phase1 integrity_algorithms: %w", err)
@@ -907,16 +925,18 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
 		}
 		phase1.IntegrityAlgorithms = intAlgsInner
-		if !tunnel.Phase1.RekeyTime.IsNull() && !tunnel.Phase1.RekeyTime.IsUnknown() {
+
+		if !tfutils.IsUndefined(tunnel.Phase1.RekeyTime) {
 			rekeyTime := tunnel.Phase1.RekeyTime.ValueInt32()
 			phase1.RekeyTime = &rekeyTime
 		}
+
 		config.Phase1 = phase1
 	}
 
 	if tunnel.Phase2 != nil {
 		phase2 := vpn.TunnelConfigurationPhase2{}
-		if !tunnel.Phase2.DhGroups.IsNull() {
+		if !tfutils.IsUndefined(tunnel.Phase2.DhGroups) {
 			dhGroups, err := tfutils.ListValueToStringSlice(tunnel.Phase2.DhGroups)
 			if err != nil {
 				return nil, fmt.Errorf("converting phase2 dh_groups: %w", err)
@@ -945,15 +965,15 @@ func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error
 			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
 		}
 		phase2.IntegrityAlgorithms = intAlgsInner
-		if !tunnel.Phase2.RekeyTime.IsNull() && !tunnel.Phase2.RekeyTime.IsUnknown() {
+		if !tfutils.IsUndefined(tunnel.Phase2.RekeyTime) {
 			rekeyTime := tunnel.Phase2.RekeyTime.ValueInt32()
 			phase2.RekeyTime = &rekeyTime
 		}
-		if !tunnel.Phase2.StartAction.IsNull() && !tunnel.Phase2.StartAction.IsUnknown() {
+		if !tfutils.IsUndefined(tunnel.Phase2.StartAction) {
 			startAction := tunnel.Phase2.StartAction.ValueString()
 			phase2.StartAction = vpn.TunnelConfigurationPhase2AllOfStartAction(startAction).Ptr()
 		}
-		if !tunnel.Phase2.DpdAction.IsNull() && !tunnel.Phase2.DpdAction.IsUnknown() {
+		if !tfutils.IsUndefined(tunnel.Phase2.DpdAction) {
 			dpdAction := tunnel.Phase2.DpdAction.ValueString()
 			phase2.DpdAction = vpn.TunnelConfigurationPhase2AllOfDpdAction(dpdAction).Ptr()
 		}

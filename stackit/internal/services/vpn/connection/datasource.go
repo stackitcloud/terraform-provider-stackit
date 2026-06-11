@@ -94,13 +94,6 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	tunnelSchema := schema.SingleNestedAttribute{
 		Computed: true,
 		Attributes: map[string]schema.Attribute{
-			"pre_shared_key_wo": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
-			},
-			"pre_shared_key_wo_version": schema.Int64Attribute{
-				Computed: true,
-			},
 			"remote_address": schema.StringAttribute{
 				Description: datasourceTunnelSchemaDescriptions["remote_address"],
 				Computed:    true,
