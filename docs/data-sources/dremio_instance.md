@@ -34,7 +34,6 @@ data "stackit_dremio_instance" "example" {
 ### Optional
 
 - `description` (String) The description is a longer text chosen by the user to provide more context for the resource.
-- `error_message` (String) A message describing an actionable error the user can resolve. This field is empty if no such error exists.
 - `region` (String) The STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
@@ -43,7 +42,6 @@ data "stackit_dremio_instance" "example" {
 - `display_name` (String) The display name is a short name chosen by the user to identify the resource.
 - `endpoints` (Attributes) The available endpoints of the Dremio instance. (see [below for nested schema](#nestedatt--endpoints))
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
-- `state` (String) The current state of the resource.
 
 <a id="nestedatt--authentication"></a>
 ### Nested Schema for `authentication`

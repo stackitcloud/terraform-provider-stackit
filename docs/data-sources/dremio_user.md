@@ -36,7 +36,6 @@ data "stackit_dremio_user" "example" {
 ### Optional
 
 - `description` (String) The description of the user.
-- `error_message` (String) A message describing an actionable error the user can resolve. This field is empty if no such error exists.
 - `region` (String) The STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
@@ -46,4 +45,3 @@ data "stackit_dremio_user" "example" {
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`user_id`".
 - `last_name` (String) The last name of the user.
 - `name` (String) The username of the user.
-- `state` (String) The current state of the resource.
