@@ -937,7 +937,7 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 			continue
 		}
 
-		connectionsResp, err := client.DefaultAPI.ListGatewayConnections(ctx, testutil.ProjectId, vpn.Region(testutil.Region), *gateway.Id).Execute()
+		connectionsResp, err := client.DefaultAPI.ListGatewayConnections(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
 		if err != nil {
 			return fmt.Errorf("listing connections for gateway %s during CheckDestroy: %w", *gateway.Id, err)
 		}
@@ -945,7 +945,7 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 			if conn.Id == nil {
 				continue
 			}
-			err := client.DefaultAPI.DeleteGatewayConnection(ctx, testutil.ProjectId, vpn.Region(testutil.Region), *gateway.Id, *conn.Id).Execute()
+			err := client.DefaultAPI.DeleteGatewayConnection(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *conn.Id).Execute()
 			if err != nil {
 				var oapiErr *oapierror.GenericOpenAPIError
 				if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -955,7 +955,7 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 			}
 		}
 
-		err = client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, vpn.Region(testutil.Region), *gateway.Id).Execute()
+		err = client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
