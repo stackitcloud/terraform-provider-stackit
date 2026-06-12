@@ -18,7 +18,21 @@ description: |-
 {{- if and (gt (len $parts) 1) (eq $lastItem "") -}}
     {{- $isRoleBinding = true -}}
 {{- end -}}
-{{/* End of check */}}
+{{/* End of check - role binding */}}
+{{- /* Check whether this is a iam policy resource. The check looks cursed because there's no hasSuffix function available here */}}
+{{- $isIAMPolicy := false -}}
+
+{{- $parts := split .Name "_iam_policy_v1" -}}
+{{- $lastItem := "" -}}
+
+{{- range $parts -}}
+    {{- $lastItem = . -}}
+{{- end -}}
+
+{{- if and (gt (len $parts) 1) (eq $lastItem "") -}}
+    {{- $isIAMPolicy = true -}}
+{{- end -}}
+{{/* End of check - iam policy */}}
 # {{.Name}} ({{.Type}})
 
 {{ .Description | trimspace }}
@@ -30,6 +44,24 @@ resource "{{.Name}}" "role_binding" {
   resource_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   role        = "owner"
   subject     = "john.doe@example.com"
+}
+```
+{{- else if $isIAMPolicy }}
+## Example Usage
+
+```terraform
+resource "{{.Name}}" "iam_policy" {
+  resource_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  role_bindings = [
+    {
+      role        = "owner"
+      subject     = "john.doe@example.com"
+    }
+    {
+      role        = "editor"
+      subject     = "jane.doe@example.com"
+    }
+  ]
 }
 ```
 {{- else }}
@@ -54,6 +86,18 @@ resource "{{.Name}}" "role_binding" {
 import {
   to = {{.Name}}.import_example
   id = "${var.region},${var.resource_id},${var.role},${var.subject}"
+}
+```
+
+{{- else if $isIAMPolicy }}
+
+## Import
+
+```terraform
+# Only use the import statement if you want to import an existing role binding
+import {
+  to = {{.Name}}.import_example
+  id = "{{ if gt (len (split .SchemaMarkdown "`region`")) 1 }}${var.region},{{ end }}${var.resource_id}"
 }
 ```
 

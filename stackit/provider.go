@@ -69,6 +69,7 @@ import (
 	iaasAlphaVpcRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcregion"
 	iaasAlphaVpcRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcroutingtable"
 	iaasAlphaVpcStaticRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcroutingtable/staticroute"
+	iamPoliciesV1 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/policy/v1"
 	iamRoleBindingsV1 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1"
 	intakeRunner "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/runner"
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
@@ -813,6 +814,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
+	dataSources = append(dataSources, iamPoliciesV1.NewIamPolicyDatasources()...)
 
 	return dataSources
 }
@@ -929,6 +931,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
 	resources = append(resources, iamRoleBindingsV1.NewRoleBindingResources()...)
+	resources = append(resources, iamPoliciesV1.NewIamPolicyResources()...)
 
 	return resources
 }

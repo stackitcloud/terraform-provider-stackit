@@ -18,7 +18,21 @@ description: |-
 {{- if and (gt (len $parts) 1) (eq $lastItem "") -}}
     {{- $isRoleBinding = true -}}
 {{- end -}}
-{{/* End of check */}}
+{{/* End of check - role binding */}}
+{{- /* Check whether this is a iam policy resource. The check looks cursed because there's no hasSuffix function available here */}}
+{{- $isIAMPolicy := false -}}
+
+{{- $parts := split .Name "_iam_policy_v1" -}}
+{{- $lastItem := "" -}}
+
+{{- range $parts -}}
+    {{- $lastItem = . -}}
+{{- end -}}
+
+{{- if and (gt (len $parts) 1) (eq $lastItem "") -}}
+    {{- $isIAMPolicy = true -}}
+{{- end -}}
+{{/* End of check - iam policy */}}
 # {{.Name}} ({{.Type}})
 
 {{ .Description | trimspace }}
@@ -27,6 +41,14 @@ description: |-
 
 ```terraform
 data "{{.Name}}" "role_binding" {
+  resource_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+{{- else if $isIAMPolicy }}
+## Example Usage
+
+```terraform
+data "{{.Name}}" "iam_policy" {
   resource_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
