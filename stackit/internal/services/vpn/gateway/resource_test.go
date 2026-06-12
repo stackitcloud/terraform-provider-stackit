@@ -43,7 +43,6 @@ func TestMapFields(t *testing.T) {
 						Tunnel1: "eu01-1",
 						Tunnel2: "eu01-2",
 					},
-					State: new(vpn.GatewayStatus("READY")),
 				},
 			},
 			expected: Model{
@@ -60,7 +59,6 @@ func TestMapFields(t *testing.T) {
 				},
 				Bgp:    nil,
 				Labels: types.MapNull(types.StringType),
-				State:  types.StringValue("READY"),
 			},
 			isValid: true,
 		},
@@ -87,7 +85,6 @@ func TestMapFields(t *testing.T) {
 						"env":  "prod",
 						"team": "network",
 					},
-					State: new(vpn.GatewayStatus("READY")),
 				},
 			},
 			expected: Model{
@@ -113,7 +110,6 @@ func TestMapFields(t *testing.T) {
 					"env":  types.StringValue("prod"),
 					"team": types.StringValue("network"),
 				}),
-				State: types.StringValue("READY"),
 			},
 			isValid: true,
 		},
@@ -141,7 +137,6 @@ func TestMapFields(t *testing.T) {
 						OverrideAdvertisedRoutes: []string{},
 					},
 					Labels: nil,
-					State:  new(vpn.GatewayStatus("READY")),
 				},
 			},
 			expected: Model{
@@ -161,7 +156,6 @@ func TestMapFields(t *testing.T) {
 					OverrideAdvertisedRoutes: types.ListValueMust(types.StringType, []attr.Value{}),
 				},
 				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{}),
-				State:  types.StringValue("READY"),
 			},
 			isValid: true,
 		},

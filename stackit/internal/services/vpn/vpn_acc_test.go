@@ -97,7 +97,6 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(gatewayMinVars["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMinVars["az_tunnel2"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 				),
 			},
 			// Data source
@@ -123,7 +122,6 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMinVars["az_tunnel2"])),
 
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "state"),
 
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "region", "stackit_vpn_gateway.gateway", "region"),
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
@@ -142,7 +140,6 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(gatewayMinVarsUpdated["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMinVarsUpdated["az_tunnel2"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 				),
 			},
 			// Import
@@ -194,7 +191,6 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(gatewayMaxVars["advertised_route_2"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 				),
 			},
 			// Data source
@@ -225,7 +221,6 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
 
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "state"),
 
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "region", "stackit_vpn_gateway.gateway", "region"),
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
@@ -250,7 +245,6 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.2", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["advertised_route_3"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 				),
 			},
 			// Update step 2 - test removal of optional fields
@@ -269,7 +263,6 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "0"),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels.#", "0"),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 				),
 			},
 			// Import

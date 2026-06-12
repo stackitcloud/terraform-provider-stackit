@@ -41,7 +41,6 @@ var (
 	_ resource.ResourceWithModifyPlan     = &gatewayResource{}
 	_ resource.ResourceWithValidateConfig = &gatewayResource{}
 
-	gatewayStates      = sdkUtils.EnumSliceToStringSlice(vpn.AllowedGatewayStatusEnumValues)
 	routingTypeOptions = sdkUtils.EnumSliceToStringSlice(vpn.AllowedRoutingTypeEnumValues)
 )
 
@@ -66,7 +65,6 @@ type Model struct {
 	AvailabilityZones *AvailabilityZonesModel `tfsdk:"availability_zones"`
 	Bgp               *BGPGatewayConfigModel  `tfsdk:"bgp"`
 	Labels            types.Map               `tfsdk:"labels"`
-	State             types.String            `tfsdk:"state"`
 }
 
 var schemaDescriptions = map[string]string{
@@ -84,7 +82,6 @@ var schemaDescriptions = map[string]string{
 	"bgp_local_asn":                  "Local ASN for BGP (private ASN range, 64512-4294967294).",
 	"bgp_override_advertised_routes": "List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.",
 	"labels":                         "Map of custom labels (key-value string pairs).",
-	"state":                          fmt.Sprintf("The current lifecycle state of the gateway. %s", tfutils.FormatPossibleValues(gatewayStates...)),
 }
 
 type gatewayResource struct {
@@ -223,10 +220,6 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				ElementType: types.StringType,
 				Validators:  validate.LabelValidators(),
-			},
-			"state": schema.StringAttribute{
-				Description: schemaDescriptions["state"],
-				Computed:    true,
 			},
 		},
 	}
@@ -629,10 +622,6 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		return fmt.Errorf("mapping labels: %w", err)
 	}
 	model.Labels = labels
-
-	if gateway.State != nil {
-		model.State = types.StringValue(string(*gateway.State))
-	}
 
 	return nil
 }
