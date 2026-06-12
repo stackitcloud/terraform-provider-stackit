@@ -13,7 +13,6 @@ import (
 
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	serviceenablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
-	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -88,7 +87,7 @@ resource "stackit_ske_cluster" "cluster" {
 												ExpirationDate: nil,
 												Cri: []ske.CRI{
 													{
-														Name: new(string(legacySke.CRINAME_CONTAINERD)),
+														Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 													},
 												},
 											},
@@ -203,7 +202,7 @@ resource "stackit_ske_cluster" "cluster" {
 				AvailabilityZones:     []string{"eu01-1"},
 				Name:                  nodeName,
 				Cri: new(ske.CRI{
-					Name: new(string(legacySke.CRINAME_CONTAINERD)),
+					Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 				}),
 				Machine: ske.Machine{
 					Image: ske.Image{
@@ -283,7 +282,7 @@ resource "stackit_ske_cluster" "cluster" {
 												ExpirationDate: nil,
 												Cri: []ske.CRI{
 													{
-														Name: new(string(legacySke.CRINAME_CONTAINERD)),
+														Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 													},
 												},
 											},

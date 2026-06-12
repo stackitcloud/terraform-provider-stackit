@@ -40,7 +40,6 @@ import (
 
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
-	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
 
@@ -1017,12 +1016,12 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	// Call tflog.Info here, to log the information of the updated context
 	tflog.Info(ctx, "Triggered create/update cluster")
 
-	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
+	waitResp, err := skeWait.CreateClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == string(legacySke.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND) {
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_SKE_OBSERVABILITY_INSTANCE_NOT_FOUND {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid observability instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
@@ -1057,7 +1056,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		ts := []ske.Taint{}
 		for _, v := range taintsModel {
 			t := ske.Taint{
-				Effect: v.Effect.ValueString(),
+				Effect: ske.TaintEffect(v.Effect.ValueString()),
 				Key:    v.Key.ValueString(),
 				Value:  conversion.StringValueToPointer(v.Value),
 			}
@@ -1095,7 +1094,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		}
 
 		cn := &ske.CRI{
-			Name: conversion.StringValueToPointer(nodePool.CRI),
+			Name: (*ske.NameOfTheCriLibrary)(conversion.StringValueToPointer(nodePool.CRI)),
 		}
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
@@ -1593,7 +1592,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 			"volume_type":             types.StringPointerValue(nodePoolResp.Volume.Type),
 			"volume_size":             types.Int32Value(nodePoolResp.Volume.Size),
 			"labels":                  types.MapNull(types.StringType),
-			"cri":                     types.StringPointerValue(nodePoolResp.Cri.Name),
+			"cri":                     types.StringPointerValue((*string)(nodePoolResp.Cri.Name)),
 			"availability_zones":      types.ListNull(types.StringType),
 			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
 		}

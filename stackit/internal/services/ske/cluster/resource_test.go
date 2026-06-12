@@ -110,7 +110,7 @@ func TestMapFields(t *testing.T) {
 						AllowSystemComponents: new(true),
 						AvailabilityZones:     []string{"z1", "z2"},
 						Cri: &ske.CRI{
-							Name: new("containerd"),
+							Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: ske.Machine{
@@ -570,7 +570,7 @@ func TestMapFields(t *testing.T) {
 					{
 						AvailabilityZones: []string{"z1", "z2"},
 						Cri: &ske.CRI{
-							Name: new("containerd"),
+							Name: new(ske.NAMEOFTHECRILIBRARY_CONTAINERD),
 						},
 						Labels: &map[string]string{"k": "v"},
 						Machine: ske.Machine{
