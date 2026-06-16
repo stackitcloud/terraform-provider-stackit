@@ -83,7 +83,7 @@ If you want to onboard resources of a STACKIT service `foo` that was not yet in 
    ```go
    setStringField(providerConfig.FooCustomEndpoint, func(v string) { providerData.FooCustomEndpoint = v })
    ```
-4. Create a utils package, for service `foo` it would be `stackit/internal/foo/utils`. Add a `ConfigureClient()` func and use it in your resource and datasource implementations.
+4. Create a utils package, for service `foo` it would be `stackit/internal/services/foo/utils`. Add a `ConfigureClient()` func and use it in your resource and datasource implementations.
 
    https://github.com/stackitcloud/terraform-provider-stackit/blob/main/.github/docs/contribution-guide/utils/util.go
 
