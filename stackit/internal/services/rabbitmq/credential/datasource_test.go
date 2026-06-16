@@ -1,0 +1,279 @@
+package rabbitmq
+
+import (
+	"context"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+)
+
+func TestMapDataSourceFields(t *testing.T) {
+	tests := []struct {
+		description string
+		state       DataSourceModel
+		input       *rabbitmq.CredentialsResponse
+		expected    DataSourceModel
+		isValid     bool
+	}{
+		{
+			"default_values",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
+			&rabbitmq.CredentialsResponse{
+				Id:  "cid",
+				Raw: &rabbitmq.RawCredentials{},
+			},
+			DataSourceModel{
+				Id:           types.StringValue("pid,iid,cid"),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Host:         types.StringValue(""),
+				Hosts:        types.ListNull(types.StringType),
+				HttpAPIURI:   types.StringNull(),
+				HttpAPIURIs:  types.ListNull(types.StringType),
+				Management:   types.StringNull(),
+				Password:     types.StringValue(""),
+				Port:         types.Int32Null(),
+				Uri:          types.StringNull(),
+				Uris:         types.ListNull(types.StringType),
+				Username:     types.StringValue(""),
+			},
+			true,
+		},
+		{
+			"simple_values",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
+			&rabbitmq.CredentialsResponse{
+				Id: "cid",
+				Raw: &rabbitmq.RawCredentials{
+					Credentials: rabbitmq.Credentials{
+						Host: "host",
+						Hosts: []string{
+							"host_1",
+							"",
+						},
+						HttpApiUri: new("http"),
+						HttpApiUris: []string{
+							"http_api_uri_1",
+							"",
+						},
+						Management: new("management"),
+						Password:   "password",
+						Port:       new(int32(1234)),
+						Uri:        new("uri"),
+						Uris: []string{
+							"uri_1",
+							"",
+						},
+						Username: "username",
+					},
+				},
+			},
+			DataSourceModel{
+				Id:           types.StringValue("pid,iid,cid"),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Host:         types.StringValue("host"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_1"),
+					types.StringValue(""),
+				}),
+				HttpAPIURI: types.StringValue("http"),
+				HttpAPIURIs: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("http_api_uri_1"),
+					types.StringValue(""),
+				}),
+				Management: types.StringValue("management"),
+				Password:   types.StringValue("password"),
+				Port:       types.Int32Value(1234),
+				Uri:        types.StringValue("uri"),
+				Uris: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("uri_1"),
+					types.StringValue(""),
+				}),
+				Username: types.StringValue("username"),
+			},
+			true,
+		},
+		{
+			"hosts_uris_unordered",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+				Uris: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("uri_2"),
+					types.StringValue(""),
+					types.StringValue("uri_1"),
+				}),
+				HttpAPIURIs: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("http_api_uri_2"),
+					types.StringValue(""),
+					types.StringValue("http_api_uri_1"),
+				}),
+			},
+			&rabbitmq.CredentialsResponse{
+				Id: "cid",
+				Raw: &rabbitmq.RawCredentials{
+					Credentials: rabbitmq.Credentials{
+						Host: "host",
+						Hosts: []string{
+							"",
+							"host_1",
+							"host_2",
+						},
+						HttpApiUri: new("http"),
+						HttpApiUris: []string{
+							"",
+							"http_api_uri_1",
+							"http_api_uri_2",
+						},
+						Management: new("management"),
+						Password:   "password",
+						Port:       new(int32(1234)),
+						Uri:        new("uri"),
+						Uris: []string{
+							"",
+							"uri_1",
+							"uri_2",
+						},
+						Username: "username",
+					},
+				},
+			},
+			DataSourceModel{
+				Id:           types.StringValue("pid,iid,cid"),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Host:         types.StringValue("host"),
+				Hosts: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("host_2"),
+					types.StringValue(""),
+					types.StringValue("host_1"),
+				}),
+				HttpAPIURI: types.StringValue("http"),
+				HttpAPIURIs: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("http_api_uri_2"),
+					types.StringValue(""),
+					types.StringValue("http_api_uri_1"),
+				}),
+				Management: types.StringValue("management"),
+				Password:   types.StringValue("password"),
+				Port:       types.Int32Value(1234),
+				Uri:        types.StringValue("uri"),
+				Uris: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("uri_2"),
+					types.StringValue(""),
+					types.StringValue("uri_1"),
+				}),
+				Username: types.StringValue("username"),
+			},
+			true,
+		},
+		{
+			"null_fields_and_int_conversions",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
+			&rabbitmq.CredentialsResponse{
+				Id: "cid",
+				Raw: &rabbitmq.RawCredentials{
+					Credentials: rabbitmq.Credentials{
+						Host:        "",
+						Hosts:       []string{},
+						HttpApiUri:  nil,
+						HttpApiUris: []string{},
+						Management:  nil,
+						Password:    "",
+						Port:        new(int32(2123456789)),
+						Uri:         nil,
+						Uris:        []string{},
+						Username:    "",
+					},
+				},
+			},
+			DataSourceModel{
+				Id:           types.StringValue("pid,iid,cid"),
+				CredentialId: types.StringValue("cid"),
+				InstanceId:   types.StringValue("iid"),
+				ProjectId:    types.StringValue("pid"),
+				Host:         types.StringValue(""),
+				Hosts:        types.ListValueMust(types.StringType, []attr.Value{}),
+				HttpAPIURI:   types.StringNull(),
+				HttpAPIURIs:  types.ListValueMust(types.StringType, []attr.Value{}),
+				Management:   types.StringNull(),
+				Password:     types.StringValue(""),
+				Port:         types.Int32Value(2123456789),
+				Uri:          types.StringNull(),
+				Uris:         types.ListValueMust(types.StringType, []attr.Value{}),
+				Username:     types.StringValue(""),
+			},
+			true,
+		},
+		{
+			"nil_response",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
+			nil,
+			DataSourceModel{},
+			false,
+		},
+		{
+			"no_resource_id",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
+			&rabbitmq.CredentialsResponse{},
+			DataSourceModel{},
+			false,
+		},
+		{
+			"nil_raw_credential",
+			DataSourceModel{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+			},
+			&rabbitmq.CredentialsResponse{
+				Id: "cid",
+			},
+			DataSourceModel{},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			err := mapDataSourceFields(context.Background(), tt.input, &tt.state)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(tt.state, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
