@@ -86,8 +86,7 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
-	value := s.ValueString()
-	return &value
+	return new(s.ValueString())
 }
 
 // StringValueToPointer converts basetypes.StringValue to a pointer to enum.
@@ -96,8 +95,7 @@ func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
-	value := s.ValueString()
-	return new(T(value))
+	return new(T(s.ValueString()))
 }
 
 // Int32ValueToPointer converts basetypes.Int32Value to a pointer to int32.
