@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -30,8 +29,6 @@ import (
 var (
 	_ datasource.DataSource              = &vpnGatewayStatusDataSource{}
 	_ datasource.DataSourceWithConfigure = &vpnGatewayStatusDataSource{}
-
-	tunnelNames = sdkUtils.EnumSliceToStringSlice(vpn.AllowedVPNTunnelsNameEnumValues)
 )
 
 type vpnGatewayStatusDataSource struct {
@@ -90,7 +87,7 @@ var schemaDescriptions = map[string]string{
 	"display_name":                "A user-friendly name for the VPN gateway.",
 	"tunnels":                     "List of the VPN tunnels in the gateway.",
 	"tunnel_internal_next_hop_ip": "The IPv4 address of the endpoint in the SNA.",
-	"tunnel_name":                 fmt.Sprintf("The name of the VPN tunnel. %s", tfutils.FormatPossibleValues(tunnelNames...)),
+	"tunnel_name":                 fmt.Sprintf("The name of the VPN tunnel. %s", tfutils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(vpn.AllowedVPNTunnelsNameEnumValues)...)),
 	"tunnel_public_ip":            "The public IPv4 address of this endpoint.",
 }
 
@@ -222,24 +219,20 @@ func mapFields(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, mo
 		model.DisplayName = types.StringValue(*gatewayStatus.DisplayName)
 	}
 
-	if err := mapTunnels(ctx, gatewayStatus, model); err != nil {
+	tfTunnels, err := mapTunnels(ctx, gatewayStatus.Tunnels)
+	if err != nil {
 		return fmt.Errorf("map tunnels: %w", err)
+	} else if tfTunnels != nil {
+		model.Tunnels = *tfTunnels
 	}
 
 	return nil
 }
 
-func mapTunnels(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, model *Model) error {
-	if gatewayStatus == nil {
-		return fmt.Errorf("gatewayStatus is nil")
-	}
-	if model == nil {
-		return fmt.Errorf("model is nil")
-	}
-
+func mapTunnels(ctx context.Context, vpnTunnels []vpn.VPNTunnels) (*basetypes.ListValue, error) {
 	tunnels := []attr.Value{}
 
-	for _, tunnelItem := range gatewayStatus.Tunnels {
+	for _, tunnelItem := range vpnTunnels {
 		tunnel := Tunnel{}
 
 		if tunnelItem.InternalNextHopIP != nil {
@@ -254,17 +247,16 @@ func mapTunnels(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, m
 
 		tunnelValue, diags := types.ObjectValueFrom(ctx, tunnelsType, tunnel)
 		if diags.HasError() {
-			return fmt.Errorf("mapping tunnel: %w", core.DiagsToError(diags))
+			return nil, fmt.Errorf("mapping tunnel: %w", core.DiagsToError(diags))
 		}
 
 		tunnels = append(tunnels, tunnelValue)
 	}
 
-	var diags diag.Diagnostics
-	model.Tunnels, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tunnelsType}, tunnels)
+	tfTunnels, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tunnelsType}, tunnels)
 	if diags.HasError() {
-		return fmt.Errorf("mapping tunnels: %w", core.DiagsToError(diags))
+		return nil, fmt.Errorf("mapping tunnels: %w", core.DiagsToError(diags))
 	}
 
-	return nil
+	return &tfTunnels, nil
 }

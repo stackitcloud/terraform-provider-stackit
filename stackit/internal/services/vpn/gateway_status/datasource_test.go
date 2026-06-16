@@ -2,42 +2,47 @@ package gateway_status
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
-var (
-	testProjectId                = uuid.NewString()
-	testGatewayId                = uuid.NewString()
+const (
 	testRegion                   = "eu01"
 	testDisplayName              = "Gateway"
-	testId                       = testProjectId + "," + testRegion + "," + testGatewayId
 	testTunnel1InternalNextHopIP = "123.45.67.89"
 	testTunnel1PublicIP          = "98.76.54.32"
 	testTunnel2InternalNextHopIP = "123.45.67.89"
 	testTunnel2PublicIP          = "98.76.54.32"
 )
 
+var (
+	testProjectId = uuid.NewString()
+	testGatewayId = uuid.NewString()
+	testId        = testProjectId + "," + testRegion + "," + testGatewayId
+)
+
 func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatusResponse {
 	resp := &vpn.GatewayStatusResponse{
-		Id:          &testGatewayId,
+		Id:          new(testGatewayId),
 		Connections: []vpn.ConnectionStatusResponse{},
-		DisplayName: &testDisplayName,
+		DisplayName: new(testDisplayName),
 		Tunnels: []vpn.VPNTunnels{
 			{
-				InternalNextHopIP: &testTunnel1InternalNextHopIP,
+				InternalNextHopIP: new(testTunnel1InternalNextHopIP),
 				Name:              vpn.VPNTUNNELSNAME_TUNNEL1.Ptr(),
-				PublicIP:          &testTunnel1PublicIP,
+				PublicIP:          new(testTunnel1PublicIP),
 			},
 			{
-				InternalNextHopIP: &testTunnel2InternalNextHopIP,
+				InternalNextHopIP: new(testTunnel2InternalNextHopIP),
 				Name:              vpn.VPNTUNNELSNAME_TUNNEL2.Ptr(),
-				PublicIP:          &testTunnel2PublicIP,
+				PublicIP:          new(testTunnel2PublicIP),
 			},
 		},
 	}
@@ -83,60 +88,60 @@ func TestMapDatasourceFields(t *testing.T) {
 		isValid  bool
 	}{
 		{
-			"default_values",
-			"eu01",
-			&Model{
+			name:   "default_values",
+			region: "eu01",
+			state: &Model{
 				ProjectId: types.StringValue(testProjectId),
 			},
-			fixtureInput(),
-			fixtureModel(),
-			true,
+			input:    fixtureInput(),
+			expected: fixtureModel(),
+			isValid:  true,
 		},
 		{
-			"no_input",
-			"eu01",
-			&Model{
-				ProjectId: types.StringValue(testProjectId),
-				GatewayId: types.StringValue(testGatewayId),
-			},
-			nil,
-			nil,
-			false,
-		},
-		{
-			"no_model",
-			"eu01",
-			nil,
-			&vpn.GatewayStatusResponse{},
-			nil,
-			false,
-		},
-		{
-			"no_gateway_id",
-			"eu01",
-			&Model{
-				ProjectId: types.StringValue(testProjectId),
-			},
-			&vpn.GatewayStatusResponse{},
-			nil,
-			false,
-		},
-		{
-			"empty_input",
-			"eu01",
-			&Model{
+			name:   "no_input",
+			region: "eu01",
+			state: &Model{
 				ProjectId: types.StringValue(testProjectId),
 				GatewayId: types.StringValue(testGatewayId),
 			},
-			&vpn.GatewayStatusResponse{},
-			&Model{
+			input:    nil,
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			name:     "no_model",
+			region:   "eu01",
+			state:    nil,
+			input:    &vpn.GatewayStatusResponse{},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			name:   "no_gateway_id",
+			region: "eu01",
+			state: &Model{
+				ProjectId: types.StringValue(testProjectId),
+			},
+			input:    &vpn.GatewayStatusResponse{},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			name:   "empty_input",
+			region: "eu01",
+			state: &Model{
+				ProjectId: types.StringValue(testProjectId),
+				GatewayId: types.StringValue(testGatewayId),
+			},
+			input: &vpn.GatewayStatusResponse{},
+			expected: &Model{
 				Id:        types.StringValue(testId),
 				ProjectId: types.StringValue(testProjectId),
 				GatewayId: types.StringValue(testGatewayId),
 				Region:    types.StringValue(testRegion),
 				Tunnels:   types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{}),
 			},
-			true,
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
@@ -148,6 +153,64 @@ func TestMapDatasourceFields(t *testing.T) {
 			if tt.isValid {
 				if diff := cmp.Diff(tt.state, tt.expected); diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestMapTunnels(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []vpn.VPNTunnels
+		expected *basetypes.ListValue
+		isValid  bool
+	}{
+		{
+			name: "default_values",
+			input: []vpn.VPNTunnels{
+				{
+					InternalNextHopIP: new(testTunnel1InternalNextHopIP),
+					Name:              vpn.VPNTUNNELSNAME_TUNNEL1.Ptr(),
+					PublicIP:          new(testTunnel1PublicIP),
+				},
+				{
+					InternalNextHopIP: new(testTunnel2InternalNextHopIP),
+					Name:              vpn.VPNTUNNELSNAME_TUNNEL2.Ptr(),
+					PublicIP:          new(testTunnel2PublicIP),
+				},
+			},
+			expected: new(types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{
+				types.ObjectValueMust(tunnelsType, map[string]attr.Value{
+					"internal_next_hop_ip": types.StringValue(testTunnel1InternalNextHopIP),
+					"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL1)),
+					"public_ip":            types.StringValue(testTunnel1PublicIP),
+				}),
+				types.ObjectValueMust(tunnelsType, map[string]attr.Value{
+					"internal_next_hop_ip": types.StringValue(testTunnel2InternalNextHopIP),
+					"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL2)),
+					"public_ip":            types.StringValue(testTunnel2PublicIP),
+				}),
+			})),
+			isValid: true,
+		},
+		{
+			name:     "empty",
+			input:    []vpn.VPNTunnels{},
+			expected: new(types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{})),
+			isValid:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			tfTunnels, err := mapTunnels(ctx, tt.input)
+			if (err == nil) != tt.isValid {
+				t.Errorf("unexpected error: %s", err)
+			}
+			if tt.isValid {
+				if !reflect.DeepEqual(tfTunnels, tt.expected) {
+					t.Errorf("ParseProviderData() got = %v, want %v", tfTunnels, tt.expected)
 				}
 			}
 		})

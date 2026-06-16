@@ -30,10 +30,8 @@ data "stackit_vpn_gateway_status" "example" {
 ### Read-Only
 
 - `display_name` (String) A user-friendly name for the VPN gateway.
-- `error_message` (String) A descriptive message provided when the gateway is in an error state.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`".
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
-- `state` (String) The current life cycle state of the gateway. Possible values are: `PENDING`, `READY`, `ERROR`, `DELETING`.
 - `tunnels` (Attributes List) List of the VPN tunnels in the gateway. (see [below for nested schema](#nestedatt--tunnels))
 
 <a id="nestedatt--tunnels"></a>
@@ -41,7 +39,6 @@ data "stackit_vpn_gateway_status" "example" {
 
 Read-Only:
 
-- `instance_state` (String) The current life cycle state of the tunnel. Possible values are: `PENDING`, `READY`, `ERROR`, `DELETING`.
 - `internal_next_hop_ip` (String) The IPv4 address of the endpoint in the SNA.
 - `name` (String) The name of the VPN tunnel. Possible values are: `tunnel1`, `tunnel2`.
 - `public_ip` (String) The public IPv4 address of this endpoint.
