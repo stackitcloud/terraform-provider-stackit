@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	legacyOpensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api/wait"
 
@@ -549,12 +548,12 @@ func testAccCheckOpenSearchDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *opensearch.Instance) bool {
-	if i.LastOperation.Type != string(legacyOpensearch.INSTANCELASTOPERATIONTYPE_DELETE) {
+	if i.LastOperation.Type != opensearch.INSTANCELASTOPERATIONTYPE_DELETE {
 		return false
 	}
 
-	if i.LastOperation.Type == string(legacyOpensearch.INSTANCELASTOPERATIONTYPE_DELETE) {
-		if i.LastOperation.State != string(legacyOpensearch.INSTANCELASTOPERATIONSTATE_SUCCEEDED) {
+	if i.LastOperation.Type == opensearch.INSTANCELASTOPERATIONTYPE_DELETE {
+		if i.LastOperation.State != opensearch.INSTANCELASTOPERATIONSTATE_SUCCEEDED {
 			return false
 		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
 			return false

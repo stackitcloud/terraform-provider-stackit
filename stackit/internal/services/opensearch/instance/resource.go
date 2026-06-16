@@ -762,7 +762,7 @@ func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParamete
 	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
 	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
 	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
-	payloadParams.JavaGarbageCollector = conversion.StringValueToPointer(parameters.JavaGarbageCollector)
+	payloadParams.JavaGarbageCollector = conversion.StringValueToEnumPointer[opensearch.InstanceParametersJavaGarbageCollector](parameters.JavaGarbageCollector)
 	payloadParams.JavaHeapspace = conversion.Int32ValueToPointer(parameters.JavaHeapspace)
 	payloadParams.JavaMaxmetaspace = conversion.Int32ValueToPointer(parameters.JavaMaxmetaspace)
 	payloadParams.MaxDiskThreshold = conversion.Int32ValueToPointer(parameters.MaxDiskThreshold)
@@ -771,7 +771,7 @@ func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParamete
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 
 	var err error
-	payloadParams.Plugins, err = conversion.StringListToSlice(parameters.Plugins)
+	payloadParams.Plugins, err = conversion.StringListToEnumSlice[opensearch.InstanceParametersPluginsInner](parameters.Plugins)
 	if err != nil {
 		return nil, fmt.Errorf("convert plugins: %w", err)
 	}
@@ -786,7 +786,7 @@ func toInstanceParams(parameters *parametersModel) (*opensearch.InstanceParamete
 		return nil, fmt.Errorf("convert tls_ciphers: %w", err)
 	}
 
-	payloadParams.TlsProtocols, err = conversion.StringListToSlice(parameters.TlsProtocols)
+	payloadParams.TlsProtocols, err = conversion.StringListToEnumSlice[opensearch.InstanceParametersTlsProtocolsInner](parameters.TlsProtocols)
 	if err != nil {
 		return nil, fmt.Errorf("convert tls_protocols: %w", err)
 	}

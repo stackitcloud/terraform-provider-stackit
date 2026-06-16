@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/stackitcloud/stackit-sdk-go/services/sfs"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -47,7 +47,7 @@ resource "stackit_sfs_resource_pool" "resourcepool" {
 						testutil.MockResponse{
 							Description: "create instance",
 							ToJsonBody: sfs.CreateResourcePoolResponse{
-								ResourcePool: &sfs.CreateResourcePoolResponseResourcePool{
+								ResourcePool: &sfs.ResourcePool{
 									Id: new(instanceId),
 								},
 							},
@@ -122,7 +122,7 @@ resource "stackit_sfs_share" "example" {
 						testutil.MockResponse{
 							Description: "create instance",
 							ToJsonBody: sfs.CreateShareResponse{
-								Share: &sfs.CreateShareResponseShare{
+								Share: &sfs.Share{
 									Id: new(instanceId),
 								},
 							},

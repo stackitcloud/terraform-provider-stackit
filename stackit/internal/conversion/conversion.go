@@ -90,6 +90,16 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	return &value
 }
 
+// StringValueToPointer converts basetypes.StringValue to a pointer to enum.
+// It returns nil if the value is null or unknown.
+func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	value := s.ValueString()
+	return new(T(value))
+}
+
 // Int32ValueToPointer converts basetypes.Int32Value to a pointer to int32.
 // It returns nil if the value is null or unknown.
 func Int32ValueToPointer(s basetypes.Int32Value) *int32 {
@@ -168,6 +178,23 @@ func StringListToSlice(list basetypes.ListValue) ([]string, error) {
 	}
 
 	return listStr, nil
+}
+
+// StringListToSlice converts basetypes.ListValue to a list of enums.
+// It returns nil if the value is null or unknown.
+func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
+	s, err := StringListToSlice(list)
+	if err != nil {
+		return nil, err
+	}
+
+	if s == nil {
+		return nil, nil
+	}
+
+	return utils.Map(s, func(s string) T {
+		return T(s)
+	}), nil
 }
 
 // StringSetToPointer converts basetypes.SetValue to a pointer to a list of strings.
