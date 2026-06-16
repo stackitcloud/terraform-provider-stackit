@@ -670,8 +670,8 @@ github.com/ssgreg/nlreturn/v2 v2.2.1 h1:X4XDI7jstt3ySqGU86YGAURbxw3oTDPK9sPEi6YE
 github.com/ssgreg/nlreturn/v2 v2.2.1/go.mod h1:E/iiPB78hV7Szg2YfRgyIrk1AD6JVMTRkkxBiELzh2I=
 github.com/stackitcloud/stackit-sdk-go/core v0.26.0 h1:jQEb9gkehfp6VCP6TcYk7BI10cz4l0KM2L6hqYBH2QA=
 github.com/stackitcloud/stackit-sdk-go/core v0.26.0/go.mod h1:WU1hhxnjXw2EV7CYa1nlEvNpMiRY6CvmIOaHuL3pOaA=
-github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.2 h1:hGzfOJjlCRoFpri5eYIiwhE27qu02pKZLprKvbsTC/w=
-github.com/stackitcloud/stackit-sdk-go/services/alb v0.14.2/go.mod h1:eK6oRB5Tmpt6KbXQ4UYBGg2LgW5bPtVoncL9E8JSRww=
+github.com/stackitcloud/stackit-sdk-go/services/alb v0.15.0 h1:GDiNrm0A1KIHARcx6xI2I4PvNEWJuNysP3w1M/9WYps=
+github.com/stackitcloud/stackit-sdk-go/services/alb v0.15.0/go.mod h1:eK6oRB5Tmpt6KbXQ4UYBGg2LgW5bPtVoncL9E8JSRww=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.2 h1:b7WJ/vwxlVmNNX91kI3obqGcuoPAyaCbDL5aCMQ/sNg=
 github.com/stackitcloud/stackit-sdk-go/services/authorization v0.15.2/go.mod h1:T/JF25XGJ3GqER/1L2N//DgY8x5tY7gA3N+/0nvmOWY=
 github.com/stackitcloud/stackit-sdk-go/services/cdn v1.16.0 h1:Wqxx0PDTL2F5gqI5jjznuJY0TdqECltjA0aa/rHY63U=
@@ -692,8 +692,8 @@ github.com/stackitcloud/stackit-sdk-go/services/intake v0.9.0 h1:vtKZgDNsrZTr8jn
 github.com/stackitcloud/stackit-sdk-go/services/intake v0.9.0/go.mod h1:UXhPs7JXjQvTp14d4ZffSLnFMQyB7y1cj100XWwQudI=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.10.0 h1:/xPQvEaSbysmIKL/wtTYiweEe74P9iCzzyIA7ZHY8FU=
 github.com/stackitcloud/stackit-sdk-go/services/kms v1.10.0/go.mod h1:pVaCmb1ZHAPGVRlSlBlVOjThp9Tb2sX9+nRX0M+d1KU=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.13.0 h1:UuLNwFHjJCpL11y4F7B9oBKtZkxpu01VkNPILNkpex4=
-github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.13.0/go.mod h1:+Ld3dn648I+YKcBV3fEkYpDSr3fel421+LurJGywSBs=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.14.0 h1:1dvL7tX91ziklayQmOupniE3jM4D5Nbtc0auNcx2p18=
+github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.14.0/go.mod h1:+Ld3dn648I+YKcBV3fEkYpDSr3fel421+LurJGywSBs=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.29.0 h1:zsZaPr15UkjLuNhOiF+K7dikhenZAd+sQuEvTlGnkvg=
 github.com/stackitcloud/stackit-sdk-go/services/logme v0.29.0/go.mod h1:JDOOYaGgcBts2x52nKPRMFgSZe7qqOFmfz1xIXCQgRY=
 github.com/stackitcloud/stackit-sdk-go/services/logs v0.9.0 h1:m/FSPciEqsci1e7Ph2Nn+XyV+1bNPCLDfm1rm42xjAk=
@@ -708,8 +708,8 @@ github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0 h1:T+ll3lS0
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0/go.mod h1:QsPtoqAYvumyPU6ToX/5j1PbudN+VSTuvh6mp154ecM=
 github.com/stackitcloud/stackit-sdk-go/services/observability v0.23.0 h1:kgD32fG3rkdGz0C+kZ1S7BEur7btTSeaX3vxHE346FY=
 github.com/stackitcloud/stackit-sdk-go/services/observability v0.23.0/go.mod h1:0fEZQHm729mBdvg4sNrAhM6KmHROHJSeS2FwCMRk46k=
-github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.28.0 h1:Bu8/UzMCAN8VyaEnz5O15zK+8xSV0kf8ndYXvwkNwOk=
-github.com/stackitcloud/stackit-sdk-go/services/opensearch v0.28.0/go.mod h1:L+NlfC1hilLOqlLLukCj/UDnxlnNrc/oMikcw3Ansyw=
+github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.0.0 h1:xJ/rhcMTV2pZ+s9PX/Q7+f4amNqn+kBl0t62cJ6xfko=
+github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.0.0/go.mod h1:L+NlfC1hilLOqlLLukCj/UDnxlnNrc/oMikcw3Ansyw=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.8.0 h1:oWTviJKdlUxaaARJghTjOqBbarIK+7+nH3Kc3Wxn4rQ=
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.8.0/go.mod h1:yzlakB+f8ur4yAHR6lyCABO+HcEtZG3G2Faj6m5/uW8=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.30.0 h1:zAFgiybClUjSaSKkGRfxKRiPmuJI7j5bnb+41/Zhtm8=

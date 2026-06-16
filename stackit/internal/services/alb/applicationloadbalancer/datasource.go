@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	legacyAlb "github.com/stackitcloud/stackit-sdk-go/services/alb"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -60,9 +59,9 @@ func (r *albDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 
 // Schema defines the schema for the resource.
 func (r *albDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	protocolOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedListenerProtocolEnumValues)
-	roleOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedNetworkRoleEnumValues)
-	errorOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedLoadBalancerErrorTypesEnumValues)
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypeEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",

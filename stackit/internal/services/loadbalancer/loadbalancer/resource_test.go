@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	legacyLoadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer"
 	loadbalancer "github.com/stackitcloud/stackit-sdk-go/services/loadbalancer/v2api"
 )
 
@@ -51,7 +50,7 @@ func TestToCreatePayload(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int32Value(80),
-						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -74,11 +73,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -129,7 +128,7 @@ func TestToCreatePayload(t *testing.T) {
 					{
 						DisplayName: new("display_name"),
 						Port:        new(int32(80)),
-						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						Protocol:    new(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP),
 						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
@@ -148,11 +147,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{
@@ -205,7 +204,7 @@ func TestToCreatePayload(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int32Value(80),
-						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -224,11 +223,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -280,7 +279,7 @@ func TestToCreatePayload(t *testing.T) {
 					{
 						DisplayName: new("display_name"),
 						Port:        new(int32(80)),
-						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						Protocol:    new(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP),
 						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
@@ -293,11 +292,11 @@ func TestToCreatePayload(t *testing.T) {
 				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{
@@ -435,7 +434,7 @@ func TestMapFields(t *testing.T) {
 					{
 						DisplayName: new("display_name"),
 						Port:        new(int32(80)),
-						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						Protocol:    new(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP),
 						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
@@ -454,11 +453,11 @@ func TestMapFields(t *testing.T) {
 				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 				},
 				Options: new(loadbalancer.LoadBalancerOptions{
@@ -512,7 +511,7 @@ func TestMapFields(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int32Value(80),
-						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -535,11 +534,11 @@ func TestMapFields(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -593,7 +592,7 @@ func TestMapFields(t *testing.T) {
 					{
 						DisplayName: new("display_name"),
 						Port:        new(int32(80)),
-						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						Protocol:    new(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP),
 						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
@@ -606,11 +605,11 @@ func TestMapFields(t *testing.T) {
 				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 				},
 				Options: new(loadbalancer.LoadBalancerOptions{
@@ -662,7 +661,7 @@ func TestMapFields(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int32Value(80),
-						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -681,11 +680,11 @@ func TestMapFields(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -925,7 +924,7 @@ func Test_toUpdatePayload(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int32Value(80),
-						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -948,11 +947,11 @@ func Test_toUpdatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -1003,7 +1002,7 @@ func Test_toUpdatePayload(t *testing.T) {
 					{
 						DisplayName: new("display_name"),
 						Port:        new(int32(80)),
-						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						Protocol:    new(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP),
 						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
@@ -1022,11 +1021,11 @@ func Test_toUpdatePayload(t *testing.T) {
 				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{
@@ -1079,7 +1078,7 @@ func Test_toUpdatePayload(t *testing.T) {
 					types.ObjectValueMust(listenerTypes, map[string]attr.Value{
 						"display_name": types.StringValue("display_name"),
 						"port":         types.Int32Value(80),
-						"protocol":     types.StringValue(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						"protocol":     types.StringValue(string(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP)),
 						"server_name_indicators": types.ListValueMust(types.ObjectType{AttrTypes: serverNameIndicatorTypes}, []attr.Value{
 							types.ObjectValueMust(
 								serverNameIndicatorTypes,
@@ -1098,11 +1097,11 @@ func Test_toUpdatePayload(t *testing.T) {
 				Networks: types.ListValueMust(types.ObjectType{AttrTypes: networkTypes}, []attr.Value{
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 					types.ObjectValueMust(networkTypes, map[string]attr.Value{
 						"network_id": types.StringValue("network_id_2"),
-						"role":       types.StringValue(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						"role":       types.StringValue(string(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS)),
 					}),
 				}),
 				Options: types.ObjectValueMust(
@@ -1154,7 +1153,7 @@ func Test_toUpdatePayload(t *testing.T) {
 					{
 						DisplayName: new("display_name"),
 						Port:        new(int32(80)),
-						Protocol:    new(string(legacyLoadbalancer.LISTENERPROTOCOL_TCP)),
+						Protocol:    new(loadbalancer.LISTENERPROTOCOL_PROTOCOL_TCP),
 						ServerNameIndicators: []loadbalancer.ServerNameIndicator{
 							{
 								Name: new("domain.com"),
@@ -1167,11 +1166,11 @@ func Test_toUpdatePayload(t *testing.T) {
 				Networks: []loadbalancer.Network{
 					{
 						NetworkId: new("network_id"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 					{
 						NetworkId: new("network_id_2"),
-						Role:      new(string(legacyLoadbalancer.NETWORKROLE_LISTENERS_AND_TARGETS)),
+						Role:      new(loadbalancer.NETWORKROLE_ROLE_LISTENERS_AND_TARGETS),
 					},
 				},
 				Options: &loadbalancer.LoadBalancerOptions{

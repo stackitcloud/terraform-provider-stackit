@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	iaasLegacy "github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaasLegacy "github.com/stackitcloud/stackit-sdk-go/services/iaas" //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -34,7 +34,8 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	return apiClient
 }
 
-func ConfigureClientLegacy(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *iaasLegacy.APIClient {
+// Deprecated: Use ConfigureClient instead
+func ConfigureClientLegacy(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *iaasLegacy.APIClient { //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),
 		utils.UserAgentConfigOption(providerData.Version),
