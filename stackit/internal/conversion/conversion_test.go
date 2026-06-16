@@ -728,18 +728,18 @@ func TestStringListToEnumSlice(t *testing.T) {
 		want    []T
 		wantErr bool
 	}
-	tests := []testCase[opensearch.InstanceParametersTlsProtocolsInner]{
+	tests := []testCase[opensearch.InstanceParametersPluginsInner]{
 		{
 			name: "default",
 			args: args{
 				list: basetypes.NewListValueMust(types.StringType, []attr.Value{
-					types.StringValue("TLSv1.2"),
-					types.StringValue("TLSv1.3"),
+					types.StringValue("repository-s3"),
+					types.StringValue("repository-azure"),
 				}),
 			},
-			want: []opensearch.InstanceParametersTlsProtocolsInner{
-				opensearch.INSTANCEPARAMETERSTLSPROTOCOLSINNER_TLSV1_2,
-				opensearch.INSTANCEPARAMETERSTLSPROTOCOLSINNER_TLSV1_3,
+			want: []opensearch.InstanceParametersPluginsInner{
+				opensearch.INSTANCEPARAMETERSPLUGINSINNER_REPOSITORY_S3,
+				opensearch.INSTANCEPARAMETERSPLUGINSINNER_REPOSITORY_AZURE,
 			},
 			wantErr: false,
 		},
@@ -764,7 +764,7 @@ func TestStringListToEnumSlice(t *testing.T) {
 			args: args{
 				list: basetypes.NewListValueMust(types.StringType, []attr.Value{}),
 			},
-			want:    []opensearch.InstanceParametersTlsProtocolsInner{},
+			want:    []opensearch.InstanceParametersPluginsInner{},
 			wantErr: false,
 		},
 		{
@@ -777,7 +777,7 @@ func TestStringListToEnumSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := StringListToEnumSlice[opensearch.InstanceParametersTlsProtocolsInner](tt.args.list)
+			got, err := StringListToEnumSlice[opensearch.InstanceParametersPluginsInner](tt.args.list)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StringListToEnumSlice() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -161,38 +161,27 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 // StringListToSlice converts basetypes.ListValue to a list of strings.
 // It returns nil if the value is null or unknown.
 func StringListToSlice(list basetypes.ListValue) ([]string, error) {
+	return StringListToEnumSlice[string](list)
+}
+
+// StringListToEnumSlice converts basetypes.ListValue to a list of enums.
+// It returns nil if the value is null or unknown.
+func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
 
 	// Instantiate an empty slice to ensure the slice is not nil
-	listStr := []string{}
+	listStr := []T{}
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("element %d is not a string", i)
 		}
-		listStr = append(listStr, elStr.ValueString())
+		listStr = append(listStr, T(elStr.ValueString()))
 	}
 
 	return listStr, nil
-}
-
-// StringListToSlice converts basetypes.ListValue to a list of enums.
-// It returns nil if the value is null or unknown.
-func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
-	s, err := StringListToSlice(list)
-	if err != nil {
-		return nil, err
-	}
-
-	if s == nil {
-		return nil, nil
-	}
-
-	return utils.Map(s, func(s string) T {
-		return T(s)
-	}), nil
 }
 
 // StringSetToPointer converts basetypes.SetValue to a pointer to a list of strings.
