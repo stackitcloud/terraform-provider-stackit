@@ -1074,6 +1074,7 @@ func mapFields(ctx context.Context, conn *vpn.ConnectionResponse, model *Model, 
 func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentTunnel *TunnelModel) (*TunnelModel, error) {
 	tunnel := &TunnelModel{
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
+		PreSharedKey:  currentTunnel.PreSharedKey,
 	}
 	phase1 := &Phase1Model{}
 	if len(apiTunnel.Phase1.DhGroups) > 0 {
