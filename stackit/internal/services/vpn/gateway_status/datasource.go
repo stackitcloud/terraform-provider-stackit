@@ -41,8 +41,15 @@ type Model struct {
 	GatewayId   types.String `tfsdk:"gateway_id"`
 	ProjectId   types.String `tfsdk:"project_id"`
 	Region      types.String `tfsdk:"region"`
+	Connections types.List   `tfsdk:"connections"`
 	DisplayName types.String `tfsdk:"display_name"`
 	Tunnels     types.List   `tfsdk:"tunnels"`
+}
+
+type Connection struct {
+	DisplayName types.String `tfsdk:"display_name"`
+	Enabled     types.Bool   `tfsdk:"enabled"`
+	Id          types.String `tfsdk:"id"`
 }
 
 type Tunnel struct {
@@ -51,7 +58,13 @@ type Tunnel struct {
 	PublicIP          types.String `tfsdk:"public_ip"`
 }
 
-var tunnelsType = map[string]attr.Type{
+var connectionType = map[string]attr.Type{
+	"display_name": basetypes.StringType{},
+	"enabled":      basetypes.BoolType{},
+	"id":           basetypes.StringType{},
+}
+
+var tunnelType = map[string]attr.Type{
 	"internal_next_hop_ip": basetypes.StringType{},
 	"name":                 basetypes.StringType{},
 	"public_ip":            basetypes.StringType{},
@@ -117,6 +130,26 @@ func (d *vpnGatewayStatusDataSource) Schema(_ context.Context, _ datasource.Sche
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+				},
+			},
+			"connections": schema.ListNestedAttribute{
+				Description: schemaDescriptions["connections"],
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"display_name": schema.StringAttribute{
+							Description: schemaDescriptions["connection_display_name"],
+							Computed:    true,
+						},
+						"enabled": schema.BoolAttribute{
+							Description: schemaDescriptions["connection_enabled"],
+							Computed:    true,
+						},
+						"id": schema.StringAttribute{
+							Description: schemaDescriptions["connection_id"],
+							Computed:    true,
+						},
+					},
 				},
 			},
 			"display_name": schema.StringAttribute{
@@ -219,6 +252,13 @@ func mapFields(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, mo
 		model.DisplayName = types.StringValue(*gatewayStatus.DisplayName)
 	}
 
+	tfConnections, err := mapConnections(ctx, gatewayStatus.Connections)
+	if err != nil {
+		return fmt.Errorf("map tunnels: %w", err)
+	} else if tfConnections != nil {
+		model.Connections = *tfConnections
+	}
+
 	tfTunnels, err := mapTunnels(ctx, gatewayStatus.Tunnels)
 	if err != nil {
 		return fmt.Errorf("map tunnels: %w", err)
@@ -227,6 +267,38 @@ func mapFields(ctx context.Context, gatewayStatus *vpn.GatewayStatusResponse, mo
 	}
 
 	return nil
+}
+
+func mapConnections(ctx context.Context, vpnConnections []vpn.ConnectionStatusResponse) (*basetypes.ListValue, error) {
+	connections := []attr.Value{}
+
+	for _, connectionItem := range vpnConnections {
+		connection := Connection{}
+
+		if connectionItem.DisplayName != nil {
+			connection.DisplayName = types.StringValue(string(*connectionItem.DisplayName))
+		}
+		if connectionItem.Enabled != nil {
+			connection.Enabled = types.BoolValue(*connectionItem.Enabled)
+		}
+		if connectionItem.Id != nil {
+			connection.Id = types.StringValue(string(*connectionItem.Id))
+		}
+
+		connectionValue, diags := types.ObjectValueFrom(ctx, connectionType, connection)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping connection: %w", core.DiagsToError(diags))
+		}
+
+		connections = append(connections, connectionValue)
+	}
+
+	tfConnections, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: connectionType}, connections)
+	if diags.HasError() {
+		return nil, fmt.Errorf("mapping connections: %w", core.DiagsToError(diags))
+	}
+
+	return &tfConnections, nil
 }
 
 func mapTunnels(ctx context.Context, vpnTunnels []vpn.VPNTunnels) (*basetypes.ListValue, error) {
@@ -245,7 +317,7 @@ func mapTunnels(ctx context.Context, vpnTunnels []vpn.VPNTunnels) (*basetypes.Li
 			tunnel.PublicIP = types.StringValue(string(*tunnelItem.PublicIP))
 		}
 
-		tunnelValue, diags := types.ObjectValueFrom(ctx, tunnelsType, tunnel)
+		tunnelValue, diags := types.ObjectValueFrom(ctx, tunnelType, tunnel)
 		if diags.HasError() {
 			return nil, fmt.Errorf("mapping tunnel: %w", core.DiagsToError(diags))
 		}
@@ -253,7 +325,7 @@ func mapTunnels(ctx context.Context, vpnTunnels []vpn.VPNTunnels) (*basetypes.Li
 		tunnels = append(tunnels, tunnelValue)
 	}
 
-	tfTunnels, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tunnelsType}, tunnels)
+	tfTunnels, diags := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tunnelType}, tunnels)
 	if diags.HasError() {
 		return nil, fmt.Errorf("mapping tunnels: %w", core.DiagsToError(diags))
 	}

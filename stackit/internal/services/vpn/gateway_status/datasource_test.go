@@ -30,8 +30,19 @@ var (
 
 func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatusResponse {
 	resp := &vpn.GatewayStatusResponse{
-		Id:          new(testGatewayId),
-		Connections: []vpn.ConnectionStatusResponse{},
+		Id: new(testGatewayId),
+		Connections: []vpn.ConnectionStatusResponse{
+			vpn.ConnectionStatusResponse{
+				DisplayName: new("Conn1"),
+				Enabled:     new(true),
+				Id:          new("foo"),
+			},
+			vpn.ConnectionStatusResponse{
+				DisplayName: new("Conn2"),
+				Enabled:     new(false),
+				Id:          new("bar"),
+			},
+		},
 		DisplayName: new(testDisplayName),
 		Tunnels: []vpn.VPNTunnels{
 			{
@@ -54,18 +65,30 @@ func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatus
 
 func fixtureModel(mods ...func(m *Model)) *Model {
 	resp := &Model{
-		ProjectId:   types.StringValue(testProjectId),
-		Region:      types.StringValue(testRegion),
-		Id:          types.StringValue(testId),
-		GatewayId:   types.StringValue(testGatewayId),
+		ProjectId: types.StringValue(testProjectId),
+		Region:    types.StringValue(testRegion),
+		Id:        types.StringValue(testId),
+		GatewayId: types.StringValue(testGatewayId),
+		Connections: types.ListValueMust(types.ObjectType{AttrTypes: connectionType}, []attr.Value{
+			types.ObjectValueMust(connectionType, map[string]attr.Value{
+				"display_name": types.StringValue("Conn1"),
+				"enabled":      types.BoolValue(true),
+				"id":           types.StringValue("foo"),
+			}),
+			types.ObjectValueMust(connectionType, map[string]attr.Value{
+				"display_name": types.StringValue("Conn2"),
+				"enabled":      types.BoolValue(false),
+				"id":           types.StringValue("bar"),
+			}),
+		}),
 		DisplayName: types.StringValue(testDisplayName),
-		Tunnels: types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{
-			types.ObjectValueMust(tunnelsType, map[string]attr.Value{
+		Tunnels: types.ListValueMust(types.ObjectType{AttrTypes: tunnelType}, []attr.Value{
+			types.ObjectValueMust(tunnelType, map[string]attr.Value{
 				"internal_next_hop_ip": types.StringValue(testTunnel1InternalNextHopIP),
 				"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL1)),
 				"public_ip":            types.StringValue(testTunnel1PublicIP),
 			}),
-			types.ObjectValueMust(tunnelsType, map[string]attr.Value{
+			types.ObjectValueMust(tunnelType, map[string]attr.Value{
 				"internal_next_hop_ip": types.StringValue(testTunnel2InternalNextHopIP),
 				"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL2)),
 				"public_ip":            types.StringValue(testTunnel2PublicIP),
@@ -135,11 +158,12 @@ func TestMapDatasourceFields(t *testing.T) {
 			},
 			input: &vpn.GatewayStatusResponse{},
 			expected: &Model{
-				Id:        types.StringValue(testId),
-				ProjectId: types.StringValue(testProjectId),
-				GatewayId: types.StringValue(testGatewayId),
-				Region:    types.StringValue(testRegion),
-				Tunnels:   types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{}),
+				Id:          types.StringValue(testId),
+				ProjectId:   types.StringValue(testProjectId),
+				GatewayId:   types.StringValue(testGatewayId),
+				Region:      types.StringValue(testRegion),
+				Connections: types.ListValueMust(types.ObjectType{AttrTypes: connectionType}, []attr.Value{}),
+				Tunnels:     types.ListValueMust(types.ObjectType{AttrTypes: tunnelType}, []attr.Value{}),
 			},
 			isValid: true,
 		},
@@ -180,13 +204,13 @@ func TestMapTunnels(t *testing.T) {
 					PublicIP:          new(testTunnel2PublicIP),
 				},
 			},
-			expected: new(types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{
-				types.ObjectValueMust(tunnelsType, map[string]attr.Value{
+			expected: new(types.ListValueMust(types.ObjectType{AttrTypes: tunnelType}, []attr.Value{
+				types.ObjectValueMust(tunnelType, map[string]attr.Value{
 					"internal_next_hop_ip": types.StringValue(testTunnel1InternalNextHopIP),
 					"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL1)),
 					"public_ip":            types.StringValue(testTunnel1PublicIP),
 				}),
-				types.ObjectValueMust(tunnelsType, map[string]attr.Value{
+				types.ObjectValueMust(tunnelType, map[string]attr.Value{
 					"internal_next_hop_ip": types.StringValue(testTunnel2InternalNextHopIP),
 					"name":                 types.StringValue(string(vpn.VPNTUNNELSNAME_TUNNEL2)),
 					"public_ip":            types.StringValue(testTunnel2PublicIP),
@@ -197,7 +221,7 @@ func TestMapTunnels(t *testing.T) {
 		{
 			name:     "empty",
 			input:    []vpn.VPNTunnels{},
-			expected: new(types.ListValueMust(types.ObjectType{AttrTypes: tunnelsType}, []attr.Value{})),
+			expected: new(types.ListValueMust(types.ObjectType{AttrTypes: tunnelType}, []attr.Value{})),
 			isValid:  true,
 		},
 	}
