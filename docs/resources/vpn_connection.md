@@ -96,14 +96,14 @@ Required:
 
 - `phase1` (Attributes) (see [below for nested schema](#nestedatt--tunnel1--phase1))
 - `phase2` (Attributes) (see [below for nested schema](#nestedatt--tunnel1--phase2))
-- `pre_shared_key` (String, Sensitive) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.
-- `pre_shared_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.
 - `remote_address` (String) Remote IPv4 address for the tunnel endpoint.
 
 Optional:
 
 - `bgp` (Attributes) (see [below for nested schema](#nestedatt--tunnel1--bgp))
 - `peering` (Attributes) (see [below for nested schema](#nestedatt--tunnel1--peering))
+- `pre_shared_key` (String) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.
+- `pre_shared_key_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.
 - `pre_shared_key_wo_version` (Number) User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.
 
 <a id="nestedatt--tunnel1--phase1"></a>
@@ -161,14 +161,14 @@ Required:
 
 - `phase1` (Attributes) (see [below for nested schema](#nestedatt--tunnel2--phase1))
 - `phase2` (Attributes) (see [below for nested schema](#nestedatt--tunnel2--phase2))
-- `pre_shared_key` (String, Sensitive) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.
-- `pre_shared_key_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.
 - `remote_address` (String) Remote IPv4 address for the tunnel endpoint.
 
 Optional:
 
 - `bgp` (Attributes) (see [below for nested schema](#nestedatt--tunnel2--bgp))
 - `peering` (Attributes) (see [below for nested schema](#nestedatt--tunnel2--peering))
+- `pre_shared_key` (String) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.
+- `pre_shared_key_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.
 - `pre_shared_key_wo_version` (Number) User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.
 
 <a id="nestedatt--tunnel2--phase1"></a>
