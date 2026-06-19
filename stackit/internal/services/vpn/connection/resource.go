@@ -1075,8 +1075,8 @@ func mapFields(ctx context.Context, conn *vpn.ConnectionResponse, model *Model, 
 func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentTunnel *TunnelModel) (*TunnelModel, error) {
 	tunnel := &TunnelModel{
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
-		PreSharedKey:  currentTunnel.PreSharedKey,
 	}
+
 	phase1, err := mapPhase1(ctx, &apiTunnel.Phase1)
 	if err != nil {
 		return nil, err
@@ -1112,6 +1112,7 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentT
 
 	// could be nil for Read after a terraform import
 	if currentTunnel != nil {
+		tunnel.PreSharedKey = currentTunnel.PreSharedKey
 		tunnel.PreSharedKeyWoVersion = currentTunnel.PreSharedKeyWoVersion
 	} else {
 		tunnel.PreSharedKeyWoVersion = types.Int64Null()
