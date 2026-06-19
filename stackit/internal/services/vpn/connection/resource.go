@@ -42,20 +42,21 @@ var (
 	_ resource.ResourceWithModifyPlan  = &vpnConnectionResource{}
 )
 
-type Phase1Model struct {
+type BasePhaseModel struct {
 	DhGroups             types.List  `tfsdk:"dh_groups"`
 	EncryptionAlgorithms types.List  `tfsdk:"encryption_algorithms"`
 	IntegrityAlgorithms  types.List  `tfsdk:"integrity_algorithms"`
 	RekeyTime            types.Int32 `tfsdk:"rekey_time"`
 }
 
+type Phase1Model struct {
+	BasePhaseModel
+}
+
 type Phase2Model struct {
-	DhGroups             types.List   `tfsdk:"dh_groups"`
-	EncryptionAlgorithms types.List   `tfsdk:"encryption_algorithms"`
-	IntegrityAlgorithms  types.List   `tfsdk:"integrity_algorithms"`
-	RekeyTime            types.Int32  `tfsdk:"rekey_time"`
-	StartAction          types.String `tfsdk:"start_action"`
-	DpdAction            types.String `tfsdk:"dpd_action"`
+	StartAction types.String `tfsdk:"start_action"`
+	DpdAction   types.String `tfsdk:"dpd_action"`
+	BasePhaseModel
 }
 
 type PeeringConfigModel struct {
@@ -1076,83 +1077,15 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentT
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
 		PreSharedKey:  currentTunnel.PreSharedKey,
 	}
-	phase1 := &Phase1Model{}
-	if len(apiTunnel.Phase1.DhGroups) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.DhGroups)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase1 dh_groups: %w", core.DiagsToError(diags))
-		}
-		phase1.DhGroups = list
-	} else {
-		phase1.DhGroups = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase1.EncryptionAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.EncryptionAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase1 encryption_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase1.EncryptionAlgorithms = list
-	} else {
-		phase1.EncryptionAlgorithms = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase1.IntegrityAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.IntegrityAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase1 integrity_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase1.IntegrityAlgorithms = list
-	} else {
-		phase1.IntegrityAlgorithms = types.ListNull(types.StringType)
-	}
-	if apiTunnel.Phase1.RekeyTime != nil {
-		phase1.RekeyTime = types.Int32Value(*apiTunnel.Phase1.RekeyTime)
-	} else {
-		phase1.RekeyTime = types.Int32Null()
+	phase1, err := mapPhase1(ctx, apiTunnel.Phase1)
+	if err != nil {
+		return nil, err
 	}
 	tunnel.Phase1 = phase1
 
-	phase2 := &Phase2Model{}
-	if len(apiTunnel.Phase2.DhGroups) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.DhGroups)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase2 dh_groups: %w", core.DiagsToError(diags))
-		}
-		phase2.DhGroups = list
-	} else {
-		phase2.DhGroups = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase2.EncryptionAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.EncryptionAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase2 encryption_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase2.EncryptionAlgorithms = list
-	} else {
-		phase2.EncryptionAlgorithms = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase2.IntegrityAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.IntegrityAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase2 integrity_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase2.IntegrityAlgorithms = list
-	} else {
-		phase2.IntegrityAlgorithms = types.ListNull(types.StringType)
-	}
-	if apiTunnel.Phase2.RekeyTime != nil {
-		phase2.RekeyTime = types.Int32Value(*apiTunnel.Phase2.RekeyTime)
-	} else {
-		phase2.RekeyTime = types.Int32Null()
-	}
-	if apiTunnel.Phase2.StartAction != nil {
-		phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
-	} else {
-		phase2.StartAction = types.StringNull()
-	}
-	if apiTunnel.Phase2.DpdAction != nil {
-		phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
-	} else {
-		phase2.DpdAction = types.StringNull()
+	phase2, err := mapPhase2(ctx, apiTunnel.Phase2)
+	if err != nil {
+		return nil, err
 	}
 	tunnel.Phase2 = phase2
 
@@ -1185,4 +1118,91 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentT
 	}
 
 	return tunnel, nil
+}
+
+type BasePhaseFields struct {
+	DhGroups             []vpn.PhaseDhGroupsInner
+	EncryptionAlgorithms []vpn.PhaseEncryptionAlgorithmsInner
+	IntegrityAlgorithms  []vpn.PhaseIntegrityAlgorithmsInner
+	RekeyTime            *int32
+}
+
+func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhaseModel, err error) {
+	if len(apiPhase.DhGroups) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.DhGroups)
+		if diags.HasError() {
+			err = fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
+			return
+		}
+		phase.DhGroups = list
+	} else {
+		phase.DhGroups = types.ListNull(types.StringType)
+	}
+	if len(apiPhase.EncryptionAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.EncryptionAlgorithms)
+		if diags.HasError() {
+			err = fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
+			return
+		}
+		phase.EncryptionAlgorithms = list
+	} else {
+		phase.EncryptionAlgorithms = types.ListNull(types.StringType)
+	}
+	if len(apiPhase.IntegrityAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.IntegrityAlgorithms)
+		if diags.HasError() {
+			err = fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
+			return
+		}
+		phase.IntegrityAlgorithms = list
+	} else {
+		phase.IntegrityAlgorithms = types.ListNull(types.StringType)
+	}
+	if apiPhase.RekeyTime != nil {
+		phase.RekeyTime = types.Int32Value(*apiPhase.RekeyTime)
+	} else {
+		phase.RekeyTime = types.Int32Null()
+	}
+	return
+}
+
+func mapPhase1(ctx context.Context, apiPhase1 vpn.TunnelConfigurationPhase1) (*Phase1Model, error) {
+	basePhase, err := mapBasePhase(ctx, BasePhaseFields{
+		DhGroups:             apiPhase1.DhGroups,
+		EncryptionAlgorithms: apiPhase1.EncryptionAlgorithms,
+		IntegrityAlgorithms:  apiPhase1.IntegrityAlgorithms,
+		RekeyTime:            apiPhase1.RekeyTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Phase1Model{
+		BasePhaseModel: basePhase,
+	}, nil
+}
+
+func mapPhase2(ctx context.Context, apiPhase2 vpn.TunnelConfigurationPhase2) (*Phase2Model, error) {
+	basePhase, err := mapBasePhase(ctx, BasePhaseFields{
+		DhGroups:             apiPhase2.DhGroups,
+		EncryptionAlgorithms: apiPhase2.EncryptionAlgorithms,
+		IntegrityAlgorithms:  apiPhase2.IntegrityAlgorithms,
+		RekeyTime:            apiPhase2.RekeyTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	phase2 := &Phase2Model{
+		BasePhaseModel: basePhase,
+	}
+	if apiPhase2.StartAction != nil {
+		phase2.StartAction = types.StringValue(string(*apiPhase2.StartAction))
+	} else {
+		phase2.StartAction = types.StringNull()
+	}
+	if apiPhase2.DpdAction != nil {
+		phase2.DpdAction = types.StringValue(string(*apiPhase2.DpdAction))
+	} else {
+		phase2.DpdAction = types.StringNull()
+	}
+	return phase2, nil
 }

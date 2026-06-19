@@ -52,7 +52,7 @@ type DataSourceModel struct {
 	Labels       types.Map              `tfsdk:"labels"`
 }
 
-var datasourceSchemaDescriptions = map[string]string{
+var dataSourceSchemaDescriptions = map[string]string{
 	"id":            "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
 	"project_id":    "STACKIT project ID.",
 	"region":        "STACKIT region.",
@@ -66,7 +66,7 @@ var datasourceSchemaDescriptions = map[string]string{
 	"labels":        "Map of custom labels.",
 }
 
-var datasourceTunnelSchemaDescriptions = map[string]string{
+var dataSourceTunnelSchemaDescriptions = map[string]string{
 	"remote_address":               "Remote peer IPv4 address for this tunnel.",
 	"phase1":                       "IKE Phase 1 configuration.",
 	"phase1_dh_groups":             "Diffie-Hellman groups.",
@@ -120,87 +120,87 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		Computed: true,
 		Attributes: map[string]schema.Attribute{
 			"remote_address": schema.StringAttribute{
-				Description: datasourceTunnelSchemaDescriptions["remote_address"],
+				Description: dataSourceTunnelSchemaDescriptions["remote_address"],
 				Computed:    true,
 			},
 			"phase1": schema.SingleNestedAttribute{
-				Description: datasourceTunnelSchemaDescriptions["phase1"],
+				Description: dataSourceTunnelSchemaDescriptions["phase1"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"dh_groups": schema.ListAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase1_dh_groups"],
+						Description: dataSourceTunnelSchemaDescriptions["phase1_dh_groups"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"encryption_algorithms": schema.ListAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase1_encryption_algorithms"],
+						Description: dataSourceTunnelSchemaDescriptions["phase1_encryption_algorithms"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"integrity_algorithms": schema.ListAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase1_integrity_algorithms"],
+						Description: dataSourceTunnelSchemaDescriptions["phase1_integrity_algorithms"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"rekey_time": schema.Int32Attribute{
-						Description: datasourceTunnelSchemaDescriptions["phase1_rekey_time"],
+						Description: dataSourceTunnelSchemaDescriptions["phase1_rekey_time"],
 						Computed:    true,
 					},
 				},
 			},
 			"phase2": schema.SingleNestedAttribute{
-				Description: datasourceTunnelSchemaDescriptions["phase2"],
+				Description: dataSourceTunnelSchemaDescriptions["phase2"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"dh_groups": schema.ListAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase2_dh_groups"],
+						Description: dataSourceTunnelSchemaDescriptions["phase2_dh_groups"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"encryption_algorithms": schema.ListAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase2_encryption_algorithms"],
+						Description: dataSourceTunnelSchemaDescriptions["phase2_encryption_algorithms"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"integrity_algorithms": schema.ListAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase2_integrity_algorithms"],
+						Description: dataSourceTunnelSchemaDescriptions["phase2_integrity_algorithms"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"rekey_time": schema.Int32Attribute{
-						Description: datasourceTunnelSchemaDescriptions["phase2_rekey_time"],
+						Description: dataSourceTunnelSchemaDescriptions["phase2_rekey_time"],
 						Computed:    true,
 					},
 					"start_action": schema.StringAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase2_start_action"],
+						Description: dataSourceTunnelSchemaDescriptions["phase2_start_action"],
 						Computed:    true,
 					},
 					"dpd_action": schema.StringAttribute{
-						Description: datasourceTunnelSchemaDescriptions["phase2_dpd_action"],
+						Description: dataSourceTunnelSchemaDescriptions["phase2_dpd_action"],
 						Computed:    true,
 					},
 				},
 			},
 			"peering": schema.SingleNestedAttribute{
-				Description: datasourceTunnelSchemaDescriptions["peering"],
+				Description: dataSourceTunnelSchemaDescriptions["peering"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"local_address": schema.StringAttribute{
-						Description: datasourceTunnelSchemaDescriptions["peering_local_address"],
+						Description: dataSourceTunnelSchemaDescriptions["peering_local_address"],
 						Computed:    true,
 					},
 					"remote_address": schema.StringAttribute{
-						Description: datasourceTunnelSchemaDescriptions["peering_remote_address"],
+						Description: dataSourceTunnelSchemaDescriptions["peering_remote_address"],
 						Computed:    true,
 					},
 				},
 			},
 			"bgp": schema.SingleNestedAttribute{
-				Description: datasourceTunnelSchemaDescriptions["bgp"],
+				Description: dataSourceTunnelSchemaDescriptions["bgp"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"remote_asn": schema.Int64Attribute{
-						Description: datasourceTunnelSchemaDescriptions["bgp_remote_asn"],
+						Description: dataSourceTunnelSchemaDescriptions["bgp_remote_asn"],
 						Computed:    true,
 					},
 				},
@@ -212,11 +212,11 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		Description: fmt.Sprintf("VPN Connection data source schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: datasourceSchemaDescriptions["id"],
+				Description: dataSourceSchemaDescriptions["id"],
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
-				Description: datasourceSchemaDescriptions["project_id"],
+				Description: dataSourceSchemaDescriptions["project_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -224,11 +224,11 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: datasourceSchemaDescriptions["region"],
+				Description: dataSourceSchemaDescriptions["region"],
 				Computed:    true,
 			},
 			"gateway_id": schema.StringAttribute{
-				Description: datasourceSchemaDescriptions["gateway_id"],
+				Description: dataSourceSchemaDescriptions["gateway_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -236,7 +236,7 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				},
 			},
 			"connection_id": schema.StringAttribute{
-				Description: datasourceSchemaDescriptions["connection_id"],
+				Description: dataSourceSchemaDescriptions["connection_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -244,32 +244,32 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				},
 			},
 			"display_name": schema.StringAttribute{
-				Description: datasourceSchemaDescriptions["display_name"],
+				Description: dataSourceSchemaDescriptions["display_name"],
 				Computed:    true,
 			},
 			"enabled": schema.BoolAttribute{
-				Description: datasourceSchemaDescriptions["enabled"],
+				Description: dataSourceSchemaDescriptions["enabled"],
 				Computed:    true,
 			},
 			"remote_subnet": schema.ListAttribute{
-				Description: datasourceSchemaDescriptions["remote_subnet"],
+				Description: dataSourceSchemaDescriptions["remote_subnet"],
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"local_subnet": schema.ListAttribute{
-				Description: datasourceSchemaDescriptions["local_subnet"],
+				Description: dataSourceSchemaDescriptions["local_subnet"],
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"static_routes": schema.ListAttribute{
-				Description: datasourceSchemaDescriptions["static_routes"],
+				Description: dataSourceSchemaDescriptions["static_routes"],
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"tunnel1": tunnelSchema,
 			"tunnel2": tunnelSchema,
 			"labels": schema.MapAttribute{
-				Description: datasourceSchemaDescriptions["labels"],
+				Description: dataSourceSchemaDescriptions["labels"],
 				Computed:    true,
 				ElementType: types.StringType,
 			},
@@ -409,83 +409,15 @@ func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration
 	tunnel := &DataSourceTunnelModel{
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
 	}
-	phase1 := &Phase1Model{}
-	if len(apiTunnel.Phase1.DhGroups) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.DhGroups)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase1 dh_groups: %w", core.DiagsToError(diags))
-		}
-		phase1.DhGroups = list
-	} else {
-		phase1.DhGroups = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase1.EncryptionAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.EncryptionAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase1 encryption_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase1.EncryptionAlgorithms = list
-	} else {
-		phase1.EncryptionAlgorithms = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase1.IntegrityAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.IntegrityAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase1 integrity_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase1.IntegrityAlgorithms = list
-	} else {
-		phase1.IntegrityAlgorithms = types.ListNull(types.StringType)
-	}
-	if apiTunnel.Phase1.RekeyTime != nil {
-		phase1.RekeyTime = types.Int32Value(*apiTunnel.Phase1.RekeyTime)
-	} else {
-		phase1.RekeyTime = types.Int32Null()
+	phase1, err := mapPhase1(ctx, apiTunnel.Phase1)
+	if err != nil {
+		return nil, err
 	}
 	tunnel.Phase1 = phase1
 
-	phase2 := &Phase2Model{}
-	if len(apiTunnel.Phase2.DhGroups) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.DhGroups)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase2 dh_groups: %w", core.DiagsToError(diags))
-		}
-		phase2.DhGroups = list
-	} else {
-		phase2.DhGroups = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase2.EncryptionAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.EncryptionAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase2 encryption_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase2.EncryptionAlgorithms = list
-	} else {
-		phase2.EncryptionAlgorithms = types.ListNull(types.StringType)
-	}
-	if len(apiTunnel.Phase2.IntegrityAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.IntegrityAlgorithms)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping phase2 integrity_algorithms: %w", core.DiagsToError(diags))
-		}
-		phase2.IntegrityAlgorithms = list
-	} else {
-		phase2.IntegrityAlgorithms = types.ListNull(types.StringType)
-	}
-	if apiTunnel.Phase2.RekeyTime != nil {
-		phase2.RekeyTime = types.Int32Value(*apiTunnel.Phase2.RekeyTime)
-	} else {
-		phase2.RekeyTime = types.Int32Null()
-	}
-	if apiTunnel.Phase2.StartAction != nil {
-		phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
-	} else {
-		phase2.StartAction = types.StringNull()
-	}
-	if apiTunnel.Phase2.DpdAction != nil {
-		phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
-	} else {
-		phase2.DpdAction = types.StringNull()
+	phase2, err := mapPhase2(ctx, apiTunnel.Phase2)
+	if err != nil {
+		return nil, err
 	}
 	tunnel.Phase2 = phase2
 
