@@ -788,3 +788,74 @@ func TestStringListToEnumSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestClearableString(t *testing.T) {
+	tests := []struct {
+		desc        string
+		plan, state types.String
+		wantNil     bool
+		wantValue   string
+	}{
+		// "I want this field empty" expressed three different ways: all collapse to nil-or-clear.
+		{"null plan, null state → nil", types.StringNull(), types.StringNull(), true, ""},
+		{"null plan, empty state → nil", types.StringNull(), types.StringValue(""), true, ""},
+		{"null plan, prior value → ptr to empty (clear)", types.StringNull(), types.StringValue("had"), false, ""},
+		{"empty plan, null state → nil", types.StringValue(""), types.StringNull(), true, ""},
+		{"empty plan, empty state → nil", types.StringValue(""), types.StringValue(""), true, ""},
+		{"empty plan, prior value → ptr to empty (clear)", types.StringValue(""), types.StringValue("had"), false, ""},
+
+		// "I want this field set"
+		{"value plan, null state → ptr to value", types.StringValue("v"), types.StringNull(), false, "v"},
+		{"value plan, prior value (changed) → ptr to value", types.StringValue("new"), types.StringValue("old"), false, "new"},
+		{"value plan, same value → ptr to value", types.StringValue("v"), types.StringValue("v"), false, "v"},
+
+		// Unknown plan defers: never accidentally clear a credential mid-dependency-resolution.
+		{"unknown plan, prior value → nil (defer)", types.StringUnknown(), types.StringValue("had"), true, ""},
+		{"unknown plan, null state → nil (defer)", types.StringUnknown(), types.StringNull(), true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got := ClearableString(tt.plan, tt.state)
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("got %q, want nil", *got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatalf("got nil, want %q", tt.wantValue)
+			}
+			if *got != tt.wantValue {
+				t.Errorf("got %q, want %q", *got, tt.wantValue)
+			}
+		})
+	}
+}
+
+func TestStringOrEmpty(t *testing.T) {
+	if got := StringOrEmpty(types.StringNull()); got != "" {
+		t.Errorf("null: got %q, want empty", got)
+	}
+	if got := StringOrEmpty(types.StringUnknown()); got != "" {
+		t.Errorf("unknown: got %q, want empty", got)
+	}
+	if got := StringOrEmpty(types.StringValue("hello")); got != "hello" {
+		t.Errorf("value: got %q, want hello", got)
+	}
+}
+
+func TestNilIfEmpty(t *testing.T) {
+	if got := NilIfEmpty(types.StringNull()); got != nil {
+		t.Errorf("null: got %q, want nil", *got)
+	}
+	if got := NilIfEmpty(types.StringUnknown()); got != nil {
+		t.Errorf("unknown: got %q, want nil", *got)
+	}
+	if got := NilIfEmpty(types.StringValue("")); got != nil {
+		t.Errorf("empty: got %q, want nil", *got)
+	}
+	if got := NilIfEmpty(types.StringValue("hello")); got == nil || *got != "hello" {
+		t.Fatalf("hello: got %v, want ptr to hello", got)
+	}
+}

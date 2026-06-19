@@ -48,6 +48,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0
+	github.com/stackitcloud/stackit-sdk-go/services/workflows v0.0.0-00010101000000-000000000000
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.37.0
 )
@@ -301,6 +302,8 @@ require (
 	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/stackitcloud/stackit-sdk-go/services/workflows => /Users/cht/code/schwarz/stackit-sdk-go/services/workflows
 
 tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint

@@ -173,7 +173,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `dremio_custom_endpoint` (String) Custom endpoint for the Dremio service
 - `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, routing-tables, network
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, workflows
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `intake_custom_endpoint` (String) Custom endpoint for the Intake service
@@ -216,3 +216,4 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
 - `use_oidc` (Boolean) Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
 - `vpn_custom_endpoint` (String) Custom endpoint for the VPN service
+- `workflows_custom_endpoint` (String) Custom endpoint for the Workflows service

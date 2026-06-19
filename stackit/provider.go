@@ -129,6 +129,11 @@ import (
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
+	workflowsDagBundle "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/workflows/dagbundle"
+	workflowsDagBundles "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/workflows/dagbundles"
+	workflowsInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/workflows/instance"
+	workflowsInstances "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/workflows/instances"
+	workflowsProviderOptions "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/workflows/provideroptions"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -211,6 +216,7 @@ type providerModel struct {
 	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
+	WorkflowsCustomEndpoint         types.String `tfsdk:"workflows_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
@@ -272,6 +278,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
 		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
+		"workflows_custom_endpoint":            "Custom endpoint for the Workflows service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
 	}
@@ -502,6 +509,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
 			},
+			"workflows_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["workflows_custom_endpoint"],
+			},
 		},
 	}
 }
@@ -589,6 +600,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
 	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
+	setStringField(providerConfig.WorkflowsCustomEndpoint, func(v string) { providerData.WorkflowsCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -757,6 +769,11 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
+		workflowsInstance.NewWorkflowsInstanceDataSource,
+		workflowsInstances.NewWorkflowsInstancesDataSource,
+		workflowsDagBundle.NewWorkflowsDagBundleDataSource,
+		workflowsDagBundles.NewWorkflowsDagBundlesDataSource,
+		workflowsProviderOptions.NewWorkflowsProviderOptionsDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -857,6 +874,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
 		telemetryLink.NewTelemetryLinkResource,
 		vpnGateway.NewGatewayResource,
+		workflowsInstance.NewWorkflowsInstanceResource,
+		workflowsDagBundle.NewWorkflowsDagBundleResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

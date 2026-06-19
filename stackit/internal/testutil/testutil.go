@@ -103,6 +103,7 @@ var (
 	IntakeCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_INTAKE_CUSTOM_ENDPOINT", providerName: "intake_custom_endpoint"}
 	TelemetryRouterCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYROUTER_CUSTOM_ENDPOINT", providerName: "telemetryrouter_custom_endpoint"}
 	TelemetryLinkCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYLINK_CUSTOM_ENDPOINT", providerName: "telemetrylink_custom_endpoint"}
+	WorkflowsCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_WORKFLOWS_CUSTOM_ENDPOINT", providerName: "workflows_custom_endpoint"}
 
 	allCustomEndpoints = []customEndpointConfig{
 		ALBCustomEndpoint,
@@ -139,6 +140,7 @@ var (
 		SKECustomEndpoint,
 		TelemetryRouterCustomEndpoint,
 		TelemetryLinkCustomEndpoint,
+		WorkflowsCustomEndpoint,
 	}
 )
 
@@ -149,6 +151,7 @@ const (
 	ExperimentNetwork       Experiment = "network"
 	ExperimentIAM           Experiment = "iam"
 	ExperimentDremio        Experiment = "dremio"
+	ExperimentWorkflows     Experiment = "workflows"
 )
 
 type customEndpointConfig struct {
