@@ -20,6 +20,187 @@ var (
 	region    = "eu01"
 )
 
+func fixtureTunnelResponse(mods ...func(m *vpn.TunnelConfiguration)) vpn.TunnelConfiguration {
+	resp := vpn.TunnelConfiguration{
+		RemoteAddress: "203.0.113.1",
+		Phase1: vpn.TunnelConfigurationPhase1{
+			DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
+			EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
+			IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
+			RekeyTime:            new(int32(14400)),
+		},
+		Phase2: vpn.TunnelConfigurationPhase2{
+			DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
+			EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
+			IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
+			RekeyTime:            new(int32(3600)),
+			StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START.Ptr(),
+			DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART.Ptr(),
+		},
+	}
+	for _, mod := range mods {
+		mod(&resp)
+	}
+	return resp
+}
+
+func fixtureConnectionResponse(mods ...func(m *vpn.ConnectionResponse)) *vpn.ConnectionResponse {
+	resp := &vpn.ConnectionResponse{
+		Id:            new("connection-id"),
+		DisplayName:   "test-connection",
+		Enabled:       new(true),
+		RemoteSubnets: []string{"10.0.0.0/16"},
+		LocalSubnets:  []string{"192.168.0.0/24"},
+		Tunnel1:       fixtureTunnelResponse(),
+		Tunnel2: fixtureTunnelResponse(func(m *vpn.TunnelConfiguration) {
+			m.RemoteAddress = "203.0.113.2"
+		}),
+	}
+	for _, mod := range mods {
+		mod(resp)
+	}
+	return resp
+}
+
+func fixtureBasePhaseModel(mods ...func(m *BasePhaseModel)) BasePhaseModel {
+	resp := BasePhaseModel{
+		DhGroups: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("modp2048"),
+		}),
+		EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("aes256"),
+		}),
+		IntegrityAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("sha2_256"),
+		}),
+		RekeyTime: types.Int32Value(14400),
+	}
+	for _, mod := range mods {
+		mod(&resp)
+	}
+	return resp
+}
+
+func fixtureTunnelModel(mods ...func(m *TunnelModel)) *TunnelModel {
+	resp := &TunnelModel{
+		PreSharedKeyWoVersion: types.Int64Value(1),
+		RemoteAddress:         types.StringValue("203.0.113.1"),
+		Phase1: &Phase1Model{
+			BasePhaseModel: fixtureBasePhaseModel(),
+		},
+		Phase2: &Phase2Model{
+			BasePhaseModel: fixtureBasePhaseModel(func(m *BasePhaseModel) {
+				m.RekeyTime = types.Int32Value(3600)
+			}),
+			StartAction: types.StringValue("start"),
+			DpdAction:   types.StringValue("restart"),
+		},
+	}
+	for _, mod := range mods {
+		mod(resp)
+	}
+	return resp
+}
+
+func fixtureModel(mods ...func(m *Model)) Model {
+	resp := Model{
+		ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+		ConnectionID: types.StringValue("connection-id"),
+		ProjectID:    types.StringValue(projectId),
+		Region:       types.StringValue(region),
+		GatewayID:    types.StringValue(gatewayId),
+		DisplayName:  types.StringValue("test-connection"),
+		Enabled:      types.BoolValue(true),
+		RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("10.0.0.0/16"),
+		}),
+		LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("192.168.0.0/24"),
+		}),
+		StaticRoutes: types.ListNull(types.StringType),
+		Tunnel1:      fixtureTunnelModel(),
+		Tunnel2: fixtureTunnelModel(func(m *TunnelModel) {
+			m.RemoteAddress = types.StringValue("203.0.113.2")
+		}),
+		Labels: types.MapNull(types.StringType),
+	}
+	for _, mod := range mods {
+		mod(&resp)
+	}
+	return resp
+}
+
+func fixtureTunnelPayload(mods ...func(m *vpn.TunnelConfiguration)) vpn.TunnelConfiguration {
+	resp := vpn.TunnelConfiguration{
+		PreSharedKey:  new("secret123-at-least-20-chars"),
+		RemoteAddress: "203.0.113.1",
+		Phase1: vpn.TunnelConfigurationPhase1{
+			DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
+			EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
+			IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
+			RekeyTime:            new(int32(14400)),
+		},
+		Phase2: vpn.TunnelConfigurationPhase2{
+			DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
+			EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
+			IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
+			RekeyTime:            new(int32(3600)),
+			StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START.Ptr(),
+			DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART.Ptr(),
+		},
+	}
+	for _, mod := range mods {
+		mod(&resp)
+	}
+	return resp
+}
+
+func fixtureCreatePayload(mods ...func(m *vpn.CreateGatewayConnectionPayload)) *vpn.CreateGatewayConnectionPayload {
+	resp := &vpn.CreateGatewayConnectionPayload{
+		DisplayName: "test-connection",
+		RemoteSubnets: []string{
+			"10.0.0.0/16",
+		},
+		LocalSubnets: []string{
+			"192.168.0.0/24",
+		},
+		Tunnel1: fixtureTunnelPayload(),
+		Tunnel2: fixtureTunnelPayload(func(m *vpn.TunnelConfiguration) {
+			m.PreSharedKey = new("secret456-at-least-20-chars")
+			m.RemoteAddress = "203.0.113.2"
+		}),
+		Enabled: new(true),
+		Labels:  &map[string]string{},
+	}
+	for _, mod := range mods {
+		mod(resp)
+	}
+	return resp
+}
+
+func fixtureUpdatePayload(mods ...func(m *vpn.UpdateGatewayConnectionPayload)) *vpn.UpdateGatewayConnectionPayload {
+	resp := &vpn.UpdateGatewayConnectionPayload{
+		DisplayName: "test-connection",
+		RemoteSubnets: []string{
+			"10.0.0.0/16",
+		},
+		LocalSubnets: []string{
+			"192.168.0.0/24",
+		},
+		Tunnel1: fixtureTunnelPayload(),
+		Tunnel2: fixtureTunnelPayload(func(m *vpn.TunnelConfiguration) {
+			m.PreSharedKey = new("secret456-at-least-20-chars")
+			m.RemoteAddress = "203.0.113.2"
+		}),
+		Enabled: new(true),
+		Labels:  &map[string]string{},
+	}
+	for _, mod := range mods {
+		mod(resp)
+	}
+	return resp
+}
+
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
@@ -29,46 +210,16 @@ func TestMapFields(t *testing.T) {
 	}{
 		{
 			description: "basic_connection",
+			input:       fixtureConnectionResponse(),
+			expected:    fixtureModel(),
+			isValid:     true,
+		},
+		{
+			description: "minimal_connection",
 			input: &vpn.ConnectionResponse{
-				Id:            new("connection-id"),
-				DisplayName:   "test-connection",
-				Enabled:       new(true),
-				RemoteSubnets: []string{"10.0.0.0/16"},
-				LocalSubnets:  []string{"192.168.0.0/24"},
-				Tunnel1: vpn.TunnelConfiguration{
-					RemoteAddress: "203.0.113.1",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-						RekeyTime:            new(int32(14400)),
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-						RekeyTime:            new(int32(3600)),
-						StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START.Ptr(),
-						DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART.Ptr(),
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					RemoteAddress: "203.0.113.2",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-						RekeyTime:            new(int32(14400)),
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             []vpn.PhaseDhGroupsInner{"modp2048"},
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-						RekeyTime:            new(int32(3600)),
-						StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START.Ptr(),
-						DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART.Ptr(),
-					},
-				},
+				Id:      new("connection-id"),
+				Tunnel1: vpn.TunnelConfiguration{},
+				Tunnel2: vpn.TunnelConfiguration{},
 			},
 			expected: Model{
 				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
@@ -76,73 +227,45 @@ func TestMapFields(t *testing.T) {
 				ProjectID:    types.StringValue(projectId),
 				Region:       types.StringValue(region),
 				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue("test-connection"),
+				DisplayName:  types.StringValue(""),
 				Enabled:      types.BoolValue(true),
-				RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("10.0.0.0/16"),
-				}),
-				LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("192.168.0.0/24"),
-				}),
+				RemoteSubnet: types.ListNull(types.StringType),
+				LocalSubnet:  types.ListNull(types.StringType),
 				StaticRoutes: types.ListNull(types.StringType),
 				Tunnel1: &TunnelModel{
 					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("203.0.113.1"),
+					RemoteAddress:         types.StringValue(""),
 					Phase1: &Phase1Model{
-						DhGroups: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("modp2048"),
-						}),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("aes256"),
-						}),
-						IntegrityAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("sha2_256"),
-						}),
-						RekeyTime: types.Int32Value(14400),
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             types.ListNull(types.StringType),
+							EncryptionAlgorithms: types.ListNull(types.StringType),
+							IntegrityAlgorithms:  types.ListNull(types.StringType),
+						},
 					},
 					Phase2: &Phase2Model{
-						DhGroups: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("modp2048"),
-						}),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("aes256"),
-						}),
-						IntegrityAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("sha2_256"),
-						}),
-						RekeyTime:   types.Int32Value(3600),
-						StartAction: types.StringValue("start"),
-						DpdAction:   types.StringValue("restart"),
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             types.ListNull(types.StringType),
+							EncryptionAlgorithms: types.ListNull(types.StringType),
+							IntegrityAlgorithms:  types.ListNull(types.StringType),
+						},
 					},
 				},
 				Tunnel2: &TunnelModel{
 					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("203.0.113.2"),
+					RemoteAddress:         types.StringValue(""),
 					Phase1: &Phase1Model{
-						DhGroups: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("modp2048"),
-						}),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("aes256"),
-						}),
-						IntegrityAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("sha2_256"),
-						}),
-						RekeyTime: types.Int32Value(14400),
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             types.ListNull(types.StringType),
+							EncryptionAlgorithms: types.ListNull(types.StringType),
+							IntegrityAlgorithms:  types.ListNull(types.StringType),
+						},
 					},
 					Phase2: &Phase2Model{
-						DhGroups: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("modp2048"),
-						}),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("aes256"),
-						}),
-						IntegrityAlgorithms: types.ListValueMust(types.StringType, []attr.Value{
-							types.StringValue("sha2_256"),
-						}),
-						RekeyTime:   types.Int32Value(3600),
-						StartAction: types.StringValue("start"),
-						DpdAction:   types.StringValue("restart"),
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             types.ListNull(types.StringType),
+							EncryptionAlgorithms: types.ListNull(types.StringType),
+							IntegrityAlgorithms:  types.ListNull(types.StringType),
+						},
 					},
 				},
 				Labels: types.MapNull(types.StringType),
@@ -151,349 +274,43 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			description: "connection_with_static_routes_and_bgp",
-			input: &vpn.ConnectionResponse{
-				Id:           new("conn-id-2"),
-				DisplayName:  "bgp-connection",
-				Enabled:      new(false),
-				StaticRoutes: []string{"10.0.0.0/8"},
-				Tunnel1: vpn.TunnelConfiguration{
-					RemoteAddress: "203.0.113.10",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256gcm16"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256gcm16"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-						StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_NONE.Ptr(),
-						DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_CLEAR.Ptr(),
-					},
-					Peering: &vpn.PeeringConfig{
-						LocalAddress:  new("169.254.0.1"),
-						RemoteAddress: new("169.254.0.2"),
-					},
-					Bgp: &vpn.BGPTunnelConfig{
-						RemoteAsn: 65000,
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					RemoteAddress: "203.0.113.11",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256gcm16"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256gcm16"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-						StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_NONE.Ptr(),
-						DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_CLEAR.Ptr(),
-					},
-				},
-			},
-			expected: Model{
-				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "conn-id-2")),
-				ConnectionID: types.StringValue("conn-id-2"),
-				ProjectID:    types.StringValue(projectId),
-				Region:       types.StringValue(region),
-				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue("bgp-connection"),
-				Enabled:      types.BoolValue(false),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				m.StaticRoutes = []string{"10.0.0.0/8"}
+				m.Tunnel1.Bgp = &vpn.BGPTunnelConfig{
+					RemoteAsn: 65000,
+				}
+			}),
+			expected: fixtureModel(func(m *Model) {
+				m.StaticRoutes = types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("10.0.0.0/8"),
-				}),
-				Tunnel1: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("203.0.113.10"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256gcm16")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256gcm16")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringValue("none"),
-						DpdAction:            types.StringValue("clear"),
-					},
-					Peering: &PeeringConfigModel{
-						LocalAddress:  types.StringValue("169.254.0.1"),
-						RemoteAddress: types.StringValue("169.254.0.2"),
-					},
-					Bgp: &BGPTunnelConfigModel{
-						RemoteAsn: types.Int64Value(65000),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("203.0.113.11"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256gcm16")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256gcm16")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringValue("none"),
-						DpdAction:            types.StringValue("clear"),
-					},
-				},
-				Labels: types.MapNull(types.StringType),
-			},
+				})
+				m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+					RemoteAsn: types.Int64Value(65000),
+				}
+			}),
 			isValid: true,
 		},
 		{
 			description: "multiple_static_routes",
-			input: &vpn.ConnectionResponse{
-				Id:           new("conn-id-3"),
-				DisplayName:  "static-routes-connection",
-				StaticRoutes: []string{"10.0.0.0/8", "172.16.0.0/12"},
-				Tunnel1: vpn.TunnelConfiguration{
-					RemoteAddress: "1.2.3.4",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					RemoteAddress: "5.6.7.8",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-				},
-			},
-			expected: Model{
-				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "conn-id-3")),
-				ConnectionID: types.StringValue("conn-id-3"),
-				ProjectID:    types.StringValue(projectId),
-				Region:       types.StringValue(region),
-				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue("static-routes-connection"),
-				Enabled:      types.BoolValue(true),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				m.StaticRoutes = []string{"10.0.0.0/8", "172.16.0.0/12"}
+			}),
+			expected: fixtureModel(func(m *Model) {
+				m.StaticRoutes = types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("10.0.0.0/8"),
 					types.StringValue("172.16.0.0/12"),
-				}),
-				Tunnel1: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("1.2.3.4"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("5.6.7.8"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Labels: types.MapNull(types.StringType),
-			},
+				})
+			}),
 			isValid: true,
 		},
 		{
 			description: "empty_labels",
-			input: &vpn.ConnectionResponse{
-				Id:          new("conn-id-4"),
-				DisplayName: "empty-labels-connection",
-				Labels:      &map[string]string{},
-				Tunnel1: vpn.TunnelConfiguration{
-					RemoteAddress: "1.2.3.4",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					RemoteAddress: "5.6.7.8",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-				},
-			},
-			expected: Model{
-				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "conn-id-4")),
-				ConnectionID: types.StringValue("conn-id-4"),
-				ProjectID:    types.StringValue(projectId),
-				Region:       types.StringValue(region),
-				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue("empty-labels-connection"),
-				Enabled:      types.BoolValue(true),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
-				Tunnel1: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("1.2.3.4"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("5.6.7.8"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Labels: types.MapNull(types.StringType),
-			},
-			isValid: true,
-		},
-		{
-			description: "asymmetric_phase_fields",
-			input: &vpn.ConnectionResponse{
-				Id:          new("conn-id-5"),
-				DisplayName: "asymmetric-connection",
-				Tunnel1: vpn.TunnelConfiguration{
-					RemoteAddress: "1.2.3.4",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-						RekeyTime:            new(int32(7200)),
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-						RekeyTime:            new(int32(1800)),
-						StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_NONE.Ptr(),
-						DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_CLEAR.Ptr(),
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					RemoteAddress: "5.6.7.8",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_256"},
-					},
-				},
-			},
-			expected: Model{
-				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "conn-id-5")),
-				ConnectionID: types.StringValue("conn-id-5"),
-				ProjectID:    types.StringValue(projectId),
-				Region:       types.StringValue(region),
-				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue("asymmetric-connection"),
-				Enabled:      types.BoolValue(true),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
-				Tunnel1: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("1.2.3.4"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Value(7200),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Value(1800),
-						StartAction:          types.StringValue("none"),
-						DpdAction:            types.StringValue("clear"),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue("5.6.7.8"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_256")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Labels: types.MapNull(types.StringType),
-			},
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				m.Labels = &map[string]string{}
+			}),
+			expected: fixtureModel(func(m *Model) {
+				m.Labels = types.MapNull(types.StringType)
+			}),
 			isValid: true,
 		},
 		{
@@ -552,167 +369,21 @@ func TestToCreatePayload(t *testing.T) {
 	}{
 		{
 			description: "basic_connection",
-			input: &Model{
-				DisplayName:  types.StringValue("test-connection"),
-				Enabled:      types.BoolValue(true),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
-				Tunnel1: &TunnelModel{
-					RemoteAddress:  types.StringValue("203.0.113.1"),
-					PreSharedKeyWo: types.StringValue("secret123-at-least-20-chars"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					RemoteAddress:  types.StringValue("203.0.113.2"),
-					PreSharedKeyWo: types.StringValue("secret456-at-least-20-chars"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-			},
-			expected: &vpn.CreateGatewayConnectionPayload{
-				DisplayName: "test-connection",
-				Tunnel1: vpn.TunnelConfiguration{
-					PreSharedKey:  new("secret123-at-least-20-chars"),
-					RemoteAddress: "203.0.113.1",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					PreSharedKey:  new("secret456-at-least-20-chars"),
-					RemoteAddress: "203.0.113.2",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Enabled: new(true),
-				Labels:  &map[string]string{},
-			},
-			isValid: true,
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel1.PreSharedKeyWo = types.StringValue("secret123-at-least-20-chars")
+				m.Tunnel2.PreSharedKeyWo = types.StringValue("secret456-at-least-20-chars")
+			})),
+			expected: fixtureCreatePayload(),
+			isValid:  true,
 		},
 		{
-			description: "with_phase2_fields",
+			description: "minimal_create",
 			input: &Model{
-				DisplayName:  types.StringValue("test"),
-				Enabled:      types.BoolValue(true),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
-				Tunnel1: &TunnelModel{
-					RemoteAddress:         types.StringValue("1.2.3.4"),
-					PreSharedKeyWo:        types.StringValue("super-secret-key-at-least-20"),
-					PreSharedKeyWoVersion: types.Int64Null(),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Value(7200),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Value(1800),
-						StartAction:          types.StringValue("none"),
-						DpdAction:            types.StringValue("clear"),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					RemoteAddress:         types.StringValue("5.6.7.8"),
-					PreSharedKeyWo:        types.StringValue("super-secret-key-at-least-20"),
-					PreSharedKeyWoVersion: types.Int64Null(),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
+				Tunnel1: &TunnelModel{},
+				Tunnel2: &TunnelModel{},
 			},
 			expected: &vpn.CreateGatewayConnectionPayload{
-				DisplayName: "test",
-				Tunnel1: vpn.TunnelConfiguration{
-					PreSharedKey:  new("super-secret-key-at-least-20"),
-					RemoteAddress: "1.2.3.4",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-						RekeyTime:            new(int32(7200)),
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-						RekeyTime:            new(int32(1800)),
-						StartAction:          vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_NONE.Ptr(),
-						DpdAction:            vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_CLEAR.Ptr(),
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					PreSharedKey:  new("super-secret-key-at-least-20"),
-					RemoteAddress: "5.6.7.8",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Labels:  &map[string]string{},
-				Enabled: new(true),
+				Labels: &map[string]string{},
 			},
 			isValid: true,
 		},
@@ -752,161 +423,21 @@ func TestToUpdatePayload(t *testing.T) {
 	}{
 		{
 			description: "basic_update",
-			input: &Model{
-				DisplayName:  types.StringValue("updated-connection"),
-				Enabled:      types.BoolValue(false),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
-				Tunnel1: &TunnelModel{
-					RemoteAddress:  types.StringValue("203.0.113.1"),
-					PreSharedKeyWo: types.StringValue("secret123-at-least-20-chars"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					RemoteAddress:  types.StringValue("203.0.113.2"),
-					PreSharedKeyWo: types.StringValue("secret456-at-least-20-chars"),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-			},
-			expected: &vpn.UpdateGatewayConnectionPayload{
-				DisplayName: "updated-connection",
-				Tunnel1: vpn.TunnelConfiguration{
-					PreSharedKey:  new("secret123-at-least-20-chars"),
-					RemoteAddress: "203.0.113.1",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					PreSharedKey:  new("secret456-at-least-20-chars"),
-					RemoteAddress: "203.0.113.2",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Labels:  &map[string]string{},
-				Enabled: new(false),
-			},
-			isValid: true,
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel1.PreSharedKeyWo = types.StringValue("secret123-at-least-20-chars")
+				m.Tunnel2.PreSharedKeyWo = types.StringValue("secret456-at-least-20-chars")
+			})),
+			expected: fixtureUpdatePayload(),
+			isValid:  true,
 		},
 		{
-			description: "update_without_psk",
+			description: "minimal_update",
 			input: &Model{
-				DisplayName:  types.StringValue("updated-connection"),
-				Enabled:      types.BoolValue(false),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
-				Tunnel1: &TunnelModel{
-					RemoteAddress:  types.StringValue("203.0.113.1"),
-					PreSharedKeyWo: types.StringNull(),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
-				Tunnel2: &TunnelModel{
-					RemoteAddress:  types.StringValue("203.0.113.2"),
-					PreSharedKeyWo: types.StringNull(),
-					Phase1: &Phase1Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-					},
-					Phase2: &Phase2Model{
-						DhGroups:             types.ListNull(types.StringType),
-						EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-						IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-						RekeyTime:            types.Int32Null(),
-						StartAction:          types.StringNull(),
-						DpdAction:            types.StringNull(),
-					},
-				},
+				Tunnel1: &TunnelModel{},
+				Tunnel2: &TunnelModel{},
 			},
 			expected: &vpn.UpdateGatewayConnectionPayload{
-				DisplayName: "updated-connection",
-				Tunnel1: vpn.TunnelConfiguration{
-					PreSharedKey:  nil,
-					RemoteAddress: "203.0.113.1",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Tunnel2: vpn.TunnelConfiguration{
-					PreSharedKey:  nil,
-					RemoteAddress: "203.0.113.2",
-					Phase1: vpn.TunnelConfigurationPhase1{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-					Phase2: vpn.TunnelConfigurationPhase2{
-						DhGroups:             nil,
-						EncryptionAlgorithms: []vpn.PhaseEncryptionAlgorithmsInner{"aes256"},
-						IntegrityAlgorithms:  []vpn.PhaseIntegrityAlgorithmsInner{"sha2_384"},
-					},
-				},
-				Labels:  &map[string]string{},
-				Enabled: new(false),
+				Labels: &map[string]string{},
 			},
 			isValid: true,
 		},
@@ -946,75 +477,22 @@ func TestToTunnelConfiguration(t *testing.T) {
 	}{
 		{
 			description: "valid_tunnel",
-			input: &TunnelModel{
-				RemoteAddress:         types.StringValue("203.0.113.1"),
-				PreSharedKeyWo:        types.StringValue("secret123-at-least-20-chars"),
-				PreSharedKeyWoVersion: types.Int64Null(),
-				Phase1: &Phase1Model{
-					DhGroups:             types.ListNull(types.StringType),
-					EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-					IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-					RekeyTime:            types.Int32Null(),
-				},
-				Phase2: &Phase2Model{
-					DhGroups:             types.ListNull(types.StringType),
-					EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-					IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-					RekeyTime:            types.Int32Null(),
-					StartAction:          types.StringNull(),
-					DpdAction:            types.StringNull(),
-				},
-			},
-			isValid: true,
+			input:       fixtureTunnelModel(),
+			isValid:     true,
 		},
 		{
 			description: "tunnel_with_bgp",
-			input: &TunnelModel{
-				RemoteAddress:         types.StringValue("203.0.113.1"),
-				PreSharedKeyWo:        types.StringValue("secret123-at-least-20-chars"),
-				PreSharedKeyWoVersion: types.Int64Null(),
-				Phase1: &Phase1Model{
-					DhGroups:             types.ListNull(types.StringType),
-					EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-					IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-					RekeyTime:            types.Int32Null(),
-				},
-				Phase2: &Phase2Model{
-					DhGroups:             types.ListNull(types.StringType),
-					EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-					IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-					RekeyTime:            types.Int32Null(),
-					StartAction:          types.StringNull(),
-					DpdAction:            types.StringNull(),
-				},
-				Bgp: &BGPTunnelConfigModel{
+			input: fixtureTunnelModel(func(m *TunnelModel) {
+				m.Bgp = &BGPTunnelConfigModel{
 					RemoteAsn: types.Int64Value(65000),
-				},
-			},
+				}
+			}),
 			isValid: true,
 		},
 		{
-			description: "tunnel_without_psk",
-			input: &TunnelModel{
-				RemoteAddress:         types.StringValue("203.0.113.1"),
-				PreSharedKeyWo:        types.StringNull(),
-				PreSharedKeyWoVersion: types.Int64Null(),
-				Phase1: &Phase1Model{
-					DhGroups:             types.ListNull(types.StringType),
-					EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-					IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-					RekeyTime:            types.Int32Null(),
-				},
-				Phase2: &Phase2Model{
-					DhGroups:             types.ListNull(types.StringType),
-					EncryptionAlgorithms: types.ListValueMust(types.StringType, []attr.Value{types.StringValue("aes256")}),
-					IntegrityAlgorithms:  types.ListValueMust(types.StringType, []attr.Value{types.StringValue("sha2_384")}),
-					RekeyTime:            types.Int32Null(),
-					StartAction:          types.StringNull(),
-					DpdAction:            types.StringNull(),
-				},
-			},
-			isValid: true,
+			description: "empty_tunnel",
+			input:       &TunnelModel{},
+			isValid:     true,
 		},
 		{
 			description: "nil_tunnel",
