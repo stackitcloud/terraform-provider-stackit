@@ -98,6 +98,50 @@ func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
 	return new(T(s.ValueString()))
 }
 
+// StringOrEmpty returns the underlying string, treating null and unknown as "".
+func StringOrEmpty(s basetypes.StringValue) string {
+	if s.IsNull() || s.IsUnknown() {
+		return ""
+	}
+	return s.ValueString()
+}
+
+// NilIfEmpty returns nil for null/unknown/empty values, otherwise a pointer to
+// the string. Use for Create payloads against servers that normalize "" → null
+// on subsequent updates — seeding "" would produce a perpetual "" → null diff
+// on the next Read.
+func NilIfEmpty(s basetypes.StringValue) *string {
+	v := StringOrEmpty(s)
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+// ClearableString returns the value to send in a PATCH payload for an optional
+// string with "empty string clears" semantics on the server. Plan "" and null
+// are treated equivalently — both mean "field is not set" — so a user writing
+// `field = ""` doesn't accidentally trigger a clear (which would then produce a
+// perpetual "" → null diff). Unknown plan values are deferred (nil). Only when
+// the prior state held a non-empty value AND the plan is empty/null do we send
+// "" to clear the field server-side.
+func ClearableString(plan, state basetypes.StringValue) *string {
+	if plan.IsUnknown() {
+		return nil
+	}
+	planVal := StringOrEmpty(plan)
+	stateVal := StringOrEmpty(state)
+	if planVal == "" {
+		if stateVal == "" {
+			return nil
+		}
+		empty := ""
+		return &empty
+	}
+	v := planVal
+	return &v
+}
+
 // Int32ValueToPointer converts basetypes.Int32Value to a pointer to int32.
 // It returns nil if the value is null or unknown.
 func Int32ValueToPointer(s basetypes.Int32Value) *int32 {

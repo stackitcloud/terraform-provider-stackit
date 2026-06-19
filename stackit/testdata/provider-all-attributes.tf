@@ -33,6 +33,7 @@ provider "stackit" {
   ske_custom_endpoint                = "https://ske.api.stackit.cloud"
   service_enablement_custom_endpoint = "https://service-enablement.api.stackit.cloud"
   token_custom_endpoint              = "https://token.api.stackit.cloud"
+  workflows_custom_endpoint          = "https://workflows.api.stackit.cloud"
   enable_beta_resources              = "true"
 }
 

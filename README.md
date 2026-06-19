@@ -185,7 +185,7 @@ To enable experiments set the experiments field in the provider definition:
 ```hcl
 provider "stackit" {
   default_region        = "eu01"
-  experiments           = ["iam", "routing-tables", "network"]
+  experiments           = ["iam", "routing-tables", "network", "workflows"]
 }
 ```
 
@@ -210,6 +210,11 @@ If you don't need these fields, don't set the experiment flag `network`, to use 
 Enables the usage and provisioning of STACKIT Dremio resources.
 The STACKIT Dremio API is currently in alpha state.
 The fields of the resources are still subject to change.
+
+#### `workflows`
+
+Enables the STACKIT Workflows resources (`stackit_workflows_instance`, `stackit_workflows_dag_bundle`) and their data sources.
+The underlying API is in alpha and may change; the experiment flag must be set to use these resources.
 
 ## Acceptance Tests
 
