@@ -198,6 +198,38 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
+			// Status data source
+			{
+				ConfigVariables: gatewayMinVars,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+
+						data "stackit_vpn_gateway_status" "gateway" {
+							project_id = stackit_vpn_gateway.gateway.project_id
+                			gateway_id = stackit_vpn_gateway.gateway.gateway_id
+						}
+						`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway_status.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMinVars["display_name"])),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.0.name", string(vpn.VPNTUNNELSNAME_TUNNEL1)),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.0.internal_next_hop_ip"),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.0.public_ip"),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.1.name", string(vpn.VPNTUNNELSNAME_TUNNEL2)),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.internal_next_hop_ip"),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.public_ip"),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "connections.#", "0"),
+				),
+			},
 			// Update
 			{
 				ConfigVariables: gatewayMinVarsUpdated,
@@ -295,6 +327,38 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "region", "stackit_vpn_gateway.gateway", "region"),
 					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+				),
+			},
+			// Status data source
+			{
+				ConfigVariables: gatewayMaxVars,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+
+						data "stackit_vpn_gateway_status" "gateway" {
+							project_id = stackit_vpn_gateway.gateway.project_id
+                			gateway_id = stackit_vpn_gateway.gateway.gateway_id
+						}
+						`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_gateway_status.gateway", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "display_name", testutil.ConvertConfigVariable(gatewayMaxVars["display_name"])),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.#", "2"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.0.name", string(vpn.VPNTUNNELSNAME_TUNNEL1)),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.0.internal_next_hop_ip"),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.0.public_ip"),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.1.name", string(vpn.VPNTUNNELSNAME_TUNNEL2)),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.internal_next_hop_ip"),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.public_ip"),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "connections.#", "0"),
 				),
 			},
 			// Update
