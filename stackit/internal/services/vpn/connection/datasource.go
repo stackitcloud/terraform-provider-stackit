@@ -384,13 +384,13 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 		model.StaticRoutes = types.ListNull(types.StringType)
 	}
 
-	tunnel1, err := mapDataSourceTunnel(ctx, &conn.Tunnel1, model.Tunnel1)
+	tunnel1, err := mapDataSourceTunnel(ctx, &conn.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
 	model.Tunnel1 = tunnel1
 
-	tunnel2, err := mapDataSourceTunnel(ctx, &conn.Tunnel2, model.Tunnel2)
+	tunnel2, err := mapDataSourceTunnel(ctx, &conn.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
 	}
@@ -405,17 +405,17 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 	return nil
 }
 
-func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentTunnel *DataSourceTunnelModel) (*DataSourceTunnelModel, error) {
+func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration) (*DataSourceTunnelModel, error) {
 	tunnel := &DataSourceTunnelModel{
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
 	}
-	phase1, err := mapPhase1(ctx, apiTunnel.Phase1)
+	phase1, err := mapPhase1(ctx, &apiTunnel.Phase1)
 	if err != nil {
 		return nil, err
 	}
 	tunnel.Phase1 = phase1
 
-	phase2, err := mapPhase2(ctx, apiTunnel.Phase2)
+	phase2, err := mapPhase2(ctx, &apiTunnel.Phase2)
 	if err != nil {
 		return nil, err
 	}

@@ -1077,13 +1077,13 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentT
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
 		PreSharedKey:  currentTunnel.PreSharedKey,
 	}
-	phase1, err := mapPhase1(ctx, apiTunnel.Phase1)
+	phase1, err := mapPhase1(ctx, &apiTunnel.Phase1)
 	if err != nil {
 		return nil, err
 	}
 	tunnel.Phase1 = phase1
 
-	phase2, err := mapPhase2(ctx, apiTunnel.Phase2)
+	phase2, err := mapPhase2(ctx, &apiTunnel.Phase2)
 	if err != nil {
 		return nil, err
 	}
@@ -1127,12 +1127,15 @@ type BasePhaseFields struct {
 	RekeyTime            *int32
 }
 
-func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhaseModel, err error) {
+func mapBasePhase(ctx context.Context, apiPhase *BasePhaseFields) (phase BasePhaseModel, err error) {
+	if apiPhase == nil {
+		return phase, fmt.Errorf("api phase can not be nil")
+	}
+
 	if len(apiPhase.DhGroups) > 0 {
 		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.DhGroups)
 		if diags.HasError() {
-			err = fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
-			return
+			return phase, fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
 		}
 		phase.DhGroups = list
 	} else {
@@ -1141,8 +1144,7 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhas
 	if len(apiPhase.EncryptionAlgorithms) > 0 {
 		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.EncryptionAlgorithms)
 		if diags.HasError() {
-			err = fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
-			return
+			return phase, fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
 		}
 		phase.EncryptionAlgorithms = list
 	} else {
@@ -1151,8 +1153,7 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhas
 	if len(apiPhase.IntegrityAlgorithms) > 0 {
 		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.IntegrityAlgorithms)
 		if diags.HasError() {
-			err = fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
-			return
+			return phase, fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
 		}
 		phase.IntegrityAlgorithms = list
 	} else {
@@ -1163,11 +1164,14 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhas
 	} else {
 		phase.RekeyTime = types.Int32Null()
 	}
-	return
+	return phase, nil
 }
 
-func mapPhase1(ctx context.Context, apiPhase1 vpn.TunnelConfigurationPhase1) (*Phase1Model, error) {
-	basePhase, err := mapBasePhase(ctx, BasePhaseFields{
+func mapPhase1(ctx context.Context, apiPhase1 *vpn.TunnelConfigurationPhase1) (*Phase1Model, error) {
+	if apiPhase1 == nil {
+		return nil, fmt.Errorf("phase can not be nil")
+	}
+	basePhase, err := mapBasePhase(ctx, &BasePhaseFields{
 		DhGroups:             apiPhase1.DhGroups,
 		EncryptionAlgorithms: apiPhase1.EncryptionAlgorithms,
 		IntegrityAlgorithms:  apiPhase1.IntegrityAlgorithms,
@@ -1181,8 +1185,11 @@ func mapPhase1(ctx context.Context, apiPhase1 vpn.TunnelConfigurationPhase1) (*P
 	}, nil
 }
 
-func mapPhase2(ctx context.Context, apiPhase2 vpn.TunnelConfigurationPhase2) (*Phase2Model, error) {
-	basePhase, err := mapBasePhase(ctx, BasePhaseFields{
+func mapPhase2(ctx context.Context, apiPhase2 *vpn.TunnelConfigurationPhase2) (*Phase2Model, error) {
+	if apiPhase2 == nil {
+		return nil, fmt.Errorf("phase can not be nil")
+	}
+	basePhase, err := mapBasePhase(ctx, &BasePhaseFields{
 		DhGroups:             apiPhase2.DhGroups,
 		EncryptionAlgorithms: apiPhase2.EncryptionAlgorithms,
 		IntegrityAlgorithms:  apiPhase2.IntegrityAlgorithms,
