@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -168,39 +167,30 @@ func (r *vpnConnectionResource) Metadata(_ context.Context, req resource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_vpn_connection"
 }
 
-func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	tunnelSchema := schema.SingleNestedAttribute{
+func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
 		Description:         tunnelSchemaDescriptions["tunnel"],
 		MarkdownDescription: fmt.Sprintf("%s \n\n-> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", tunnelSchemaDescriptions["tunnel"]),
 		Required:            true,
-		Validators: []validator.Object{
-			objectvalidator.ExactlyOneOf(
-				path.MatchRelative().AtName("pre_shared_key"),
-				path.MatchRelative().AtName("pre_shared_key_wo"),
-			),
-		},
 		Attributes: map[string]schema.Attribute{
 			"pre_shared_key": schema.StringAttribute{
 				Description: tunnelSchemaDescriptions["pre_shared_key"],
 				Optional:    true,
-				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(20),
-					stringvalidator.ConflictsWith(
-						path.MatchRelative().AtParent().AtName("pre_shared_key_wo"),
-						path.MatchRelative().AtParent().AtName("pre_shared_key_wo_version"),
-					),
-					stringvalidator.PreferWriteOnlyAttribute(path.MatchRelative().AtParent().AtName("key_payload_base64_wo")),
+					stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot(rootAttribute).AtName("pre_shared_key_wo")),
 				},
 			},
 			"pre_shared_key_wo": schema.StringAttribute{
 				Description: tunnelSchemaDescriptions["pre_shared_key_wo"],
 				Optional:    true,
-				Sensitive:   true,
 				WriteOnly:   true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(20),
-					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
+					stringvalidator.ExactlyOneOf(
+						path.MatchRelative().AtParent().AtName("pre_shared_key"),
+						path.MatchRelative().AtParent().AtName("pre_shared_key_wo"),
+					),
 				},
 			},
 			"pre_shared_key_wo_version": schema.Int64Attribute{
@@ -208,7 +198,6 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:    true,
 				Validators: []validator.Int64{
 					int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo")),
-					int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
 				},
 			},
 			"remote_address": schema.StringAttribute{
@@ -353,7 +342,9 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 			},
 		},
 	}
+}
 
+func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("VPN Connection resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
@@ -451,8 +442,8 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 					listvalidator.ValueStringsAre(validate.CIDR()),
 				},
 			},
-			"tunnel1": tunnelSchema,
-			"tunnel2": tunnelSchema,
+			"tunnel1": tunnelSchema("tunnel1"),
+			"tunnel2": tunnelSchema("tunnel2"),
 			"labels": schema.MapAttribute{
 				Description: schemaDescriptions["labels"],
 				Optional:    true,
@@ -524,9 +515,7 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	model.Tunnel1.PreSharedKey = configModel.Tunnel1.PreSharedKey
 	model.Tunnel1.PreSharedKeyWo = configModel.Tunnel1.PreSharedKeyWo
-	model.Tunnel2.PreSharedKey = configModel.Tunnel2.PreSharedKey
 	model.Tunnel2.PreSharedKeyWo = configModel.Tunnel2.PreSharedKeyWo
 
 	ctx = core.InitProviderContext(ctx)
@@ -1082,7 +1071,7 @@ func mapFields(ctx context.Context, conn *vpn.ConnectionResponse, model *Model, 
 	return nil
 }
 
-func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, cuurrentTunnel *TunnelModel) (*TunnelModel, error) {
+func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentTunnel *TunnelModel) (*TunnelModel, error) {
 	tunnel := &TunnelModel{
 		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
 	}
@@ -1188,8 +1177,8 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, cuurrent
 	}
 
 	// could be nil for Read after a terraform import
-	if cuurrentTunnel != nil {
-		tunnel.PreSharedKeyWoVersion = cuurrentTunnel.PreSharedKeyWoVersion
+	if currentTunnel != nil {
+		tunnel.PreSharedKeyWoVersion = currentTunnel.PreSharedKeyWoVersion
 	} else {
 		tunnel.PreSharedKeyWoVersion = types.Int64Null()
 	}

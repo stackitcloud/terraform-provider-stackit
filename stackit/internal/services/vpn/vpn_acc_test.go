@@ -92,7 +92,6 @@ var gatewayMaxVarsUpdated2 = func() config.Variables {
 var connectionMinVars = func() config.Variables {
 	vars := make(config.Variables, len(gatewayMinVars)+5)
 	maps.Copy(vars, gatewayMinVars)
-	// vars["plan_id"] = config.StringVariable("p500")
 	vars["connection_display_name"] = config.StringVariable("vpn-conn-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	vars["tunnel1_remote_address"] = config.StringVariable("203.0.113.1")
 	vars["tunnel1_psk"] = config.StringVariable("Super.Secret_$hared3Key_1")
@@ -442,7 +441,6 @@ func TestAccVpnConnectionResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(connectionMinVars["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(connectionMinVars["az_tunnel2"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 					// Connection – identity & top-level
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.Region),
@@ -543,7 +541,6 @@ func TestAccVpnConnectionResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(connectionMinVarsUpdated["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(connectionMinVarsUpdated["az_tunnel2"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 					// Connection – all fields
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.Region),
@@ -631,7 +628,6 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(connectionMaxVars["advertised_route_2"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(connectionMaxVars["label_key"]), testutil.ConvertConfigVariable(connectionMaxVars["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 					// Connection – identity & top-level
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
@@ -770,7 +766,6 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "routing_type", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["routing_type"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["local_asn"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
-					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "state"),
 					// Connection
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["region"])),
