@@ -40,9 +40,9 @@ data "stackit_vpn_gateway_status" "example" {
 
 Read-Only:
 
+- `connection_id` (String) ID of the VPN connection.
 - `display_name` (String) Display name of the VPN connection.
 - `enabled` (Boolean) Wether the VPN connection is enabled or not.
-- `id` (String) ID of the VPN connection.
 
 
 <a id="nestedatt--tunnels"></a>

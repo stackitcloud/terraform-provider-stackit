@@ -49,7 +49,7 @@ type Model struct {
 type Connection struct {
 	DisplayName types.String `tfsdk:"display_name"`
 	Enabled     types.Bool   `tfsdk:"enabled"`
-	Id          types.String `tfsdk:"id"`
+	Id          types.String `tfsdk:"connection_id"`
 }
 
 type Tunnel struct {
@@ -59,9 +59,9 @@ type Tunnel struct {
 }
 
 var connectionType = map[string]attr.Type{
-	"display_name": basetypes.StringType{},
-	"enabled":      basetypes.BoolType{},
-	"id":           basetypes.StringType{},
+	"display_name":  basetypes.StringType{},
+	"enabled":       basetypes.BoolType{},
+	"connection_id": basetypes.StringType{},
 }
 
 var tunnelType = map[string]attr.Type{
@@ -149,7 +149,7 @@ func (d *vpnGatewayStatusDataSource) Schema(_ context.Context, _ datasource.Sche
 							Description: schemaDescriptions["connection_enabled"],
 							Computed:    true,
 						},
-						"id": schema.StringAttribute{
+						"connection_id": schema.StringAttribute{
 							Description: schemaDescriptions["connection_id"],
 							Computed:    true,
 						},

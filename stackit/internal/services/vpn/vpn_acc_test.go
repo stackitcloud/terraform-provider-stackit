@@ -155,6 +155,8 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.1.name", string(vpn.VPNTUNNELSNAME_TUNNEL2)),
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.internal_next_hop_ip"),
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.public_ip"),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "connections.#", "0"),
 				),
 			},
 			// Update
@@ -284,6 +286,8 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "tunnels.1.name", string(vpn.VPNTUNNELSNAME_TUNNEL2)),
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.internal_next_hop_ip"),
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway_status.gateway", "tunnels.1.public_ip"),
+
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway_status.gateway", "connections.#", "0"),
 				),
 			},
 			// Update

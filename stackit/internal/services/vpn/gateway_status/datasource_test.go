@@ -32,12 +32,12 @@ func fixtureInput(mods ...func(m *vpn.GatewayStatusResponse)) *vpn.GatewayStatus
 	resp := &vpn.GatewayStatusResponse{
 		Id: new(testGatewayId),
 		Connections: []vpn.ConnectionStatusResponse{
-			vpn.ConnectionStatusResponse{
+			{
 				DisplayName: new("Conn1"),
 				Enabled:     new(true),
 				Id:          new("foo"),
 			},
-			vpn.ConnectionStatusResponse{
+			{
 				DisplayName: new("Conn2"),
 				Enabled:     new(false),
 				Id:          new("bar"),
@@ -71,14 +71,14 @@ func fixtureModel(mods ...func(m *Model)) *Model {
 		GatewayId: types.StringValue(testGatewayId),
 		Connections: types.ListValueMust(types.ObjectType{AttrTypes: connectionType}, []attr.Value{
 			types.ObjectValueMust(connectionType, map[string]attr.Value{
-				"display_name": types.StringValue("Conn1"),
-				"enabled":      types.BoolValue(true),
-				"id":           types.StringValue("foo"),
+				"display_name":  types.StringValue("Conn1"),
+				"enabled":       types.BoolValue(true),
+				"connection_id": types.StringValue("foo"),
 			}),
 			types.ObjectValueMust(connectionType, map[string]attr.Value{
-				"display_name": types.StringValue("Conn2"),
-				"enabled":      types.BoolValue(false),
-				"id":           types.StringValue("bar"),
+				"display_name":  types.StringValue("Conn2"),
+				"enabled":       types.BoolValue(false),
+				"connection_id": types.StringValue("bar"),
 			}),
 		}),
 		DisplayName: types.StringValue(testDisplayName),
