@@ -17,6 +17,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
+	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -26,6 +27,30 @@ var (
 	_ datasource.DataSource              = (*vpnConnectionDataSource)(nil)
 	_ datasource.DataSourceWithConfigure = (*vpnConnectionDataSource)(nil)
 )
+
+type DataSourceTunnelModel struct {
+	RemoteAddress types.String          `tfsdk:"remote_address"`
+	Phase1        *Phase1Model          `tfsdk:"phase1"`
+	Phase2        *Phase2Model          `tfsdk:"phase2"`
+	Peering       *PeeringConfigModel   `tfsdk:"peering"`
+	Bgp           *BGPTunnelConfigModel `tfsdk:"bgp"`
+}
+
+type DataSourceModel struct {
+	ID           types.String           `tfsdk:"id"`
+	ConnectionID types.String           `tfsdk:"connection_id"`
+	ProjectID    types.String           `tfsdk:"project_id"`
+	Region       types.String           `tfsdk:"region"`
+	GatewayID    types.String           `tfsdk:"gateway_id"`
+	DisplayName  types.String           `tfsdk:"display_name"`
+	Enabled      types.Bool             `tfsdk:"enabled"`
+	RemoteSubnet types.List             `tfsdk:"remote_subnet"`
+	LocalSubnet  types.List             `tfsdk:"local_subnet"`
+	StaticRoutes types.List             `tfsdk:"static_routes"`
+	Tunnel1      *DataSourceTunnelModel `tfsdk:"tunnel1"`
+	Tunnel2      *DataSourceTunnelModel `tfsdk:"tunnel2"`
+	Labels       types.Map              `tfsdk:"labels"`
+}
 
 var datasourceSchemaDescriptions = map[string]string{
 	"id":            "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
@@ -253,7 +278,7 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 }
 
 func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -285,7 +310,7 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, connResp, &model, region)
+	err = mapDataSourceFields(ctx, connResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Processing response: %v", err))
 		return
@@ -299,4 +324,191 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 	tflog.Info(ctx, "VPN connection read", map[string]any{
 		"connection_id": connectionId,
 	})
+}
+
+func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, model *DataSourceModel, region string) error {
+	if conn == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var connectionId string
+	if conn.Id != nil {
+		connectionId = *conn.Id
+	} else if model.ConnectionID.ValueString() != "" {
+		connectionId = model.ConnectionID.ValueString()
+	} else {
+		return fmt.Errorf("connection id not present")
+	}
+
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.GatewayID.ValueString(), connectionId)
+	model.ConnectionID = types.StringValue(connectionId)
+	model.DisplayName = types.StringValue(conn.DisplayName)
+	model.Region = types.StringValue(region)
+
+	if conn.Enabled != nil {
+		model.Enabled = types.BoolValue(*conn.Enabled)
+	} else {
+		model.Enabled = types.BoolValue(true)
+	}
+
+	if conn.RemoteSubnets != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, conn.RemoteSubnets)
+		if diags.HasError() {
+			return fmt.Errorf("mapping remote_subnet: %w", core.DiagsToError(diags))
+		}
+		model.RemoteSubnet = list
+	} else {
+		model.RemoteSubnet = types.ListNull(types.StringType)
+	}
+
+	if conn.LocalSubnets != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, conn.LocalSubnets)
+		if diags.HasError() {
+			return fmt.Errorf("mapping local_subnet: %w", core.DiagsToError(diags))
+		}
+		model.LocalSubnet = list
+	} else {
+		model.LocalSubnet = types.ListNull(types.StringType)
+	}
+
+	if conn.StaticRoutes != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, conn.StaticRoutes)
+		if diags.HasError() {
+			return fmt.Errorf("mapping static_routes: %w", core.DiagsToError(diags))
+		}
+		model.StaticRoutes = list
+	} else {
+		model.StaticRoutes = types.ListNull(types.StringType)
+	}
+
+	tunnel1, err := mapDataSourceTunnel(ctx, &conn.Tunnel1, model.Tunnel1)
+	if err != nil {
+		return fmt.Errorf("mapping tunnel1: %w", err)
+	}
+	model.Tunnel1 = tunnel1
+
+	tunnel2, err := mapDataSourceTunnel(ctx, &conn.Tunnel2, model.Tunnel2)
+	if err != nil {
+		return fmt.Errorf("mapping tunnel2: %w", err)
+	}
+	model.Tunnel2 = tunnel2
+
+	labels, err := tfutils.MapLabels(ctx, conn.Labels, model.Labels)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
+	}
+	model.Labels = labels
+
+	return nil
+}
+
+func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentTunnel *DataSourceTunnelModel) (*DataSourceTunnelModel, error) {
+	tunnel := &DataSourceTunnelModel{
+		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
+	}
+	phase1 := &Phase1Model{}
+	if len(apiTunnel.Phase1.DhGroups) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.DhGroups)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping phase1 dh_groups: %w", core.DiagsToError(diags))
+		}
+		phase1.DhGroups = list
+	} else {
+		phase1.DhGroups = types.ListNull(types.StringType)
+	}
+	if len(apiTunnel.Phase1.EncryptionAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.EncryptionAlgorithms)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping phase1 encryption_algorithms: %w", core.DiagsToError(diags))
+		}
+		phase1.EncryptionAlgorithms = list
+	} else {
+		phase1.EncryptionAlgorithms = types.ListNull(types.StringType)
+	}
+	if len(apiTunnel.Phase1.IntegrityAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase1.IntegrityAlgorithms)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping phase1 integrity_algorithms: %w", core.DiagsToError(diags))
+		}
+		phase1.IntegrityAlgorithms = list
+	} else {
+		phase1.IntegrityAlgorithms = types.ListNull(types.StringType)
+	}
+	if apiTunnel.Phase1.RekeyTime != nil {
+		phase1.RekeyTime = types.Int32Value(*apiTunnel.Phase1.RekeyTime)
+	} else {
+		phase1.RekeyTime = types.Int32Null()
+	}
+	tunnel.Phase1 = phase1
+
+	phase2 := &Phase2Model{}
+	if len(apiTunnel.Phase2.DhGroups) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.DhGroups)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping phase2 dh_groups: %w", core.DiagsToError(diags))
+		}
+		phase2.DhGroups = list
+	} else {
+		phase2.DhGroups = types.ListNull(types.StringType)
+	}
+	if len(apiTunnel.Phase2.EncryptionAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.EncryptionAlgorithms)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping phase2 encryption_algorithms: %w", core.DiagsToError(diags))
+		}
+		phase2.EncryptionAlgorithms = list
+	} else {
+		phase2.EncryptionAlgorithms = types.ListNull(types.StringType)
+	}
+	if len(apiTunnel.Phase2.IntegrityAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, apiTunnel.Phase2.IntegrityAlgorithms)
+		if diags.HasError() {
+			return nil, fmt.Errorf("mapping phase2 integrity_algorithms: %w", core.DiagsToError(diags))
+		}
+		phase2.IntegrityAlgorithms = list
+	} else {
+		phase2.IntegrityAlgorithms = types.ListNull(types.StringType)
+	}
+	if apiTunnel.Phase2.RekeyTime != nil {
+		phase2.RekeyTime = types.Int32Value(*apiTunnel.Phase2.RekeyTime)
+	} else {
+		phase2.RekeyTime = types.Int32Null()
+	}
+	if apiTunnel.Phase2.StartAction != nil {
+		phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
+	} else {
+		phase2.StartAction = types.StringNull()
+	}
+	if apiTunnel.Phase2.DpdAction != nil {
+		phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
+	} else {
+		phase2.DpdAction = types.StringNull()
+	}
+	tunnel.Phase2 = phase2
+
+	if apiTunnel.Peering != nil {
+		peering := &PeeringConfigModel{}
+		if apiTunnel.Peering.LocalAddress != nil {
+			peering.LocalAddress = types.StringValue(*apiTunnel.Peering.LocalAddress)
+		} else {
+			peering.LocalAddress = types.StringNull()
+		}
+		if apiTunnel.Peering.RemoteAddress != nil {
+			peering.RemoteAddress = types.StringValue(*apiTunnel.Peering.RemoteAddress)
+		} else {
+			peering.RemoteAddress = types.StringNull()
+		}
+		tunnel.Peering = peering
+	}
+
+	if apiTunnel.Bgp != nil {
+		tunnel.Bgp = &BGPTunnelConfigModel{
+			RemoteAsn: types.Int64Value(int64(apiTunnel.Bgp.RemoteAsn)),
+		}
+	}
+
+	return tunnel, nil
 }
