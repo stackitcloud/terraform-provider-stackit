@@ -29,10 +29,21 @@ data "stackit_vpn_gateway_status" "example" {
 
 ### Read-Only
 
+- `connections` (Attributes List) List of connections in the VPN gateway. (see [below for nested schema](#nestedatt--connections))
 - `display_name` (String) A user-friendly name for the VPN gateway.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`".
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 - `tunnels` (Attributes List) List of the VPN tunnels in the gateway. (see [below for nested schema](#nestedatt--tunnels))
+
+<a id="nestedatt--connections"></a>
+### Nested Schema for `connections`
+
+Read-Only:
+
+- `display_name` (String) Display name of the VPN connection.
+- `enabled` (Boolean) Wether the VPN connection is enabled or not.
+- `id` (String) ID of the VPN connection.
+
 
 <a id="nestedatt--tunnels"></a>
 ### Nested Schema for `tunnels`
