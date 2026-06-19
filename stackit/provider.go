@@ -129,6 +129,7 @@ import (
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
+	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -757,6 +758,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
+		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
