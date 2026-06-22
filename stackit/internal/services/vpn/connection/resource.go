@@ -648,17 +648,17 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	// tunnel1 PSK rotation
 	if !tfutils.IsUndefined(model.Tunnel1.PreSharedKeyWoVersion) {
-		pv := model.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
-		sv := stateModel.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
-		if pv < sv {
+		planVersion := model.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
+		stateVersion := stateModel.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
+		if planVersion < stateVersion {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("tunnel1").AtName("pre_shared_key_wo_version"),
 				"Version must not decrease",
-				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", pv, sv),
+				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", planVersion, stateVersion),
 			)
 			return
 		}
-		if pv > sv {
+		if planVersion > stateVersion {
 			// Secret must be read from Config, not Plan — write-only values are always null in plan.
 			model.Tunnel1.PreSharedKeyWo = configModel.Tunnel1.PreSharedKeyWo
 		}
@@ -666,17 +666,17 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	// tunnel2 PSK rotation
 	if !tfutils.IsUndefined(model.Tunnel2.PreSharedKeyWoVersion) {
-		pv := model.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
-		sv := stateModel.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
-		if pv < sv {
+		planVersion := model.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
+		stateVersion := stateModel.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
+		if planVersion < stateVersion {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("tunnel2").AtName("pre_shared_key_wo_version"),
 				"Version must not decrease",
-				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", pv, sv),
+				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", planVersion, stateVersion),
 			)
 			return
 		}
-		if pv > sv {
+		if planVersion > stateVersion {
 			// Secret must be read from Config, not Plan — write-only values are always null in plan.
 			model.Tunnel2.PreSharedKeyWo = configModel.Tunnel2.PreSharedKeyWo
 		}
