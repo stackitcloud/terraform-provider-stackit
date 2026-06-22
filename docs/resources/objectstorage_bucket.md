@@ -4,11 +4,14 @@ page_title: "stackit_objectstorage_bucket Resource - stackit"
 subcategory: ""
 description: |-
   ObjectStorage bucket resource schema. Must have a region specified in the provider configuration. If you are creating credentialsgroup and bucket resources simultaneously, please include the depends_on field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.
+  ~> This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.
 ---
 
 # stackit_objectstorage_bucket (Resource)
 
 ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.
+
+~> This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.
 
 ## Example Usage
 
