@@ -503,7 +503,7 @@ func TestToTunnelConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			config, err := toTunnelConfiguration(tt.input)
+			config, err := toTunnelPayload(tt.input)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")

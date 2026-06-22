@@ -817,12 +817,12 @@ type connectionFields struct {
 }
 
 func toConnectionFields(ctx context.Context, model *Model) (*connectionFields, error) {
-	tunnel1, err := toTunnelConfiguration(model.Tunnel1)
+	tunnel1, err := toTunnelPayload(model.Tunnel1)
 	if err != nil {
 		return nil, fmt.Errorf("converting tunnel1: %w", err)
 	}
 
-	tunnel2, err := toTunnelConfiguration(model.Tunnel2)
+	tunnel2, err := toTunnelPayload(model.Tunnel2)
 	if err != nil {
 		return nil, fmt.Errorf("converting tunnel2: %w", err)
 	}
@@ -870,7 +870,7 @@ func toConnectionFields(ctx context.Context, model *Model) (*connectionFields, e
 	return fields, nil
 }
 
-func toTunnelConfiguration(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
+func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 	if tunnel == nil {
 		return nil, fmt.Errorf("nil tunnel model")
 	}
