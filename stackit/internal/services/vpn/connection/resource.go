@@ -171,7 +171,7 @@ func (r *vpnConnectionResource) Metadata(_ context.Context, req resource.Metadat
 func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Description:         tunnelSchemaDescriptions["tunnel"],
-		MarkdownDescription: fmt.Sprintf("%s \n\n-> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", tunnelSchemaDescriptions["tunnel"]),
+		MarkdownDescription: fmt.Sprintf("%s \n\n~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", tunnelSchemaDescriptions["tunnel"]),
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"pre_shared_key": schema.StringAttribute{
