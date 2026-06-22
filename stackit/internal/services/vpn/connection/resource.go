@@ -1051,17 +1051,15 @@ func mapFields(ctx context.Context, conn *vpn.ConnectionResponse, model *Model, 
 		model.StaticRoutes = types.ListNull(types.StringType)
 	}
 
-	tunnel1, err := mapTunnel(ctx, &conn.Tunnel1, model.Tunnel1)
+	err := mapTunnel(ctx, &conn.Tunnel1, model.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
-	model.Tunnel1 = tunnel1
 
-	tunnel2, err := mapTunnel(ctx, &conn.Tunnel2, model.Tunnel2)
+	err = mapTunnel(ctx, &conn.Tunnel2, model.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
 	}
-	model.Tunnel2 = tunnel2
 
 	labels, err := tfutils.MapLabels(ctx, conn.Labels, model.Labels)
 	if err != nil {
@@ -1072,22 +1070,26 @@ func mapFields(ctx context.Context, conn *vpn.ConnectionResponse, model *Model, 
 	return nil
 }
 
-func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentTunnel *TunnelModel) (*TunnelModel, error) {
-	tunnel := &TunnelModel{
-		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
+func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel *TunnelModel) error {
+	if tfTunnel == nil {
+		tfTunnel = &TunnelModel{
+			PreSharedKeyWoVersion: types.Int64Null(),
+		}
 	}
+
+	tfTunnel.RemoteAddress = types.StringValue(string(apiTunnel.RemoteAddress))
 
 	phase1, err := mapPhase1(ctx, &apiTunnel.Phase1)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	tunnel.Phase1 = phase1
+	tfTunnel.Phase1 = phase1
 
 	phase2, err := mapPhase2(ctx, &apiTunnel.Phase2)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	tunnel.Phase2 = phase2
+	tfTunnel.Phase2 = phase2
 
 	if apiTunnel.Peering != nil {
 		peering := &PeeringConfigModel{}
@@ -1101,24 +1103,20 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, currentT
 		} else {
 			peering.RemoteAddress = types.StringNull()
 		}
-		tunnel.Peering = peering
+		tfTunnel.Peering = peering
+	} else {
+		tfTunnel.Peering = nil
 	}
 
 	if apiTunnel.Bgp != nil {
-		tunnel.Bgp = &BGPTunnelConfigModel{
+		tfTunnel.Bgp = &BGPTunnelConfigModel{
 			RemoteAsn: types.Int64Value(int64(apiTunnel.Bgp.RemoteAsn)),
 		}
-	}
-
-	// could be nil for Read after a terraform import
-	if currentTunnel != nil {
-		tunnel.PreSharedKey = currentTunnel.PreSharedKey
-		tunnel.PreSharedKeyWoVersion = currentTunnel.PreSharedKeyWoVersion
 	} else {
-		tunnel.PreSharedKeyWoVersion = types.Int64Null()
+		tfTunnel.Bgp = nil
 	}
 
-	return tunnel, nil
+	return nil
 }
 
 type BasePhaseFields struct {
