@@ -68,12 +68,12 @@ import {
 - `display_name` (String) A user-friendly name for the connection. Must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long.
 - `gateway_id` (String) The UUID of the parent VPN gateway.
 - `project_id` (String) STACKIT project ID.
-- `tunnel1` (Attributes) Configuration for the IPsec tunnel. 
+- `tunnel1` (Attributes) Configuration for the IPsec tunnel1 
 
--> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--tunnel1))
-- `tunnel2` (Attributes) Configuration for the IPsec tunnel. 
+~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--tunnel1))
+- `tunnel2` (Attributes) Configuration for the IPsec tunnel2 
 
--> **Note:** Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--tunnel2))
+~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments). (see [below for nested schema](#nestedatt--tunnel2))
 
 ### Optional
 
