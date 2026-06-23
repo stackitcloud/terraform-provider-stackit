@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
@@ -47,10 +47,10 @@ func TestMapDataFields(t *testing.T) {
 				Region:         types.StringValue(testRegion),
 			},
 			&iaas.RoutingTableListResponse{
-				Items: &[]iaas.RoutingTable{
+				Items: []iaas.RoutingTable{
 					{
 						Id:            new(routingTableId.String()),
-						Name:          new("test"),
+						Name:          "test",
 						Description:   new("description"),
 						Default:       new(true),
 						CreatedAt:     &createdAt,
@@ -89,10 +89,10 @@ func TestMapDataFields(t *testing.T) {
 				Region:         types.StringValue(testRegion),
 			},
 			&iaas.RoutingTableListResponse{
-				Items: &[]iaas.RoutingTable{
+				Items: []iaas.RoutingTable{
 					{
 						Id:            new(routingTableId.String()),
-						Name:          new("test"),
+						Name:          "test",
 						Description:   new("description"),
 						Default:       new(true),
 						CreatedAt:     &createdAt,
@@ -102,7 +102,7 @@ func TestMapDataFields(t *testing.T) {
 					},
 					{
 						Id:            new(secondRoutingTableId.String()),
-						Name:          new("test2"),
+						Name:          "test2",
 						Description:   new("description2"),
 						Default:       new(false),
 						CreatedAt:     &createdAt,

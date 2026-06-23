@@ -62,6 +62,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["write_enabled"] = config.BoolVariable(false)
 	tempConfig["use_kms_key"] = config.BoolVariable(false)
 	tempConfig["acl2"] = config.StringVariable("10.100.2.0/24")
+	tempConfig["user_description"] = config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	return tempConfig
 }
 

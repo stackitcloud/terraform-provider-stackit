@@ -12,6 +12,7 @@ variable "policy" {}
 variable "size" {}
 variable "public_key" {}
 variable "service_account_mail" {}
+variable "agent_policy" {}
 
 resource "stackit_affinity_group" "affinity_group" {
   project_id = var.project_id
@@ -78,5 +79,8 @@ resource "stackit_server" "server" {
   }
   labels = {
     "acc-test" : var.label
+  }
+  agent = {
+    provisioning_policy = var.agent_policy
   }
 }

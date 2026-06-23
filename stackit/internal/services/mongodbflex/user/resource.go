@@ -2,9 +2,12 @@ package mongodbflex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
@@ -48,6 +51,11 @@ type Model struct {
 	Port       types.Int64  `tfsdk:"port"`
 	Uri        types.String `tfsdk:"uri"`
 	Region     types.String `tfsdk:"region"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -210,6 +218,18 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -301,6 +321,11 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	userId := model.UserId.ValueString()
+	if userId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -308,8 +333,8 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -435,6 +460,10 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	// Delete user
 	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

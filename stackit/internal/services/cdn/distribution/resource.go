@@ -10,22 +10,28 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api/wait"
 
@@ -45,32 +51,57 @@ var (
 )
 
 var schemaDescriptions = map[string]string{
-	"id":                                    "Terraform's internal resource identifier. It is structured as \"`project_id`,`distribution_id`\".",
-	"distribution_id":                       "CDN distribution ID",
-	"project_id":                            "STACKIT project ID associated with the distribution",
-	"status":                                "Status of the distribution",
-	"created_at":                            "Time when the distribution was created",
-	"updated_at":                            "Time when the distribution was last updated",
-	"errors":                                "List of distribution errors",
-	"domains":                               "List of configured domains for the distribution",
-	"config":                                "The distribution configuration",
-	"config_backend":                        "The configured backend for the distribution",
-	"config_regions":                        "The configured regions where content will be hosted",
-	"config_backend_type":                   "The configured backend type. ",
-	"config_optimizer":                      "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
-	"config_backend_origin_url":             "The configured backend type http for the distribution",
-	"config_backend_origin_request_headers": "The configured type http origin request headers for the backend",
-	"config_backend_geofencing":             "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
-	"config_blocked_countries":              "The configured countries where distribution of content is blocked",
-	"domain_name":                           "The name of the domain",
-	"domain_status":                         "The status of the domain",
-	"domain_type":                           "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
-	"domain_errors":                         "List of domain errors",
-	"config_backend_bucket_url":             "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
-	"config_backend_region":                 "The region where the bucket is hosted. Required if type is 'bucket'.",
+	"id":                                           "Terraform's internal resource identifier. It is structured as \"`project_id`,`distribution_id`\".",
+	"distribution_id":                              "CDN distribution ID",
+	"project_id":                                   "STACKIT project ID associated with the distribution",
+	"status":                                       "Status of the distribution",
+	"created_at":                                   "Time when the distribution was created",
+	"updated_at":                                   "Time when the distribution was last updated",
+	"errors":                                       "List of distribution errors",
+	"domains":                                      "List of configured domains for the distribution",
+	"config":                                       "The distribution configuration",
+	"config_backend":                               "The configured backend for the distribution",
+	"config_regions":                               "The configured regions where content will be hosted",
+	"config_backend_type":                          "The configured backend type. ",
+	"config_optimizer":                             "Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience.",
+	"config_backend_origin_url":                    "The configured backend type http for the distribution",
+	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
+	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
+	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
+	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
+	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
+	"config_redirects_rule_description":            "An optional description for the redirect rule",
+	"config_redirects_rule_enabled":                "A toggle to enable or disable the redirect rule. Default to true",
+	"config_redirects_rule_target_url":             "The target URL to redirect to. Must be a valid URI",
+	"config_redirects_rule_status_code":            "The HTTP status code for the redirect. Must be one of 301, 302, 303, 307, or 308.",
+	"config_redirects_rule_matchers":               "A list of matchers that define when this rule should apply. At least one matcher is required",
+	"config_redirects_rule_matcher_values":         "A list of glob patterns to match against the request path. At least one value is required. Examples: \"/shop/*\" or \"*/img/*\"",
+	"config_redirects_rule_match_condition":        "Defines how multiple matchers within this rule are combined (ALL, ANY, NONE). Defaults to ANY.",
+	"domain_name":                                  "The name of the domain",
+	"domain_status":                                "The status of the domain",
+	"domain_type":                                  "The type of the domain. Each distribution has one domain of type \"managed\", and domains of type \"custom\" may be additionally created by the user",
+	"domain_errors":                                "List of domain errors",
+	"config_backend_bucket_url":                    "The URL of the bucket (e.g. https://s3.example.com). Required if type is 'bucket'.",
+	"config_backend_region":                        "The region where the bucket is hosted. Required if type is 'bucket'.",
 	"config_backend_credentials_access_key_id":     "The access key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials_secret_access_key": "The secret key for the bucket. Required if type is 'bucket'.",
 	"config_backend_credentials":                   "The credentials for the bucket. Required if type is 'bucket'.",
+	"config_waf":                                   "Configures the Web Application Firewall (WAF) for the distribution. If this block is undefined or removed from your configuration, the WAF mode will default to DISABLED and the type to FREE. All other WAF properties will retain their last known state in the API; if they were never defined, the API will apply its default settings.",
+	"waf_mode":                                     "The operating mode of the WAF. 'ENABLED' actively blocks threats, 'LOG_ONLY' logs matches without blocking, and 'DISABLED' completely turns off inspection. Defaults to 'DISABLED'.",
+	"waf_type":                                     "The tier of the WAF. Valid values are 'FREE' or 'PREMIUM'. Defaults to 'FREE'.",
+	"waf_paranoia_level":                           "Defines how aggressively the WAF should act on requests. Valid values are 'L1' to 'L4'. Case you removed waf will retain the last known state and if omitted, The API applies the following default 'L1'.",
+	"waf_allowed_http_versions":                    "Restricts which HTTP protocol versions are accepted. If provided, the set must contain at least one item. If omitted, the API applies the following defaults: `HTTP/1.0`, `HTTP/1.1`, `HTTP/2`, `HTTP/2.0`.",
+	"waf_allowed_request_content_types":            "Restricts which Content-Type headers are accepted in request bodies. If provided, the set must contain at least one item. Case you removed waf will retain the last known state and if omitted, the API applies the following defaults: `application/x-www-form-urlencoded`, `multipart/form-data`, `multipart/related`, `text/xml`, `application/xml`, `application/soap+xml`, `application/x-amf`, `application/json`, `application/octet-stream`, `application/csp-report`, `application/xss-auditor-report`, `text/plain`.",
+	"waf_allowed_http_methods":                     "Restricts which HTTP methods the distribution accepts. If provided, the set must contain at least one item. Case you removed waf will retain the last known state and if omitted, the API applies the following defaults: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `CONNECT`, `OPTIONS`, `TRACE`, `PATCH`.",
+	"waf_enabled_rule_ids":                         "Set of WAF rule IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly enabled Rule ID takes precedence over a disabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_ids":                        "Set of WAF rule IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. For example, an explicitly disabled Rule ID takes precedence over an enabled Group ID. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_ids":                        "Set of WAF rule IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Specific Rules override Groups. To view available rules, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_group_ids":                   "Set of WAF Rule Group IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_group_ids":                  "Set of WAF Rule Group IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. Precedence hierarchy: Groups override Collections. To view available rule groups, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_enabled_rule_collection_ids":              "Set of WAF Collection IDs explicitly enabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_disabled_rule_collection_ids":             "Set of WAF Collection IDs explicitly disabled. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
+	"waf_log_only_rule_collection_ids":             "Set of WAF Collection IDs explicitly marked as Log Only. Can be set to an empty set to clear previously set rules. Case you removed waf will retain the last known state. To view available rule collections, please consult the API documentation: https://docs.api.eu01.stackit.cloud/documentation/cdn/version/v1#tag/WAF/operation/ListWafCollections",
 }
 
 type Model struct {
@@ -85,11 +116,31 @@ type Model struct {
 	Config         types.Object `tfsdk:"config"`          // the configuration of the distribution
 }
 
+type matcher struct {
+	Values              []string `tfsdk:"values"`
+	ValueMatchCondition *string  `tfsdk:"value_match_condition"`
+}
+
+type redirectRule struct {
+	Description        *string   `tfsdk:"description"`
+	Enabled            *bool     `tfsdk:"enabled"`
+	TargetUrl          string    `tfsdk:"target_url"`
+	StatusCode         int32     `tfsdk:"status_code"`
+	Matchers           []matcher `tfsdk:"matchers"`
+	RuleMatchCondition *string   `tfsdk:"rule_match_condition"`
+}
+
+type redirectConfig struct {
+	Rules []redirectRule `tfsdk:"rules"`
+}
+
 type distributionConfig struct {
-	Backend          backend      `tfsdk:"backend"`           // The backend associated with the distribution
-	Regions          *[]string    `tfsdk:"regions"`           // The regions in which data will be cached
-	BlockedCountries *[]string    `tfsdk:"blocked_countries"` // The countries for which content will be blocked
-	Optimizer        types.Object `tfsdk:"optimizer"`         // The optimizer configuration
+	Backend          backend         `tfsdk:"backend"`           // The backend associated with the distribution
+	Redirects        *redirectConfig `tfsdk:"redirects"`         // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
+	Regions          *[]string       `tfsdk:"regions"`           // The regions in which data will be cached
+	BlockedCountries *[]string       `tfsdk:"blocked_countries"` // The countries for which content will be blocked
+	Optimizer        types.Object    `tfsdk:"optimizer"`         // The optimizer configuration
+	Waf              types.Object    `tfsdk:"waf"`               // The WAF configuration
 }
 
 type optimizerConfig struct {
@@ -97,7 +148,7 @@ type optimizerConfig struct {
 }
 
 type backend struct {
-	Type                 string                `tfsdk:"type"`                   // The type of the backend. Currently, only "http" backend is supported
+	Type                 string                `tfsdk:"type"`                   // The type of the backend. Currently, only "http" and "bucket" backend is supported
 	OriginURL            *string               `tfsdk:"origin_url"`             // The origin URL of the backend
 	OriginRequestHeaders *map[string]string    `tfsdk:"origin_request_headers"` // Request headers that should be added by the CDN distribution to incoming requests
 	Geofencing           *map[string][]*string `tfsdk:"geofencing"`             // The geofencing is an object mapping multiple alternative origins to country codes.
@@ -106,8 +157,26 @@ type backend struct {
 	Credentials          *backendCredentials   `tfsdk:"credentials"`
 }
 
+type wafConfig struct {
+	Mode                       types.String `tfsdk:"mode"`
+	Type                       types.String `tfsdk:"type"`
+	ParanoiaLevel              types.String `tfsdk:"paranoia_level"`
+	AllowedHttpVersions        types.Set    `tfsdk:"allowed_http_versions"`
+	AllowedRequestContentTypes types.Set    `tfsdk:"allowed_request_content_types"`
+	AllowedHttpMethods         types.Set    `tfsdk:"allowed_http_methods"`
+	EnabledRuleIds             types.Set    `tfsdk:"enabled_rule_ids"`
+	DisabledRuleIds            types.Set    `tfsdk:"disabled_rule_ids"`
+	LogOnlyRuleIds             types.Set    `tfsdk:"log_only_rule_ids"`
+	EnabledRuleGroupIds        types.Set    `tfsdk:"enabled_rule_group_ids"`
+	DisabledRuleGroupIds       types.Set    `tfsdk:"disabled_rule_group_ids"`
+	LogOnlyRuleGroupIds        types.Set    `tfsdk:"log_only_rule_group_ids"`
+	EnabledRuleCollectionIds   types.Set    `tfsdk:"enabled_rule_collection_ids"`
+	DisabledRuleCollectionIds  types.Set    `tfsdk:"disabled_rule_collection_ids"`
+	LogOnlyRuleCollectionIds   types.Set    `tfsdk:"log_only_rule_collection_ids"`
+}
+
 type backendCredentials struct {
-	AccessKey *string `tfsdk:"access_key_id"`
+	AccessKey *string `tfsdk:"access_key_id"` //nolint:gosec // AccessKey should be exported from this struct
 	SecretKey *string `tfsdk:"secret_access_key"`
 }
 
@@ -118,6 +187,12 @@ var configTypes = map[string]attr.Type{
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes,
 	},
+	"redirects": types.ObjectType{
+		AttrTypes: redirectsTypes,
+	},
+	"waf": types.ObjectType{
+		AttrTypes: wafTypes,
+	},
 }
 
 var optimizerTypes = map[string]attr.Type{
@@ -127,6 +202,50 @@ var optimizerTypes = map[string]attr.Type{
 var geofencingTypes = types.MapType{ElemType: types.ListType{
 	ElemType: types.StringType,
 }}
+
+var matcherTypes = map[string]attr.Type{
+	"values":                types.ListType{ElemType: types.StringType},
+	"value_match_condition": types.StringType,
+}
+
+var redirectRuleTypes = map[string]attr.Type{
+	"description":          types.StringType,
+	"enabled":              types.BoolType,
+	"target_url":           types.StringType,
+	"status_code":          types.Int32Type,
+	"rule_match_condition": types.StringType,
+	"matchers": types.ListType{
+		ElemType: types.ObjectType{
+			AttrTypes: matcherTypes,
+		},
+	},
+}
+
+var redirectsTypes = map[string]attr.Type{
+	"rules": types.ListType{
+		ElemType: types.ObjectType{
+			AttrTypes: redirectRuleTypes,
+		},
+	},
+}
+
+var wafTypes = map[string]attr.Type{
+	"mode":                          types.StringType,
+	"type":                          types.StringType,
+	"paranoia_level":                types.StringType,
+	"allowed_http_versions":         types.SetType{ElemType: types.StringType},
+	"allowed_request_content_types": types.SetType{ElemType: types.StringType},
+	"allowed_http_methods":          types.SetType{ElemType: types.StringType},
+	"enabled_rule_ids":              types.SetType{ElemType: types.StringType},
+	"disabled_rule_ids":             types.SetType{ElemType: types.StringType},
+	"log_only_rule_ids":             types.SetType{ElemType: types.StringType},
+	"enabled_rule_group_ids":        types.SetType{ElemType: types.StringType},
+	"disabled_rule_group_ids":       types.SetType{ElemType: types.StringType},
+	"log_only_rule_group_ids":       types.SetType{ElemType: types.StringType},
+	"enabled_rule_collection_ids":   types.SetType{ElemType: types.StringType},
+	"disabled_rule_collection_ids":  types.SetType{ElemType: types.StringType},
+	"log_only_rule_collection_ids":  types.SetType{ElemType: types.StringType},
+}
 
 var backendTypes = map[string]attr.Type{
 	"type":                   types.StringType,
@@ -185,6 +304,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	backendOptions := []string{"http", "bucket"}
+	statusCode := []int32{301, 302, 303, 307, 308}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: features.AddBetaDescription("CDN distribution data source schema.", core.Resource),
 		Description:         "CDN distribution data source schema.",
@@ -267,6 +387,185 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						},
 						Validators: []validator.Object{
 							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+					},
+					"redirects": schema.SingleNestedAttribute{
+						Optional:    true,
+						Description: schemaDescriptions["config_redirects"],
+						Attributes: map[string]schema.Attribute{
+							"rules": schema.ListNestedAttribute{
+								Description: schemaDescriptions["config_redirects_rules"],
+								Required:    true,
+								Validators: []validator.List{
+									listvalidator.SizeAtLeast(1),
+								},
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"description": schema.StringAttribute{
+											Description: schemaDescriptions["config_redirects_rule_description"],
+											Optional:    true,
+											Computed:    true,
+											Default:     stringdefault.StaticString(""),
+										},
+										"enabled": schema.BoolAttribute{
+											Optional:    true,
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_enabled"],
+											Default:     booldefault.StaticBool(true),
+										},
+										"target_url": schema.StringAttribute{
+											Required:    true,
+											Description: schemaDescriptions["config_redirects_rule_target_url"],
+										},
+										"status_code": schema.Int32Attribute{
+											Required:    true,
+											Description: schemaDescriptions["config_redirects_rule_status_code"],
+											Validators:  []validator.Int32{int32validator.OneOf(statusCode...)},
+										},
+										"rule_match_condition": schema.StringAttribute{
+											Optional:    true,
+											Computed:    true,
+											Description: schemaDescriptions["config_redirects_rule_match_condition"],
+											Default:     stringdefault.StaticString("ANY"),
+											Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
+										},
+										"matchers": schema.ListNestedAttribute{
+											Description: schemaDescriptions["config_redirects_rule_matchers"],
+											Required:    true,
+											Validators: []validator.List{
+												listvalidator.SizeAtLeast(1),
+											},
+											NestedObject: schema.NestedAttributeObject{
+												Attributes: map[string]schema.Attribute{
+													"values": schema.ListAttribute{
+														Description: schemaDescriptions["config_redirects_rule_matcher_values"],
+														Required:    true,
+														ElementType: types.StringType,
+														Validators: []validator.List{
+															listvalidator.SizeAtLeast(1),
+															listvalidator.NoNullValues(),
+														},
+													},
+													"value_match_condition": schema.StringAttribute{
+														Optional:    true,
+														Description: schemaDescriptions["config_redirects_rule_match_condition"],
+														Default:     stringdefault.StaticString("ANY"),
+														Computed:    true,
+														Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedMatchConditionEnumValues)...)},
+													},
+												},
+											},
+										}},
+								},
+							},
+						},
+					},
+					"waf": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_waf"],
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"mode": schema.StringAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["waf_mode"],
+								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafModeEnumValues)...)},
+								Default:     stringdefault.StaticString(string(cdnSdk.WAFMODE_DISABLED)),
+							},
+							"type": schema.StringAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["waf_type"],
+								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafTypeEnumValues)...)},
+								Default:     stringdefault.StaticString(string(cdnSdk.WAFTYPE_FREE)),
+							},
+							"paranoia_level": schema.StringAttribute{
+								Optional:    true,
+								Computed:    true,
+								Description: schemaDescriptions["waf_paranoia_level"],
+								Validators:  []validator.String{stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(cdnSdk.AllowedWafParanoiaLevelEnumValues)...)},
+							},
+							"allowed_http_versions": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_http_versions"],
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
+								},
+							},
+							"allowed_request_content_types": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_allowed_request_content_types"],
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
+								},
+							},
+							"allowed_http_methods": schema.SetAttribute{
+								Optional:    true,
+								ElementType: types.StringType,
+								Computed:    true,
+								Description: schemaDescriptions["waf_allowed_http_methods"],
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
+								},
+							},
+							"enabled_rule_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_ids"],
+							},
+							"disabled_rule_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_ids"],
+							},
+							"log_only_rule_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_ids"],
+							},
+							"enabled_rule_group_ids": schema.SetAttribute{
+								Optional:    true,
+								ElementType: types.StringType,
+								Computed:    true,
+								Description: schemaDescriptions["waf_enabled_rule_group_ids"],
+							},
+							"disabled_rule_group_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_group_ids"],
+							},
+							"log_only_rule_group_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_group_ids"],
+							},
+							"enabled_rule_collection_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_enabled_rule_collection_ids"],
+							},
+							"disabled_rule_collection_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_disabled_rule_collection_ids"],
+							},
+							"log_only_rule_collection_ids": schema.SetAttribute{
+								Optional:    true,
+								Computed:    true,
+								ElementType: types.StringType,
+								Description: schemaDescriptions["waf_log_only_rule_collection_ids"],
+							},
 						},
 					},
 					"backend": schema.SingleNestedAttribute{
@@ -481,6 +780,11 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
+	if distributionId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
@@ -535,7 +839,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		UnhandledUnknownAsEmpty: false,
 	})
 	if diags.HasError() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping config")
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping plan config")
 		return
 	}
 
@@ -550,12 +854,9 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	// blockedCountries
-	// Use a pointer to a slice to distinguish between an empty list (unblock all) and nil (no change).
-	var blockedCountries *[]string
+	var blockedCountries []string
 	if configModel.BlockedCountries != nil {
-		// Use a temporary slice
 		tempBlockedCountries := []string{}
-
 		for _, blockedCountry := range *configModel.BlockedCountries {
 			validatedBlockedCountry, err := validateCountryCode(blockedCountry)
 			if err != nil {
@@ -564,10 +865,11 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 			}
 			tempBlockedCountries = append(tempBlockedCountries, validatedBlockedCountry)
 		}
-
-		// Point to the populated slice
-		blockedCountries = &tempBlockedCountries
+		blockedCountries = tempBlockedCountries
 	}
+
+	// redirects
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
 
 	configPatchBackend := &cdnSdk.ConfigPatchBackend{}
 
@@ -613,7 +915,43 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	configPatch := &cdnSdk.ConfigPatch{
 		Backend:          configPatchBackend,
 		Regions:          regions,
-		BlockedCountries: *blockedCountries,
+		BlockedCountries: blockedCountries,
+		Redirects:        redirectsConfig,
+	}
+
+	configPatch.Waf = &cdnSdk.WafConfigPatch{
+		Mode: new(cdnSdk.WAFMODE_DISABLED),
+		Type: new(cdnSdk.WAFTYPE_FREE),
+	}
+
+	// Map WAF Update
+	if !utils.IsUndefined(configModel.Waf) {
+		var wafModel wafConfig
+		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+
+		configPatch.Waf.Mode = new(cdnSdk.WafMode(wafModel.Mode.ValueString()))
+		configPatch.Waf.Type = new(cdnSdk.WafType(wafModel.Type.ValueString()))
+		configPatch.Waf.AllowedHttpVersions = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpVersions, &diags)
+		configPatch.Waf.AllowedRequestContentTypes = conversion.TerraformStringSetToList(ctx, wafModel.AllowedRequestContentTypes, &diags)
+		configPatch.Waf.AllowedHttpMethods = conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpMethods, &diags)
+		configPatch.Waf.EnabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleIds, &diags)
+		configPatch.Waf.DisabledRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleIds, &diags)
+		configPatch.Waf.LogOnlyRuleIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleIds, &diags)
+		configPatch.Waf.EnabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleGroupIds, &diags)
+		configPatch.Waf.DisabledRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleGroupIds, &diags)
+		configPatch.Waf.LogOnlyRuleGroupIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleGroupIds, &diags)
+		configPatch.Waf.EnabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleCollectionIds, &diags)
+		configPatch.Waf.DisabledRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleCollectionIds, &diags)
+		configPatch.Waf.LogOnlyRuleCollectionIds = conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleCollectionIds, &diags)
+
+		if diags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", "Error mapping WAF config")
+			return
+		}
+
+		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
+			configPatch.Waf.ParanoiaLevel = new(cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString()))
+		}
 	}
 
 	if !utils.IsUndefined(configModel.Optimizer) {
@@ -768,6 +1106,93 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		}
 	}
 
+	// redirects
+	redirectsVal := types.ObjectNull(redirectsTypes)
+	if distribution.Config.Redirects != nil && distribution.Config.Redirects.Rules != nil {
+		var tfRules []attr.Value
+		for _, r := range distribution.Config.Redirects.Rules {
+			var tfMatchers []attr.Value
+			if r.Matchers != nil {
+				for _, m := range r.Matchers {
+					tfValuesList, diags := types.ListValueFrom(ctx, types.StringType, m.Values)
+					if diags.HasError() {
+						return core.DiagsToError(diags)
+					}
+
+					tfValMatchCond := types.StringValue("ANY")
+					if m.ValueMatchCondition != nil {
+						tfValMatchCond = types.StringValue(string(*m.ValueMatchCondition))
+					}
+
+					tfMatcherObj, diags := types.ObjectValue(matcherTypes, map[string]attr.Value{
+						"values":                tfValuesList,
+						"value_match_condition": tfValMatchCond,
+					})
+					if diags.HasError() {
+						return core.DiagsToError(diags)
+					}
+					tfMatchers = append(tfMatchers, tfMatcherObj)
+				}
+			}
+
+			tfMatchersList, diags := types.ListValue(types.ObjectType{AttrTypes: matcherTypes}, tfMatchers)
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+
+			tfDesc := types.StringValue("")
+			if r.Description != nil {
+				tfDesc = types.StringValue(*r.Description)
+			}
+
+			tfEnabled := types.BoolValue(true)
+			if r.Enabled != nil {
+				tfEnabled = types.BoolValue(*r.Enabled)
+			}
+
+			tfTargetUrl := types.StringNull()
+			if r.TargetUrl != "" {
+				tfTargetUrl = types.StringValue(r.TargetUrl)
+			}
+
+			tfStatusCode := types.Int32Null()
+			if r.StatusCode > 0 {
+				tfStatusCode = types.Int32Value(r.StatusCode)
+			}
+
+			tfRuleMatchCond := types.StringValue("ANY")
+			if r.RuleMatchCondition != nil {
+				tfRuleMatchCond = types.StringValue(string(*r.RuleMatchCondition))
+			}
+
+			tfRuleObj, diags := types.ObjectValue(redirectRuleTypes, map[string]attr.Value{
+				"description":          tfDesc,
+				"enabled":              tfEnabled,
+				"target_url":           tfTargetUrl,
+				"status_code":          tfStatusCode,
+				"rule_match_condition": tfRuleMatchCond,
+				"matchers":             tfMatchersList,
+			})
+			if diags.HasError() {
+				return core.DiagsToError(diags)
+			}
+			tfRules = append(tfRules, tfRuleObj)
+		}
+
+		tfRulesList, diags := types.ListValue(types.ObjectType{AttrTypes: redirectRuleTypes}, tfRules)
+		if diags.HasError() {
+			return core.DiagsToError(diags)
+		}
+
+		var objDiags diag.Diagnostics
+		redirectsVal, objDiags = types.ObjectValue(redirectsTypes, map[string]attr.Value{
+			"rules": tfRulesList,
+		})
+		if objDiags.HasError() {
+			return core.DiagsToError(objDiags)
+		}
+	}
+
 	// blockedCountries
 	var blockedCountries []attr.Value
 	if distribution.Config.BlockedCountries != nil {
@@ -887,6 +1312,41 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		return core.DiagsToError(diags)
 	}
 
+	// Map Waf
+	var pl *string
+	if distribution.Config.Waf.ParanoiaLevel != nil {
+		pl = new(string(*distribution.Config.Waf.ParanoiaLevel))
+	}
+	wafObjAttrs := map[string]attr.Value{
+		"mode":                          types.StringValue(string(distribution.Config.Waf.Mode)),
+		"type":                          types.StringValue(string(distribution.Config.Waf.Type)),
+		"paranoia_level":                types.StringPointerValue(pl),
+		"allowed_http_versions":         conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpVersions, &diags),
+		"allowed_request_content_types": conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedRequestContentTypes, &diags),
+		"allowed_http_methods":          conversion.StringListToSet(ctx, distribution.Config.Waf.AllowedHttpMethods, &diags),
+		"enabled_rule_ids":              conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleIds, &diags),
+		"disabled_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleIds, &diags),
+		"log_only_rule_ids":             conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleIds, &diags),
+		"enabled_rule_group_ids":        conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleGroupIds, &diags),
+		"disabled_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleGroupIds, &diags),
+		"log_only_rule_group_ids":       conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleGroupIds, &diags),
+		"enabled_rule_collection_ids":   conversion.StringListToSet(ctx, distribution.Config.Waf.EnabledRuleCollectionIds, &diags),
+		"disabled_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.DisabledRuleCollectionIds, &diags),
+		"log_only_rule_collection_ids":  conversion.StringListToSet(ctx, distribution.Config.Waf.LogOnlyRuleCollectionIds, &diags),
+	}
+
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	var wafVal attr.Value
+
+	var diagWaf diag.Diagnostics
+	wafVal, diagWaf = types.ObjectValue(wafTypes, wafObjAttrs)
+	if diagWaf.HasError() {
+		return core.DiagsToError(diagWaf)
+	}
+
 	optimizerVal := types.ObjectNull(optimizerTypes)
 	if o := distribution.Config.Optimizer; o != nil {
 		optimizerEnabled, ok := o.GetEnabledOk()
@@ -905,6 +1365,8 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		"regions":           modelRegions,
 		"blocked_countries": modelBlockedCountries,
 		"optimizer":         optimizerVal,
+		"redirects":         redirectsVal,
+		"waf":               wafVal,
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)
@@ -956,14 +1418,26 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	if model == nil {
 		return nil, fmt.Errorf("missing model")
 	}
+
+	var rawConfig distributionConfig
+	diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
+		UnhandledNullAsEmpty:    false,
+		UnhandledUnknownAsEmpty: false,
+	})
+	if diags.HasError() {
+		return nil, core.DiagsToError(diags)
+	}
+
 	cfg, err := convertConfig(ctx, model)
 	if err != nil {
 		return nil, err
 	}
+
 	var optimizer *cdnSdk.Optimizer
 	if cfg.Optimizer != nil {
 		optimizer = cdnSdk.NewOptimizer(cfg.Optimizer.GetEnabled())
 	}
+
 	var backend *cdnSdk.CreateDistributionPayloadBackend
 	if cfg.Backend.HttpBackend != nil {
 		backend = &cdnSdk.CreateDistributionPayloadBackend{
@@ -975,16 +1449,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 			},
 		}
 	} else if cfg.Backend.BucketBackend != nil {
-		// We need to parse the model again to access the credentials,
-		// as convertConfig returns the SDK Config struct which hides them.
-		var rawConfig distributionConfig
-		diags := model.Config.As(ctx, &rawConfig, basetypes.ObjectAsOptions{
-			UnhandledNullAsEmpty:    false,
-			UnhandledUnknownAsEmpty: false,
-		})
-		if diags.HasError() {
-			return nil, core.DiagsToError(diags)
-		}
 		var accessKey, secretKey *string
 		if rawConfig.Backend.Credentials != nil {
 			accessKey = rawConfig.Backend.Credentials.AccessKey
@@ -1003,21 +1467,74 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		}
 	}
 
+	// Conditionally set the WAF payload to nil if it's not defined
+	var wafPayload *cdnSdk.WafConfig
+	if !utils.IsUndefined(rawConfig.Waf) {
+		wafPayload = &cfg.Waf
+	}
+
 	payload := &cdnSdk.CreateDistributionPayload{
 		IntentId:         new(uuid.NewString()),
 		Regions:          cfg.Regions,
 		Backend:          *backend,
 		BlockedCountries: cfg.BlockedCountries,
 		Optimizer:        optimizer,
+		Redirects:        cfg.Redirects,
+		Waf:              wafPayload, // Now passes nil if omitted
 	}
 
 	return payload, nil
+}
+
+func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.RedirectConfig {
+	var redirectsConfig *cdnSdk.RedirectConfig
+	if redirectConfigModel != nil {
+		sdkRules := []cdnSdk.RedirectRule{}
+		if len(redirectConfigModel.Rules) > 0 {
+			for _, rule := range redirectConfigModel.Rules {
+				matchers := []cdnSdk.Matcher{}
+				for _, matcher := range rule.Matchers {
+					var matchCond *cdnSdk.MatchCondition
+					if matcher.ValueMatchCondition != nil {
+						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
+						matchCond = &cond
+					}
+
+					matchers = append(matchers, cdnSdk.Matcher{
+						Values:              matcher.Values,
+						ValueMatchCondition: matchCond,
+					})
+				}
+
+				var ruleMatchCond *cdnSdk.MatchCondition
+				if rule.RuleMatchCondition != nil {
+					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
+				}
+				targetUrl := rule.TargetUrl
+
+				sdkConfigRule := cdnSdk.RedirectRule{
+					Description:        rule.Description,
+					Enabled:            rule.Enabled,
+					Matchers:           matchers,
+					RuleMatchCondition: ruleMatchCond,
+					StatusCode:         rule.StatusCode,
+					TargetUrl:          targetUrl,
+				}
+				sdkRules = append(sdkRules, sdkConfigRule)
+			}
+		}
+		redirectsConfig = &cdnSdk.RedirectConfig{
+			Rules: sdkRules,
+		}
+	}
+	return redirectsConfig
 }
 
 func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 	if model == nil {
 		return nil, errors.New("model cannot be nil")
 	}
+
 	if model.Config.IsNull() || model.Config.IsUnknown() {
 		return nil, errors.New("config cannot be nil or unknown")
 	}
@@ -1052,6 +1569,49 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		}
 	}
 
+	// redirects
+	redirectsConfig := convertRedirectconfig(configModel.Redirects)
+
+	if configModel.Redirects != nil {
+		sdkRules := []cdnSdk.RedirectRule{}
+
+		if len(configModel.Redirects.Rules) > 0 {
+			for _, rule := range configModel.Redirects.Rules {
+				matchers := []cdnSdk.Matcher{}
+				for _, matcher := range rule.Matchers {
+					var matchCond *cdnSdk.MatchCondition
+					if matcher.ValueMatchCondition != nil {
+						cond := cdnSdk.MatchCondition(*matcher.ValueMatchCondition)
+						matchCond = &cond
+					}
+
+					matchers = append(matchers, cdnSdk.Matcher{
+						Values:              matcher.Values,
+						ValueMatchCondition: matchCond,
+					})
+				}
+
+				var ruleMatchCond *cdnSdk.MatchCondition
+				if rule.RuleMatchCondition != nil {
+					ruleMatchCond = new(cdnSdk.MatchCondition(*rule.RuleMatchCondition))
+				}
+
+				sdkConfigRule := cdnSdk.RedirectRule{
+					Description:        rule.Description,
+					Enabled:            rule.Enabled,
+					Matchers:           matchers,
+					RuleMatchCondition: ruleMatchCond,
+					StatusCode:         rule.StatusCode,
+					TargetUrl:          rule.TargetUrl,
+				}
+				sdkRules = append(sdkRules, sdkConfigRule)
+			}
+		}
+		redirectsConfig = &cdnSdk.RedirectConfig{
+			Rules: sdkRules,
+		}
+	}
+
 	// geofencing
 	geofencing := map[string][]string{}
 	if configModel.Backend.Geofencing != nil {
@@ -1075,6 +1635,37 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		Backend:          cdnSdk.ConfigBackend{},
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
+		Redirects:        redirectsConfig,
+	}
+
+	if !utils.IsUndefined(configModel.Waf) {
+		var wafModel wafConfig
+		diags := configModel.Waf.As(ctx, &wafModel, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+
+		cdnConfig.Waf = cdnSdk.WafConfig{
+			Mode:                       cdnSdk.WafMode(wafModel.Mode.ValueString()),
+			Type:                       cdnSdk.WafType(wafModel.Type.ValueString()),
+			AllowedHttpVersions:        conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpVersions, &diags),
+			AllowedRequestContentTypes: conversion.TerraformStringSetToList(ctx, wafModel.AllowedRequestContentTypes, &diags),
+			AllowedHttpMethods:         conversion.TerraformStringSetToList(ctx, wafModel.AllowedHttpMethods, &diags),
+			EnabledRuleIds:             conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleIds, &diags),
+			DisabledRuleIds:            conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleIds, &diags),
+			LogOnlyRuleIds:             conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleIds, &diags),
+			EnabledRuleGroupIds:        conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleGroupIds, &diags),
+			DisabledRuleGroupIds:       conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleGroupIds, &diags),
+			LogOnlyRuleGroupIds:        conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleGroupIds, &diags),
+			EnabledRuleCollectionIds:   conversion.TerraformStringSetToList(ctx, wafModel.EnabledRuleCollectionIds, &diags),
+			DisabledRuleCollectionIds:  conversion.TerraformStringSetToList(ctx, wafModel.DisabledRuleCollectionIds, &diags),
+			LogOnlyRuleCollectionIds:   conversion.TerraformStringSetToList(ctx, wafModel.LogOnlyRuleCollectionIds, &diags),
+		}
+
+		if !utils.IsUndefined(wafModel.ParanoiaLevel) {
+			pl := cdnSdk.WafParanoiaLevel(wafModel.ParanoiaLevel.ValueString())
+			cdnConfig.Waf.ParanoiaLevel = &pl
+		}
 	}
 
 	switch configModel.Backend.Type {

@@ -339,7 +339,6 @@ func TestAccScfOrgMax(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "display_name", platformName),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "system_id", platformSystemId),
-					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "display_name", platformName),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "region", region),
 					resource.TestCheckResourceAttr("data.stackit_scf_platform.platform", "api_url", platformApiUrl),
 					resource.TestCheckResourceAttrWith("data.stackit_scf_platform.platform", "console_url", testutil.CheckAttrHasPrefix(platformConsoleUrl)),

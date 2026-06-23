@@ -51,6 +51,7 @@ func TestMapFields(t *testing.T) {
 				AvailabilityZone: types.StringNull(),
 				IpAcl:            types.ListNull(types.StringType),
 				Name:             types.StringNull(),
+				Labels:           types.MapNull(types.StringType),
 				PerformanceClass: types.StringNull(),
 				SizeGigabytes:    types.Int32Null(),
 				Region:           testRegion,
@@ -95,6 +96,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("baz"),
 				}),
 				Name:             types.StringValue("testname"),
+				Labels:           types.MapNull(types.StringType),
 				PerformanceClass: types.StringValue("performance"),
 				SizeGigabytes:    types.Int32Value(42),
 				Region:           testRegion,
@@ -135,6 +137,10 @@ func TestToCreatePayload(t *testing.T) {
 				Name:             types.StringValue("testname"),
 				PerformanceClass: types.StringValue("performance"),
 				SizeGigabytes:    types.Int32Value(42),
+				SnapshotPolicy: types.ObjectValueMust(snapshotPolicyTypes, map[string]attr.Value{
+					"id":   types.StringValue("snapshot-id"),
+					"name": types.StringNull(),
+				}),
 			},
 			&sfs.CreateResourcePoolPayload{
 				AvailabilityZone: testAvailabilityZone.ValueString(),
@@ -142,6 +148,8 @@ func TestToCreatePayload(t *testing.T) {
 				Name:             "testname",
 				PerformanceClass: "performance",
 				SizeGigabytes:    42,
+				SnapshotPolicyId: new("snapshot-id"),
+				Labels:           &map[string]string{},
 			},
 			false,
 		},
@@ -163,13 +171,14 @@ func TestToCreatePayload(t *testing.T) {
 				Name:             "testname",
 				PerformanceClass: "performance",
 				SizeGigabytes:    42,
+				Labels:           &map[string]string{},
 			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toCreatePayload(tt.model)
+			got, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -206,6 +215,8 @@ func TestToUpdatePayload(t *testing.T) {
 				PerformanceClass:    new("performance"),
 				SizeGigabytes:       *sfs.NewNullableInt32(utils.Ptr[int32](42)),
 				SnapshotsAreVisible: new(true),
+				SnapshotPolicyId:    *sfs.NewNullableString(nil),
+				Labels:              &map[string]string{},
 			},
 			false,
 		},
@@ -225,6 +236,8 @@ func TestToUpdatePayload(t *testing.T) {
 				IpAcl:            nil,
 				PerformanceClass: new("performance"),
 				SizeGigabytes:    *sfs.NewNullableInt32(utils.Ptr[int32](42)),
+				SnapshotPolicyId: *sfs.NewNullableString(nil),
+				Labels:           &map[string]string{},
 			},
 			false,
 		},
@@ -244,13 +257,15 @@ func TestToUpdatePayload(t *testing.T) {
 				IpAcl:            []string{},
 				PerformanceClass: new("performance"),
 				SizeGigabytes:    *sfs.NewNullableInt32(utils.Ptr[int32](42)),
+				SnapshotPolicyId: *sfs.NewNullableString(nil),
+				Labels:           &map[string]string{},
 			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toUpdatePayload(tt.model)
+			got, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return

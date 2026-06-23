@@ -38,6 +38,7 @@ func TestAccSecretsManagerInstanceRoleBindings(t *testing.T) {
 
 	tc := rolebindings_testing.NewRoleBindingAccTestBuilder(providerConfig, "secretsmanager", "instance", "role_binding").
 		CreateStep(instanceConfig, variables, "stackit_secretsmanager_instance.instance", "instance_id").
+		DatasourceStep(instanceConfig, variables).
 		ImportStep(variables).
 		UpdateStep(instanceConfig, variablesUpdated(), "stackit_secretsmanager_instance.instance", "instance_id").
 		Build()

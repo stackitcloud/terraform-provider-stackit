@@ -37,6 +37,7 @@ type dataSourceModel struct {
 	SpaceHardLimitGigabytes types.Int32  `tfsdk:"space_hard_limit_gigabytes"`
 	ExportPolicyName        types.String `tfsdk:"export_policy"`
 	Region                  types.String `tfsdk:"region"`
+	Labels                  types.Map    `tfsdk:"labels"`
 }
 type shareDataSource struct {
 	client       *sfs.APIClient
@@ -183,11 +184,16 @@ You can also assign a Share Export Policy after creating the Share`,
 				Optional:    true,
 				Description: "The resource region. Read-only attribute that reflects the provider region.",
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a share",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
 		},
 	}
 }
 
-func mapDataSourceFields(_ context.Context, region string, share *sfs.Share, model *dataSourceModel) error {
+func mapDataSourceFields(ctx context.Context, region string, share *sfs.Share, model *dataSourceModel) error {
 	if share == nil {
 		return fmt.Errorf("share empty in response")
 	}
@@ -220,6 +226,12 @@ func mapDataSourceFields(_ context.Context, region string, share *sfs.Share, mod
 	}
 
 	model.MountPath = types.StringPointerValue(share.MountPath)
+
+	labels, err := utils.MapLabels(ctx, share.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+	model.Labels = labels
 
 	return nil
 }

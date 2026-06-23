@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability/wait"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/observability/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -180,6 +180,9 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -429,6 +432,9 @@ func TestAccResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -513,6 +519,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -688,6 +697,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("data.stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -920,6 +932,9 @@ func TestAccResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "logs_push_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "jaeger_ui_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_grpc_traces_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_logs_url"),
+					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_http_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "otlp_traces_url"),
 					resource.TestCheckResourceAttrSet("stackit_observability_instance.instance", "zipkin_spans_url"),
 
@@ -1050,7 +1065,7 @@ func TestAccResourceMax(t *testing.T) {
 
 func testAccCheckObservabilityDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := observability.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint, true)...)
+	client, err := observabilitySdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ObservabilityCustomEndpoint, true)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -1065,22 +1080,22 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	instances := *instancesResp.Instances
+	instances := instancesResp.Instances
 	for i := range instances {
-		if utils.Contains(instancesToDestroy, *instances[i].Id) {
-			if *instances[i].Status != observability.PROJECTINSTANCEFULLSTATUS_DELETE_SUCCEEDED {
-				_, err := client.DeleteInstanceExecute(ctx, testutil.ProjectId, *instances[i].Id)
+		if utils.Contains(instancesToDestroy, instances[i].Id) {
+			if instances[i].Status != "DELETE_SUCCEEDED" {
+				_, err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, instances[i].Id).Execute()
 				if err != nil {
-					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].Id, err)
+					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", instances[i].Id, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client, testutil.ProjectId, *instances[i].Id).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, instances[i].Id).WaitWithContext(ctx)
 				if err != nil {
-					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].Id, err)
+					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", instances[i].Id, err)
 				}
 			}
 		}

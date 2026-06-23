@@ -22,6 +22,9 @@ resource "stackit_sfs_share" "example" {
   name                       = "my-nfs-share"
   export_policy              = "high-performance-class"
   space_hard_limit_gigabytes = 32
+  labels = {
+    "foo" = "bar"
+  }
 }
 
 # Only use the import statement, if you want to import an existing sfs share
@@ -49,6 +52,7 @@ import {
 Note that if this is set to an empty string, the Share can only be mounted in read only by
 clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to the resource.
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only

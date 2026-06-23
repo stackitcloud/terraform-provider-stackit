@@ -9,7 +9,7 @@ resource "stackit_postgresflex_instance" "example" {
   }
   replicas = 3
   storage = {
-    class = "class"
+    class = "premium-perf2-stackit"
     size  = 5
   }
   version = 14

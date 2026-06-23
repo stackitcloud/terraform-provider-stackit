@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	legacyOpensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch"
 	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 )
 
@@ -16,7 +15,7 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 	"sgw_acl":                types.StringValue("acl"),
 	"enable_monitoring":      types.BoolValue(true),
 	"graphite":               types.StringValue("graphite"),
-	"java_garbage_collector": types.StringValue(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+	"java_garbage_collector": types.StringValue(string(opensearch.INSTANCEPARAMETERSJAVAGARBAGECOLLECTOR_USE_G1_GC)),
 	"java_heapspace":         types.Int32Value(10),
 	"java_maxmetaspace":      types.Int32Value(10),
 	"max_disk_threshold":     types.Int32Value(10),
@@ -24,8 +23,8 @@ var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]a
 	"metrics_prefix":         types.StringValue("prefix"),
 	"monitoring_instance_id": types.StringValue("mid"),
 	"plugins": types.ListValueMust(types.StringType, []attr.Value{
-		types.StringValue("plugin"),
-		types.StringValue("plugin2"),
+		types.StringValue("repository-s3"),
+		types.StringValue("repository-azure"),
 	}),
 	"syslog": types.ListValueMust(types.StringType, []attr.Value{
 		types.StringValue("syslog"),
@@ -62,17 +61,23 @@ var fixtureInstanceParameters = opensearch.InstanceParameters{
 	SgwAcl:               new("acl"),
 	EnableMonitoring:     new(true),
 	Graphite:             new("graphite"),
-	JavaGarbageCollector: new(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+	JavaGarbageCollector: new(opensearch.INSTANCEPARAMETERSJAVAGARBAGECOLLECTOR_USE_G1_GC),
 	JavaHeapspace:        new(int32(10)),
 	JavaMaxmetaspace:     new(int32(10)),
 	MaxDiskThreshold:     new(int32(10)),
 	MetricsFrequency:     new(int32(10)),
 	MetricsPrefix:        new("prefix"),
 	MonitoringInstanceId: new("mid"),
-	Plugins:              []string{"plugin", "plugin2"},
-	Syslog:               []string{"syslog", "syslog2"},
-	TlsCiphers:           []string{"cipher", "cipher2"},
-	TlsProtocols:         []string{"TLSv1.2", "TLSv1.3"},
+	Plugins: []opensearch.InstanceParametersPluginsInner{
+		opensearch.INSTANCEPARAMETERSPLUGINSINNER_REPOSITORY_S3,
+		opensearch.INSTANCEPARAMETERSPLUGINSINNER_REPOSITORY_AZURE,
+	},
+	Syslog:     []string{"syslog", "syslog2"},
+	TlsCiphers: []string{"cipher", "cipher2"},
+	TlsProtocols: []opensearch.InstanceParametersTlsProtocolsInner{
+		opensearch.INSTANCEPARAMETERSTLSPROTOCOLSINNER_TLSV1_2,
+		opensearch.INSTANCEPARAMETERSTLSPROTOCOLSINNER_TLSV1_3,
+	},
 }
 
 func TestMapFields(t *testing.T) {
@@ -116,14 +121,14 @@ func TestMapFields(t *testing.T) {
 					"sgw_acl":                "acl",
 					"enable_monitoring":      true,
 					"graphite":               "graphite",
-					"java_garbage_collector": string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC),
+					"java_garbage_collector": string(opensearch.INSTANCEPARAMETERSJAVAGARBAGECOLLECTOR_USE_G1_GC),
 					"java_heapspace":         int32(10),
 					"java_maxmetaspace":      int32(10),
 					"max_disk_threshold":     int32(10),
 					"metrics_frequency":      int32(10),
 					"metrics_prefix":         "prefix",
 					"monitoring_instance_id": "mid",
-					"plugins":                []string{"plugin", "plugin2"},
+					"plugins":                []string{"repository-s3", "repository-azure"},
 					"syslog":                 []string{"syslog", "syslog2"},
 					"tls-ciphers":            []string{"cipher", "cipher2"},
 					"tls-protocols":          []string{"TLSv1.2", "TLSv1.3"},
@@ -350,7 +355,7 @@ func TestToUpdatePayload(t *testing.T) {
 					"sgw_acl":                types.StringValue("acl"),
 					"enable_monitoring":      types.BoolValue(true),
 					"graphite":               types.StringValue("graphite"),
-					"java_garbage_collector": types.StringValue(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+					"java_garbage_collector": types.StringValue(string(opensearch.INSTANCEPARAMETERSJAVAGARBAGECOLLECTOR_USE_G1_GC)),
 					"java_heapspace":         types.Int32Value(10),
 					"java_maxmetaspace":      types.Int32Value(10),
 					"max_disk_threshold":     types.Int32Value(10),
@@ -377,17 +382,20 @@ func TestToUpdatePayload(t *testing.T) {
 					SgwAcl:               new("acl"),
 					EnableMonitoring:     new(true),
 					Graphite:             new("graphite"),
-					JavaGarbageCollector: new(string(legacyOpensearch.INSTANCEPARAMETERSJAVA_GARBAGE_COLLECTOR_USE_G1_GC)),
+					JavaGarbageCollector: new(opensearch.INSTANCEPARAMETERSJAVAGARBAGECOLLECTOR_USE_G1_GC),
 					JavaHeapspace:        new(int32(10)),
 					JavaMaxmetaspace:     new(int32(10)),
 					MaxDiskThreshold:     new(int32(10)),
 					MetricsFrequency:     new(int32(10)),
 					MetricsPrefix:        new("prefix"),
 					MonitoringInstanceId: new("mid"),
-					Plugins:              []string{},
+					Plugins:              []opensearch.InstanceParametersPluginsInner{},
 					Syslog:               []string{"syslog", "syslog2"},
 					TlsCiphers:           []string{"cipher", "cipher2"},
-					TlsProtocols:         []string{"TLSv1.2", "TLSv1.3"},
+					TlsProtocols: []opensearch.InstanceParametersTlsProtocolsInner{
+						opensearch.INSTANCEPARAMETERSTLSPROTOCOLSINNER_TLSV1_2,
+						opensearch.INSTANCEPARAMETERSTLSPROTOCOLSINNER_TLSV1_3,
+					},
 				},
 				PlanId: new("plan"),
 			},

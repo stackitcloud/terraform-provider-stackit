@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -38,7 +38,7 @@ func TestMapFields(t *testing.T) {
 				Id:              types.StringValue("pid,eu01,sgid"),
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
-				Name:            types.StringNull(),
+				Name:            types.StringValue(""),
 				Labels:          types.MapNull(types.StringType),
 				Description:     types.StringNull(),
 				Stateful:        types.BoolNull(),
@@ -56,9 +56,9 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.SecurityGroup{
 					Id:       new("sgid"),
-					Name:     new("name"),
+					Name:     "name",
 					Stateful: new(true),
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"key": "value",
 					},
 					Description: new("desc"),
@@ -88,7 +88,7 @@ func TestMapFields(t *testing.T) {
 				},
 				input: &iaas.SecurityGroup{
 					Id:     new("sgid"),
-					Labels: &map[string]any{},
+					Labels: map[string]any{},
 				},
 				region: "eu01",
 			},
@@ -96,7 +96,7 @@ func TestMapFields(t *testing.T) {
 				Id:              types.StringValue("pid,eu01,sgid"),
 				ProjectId:       types.StringValue("pid"),
 				SecurityGroupId: types.StringValue("sgid"),
-				Name:            types.StringNull(),
+				Name:            types.StringValue(""),
 				Labels:          types.MapNull(types.StringType),
 				Description:     types.StringNull(),
 				Stateful:        types.BoolNull(),
@@ -154,9 +154,9 @@ func TestToCreatePayload(t *testing.T) {
 				Description: types.StringValue("desc"),
 			},
 			&iaas.CreateSecurityGroupPayload{
-				Name:     new("name"),
+				Name:     "name",
 				Stateful: new(true),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
 				Description: new("desc"),
@@ -201,7 +201,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateSecurityGroupPayload{
 				Name: new("name"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
 				Description: new("desc"),

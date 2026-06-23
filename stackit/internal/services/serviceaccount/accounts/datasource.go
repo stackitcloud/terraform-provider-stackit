@@ -75,8 +75,8 @@ func (r *serviceAccountsDataSource) Metadata(_ context.Context, req datasource.M
 
 func (r *serviceAccountsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Service accounts plural data source schema. Returns a list of all service accounts in a project, optionally filtered.",
-		Description:         "Service accounts plural data source schema.",
+		MarkdownDescription: "Lists STACKIT service accounts in a project, optionally filtered by email.",
+		Description:         "Lists STACKIT service accounts in a project, optionally filtered by email.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID, structured as \"`project_id`\".",

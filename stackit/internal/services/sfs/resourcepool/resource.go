@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
@@ -27,6 +29,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -45,10 +48,22 @@ type Model struct {
 	AvailabilityZone    types.String `tfsdk:"availability_zone"`
 	IpAcl               types.List   `tfsdk:"ip_acl"`
 	Name                types.String `tfsdk:"name"`
+	Labels              types.Map    `tfsdk:"labels"`
 	PerformanceClass    types.String `tfsdk:"performance_class"`
 	SizeGigabytes       types.Int32  `tfsdk:"size_gigabytes"`
+	SnapshotPolicy      types.Object `tfsdk:"snapshot_policy"`
 	Region              types.String `tfsdk:"region"`
 	SnapshotsAreVisible types.Bool   `tfsdk:"snapshots_are_visible"`
+}
+
+type SnapshotPolicyModel struct {
+	Id   types.String `tfsdk:"id"`
+	Name types.String `tfsdk:"name"`
+}
+
+var snapshotPolicyTypes = map[string]attr.Type{
+	"id":   basetypes.StringType{},
+	"name": basetypes.StringType{},
 }
 
 // NewResourcePoolResource is a helper function to simplify the provider implementation.
@@ -142,6 +157,12 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 					validate.NoSeparator(),
 				},
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to the resource.",
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators:  validate.LabelValidators(),
+			},
 			"region": schema.StringAttribute{
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
@@ -200,6 +221,26 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 			},
+			"snapshot_policy": schema.SingleNestedAttribute{
+				Description: `Name of the snapshot policy.`,
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "ID of the snapshot policy.",
+						Required:    true, // must be set when snapshot_policy != null
+						Validators: []validator.String{
+							validate.UUID(),
+						},
+					},
+					"name": schema.StringAttribute{
+						Description: "Name of the snapshot policy.",
+						Computed:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "id", "sets `UseStateForUnknown` only if `id` has not changed"),
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -221,7 +262,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 
 	ctx = core.InitProviderContext(ctx)
 
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("Cannot create payload: %v", err))
 		return
@@ -300,6 +341,11 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 	}
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
+	if resourcePoolId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
@@ -309,9 +355,8 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 
 	response, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
-		var openapiError *oapierror.GenericOpenAPIError
-		if errors.As(err, &openapiError) {
-			if openapiError.StatusCode == http.StatusNotFound {
+		if openapiError, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
+			if openapiError.StatusCode == http.StatusNotFound || openapiError.StatusCode == http.StatusGone {
 				resp.State.RemoveResource(ctx)
 				return
 			}
@@ -363,7 +408,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update resource pool", fmt.Sprintf("cannot create payload: %v", err))
 		return
@@ -434,6 +479,12 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	// Delete existing resource pool
 	_, err := r.client.DefaultAPI.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
+		var openapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &openapiError) {
+			if openapiError.StatusCode == http.StatusNotFound {
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -500,6 +551,12 @@ func mapFields(ctx context.Context, region string, resourcePool *sfs.ResourcePoo
 		model.IpAcl = types.ListNull(types.StringType)
 	}
 
+	labels, err := utils.MapLabels(ctx, resourcePool.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+	model.Labels = labels
+
 	model.Name = types.StringPointerValue(resourcePool.Name)
 	if pc := resourcePool.PerformanceClass; pc != nil {
 		model.PerformanceClass = types.StringPointerValue(pc.Name)
@@ -509,10 +566,22 @@ func mapFields(ctx context.Context, region string, resourcePool *sfs.ResourcePoo
 		model.SizeGigabytes = types.Int32PointerValue(resourcePool.Space.SizeGigabytes)
 	}
 
+	model.SnapshotPolicy = types.ObjectNull(snapshotPolicyTypes)
+	if snapshotPolicy := resourcePool.SnapshotPolicy.Get(); snapshotPolicy != nil {
+		snapshotPolicyTf, diags := types.ObjectValue(snapshotPolicyTypes, map[string]attr.Value{
+			"id":   types.StringPointerValue(snapshotPolicy.Id),
+			"name": types.StringPointerValue(snapshotPolicy.Name),
+		})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map snapshot policy: %w", core.DiagsToError(diags))
+		}
+		model.SnapshotPolicy = snapshotPolicyTf
+	}
+
 	return nil
 }
 
-func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*sfs.CreateResourcePoolPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -520,25 +589,41 @@ func toCreatePayload(model *Model) (*sfs.CreateResourcePoolPayload, error) {
 		aclList []string
 	)
 	if !utils.IsUndefined(model.IpAcl) {
-		tmp, err := utils.ListValuetoStringSlice(model.IpAcl)
+		tmp, err := utils.ListValueToStringSlice(model.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}
 		aclList = tmp
+	}
+
+	snapshotPolicy := &SnapshotPolicyModel{}
+	if !utils.IsUndefined(model.SnapshotPolicy) {
+		diags := model.SnapshotPolicy.As(ctx, snapshotPolicy, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("cannot convert snapshot policy: %w", core.DiagsToError(diags))
+		}
+	}
+
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &sfs.CreateResourcePoolPayload{
 		AvailabilityZone:    model.AvailabilityZone.ValueString(),
 		IpAcl:               aclList,
 		Name:                model.Name.ValueString(),
+		Labels:              &labels,
 		PerformanceClass:    model.PerformanceClass.ValueString(),
 		SizeGigabytes:       model.SizeGigabytes.ValueInt32(),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
+		SnapshotPolicyId:    snapshotPolicy.Id.ValueStringPointer(),
 	}
+
 	return result, nil
 }
 
-func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -546,11 +631,24 @@ func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 		aclList []string
 	)
 	if !utils.IsUndefined(model.IpAcl) {
-		tmp, err := utils.ListValuetoStringSlice(model.IpAcl)
+		tmp, err := utils.ListValueToStringSlice(model.IpAcl)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get acl ip list from model: %w", err)
 		}
 		aclList = tmp
+	}
+
+	snapshotPolicy := &SnapshotPolicyModel{}
+	if !utils.IsUndefined(model.SnapshotPolicy) {
+		diags := model.SnapshotPolicy.As(ctx, snapshotPolicy, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("cannot convert snapshot policy: %w", core.DiagsToError(diags))
+		}
+	}
+
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &sfs.UpdateResourcePoolPayload{
@@ -558,6 +656,8 @@ func toUpdatePayload(model *Model) (*sfs.UpdateResourcePoolPayload, error) {
 		PerformanceClass:    model.PerformanceClass.ValueStringPointer(),
 		SizeGigabytes:       *sfs.NewNullableInt32(model.SizeGigabytes.ValueInt32Pointer()),
 		SnapshotsAreVisible: model.SnapshotsAreVisible.ValueBoolPointer(),
+		SnapshotPolicyId:    *sfs.NewNullableString(snapshotPolicy.Id.ValueStringPointer()),
+		Labels:              &labels,
 	}
 	return result, nil
 }

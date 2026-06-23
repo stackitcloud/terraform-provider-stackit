@@ -205,6 +205,12 @@ The `stackit_network` provides the fields `region` and `routing_table_id` when t
 The underlying API is not stable yet and could change in the future.  
 If you don't need these fields, don't set the experiment flag `network`, to use the stable api.
 
+#### `dremio`
+
+Enables the usage and provisioning of STACKIT Dremio resources.
+The STACKIT Dremio API is currently in alpha state.
+The fields of the resources are still subject to change.
+
 ## Acceptance Tests
 
 > [!WARNING]
@@ -279,7 +285,7 @@ If you encounter any issues or have suggestions for improvements, please open an
 
 ## Contribute
 
-Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTION.md).
+Your contribution is welcome! For more details on how to contribute, refer to our [Contribution Guide](./CONTRIBUTING.md).
 
 ## Release creation
 

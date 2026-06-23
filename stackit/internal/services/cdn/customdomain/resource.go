@@ -374,7 +374,13 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	_, err := r.client.DefaultAPI.DeleteCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Delete custom domain: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)

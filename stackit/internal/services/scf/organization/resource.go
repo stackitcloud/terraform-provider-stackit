@@ -329,6 +329,11 @@ func (s *scfOrganizationResource) Read(ctx context.Context, request resource.Rea
 	// Extract the project ID and instance id of the model
 	projectId := model.ProjectId.ValueString()
 	orgId := model.OrgId.ValueString()
+	if orgId == "" {
+		// Resource not yet created; ID is unknown.
+		response.State.RemoveResource(ctx)
+		return
+	}
 	// Extract the region
 	region := s.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -458,6 +463,10 @@ func (s *scfOrganizationResource) Delete(ctx context.Context, request resource.D
 	// Call API to delete the existing scf organization.
 	_, err := s.client.DefaultAPI.DeleteOrganization(ctx, projectId, region, orgId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &response.Diagnostics, "Error deleting scf organization", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

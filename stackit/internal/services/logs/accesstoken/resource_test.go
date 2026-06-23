@@ -27,20 +27,21 @@ func fixtureAccessToken(mods ...func(accessToken *logs.AccessToken)) *logs.Acces
 
 func fixtureModel(mods ...func(model *Model)) *Model {
 	model := &Model{
-		ID:            types.StringValue("pid,rid,iid,atid"),
-		AccessTokenID: types.StringValue("atid"),
-		InstanceID:    types.StringValue("iid"),
-		Region:        types.StringValue("rid"),
-		ProjectID:     types.StringValue("pid"),
-		Creator:       types.String{},
-		AccessToken:   types.String{},
-		Description:   types.String{},
-		DisplayName:   types.String{},
-		Expires:       types.Bool{},
-		ValidUntil:    types.String{},
-		Lifetime:      types.Int32{},
-		Permissions:   types.ListNull(types.StringType),
-		Status:        types.StringValue("active"),
+		ID:                types.StringValue("pid,rid,iid,atid"),
+		AccessTokenID:     types.StringValue("atid"),
+		InstanceID:        types.StringValue("iid"),
+		Region:            types.StringValue("rid"),
+		ProjectID:         types.StringValue("pid"),
+		Creator:           types.String{},
+		AccessToken:       types.String{},
+		Description:       types.String{},
+		DisplayName:       types.String{},
+		Expires:           types.Bool{},
+		ValidUntil:        types.String{},
+		Lifetime:          types.Int32{},
+		Permissions:       types.ListNull(types.StringType),
+		Status:            types.StringValue("active"),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(model)
@@ -104,9 +105,10 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
-				ProjectID:  tt.expected.ProjectID,
-				Region:     tt.expected.Region,
-				InstanceID: tt.expected.InstanceID,
+				ProjectID:         tt.expected.ProjectID,
+				Region:            tt.expected.Region,
+				InstanceID:        tt.expected.InstanceID,
+				RotateWhenChanged: types.MapNull(types.StringType),
 			}
 			err := mapFields(context.Background(), tt.input, state)
 			if tt.wantErr && err == nil {

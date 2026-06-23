@@ -10,6 +10,7 @@ variable "second_rule_ip_acl_1" {}
 variable "second_rule_ip_acl_2" {}
 variable "second_rule_read_only" {}
 variable "second_rule_super_user" {}
+variable "label" {}
 
 resource "stackit_sfs_export_policy" "exportpolicy" {
   project_id = var.project_id
@@ -32,4 +33,7 @@ resource "stackit_sfs_export_policy" "exportpolicy" {
     read_only  = var.second_rule_read_only
     super_user = var.second_rule_super_user
   }]
+  labels = {
+    label = var.label
+  }
 }

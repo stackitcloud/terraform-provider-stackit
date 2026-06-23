@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 const (
@@ -35,20 +35,10 @@ func Test_MapRouteNextHop(t *testing.T) {
 		expected types.Object
 	}{
 		{
-			name: "nexthop is nil",
-			args: args{
-				routeResp: &iaas.Route{
-					Nexthop: nil,
-				},
-			},
-			wantErr:  false,
-			expected: types.ObjectNull(RouteNextHopTypes),
-		},
-		{
 			name: "nexthop is empty",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: &iaas.RouteNexthop{},
+					Nexthop: iaas.RouteNexthop{},
 				},
 			},
 			wantErr: true,
@@ -57,9 +47,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 			name: "nexthop ipv4",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: new(iaas.NexthopIPv4AsRouteNexthop(
+					Nexthop: iaas.NexthopIPv4AsRouteNexthop(
 						iaas.NewNexthopIPv4("ipv4", "10.20.42.2"),
-					)),
+					),
 				},
 			},
 			wantErr: false,
@@ -72,9 +62,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 			name: "nexthop ipv6",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: new(iaas.NexthopIPv6AsRouteNexthop(
+					Nexthop: iaas.NexthopIPv6AsRouteNexthop(
 						iaas.NewNexthopIPv6("ipv6", "172b:f881:46fe:d89a:9332:90f7:3485:236d"),
-					)),
+					),
 				},
 			},
 			wantErr: false,
@@ -87,9 +77,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 			name: "nexthop internet",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: new(iaas.NexthopInternetAsRouteNexthop(
+					Nexthop: iaas.NexthopInternetAsRouteNexthop(
 						iaas.NewNexthopInternet("internet"),
-					)),
+					),
 				},
 			},
 			wantErr: false,
@@ -102,9 +92,9 @@ func Test_MapRouteNextHop(t *testing.T) {
 			name: "nexthop blackhole",
 			args: args{
 				routeResp: &iaas.Route{
-					Nexthop: new(iaas.NexthopBlackholeAsRouteNexthop(
+					Nexthop: iaas.NexthopBlackholeAsRouteNexthop(
 						iaas.NewNexthopBlackhole("blackhole"),
-					)),
+					),
 				},
 			},
 			wantErr: false,
@@ -139,22 +129,11 @@ func Test_MapRouteDestination(t *testing.T) {
 		wantErr  bool
 		expected types.Object
 	}{
-
-		{
-			name: "destination is nil",
-			args: args{
-				routeResp: &iaas.Route{
-					Destination: nil,
-				},
-			},
-			wantErr:  false,
-			expected: types.ObjectNull(RouteDestinationTypes),
-		},
 		{
 			name: "destination is empty",
 			args: args{
 				routeResp: &iaas.Route{
-					Destination: &iaas.RouteDestination{},
+					Destination: iaas.RouteDestination{},
 				},
 			},
 			wantErr: true,
@@ -163,9 +142,9 @@ func Test_MapRouteDestination(t *testing.T) {
 			name: "destination cidrv4",
 			args: args{
 				routeResp: &iaas.Route{
-					Destination: new(iaas.DestinationCIDRv4AsRouteDestination(
+					Destination: iaas.DestinationCIDRv4AsRouteDestination(
 						iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
-					)),
+					),
 				},
 			},
 			wantErr: false,
@@ -178,9 +157,9 @@ func Test_MapRouteDestination(t *testing.T) {
 			name: "destination cidrv6",
 			args: args{
 				routeResp: &iaas.Route{
-					Destination: new(iaas.DestinationCIDRv6AsRouteDestination(
+					Destination: iaas.DestinationCIDRv6AsRouteDestination(
 						iaas.NewDestinationCIDRv6("cidrv6", "2001:0db8:3c4d:1a2b::/64"),
-					)),
+					),
 				},
 			},
 			wantErr: false,
@@ -249,16 +228,14 @@ func TestMapRouteModel(t *testing.T) {
 				},
 				route: &iaas.Route{
 					Id: new(testRouteId.String()),
-					Destination: new(iaas.DestinationCIDRv4AsRouteDestination(
+					Destination: iaas.DestinationCIDRv4AsRouteDestination(
 						iaas.NewDestinationCIDRv4("cidrv4", "58.251.236.138/32"),
-					)),
-					Labels: &map[string]any{
+					),
+					Labels: map[string]any{
 						"foo1": "bar1",
 						"foo2": "bar2",
 					},
-					Nexthop: new(
-						iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", "10.20.42.2")),
-					),
+					Nexthop:   iaas.NexthopIPv4AsRouteNexthop(iaas.NewNexthopIPv4("ipv4", "10.20.42.2")),
 					CreatedAt: &createdAt,
 					UpdatedAt: &updatedAt,
 				},

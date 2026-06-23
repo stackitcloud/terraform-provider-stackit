@@ -43,6 +43,7 @@ Note that if this is not set, the Share can only be mounted in read only by
 clients with IPs matching the IP ACL of the Resource Pool hosting this Share.
 You can also assign a Share Export Policy after creating the Share
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`share_id`".
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a share
 - `mount_path` (String) Mount path of the Share, used to mount the Share
 - `name` (String) Name of the Share
 - `space_hard_limit_gigabytes` (Number) Space hard limit for the Share.

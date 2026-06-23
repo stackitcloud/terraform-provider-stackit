@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -306,6 +307,11 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	serverId := model.ServerId.ValueString()
 	backupScheduleId := model.BackupScheduleId.ValueInt32()
+	if backupScheduleId == 0 {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -315,8 +321,8 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	scheduleResp, err := r.client.DefaultAPI.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -415,6 +421,10 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	err := r.client.DefaultAPI.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -485,7 +495,7 @@ func mapFields(ctx context.Context, schedule *serverbackup.BackupSchedule, model
 		var modelVolIds []string
 		if model.BackupProperties != nil {
 			var err error
-			modelVolIds, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			modelVolIds, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return err
 			}
@@ -570,7 +580,7 @@ func toCreatePayload(model *Model) (*serverbackup.CreateBackupSchedulePayload, e
 		ids := []string{}
 		var err error
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
-			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			ids, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
 			}
@@ -603,7 +613,7 @@ func toUpdatePayload(model *Model) (*serverbackup.UpdateBackupSchedulePayload, e
 		ids := []string{}
 		var err error
 		if !(model.BackupProperties.VolumeIds.IsNull() || model.BackupProperties.VolumeIds.IsUnknown()) {
-			ids, err = utils.ListValuetoStringSlice(model.BackupProperties.VolumeIds)
+			ids, err = utils.ListValueToStringSlice(model.BackupProperties.VolumeIds)
 			if err != nil {
 				return nil, fmt.Errorf("convert volume id: %w", err)
 			}

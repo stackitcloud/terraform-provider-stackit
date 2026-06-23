@@ -3,8 +3,11 @@ package secretsmanager
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	secretsmanagerV1Alpha "github.com/stackitcloud/stackit-sdk-go/services/secretsmanager/v1alphaapi"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1/generic"
 
@@ -47,6 +50,28 @@ func NewSecretsmanagerSecretGroupRoleBindingResource() resource.Resource {
 			}
 
 			return client.DefaultAPI.RemoveSecretGroupRoleBindings(ctx, region, resourceId).RemoveSecretGroupRoleBindingsPayload(payload).Execute()
+		},
+	}
+}
+
+func NewSecretsmanagerSecretGroupRoleBindingsDatasource() datasource.DataSource {
+	return &generic.RoleBindingDatasource[secretsmanagerV1Alpha.APIClient]{
+		ApiName:          "secretsmanager",
+		ResourceType:     "secret_group",
+		ApiClientFactory: secretsmanagerUtils.ConfigureV1AlphaClient,
+		ExecReadRequest: func(ctx context.Context, client *secretsmanagerV1Alpha.APIClient, region, resourceId string) ([]generic.GenericRoleBindingResponse, error) {
+			resp, err := client.DefaultAPI.ListSecretGroupRoleBindings(ctx, region, resourceId).Execute()
+			if err != nil {
+				return nil, err
+			}
+
+			if resp == nil {
+				return nil, nil
+			}
+
+			return utils.Map(resp.RoleBindings, func(t secretsmanagerV1Alpha.RoleBinding) generic.GenericRoleBindingResponse {
+				return &t
+			}), nil
 		},
 	}
 }

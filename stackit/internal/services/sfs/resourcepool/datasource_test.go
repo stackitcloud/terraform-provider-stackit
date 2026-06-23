@@ -41,6 +41,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				AvailabilityZone:               types.StringNull(),
 				IpAcl:                          types.ListNull(types.StringType),
 				Name:                           types.StringNull(),
+				Labels:                         types.MapNull(types.StringType),
 				PerformanceClass:               types.StringNull(),
 				SizeGigabytes:                  types.Int32Null(),
 				Region:                         testRegion,
@@ -74,6 +75,10 @@ func TestMapDatasourceFields(t *testing.T) {
 				Space: &sfs.ResourcePoolSpace{
 					SizeGigabytes: utils.Ptr[int32](42),
 				},
+				SnapshotPolicy: *sfs.NewNullableResourcePoolSnapshotPolicy(&sfs.ResourcePoolSnapshotPolicy{
+					Id:   new("snapshot-id"),
+					Name: new("snapshot-name"),
+				}),
 				State: new("state"),
 			},
 			expected: &dataSourceModel{
@@ -87,11 +92,16 @@ func TestMapDatasourceFields(t *testing.T) {
 					types.StringValue("baz"),
 				}),
 				Name:                           types.StringValue("testname"),
+				Labels:                         types.MapNull(types.StringType),
 				PerformanceClass:               types.StringValue("performance"),
 				SizeGigabytes:                  types.Int32Value(42),
 				Region:                         testRegion,
 				SizeReducibleAt:                testTimePlus1h,
 				PerformanceClassDowngradableAt: testTime,
+				SnapshotPolicy: &SnapshotPolicyModel{
+					Id:   types.StringValue("snapshot-id"),
+					Name: types.StringValue("snapshot-name"),
+				},
 			},
 			isValid: true,
 		},

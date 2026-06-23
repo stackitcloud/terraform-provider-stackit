@@ -20,8 +20,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 	edgewait "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api/wait"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
-	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -251,13 +251,13 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// If the service edge-cloud is not enabled, enable it
-	err := i.enablementClient.EnableServiceRegional(ctx, region, projectId, utils.EdgecloudServiceId).Execute()
+	err := i.enablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.EdgecloudServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API to enable edge-cloud: %v", err))
 		return
 	}
 
-	_, err = enablementWait.EnableServiceWaitHandler(ctx, i.enablementClient, region, projectId, utils.EdgecloudServiceId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, i.enablementClient.DefaultAPI, region, projectId, utils.EdgecloudServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Wait for edge-cloud enablement: %v", err))
 		return
@@ -321,6 +321,11 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	region := i.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+	if instanceId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -412,6 +417,10 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	err := i.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

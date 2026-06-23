@@ -21,10 +21,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+
 	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api/wait"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
-	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -247,7 +248,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// If AI model serving is not enabled, enable it
-	err := r.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelServingServiceId).
+	err := r.serviceEnablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.ModelServingServiceId).
 		Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -268,7 +269,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient, region, projectId, utils.ModelServingServiceId).
+	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, r.serviceEnablementClient.DefaultAPI, region, projectId, utils.ModelServingServiceId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
@@ -355,6 +356,11 @@ func (r *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	projectId := model.ProjectId.ValueString()
 	tokenId := model.TokenId.ValueString()
+	if tokenId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)

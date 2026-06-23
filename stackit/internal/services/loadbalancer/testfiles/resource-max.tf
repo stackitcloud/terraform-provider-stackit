@@ -109,9 +109,9 @@ resource "stackit_loadbalancer" "loadbalancer" {
         timeout             = var.sni_health_timeout
         unhealthy_threshold = var.sni_unhealthy_threshold
       }
-      session_persistence = var.sni_use_source_ip_address ? {
+      session_persistence = {
         use_source_ip_address = var.sni_use_source_ip_address
-      } : null
+      }
     },
     {
       name        = var.udp_target_pool_name

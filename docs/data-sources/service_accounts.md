@@ -3,12 +3,12 @@
 page_title: "stackit_service_accounts Data Source - stackit"
 subcategory: ""
 description: |-
-  Service accounts plural data source schema. Returns a list of all service accounts in a project, optionally filtered.
+  Lists STACKIT service accounts in a project, optionally filtered by email.
 ---
 
 # stackit_service_accounts (Data Source)
 
-Service accounts plural data source schema. Returns a list of all service accounts in a project, optionally filtered.
+Lists STACKIT service accounts in a project, optionally filtered by email.
 
 ## Example Usage
 

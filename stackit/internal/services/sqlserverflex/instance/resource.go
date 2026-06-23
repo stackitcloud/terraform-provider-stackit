@@ -2,6 +2,7 @@ package sqlserverflex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -176,6 +177,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
 		"options":         "Custom parameters for the SQLServer Flex instance.",
 		"region":          "The resource region. If not defined, the provider region is used.",
+		"storage_class":   "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```",
 	}
 
 	resp.Schema = schema.Schema{
@@ -277,8 +279,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Optional: true,
-						Computed: true,
+						Description: descriptions["storage_class"],
+						Optional:    true,
+						Computed:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 							stringplanmodifier.UseStateForUnknown(),
@@ -466,6 +469,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	if instanceId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -500,8 +508,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -642,6 +650,11 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing instance
 	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -704,7 +717,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := instance.Acl.Items
-		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
+		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
 		}

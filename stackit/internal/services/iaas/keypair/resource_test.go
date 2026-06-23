@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -29,7 +29,7 @@ func TestMapFields(t *testing.T) {
 			Model{
 				Id:          types.StringValue("name"),
 				Name:        types.StringValue("name"),
-				PublicKey:   types.StringNull(),
+				PublicKey:   types.StringValue(""),
 				Fingerprint: types.StringNull(),
 				Labels:      types.MapNull(types.StringType),
 			},
@@ -42,9 +42,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&iaas.Keypair{
 				Name:        new("name"),
-				PublicKey:   new("public_key"),
+				PublicKey:   "public_key",
 				Fingerprint: new("fingerprint"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
 			},
@@ -66,9 +66,9 @@ func TestMapFields(t *testing.T) {
 			},
 			&iaas.Keypair{
 				Name:        new("name"),
-				PublicKey:   new("public_key"),
+				PublicKey:   "public_key",
 				Fingerprint: new("fingerprint"),
-				Labels:      &map[string]any{},
+				Labels:      map[string]any{},
 			},
 			Model{
 				Id:          types.StringValue("name"),
@@ -90,9 +90,9 @@ func TestMapFields(t *testing.T) {
 			"no_resource_id",
 			Model{},
 			&iaas.Keypair{
-				PublicKey:   new("public_key"),
+				PublicKey:   "public_key",
 				Fingerprint: new("fingerprint"),
-				Labels:      &map[string]any{},
+				Labels:      map[string]any{},
 			},
 			Model{},
 			false,
@@ -136,8 +136,8 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateKeyPairPayload{
 				Name:      new("name"),
-				PublicKey: new("public_key"),
-				Labels: &map[string]any{
+				PublicKey: "public_key",
+				Labels: map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},
@@ -182,7 +182,7 @@ func TestToUpdatePayload(t *testing.T) {
 				}),
 			},
 			&iaas.UpdateKeyPairPayload{
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key1": "value1",
 					"key2": "value2",
 				},

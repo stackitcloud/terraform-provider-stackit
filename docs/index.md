@@ -170,11 +170,13 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `credentials_path` (String) Path of JSON from where the credentials are read. Takes precedence over the env var `STACKIT_CREDENTIALS_PATH`. Default value is `~/.stackit/credentials.json`.
 - `default_region` (String) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `dns_custom_endpoint` (String) Custom endpoint for the DNS service
+- `dremio_custom_endpoint` (String) Custom endpoint for the Dremio service
 - `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: iam, routing-tables, network
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, routing-tables, network
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
+- `intake_custom_endpoint` (String) Custom endpoint for the Intake service
 - `kms_custom_endpoint` (String) Custom endpoint for the KMS service
 - `loadbalancer_custom_endpoint` (String) Custom endpoint for the Load Balancer service
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
@@ -209,5 +211,8 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `sfs_custom_endpoint` (String) Custom endpoint for the Stackit Filestorage API
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
 - `sqlserverflex_custom_endpoint` (String) Custom endpoint for the SQL Server Flex service
+- `telemetrylink_custom_endpoint` (String) Custom endpoint for the Telemetry Link service
+- `telemetryrouter_custom_endpoint` (String) Custom endpoint for the Telemetry Router service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
 - `use_oidc` (Boolean) Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
+- `vpn_custom_endpoint` (String) Custom endpoint for the VPN service

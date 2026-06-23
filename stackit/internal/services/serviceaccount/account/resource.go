@@ -2,7 +2,9 @@ package account
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -20,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -84,8 +87,8 @@ func (r *serviceAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Service account resource schema.",
-		Description:         "Service account resource schema.",
+		MarkdownDescription: "Manages a STACKIT service account in a project.",
+		Description:         "Manages a STACKIT service account in a project.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -200,6 +203,11 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	// Fetch the list of service accounts from the API.
 	listSaResp, err := r.client.DefaultAPI.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading service account", fmt.Sprintf("Error calling API: %v", err))
 		return
 	}
@@ -257,6 +265,11 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	// Call API to delete the existing service account.
 	err := r.client.DefaultAPI.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting service account", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

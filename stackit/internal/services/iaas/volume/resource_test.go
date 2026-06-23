@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapFields(t *testing.T) {
@@ -32,6 +32,7 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.Volume{
 					Id:                   new("nid"),
 					EncryptionParameters: nil,
+					AvailabilityZone:     "eu01-1",
 				},
 				region: "eu01",
 			},
@@ -40,7 +41,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:            types.StringValue("pid"),
 				VolumeId:             types.StringValue("nid"),
 				Name:                 types.StringNull(),
-				AvailabilityZone:     types.StringNull(),
+				AvailabilityZone:     types.StringValue("eu01-1"),
 				Labels:               types.MapNull(types.StringType),
 				Description:          types.StringNull(),
 				PerformanceClass:     types.StringNull(),
@@ -70,8 +71,8 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.Volume{
 					Id:               new("nid"),
 					Name:             new("name"),
-					AvailabilityZone: new("zone"),
-					Labels: &map[string]any{
+					AvailabilityZone: "zone",
+					Labels: map[string]any{
 						"key": "value",
 					},
 					Description:      new("desc"),
@@ -81,12 +82,12 @@ func TestMapFields(t *testing.T) {
 					Source:           &iaas.VolumeSource{},
 					Encrypted:        new(true),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{
-						KekKeyId:       new("kek-key-id"),
-						KekKeyVersion:  new(int64(1)),
-						KekKeyringId:   new("kek-keyring-id"),
+						KekKeyId:       "kek-key-id",
+						KekKeyVersion:  int64(1),
+						KekKeyringId:   "kek-keyring-id",
 						KekProjectId:   new("kek-project-id"),
 						KeyPayload:     nil,
-						ServiceAccount: new("test-sa@sa.stackit.cloud"),
+						ServiceAccount: "test-sa@sa.stackit.cloud",
 					},
 				},
 				region: "eu02",
@@ -105,8 +106,8 @@ func TestMapFields(t *testing.T) {
 				ServerId:         types.StringValue("sid"),
 				Size:             types.Int64Value(1),
 				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
-					"type": types.StringNull(),
-					"id":   types.StringNull(),
+					"type": types.StringValue(""),
+					"id":   types.StringValue(""),
 				}),
 				Region:    types.StringValue("eu02"),
 				Encrypted: types.BoolValue(true),
@@ -129,7 +130,8 @@ func TestMapFields(t *testing.T) {
 					Labels:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				},
 				input: &iaas.Volume{
-					Id: new("nid"),
+					Id:               new("nid"),
+					AvailabilityZone: "eu01-1",
 				},
 				region: "eu01",
 			},
@@ -138,7 +140,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:        types.StringValue("pid"),
 				VolumeId:         types.StringValue("nid"),
 				Name:             types.StringNull(),
-				AvailabilityZone: types.StringNull(),
+				AvailabilityZone: types.StringValue("eu01-1"),
 				Labels:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				Description:      types.StringNull(),
 				PerformanceClass: types.StringNull(),
@@ -213,16 +215,16 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &iaas.CreateVolumePayload{
 				Name:             new("name"),
-				AvailabilityZone: new("zone"),
-				Labels: &map[string]any{
+				AvailabilityZone: "zone",
+				Labels: map[string]any{
 					"key": "value",
 				},
 				Description:      new("desc"),
 				PerformanceClass: new("class"),
 				Size:             new(int64(1)),
 				Source: &iaas.VolumeSource{
-					Type: new("volume"),
-					Id:   new("id"),
+					Type: "volume",
+					Id:   "id",
 				},
 			},
 			isValid: true,
@@ -245,17 +247,17 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &iaas.CreateVolumePayload{
 				Source: &iaas.VolumeSource{
-					Type: new("volume"),
-					Id:   new("id"),
+					Type: "volume",
+					Id:   "id",
 				},
-				Labels: &map[string]any{},
+				Labels: map[string]any{},
 				EncryptionParameters: &iaas.VolumeEncryptionParameter{
-					KekKeyId:       new("kek-key-id"),
-					KekKeyVersion:  new(int64(1)),
-					KekKeyringId:   new("kek-keyring-id"),
+					KekKeyId:       "kek-key-id",
+					KekKeyVersion:  int64(1),
+					KekKeyringId:   "kek-keyring-id",
 					KekProjectId:   nil,
 					KeyPayload:     nil,
-					ServiceAccount: new("test-sa@sa.stackit.cloud"),
+					ServiceAccount: "test-sa@sa.stackit.cloud",
 				},
 			},
 			isValid: true,
@@ -278,25 +280,17 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			expected: &iaas.CreateVolumePayload{
 				Source: &iaas.VolumeSource{
-					Type: new("volume"),
-					Id:   new("id"),
+					Type: "volume",
+					Id:   "id",
 				},
-				Labels: &map[string]any{},
+				Labels: map[string]any{},
 				EncryptionParameters: &iaas.VolumeEncryptionParameter{
-					KekKeyId:      new("kek-key-id"),
-					KekKeyVersion: new(int64(1)),
-					KekKeyringId:  new("kek-keyring-id"),
-					KekProjectId:  nil,
-					KeyPayload: func() *[]byte {
-						keyPayload := []byte{
-							0x56, 0x47, 0x68, 0x6c, 0x49, 0x48, 0x46, 0x31, 0x61, 0x57, 0x4e, 0x72, 0x49, 0x47, 0x4a,
-							0x79, 0x62, 0x33, 0x64, 0x75, 0x49, 0x47, 0x5a, 0x76, 0x65, 0x43, 0x42, 0x71, 0x64, 0x57,
-							0x31, 0x77, 0x63, 0x79, 0x42, 0x76, 0x64, 0x6d, 0x56, 0x79, 0x49, 0x44, 0x45, 0x7a, 0x49,
-							0x47, 0x78, 0x68, 0x65, 0x6e, 0x6b, 0x67, 0x5a, 0x47, 0x39, 0x6e, 0x63, 0x79, 0x34, 0x3d,
-						}
-						return &keyPayload
-					}(),
-					ServiceAccount: new("test-sa@sa.stackit.cloud"),
+					KekKeyId:       "kek-key-id",
+					KekKeyVersion:  int64(1),
+					KekKeyringId:   "kek-keyring-id",
+					KekProjectId:   nil,
+					KeyPayload:     new("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="),
+					ServiceAccount: "test-sa@sa.stackit.cloud",
 				},
 			},
 			isValid: true,
@@ -339,7 +333,7 @@ func TestToUpdatePayload(t *testing.T) {
 			},
 			&iaas.UpdateVolumePayload{
 				Name: new("name"),
-				Labels: &map[string]any{
+				Labels: map[string]any{
 					"key": "value",
 				},
 				Description: new("desc"),

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 func ToString(ctx context.Context, v attr.Value) (string, error) {
@@ -85,8 +86,16 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
-	value := s.ValueString()
-	return &value
+	return new(s.ValueString())
+}
+
+// StringValueToPointer converts basetypes.StringValue to a pointer to enum.
+// It returns nil if the value is null or unknown.
+func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	return new(T(s.ValueString()))
 }
 
 // Int32ValueToPointer converts basetypes.Int32Value to a pointer to int32.
@@ -152,18 +161,24 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 // StringListToSlice converts basetypes.ListValue to a list of strings.
 // It returns nil if the value is null or unknown.
 func StringListToSlice(list basetypes.ListValue) ([]string, error) {
+	return StringListToEnumSlice[string](list)
+}
+
+// StringListToEnumSlice converts basetypes.ListValue to a list of enums.
+// It returns nil if the value is null or unknown.
+func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
 
 	// Instantiate an empty slice to ensure the slice is not nil
-	listStr := []string{}
+	listStr := []T{}
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("element %d is not a string", i)
 		}
-		listStr = append(listStr, elStr.ValueString())
+		listStr = append(listStr, T(elStr.ValueString()))
 	}
 
 	return listStr, nil
@@ -262,4 +277,56 @@ func ParseEphemeralProviderData(ctx context.Context, providerData any, diags *di
 		return core.EphemeralProviderData{}, false
 	}
 	return stackitProviderData, true
+}
+
+// StringListToSet safely converts a Go slice of strings into a Terraform framework types.Set.
+//
+// By accepting a pointer to diag.Diagnostics, it enables clean, inline assignments within
+// map literals (avoiding verbose error checking per field) while correctly accumulating
+// framework diagnostics.
+//
+// State mapping behavior:
+//   - Nil inputs map directly to types.SetNull to accurately reflect unconfigured states.
+//   - On conversion failure, it mutates the provided diags and returns an Unknown set
+//     (basetypes.NewSetUnknown) to prevent state corruption and allow Terraform to handle
+//     the error gracefully.
+func StringListToSet(ctx context.Context, stringList []string, diags *diag.Diagnostics) types.Set {
+	if stringList == nil {
+		return types.SetNull(types.StringType)
+	}
+
+	setVal, d := types.SetValueFrom(ctx, types.StringType, stringList)
+	diags.Append(d...)
+
+	if d.HasError() {
+		return basetypes.NewSetUnknown(types.StringType)
+	}
+
+	return setVal
+}
+
+// TerraformStringSetToList safely converts a Go slice of strings into a Terraform framework types.Set.
+//
+// By accepting a pointer to diag.Diagnostics, it enables clean, inline assignments within
+// map literals (avoiding verbose error checking per field) while correctly accumulating
+// framework diagnostics.
+//
+// State mapping behavior:
+//   - Nil inputs or IsUnknown return nil.
+//   - On conversion failure, it mutates the provided diags and returns an nil
+func TerraformStringSetToList(ctx context.Context, tfSet basetypes.SetValue, diags *diag.Diagnostics) []string {
+	if utils.IsUndefined(tfSet) {
+		return nil
+	}
+
+	var elements []string
+	d := tfSet.ElementsAs(ctx, &elements, true)
+
+	diags.Append(d...)
+
+	if d.HasError() {
+		return nil
+	}
+
+	return elements
 }

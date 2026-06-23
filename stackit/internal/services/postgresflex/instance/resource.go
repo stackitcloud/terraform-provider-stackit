@@ -2,6 +2,7 @@ package postgresflex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -157,6 +158,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"region":          "The resource region. If not defined, the provider region is used.",
 		"backup_schedule": "The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.",
 		"replicas":        "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.",
+		"storage_class":   "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --storages --flavor-id FLAVOR_ID\n```",
 	}
 
 	resp.Schema = schema.Schema{
@@ -246,7 +248,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Required: true,
+						Description: descriptions["storage_class"],
+						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
@@ -383,6 +386,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	if instanceId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -407,8 +415,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -544,6 +552,11 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing instance
 	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -606,7 +619,7 @@ func mapFields(ctx context.Context, resp *postgresflex.InstanceResponse, model *
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := instance.Acl.Items
-		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
+		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
 		}

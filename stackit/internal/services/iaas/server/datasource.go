@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -35,6 +36,7 @@ type DataSourceModel struct {
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
+	Agent             types.Object `tfsdk:"agent"`
 	AvailabilityZone  types.String `tfsdk:"availability_zone"`
 	BootVolume        types.Object `tfsdk:"boot_volume"`
 	ImageId           types.String `tfsdk:"image_id"`
@@ -51,6 +53,10 @@ type DataSourceModel struct {
 var bootVolumeDataTypes = map[string]attr.Type{
 	"id":                    basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
+}
+
+var agentDataTypes = map[string]attr.Type{
+	"provisioned": basetypes.BoolType{},
 }
 
 // NewServerDataSource is a helper function to simplify the provider implementation.
@@ -123,6 +129,16 @@ func (d *serverDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"machine_type": schema.StringAttribute{
 				MarkdownDescription: "Name of the type of the machine for the server. Possible values are documented in [Virtual machine flavors](https://docs.stackit.cloud/products/compute-engine/server/basics/machine-types/)",
 				Computed:            true,
+			},
+			"agent": schema.SingleNestedAttribute{
+				Description: "STACKIT Server Agent as setup on the server",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"provisioned": schema.BoolAttribute{
+						Description: "Whether a STACKIT Server Agent is provisioned at the server",
+						Computed:    true,
+					},
+				},
 			},
 			"availability_zone": schema.StringAttribute{
 				Description: "The availability zone of the server.",
@@ -202,7 +218,7 @@ func (d *serverDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := d.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := d.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
@@ -279,8 +295,8 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	}
 	if serverResp.Nics != nil {
 		var respNics []string
-		for _, nic := range *serverResp.Nics {
-			respNics = append(respNics, *nic.NicId)
+		for _, nic := range serverResp.Nics {
+			respNics = append(respNics, nic.NicId)
 		}
 		nicTF, diags := types.ListValueFrom(ctx, types.StringType, respNics)
 		if diags.HasError() {
@@ -305,15 +321,23 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 		model.BootVolume = types.ObjectNull(bootVolumeDataTypes)
 	}
 
-	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
-		model.UserData = types.StringValue(string(*serverResp.UserData))
+	agentProvisioned := types.BoolNull()
+	if serverResp.Agent != nil && serverResp.Agent.Provisioned != nil {
+		agentProvisioned = types.BoolPointerValue(serverResp.Agent.Provisioned)
 	}
+	agent, diags := types.ObjectValue(agentDataTypes, map[string]attr.Value{
+		"provisioned": agentProvisioned,
+	})
+	if diags.HasError() {
+		return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+	}
+	model.Agent = agent
 
 	model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
 	model.ServerId = types.StringValue(serverId)
-	model.MachineType = types.StringPointerValue(serverResp.MachineType)
+	model.MachineType = types.StringValue(serverResp.MachineType)
 
-	model.Name = types.StringPointerValue(serverResp.Name)
+	model.Name = types.StringValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
@@ -321,6 +345,17 @@ func mapDataSourceFields(ctx context.Context, serverResp *iaas.Server, model *Da
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt
+
+	// decode user data from base 64
+	model.UserData = types.StringNull()
+	if serverResp.UserData != nil {
+		userdata, err := base64.StdEncoding.DecodeString(*serverResp.UserData)
+		if err != nil {
+			return fmt.Errorf("failed to base64 decode user data: %w", err)
+		}
+
+		model.UserData = types.StringValue(string(userdata))
+	}
 
 	return nil
 }

@@ -40,6 +40,7 @@ type Model struct {
 	ResourcePoolId          types.String `tfsdk:"resource_pool_id"`
 	ShareId                 types.String `tfsdk:"share_id"`
 	Name                    types.String `tfsdk:"name"`
+	Labels                  types.Map    `tfsdk:"labels"`
 	ExportPolicyName        types.String `tfsdk:"export_policy"`
 	SpaceHardLimitGigabytes types.Int32  `tfsdk:"space_hard_limit_gigabytes"`
 	Region                  types.String `tfsdk:"region"`
@@ -159,6 +160,12 @@ func (r *shareResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					validate.NoSeparator(),
 				},
 			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to the resource.",
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators:  validate.LabelValidators(),
+			},
 			"region": schema.StringAttribute{
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
@@ -219,7 +226,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	ctx = core.InitProviderContext(ctx)
 
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Create Resourcepool", fmt.Sprintf("Cannot create payload: %v", err))
 		return
@@ -227,7 +234,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	// Create new share
 	share, err := r.client.DefaultAPI.CreateShare(ctx, projectId, region, resourcePoolId).
-		CreateSharePayload(payload).
+		CreateSharePayload(*payload).
 		Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("Calling API: %v", err))
@@ -299,6 +306,11 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	projectId := model.ProjectId.ValueString()
 	resourcePoolId := model.ResourcePoolId.ValueString()
 	shareId := model.ShareId.ValueString()
+	if shareId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "resource_pool_id", resourcePoolId)
@@ -365,7 +377,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update share", fmt.Sprintf("cannot create payload: %v", err))
 		return
@@ -438,6 +450,12 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	// Delete existing share
 	_, err := r.client.DefaultAPI.DeleteShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
+		var openapiError *oapierror.GenericOpenAPIError
+		if errors.As(err, &openapiError) {
+			if openapiError.StatusCode == http.StatusNotFound {
+				return
+			}
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -474,7 +492,7 @@ func (r *shareResource) ImportState(ctx context.Context, req resource.ImportStat
 	tflog.Info(ctx, "SFS share imported")
 }
 
-func mapFields(_ context.Context, share *sfs.Share, region string, model *Model) error {
+func mapFields(ctx context.Context, share *sfs.Share, region string, model *Model) error {
 	if share == nil {
 		return fmt.Errorf("share empty in response")
 	}
@@ -496,6 +514,12 @@ func mapFields(_ context.Context, share *sfs.Share, region string, model *Model)
 	)
 	model.Name = types.StringPointerValue(share.Name)
 
+	labels, err := utils.MapLabels(ctx, share.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+	model.Labels = labels
+
 	if share.ExportPolicy.IsSet() {
 		if policy := share.ExportPolicy.Get(); policy != nil {
 			model.ExportPolicyName = types.StringPointerValue(policy.Name)
@@ -508,26 +532,39 @@ func mapFields(_ context.Context, share *sfs.Share, region string, model *Model)
 	return nil
 }
 
-func toCreatePayload(model *Model) (ret sfs.CreateSharePayload, err error) {
+func toCreatePayload(ctx context.Context, model *Model) (ret *sfs.CreateSharePayload, err error) {
 	if model == nil {
 		return ret, fmt.Errorf("nil model")
 	}
-	result := sfs.CreateSharePayload{
+
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &sfs.CreateSharePayload{
 		ExportPolicyName:        *sfs.NewNullableString(model.ExportPolicyName.ValueStringPointer()),
 		Name:                    model.Name.ValueString(),
+		Labels:                  &labels,
 		SpaceHardLimitGigabytes: model.SpaceHardLimitGigabytes.ValueInt32(),
 	}
 	return result, nil
 }
 
-func toUpdatePayload(model *Model) (*sfs.UpdateSharePayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*sfs.UpdateSharePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
+	}
+
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &sfs.UpdateSharePayload{
 		ExportPolicyName:        *sfs.NewNullableString(model.ExportPolicyName.ValueStringPointer()),
 		SpaceHardLimitGigabytes: *sfs.NewNullableInt32(model.SpaceHardLimitGigabytes.ValueInt32Pointer()),
+		Labels:                  &labels,
 	}
 	return result, nil
 }

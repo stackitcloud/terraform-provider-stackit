@@ -31,18 +31,20 @@ var (
 )
 
 type dataSourceModel struct {
-	Id                             types.String `tfsdk:"id"` // needed by TF
-	ProjectId                      types.String `tfsdk:"project_id"`
-	ResourcePoolId                 types.String `tfsdk:"resource_pool_id"`
-	AvailabilityZone               types.String `tfsdk:"availability_zone"`
-	IpAcl                          types.List   `tfsdk:"ip_acl"`
-	Name                           types.String `tfsdk:"name"`
-	PerformanceClass               types.String `tfsdk:"performance_class"`
-	SizeGigabytes                  types.Int32  `tfsdk:"size_gigabytes"`
-	SizeReducibleAt                types.String `tfsdk:"size_reducible_at"`
-	PerformanceClassDowngradableAt types.String `tfsdk:"performance_class_downgradable_at"`
-	Region                         types.String `tfsdk:"region"`
-	SnapshotsAreVisible            types.Bool   `tfsdk:"snapshots_are_visible"`
+	Id                             types.String         `tfsdk:"id"` // needed by TF
+	ProjectId                      types.String         `tfsdk:"project_id"`
+	ResourcePoolId                 types.String         `tfsdk:"resource_pool_id"`
+	AvailabilityZone               types.String         `tfsdk:"availability_zone"`
+	IpAcl                          types.List           `tfsdk:"ip_acl"`
+	Name                           types.String         `tfsdk:"name"`
+	PerformanceClass               types.String         `tfsdk:"performance_class"`
+	SizeGigabytes                  types.Int32          `tfsdk:"size_gigabytes"`
+	SizeReducibleAt                types.String         `tfsdk:"size_reducible_at"`
+	PerformanceClassDowngradableAt types.String         `tfsdk:"performance_class_downgradable_at"`
+	Region                         types.String         `tfsdk:"region"`
+	SnapshotsAreVisible            types.Bool           `tfsdk:"snapshots_are_visible"`
+	SnapshotPolicy                 *SnapshotPolicyModel `tfsdk:"snapshot_policy"`
+	Labels                         types.Map            `tfsdk:"labels"`
 }
 
 type resourcePoolDataSource struct {
@@ -191,11 +193,31 @@ func (r *resourcePoolDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 				Description: "If set to true, snapshots are visible and accessible to users. (default: false)",
 			},
+			"snapshot_policy": schema.SingleNestedAttribute{
+				Description: `Name of the snapshot policy.`,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Description: "ID of the snapshot policy.",
+						Computed:    true,
+					},
+					"name": schema.StringAttribute{
+						Description: "Name of the snapshot policy.",
+						Computed:    true,
+					},
+				},
+			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
 				Optional:    true,
 				Description: "The resource region. Read-only attribute that reflects the provider region.",
-			}},
+			},
+			"labels": schema.MapAttribute{
+				Description: "Labels are key-value string pairs which can be attached to a resource pool",
+				ElementType: types.StringType,
+				Computed:    true,
+			},
+		},
 	}
 }
 
@@ -246,6 +268,19 @@ func mapDataSourceFields(ctx context.Context, region string, resourcePool *sfs.R
 	if t := resourcePool.SizeReducibleAt; t != nil {
 		model.SizeReducibleAt = types.StringValue(t.Format(time.RFC3339))
 	}
+
+	if snapshotPolicy := resourcePool.SnapshotPolicy.Get(); snapshotPolicy != nil {
+		model.SnapshotPolicy = &SnapshotPolicyModel{
+			Id:   types.StringPointerValue(snapshotPolicy.Id),
+			Name: types.StringPointerValue(snapshotPolicy.Name),
+		}
+	}
+
+	labels, err := utils.MapLabels(ctx, resourcePool.Labels, model.Labels)
+	if err != nil {
+		return err
+	}
+	model.Labels = labels
 
 	return nil
 }

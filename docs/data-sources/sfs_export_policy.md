@@ -37,6 +37,7 @@ data "stackit_sfs_export_policy" "example" {
 ### Read-Only
 
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`policy_id`".
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to an export policy
 - `name` (String) Name of the export policy.
 - `rules` (Attributes List) (see [below for nested schema](#nestedatt--rules))
 

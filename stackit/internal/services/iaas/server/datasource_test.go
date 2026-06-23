@@ -7,8 +7,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
+
+var expectedNullAgentData = types.ObjectValueMust(agentDataTypes, map[string]attr.Value{
+	"provisioned": types.BoolNull(),
+})
 
 func TestMapDataSourceFields(t *testing.T) {
 	type args struct {
@@ -38,8 +42,9 @@ func TestMapDataSourceFields(t *testing.T) {
 				Id:                types.StringValue("pid,eu01,sid"),
 				ProjectId:         types.StringValue("pid"),
 				ServerId:          types.StringValue("sid"),
-				Name:              types.StringNull(),
+				Name:              types.StringValue(""),
 				AvailabilityZone:  types.StringNull(),
+				Agent:             expectedNullAgentData,
 				Labels:            types.MapNull(types.StringType),
 				ImageId:           types.StringNull(),
 				NetworkInterfaces: types.ListNull(types.StringType),
@@ -50,6 +55,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				UpdatedAt:         types.StringNull(),
 				LaunchedAt:        types.StringNull(),
 				Region:            types.StringValue("eu01"),
+				MachineType:       types.StringValue(""),
 			},
 			isValid: true,
 		},
@@ -63,26 +69,30 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 				input: &iaas.Server{
 					Id:               new("sid"),
-					Name:             new("name"),
+					Name:             "name",
 					AvailabilityZone: new("zone"),
-					Labels: &map[string]any{
+					Labels: map[string]any{
 						"key": "value",
 					},
 					ImageId: new("image_id"),
-					Nics: &[]iaas.ServerNetwork{
+					Nics: []iaas.ServerNetwork{
 						{
-							NicId: new("nic1"),
+							NicId: "nic1",
 						},
 						{
-							NicId: new("nic2"),
+							NicId: "nic2",
 						},
 					},
-					KeypairName:   new("keypair_name"),
+					KeypairName: new("keypair_name"),
+					Agent: &iaas.ServerAgent{
+						Provisioned: new(true),
+					},
 					AffinityGroup: new("group_id"),
 					CreatedAt:     new(testTimestamp()),
 					UpdatedAt:     new(testTimestamp()),
 					LaunchedAt:    new(testTimestamp()),
 					Status:        new("active"),
+					UserData:      new(base64EncodedUserData),
 				},
 				region: "eu02",
 			},
@@ -100,12 +110,17 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue("nic1"),
 					types.StringValue("nic2"),
 				}),
-				KeypairName:   types.StringValue("keypair_name"),
+				KeypairName: types.StringValue("keypair_name"),
+				Agent: types.ObjectValueMust(agentDataTypes, map[string]attr.Value{
+					"provisioned": types.BoolValue(true),
+				}),
 				AffinityGroup: types.StringValue("group_id"),
 				CreatedAt:     types.StringValue(testTimestampValue),
 				UpdatedAt:     types.StringValue(testTimestampValue),
 				LaunchedAt:    types.StringValue(testTimestampValue),
 				Region:        types.StringValue("eu02"),
+				MachineType:   types.StringValue(""),
+				UserData:      types.StringValue(userData),
 			},
 			isValid: true,
 		},
@@ -126,11 +141,12 @@ func TestMapDataSourceFields(t *testing.T) {
 				Id:                types.StringValue("pid,eu01,sid"),
 				ProjectId:         types.StringValue("pid"),
 				ServerId:          types.StringValue("sid"),
-				Name:              types.StringNull(),
+				Name:              types.StringValue(""),
 				AvailabilityZone:  types.StringNull(),
 				Labels:            types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				ImageId:           types.StringNull(),
 				NetworkInterfaces: types.ListNull(types.StringType),
+				Agent:             expectedNullAgentData,
 				KeypairName:       types.StringNull(),
 				AffinityGroup:     types.StringNull(),
 				UserData:          types.StringNull(),
@@ -138,6 +154,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				UpdatedAt:         types.StringNull(),
 				LaunchedAt:        types.StringNull(),
 				Region:            types.StringValue("eu01"),
+				MachineType:       types.StringValue(""),
 			},
 			isValid: true,
 		},

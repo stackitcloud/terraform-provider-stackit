@@ -369,7 +369,7 @@ resource "stackit_server" "example" {
   boot_volume = {
     size        = 64
     source_type = "image"
-    source_id   = "59838a89-51b1-4892-b57f-b3caf598ee2f" // Ubuntu 24.04
+    source_id   = "7b10e105-295b-4369-b6e0-567ec940a02b" // Ubuntu 24.04
   }
   availability_zone = "xxxx-x"
   machine_type      = "g2i.1"
@@ -404,6 +404,7 @@ import {
 ### Optional
 
 - `affinity_group` (String) The affinity group the server is assigned to.
+- `agent` (Attributes) The STACKIT Server Agent configured for the server (see [below for nested schema](#nestedatt--agent))
 - `availability_zone` (String) The availability zone of the server.
 - `boot_volume` (Attributes) The boot volume for the server (see [below for nested schema](#nestedatt--boot_volume))
 - `desired_status` (String) The desired status of the server resource. Possible values are: `active`, `inactive`, `deallocated`.
@@ -421,6 +422,18 @@ import {
 - `launched_at` (String) Date-time when the server was launched
 - `server_id` (String) The server ID.
 - `updated_at` (String) Date-time when the server was updated
+
+<a id="nestedatt--agent"></a>
+### Nested Schema for `agent`
+
+Optional:
+
+- `provisioning_policy` (String) Agent provisioning policy: `ALWAYS`, `NEVER`, or `INHERIT`. `INHERIT` follows the image default value.
+
+Read-Only:
+
+- `provisioned` (Boolean) Whether a STACKIT Server Agent is provisioned at the server
+
 
 <a id="nestedatt--boot_volume"></a>
 ### Nested Schema for `boot_volume`

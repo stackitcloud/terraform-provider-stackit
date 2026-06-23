@@ -2,6 +2,7 @@ package objectstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -248,6 +249,11 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
+	if credentialsGroupId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -306,7 +312,13 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	// Delete existing credentials group
 	_, err := r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credentials group", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -392,8 +404,8 @@ func readCredentialsGroups(ctx context.Context, model *Model, region string, cli
 
 	credentialsGroupsResp, err := client.ListCredentialsGroups(ctx, model.ProjectId.ValueString(), region).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return found, nil
 		}
 		return found, fmt.Errorf("getting credentials groups: %w", err)

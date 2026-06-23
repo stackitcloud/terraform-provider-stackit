@@ -24,7 +24,7 @@ resource "stackit_resourcemanager_project" "example" {
 }
 
 resource "stackit_authorization_project_role_assignment" "pra" {
-  resource_id = stackit_resourcemanager_project.example.folder_id
+  resource_id = stackit_resourcemanager_project.example.project_id
   role        = "reader"
   subject     = "foo.bar@stackit.cloud"
 }

@@ -2,10 +2,13 @@ package objectstorage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
 	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
 
@@ -45,6 +48,11 @@ type Model struct {
 	SecretAccessKey     types.String `tfsdk:"secret_access_key"`
 	ExpirationTimestamp types.String `tfsdk:"expiration_timestamp"`
 	Region              types.String `tfsdk:"region"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -151,7 +159,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
+	descriptions := map[string]string{ //nolint:gosec // description for credential id
 		"main":                 "ObjectStorage credential resource schema. Must have a `region` specified in the provider configuration.",
 		"id":                   "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`credentials_group_id`,`credential_id`\".",
 		"credential_id":        "The credential ID.",
@@ -235,6 +243,18 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: descriptions["region"],
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
 				},
 			},
 		},
@@ -343,6 +363,11 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	credentialsGroupId := model.CredentialsGroupId.ValueString()
 	credentialId := model.CredentialId.ValueString()
+	if credentialId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
@@ -431,7 +456,12 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete existing credential
 	_, err := r.client.DefaultAPI.DeleteAccessKey(ctx, projectId, region, credentialId).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -544,8 +574,8 @@ func readCredentials(ctx context.Context, model *Model, region string, client *o
 
 	credentialsGroupResp, err := client.DefaultAPI.ListAccessKeys(ctx, projectId, region).CredentialsGroup(credentialsGroupId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			return false, nil
 		}
 		return false, fmt.Errorf("getting credentials groups: %w", err)

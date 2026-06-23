@@ -23,7 +23,7 @@ resource "stackit_sqlserverflex_instance" "example" {
     ram = 16
   }
   storage = {
-    class = "class"
+    class = "premium-perf2-stackit"
     size  = 5
   }
   version = 2022
@@ -91,5 +91,8 @@ Read-Only:
 
 Optional:
 
-- `class` (String)
+- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+```bash
+stackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID
+```
 - `size` (Number)

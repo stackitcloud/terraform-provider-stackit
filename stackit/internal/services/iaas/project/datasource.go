@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas" //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -53,7 +53,7 @@ func (d *projectDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := iaasUtils.ConfigureClientLegacy(ctx, &providerData, &resp.Diagnostics) //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -138,14 +138,14 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	projectResp, err := d.client.GetProjectDetailsExecute(ctx, projectId)
+	projectResp, err := d.client.GetProjectDetailsExecute(ctx, projectId) //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading project",
-			fmt.Sprintf("Project with ID %q does not exists.", projectId),
+			fmt.Sprintf("Project with ID %q does not exists: %v", projectId, err),
 			nil,
 		)
 		resp.State.RemoveResource(ctx)

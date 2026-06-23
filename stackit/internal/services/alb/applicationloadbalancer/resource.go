@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	legacyAlb "github.com/stackitcloud/stackit-sdk-go/services/alb"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/alb/v2api/wait"
 
@@ -390,9 +389,9 @@ func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req res
 
 // Schema defines the schema for the resource.
 func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	protocolOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedListenerProtocolEnumValues)
-	roleOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedNetworkRoleEnumValues)
-	errorOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedLoadBalancerErrorTypesEnumValues)
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypeEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
@@ -1344,6 +1343,11 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 	// Delete Application Load Balancer
 	_, err := r.client.DefaultAPI.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Calling API for delete: %v", errStr))
 		return
@@ -1459,7 +1463,7 @@ func toListenersPayload(ctx context.Context, model *Model) ([]albSdk.Listener, e
 			Https:         httpsPayload,
 			Name:          conversion.StringValueToPointer(listenerModel.Name),
 			Port:          conversion.Int32ValueToPointer(listenerModel.Port),
-			Protocol:      conversion.StringValueToPointer(listenerModel.Protocol),
+			Protocol:      conversion.StringValueToEnumPointer[albSdk.ListenerProtocol](listenerModel.Protocol),
 			WafConfigName: conversion.StringValueToPointer(listenerModel.WafConfigName),
 		})
 	}
@@ -1713,7 +1717,7 @@ func toNetworksPayload(ctx context.Context, model *Model) ([]albSdk.Network, err
 		networkModel := networksModel[i]
 		payload = append(payload, albSdk.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
-			Role:      conversion.StringValueToPointer(networkModel.Role),
+			Role:      conversion.StringValueToEnumPointer[albSdk.NetworkRole](networkModel.Role),
 		})
 	}
 
@@ -1755,25 +1759,29 @@ func toOptionsPayload(ctx context.Context, model *Model) (*albSdk.LoadBalancerOp
 		}
 
 		// observability logs
-		observabilityLogsModel := observabilityOption{}
-		diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
-		}
-		observabilityPayload.Logs = &albSdk.LoadbalancerOptionLogs{
-			CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
-			PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
+		if !utils.IsUndefined(observabilityModel.Logs) {
+			observabilityLogsModel := observabilityOption{}
+			diags = observabilityModel.Logs.As(ctx, &observabilityLogsModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting observability logs: %w", core.DiagsToError(diags))
+			}
+			observabilityPayload.Logs = &albSdk.LoadbalancerOptionLogs{
+				CredentialsRef: observabilityLogsModel.CredentialsRef.ValueStringPointer(),
+				PushUrl:        observabilityLogsModel.PushUrl.ValueStringPointer(),
+			}
 		}
 
 		// observability metrics
-		observabilityMetricsModel := observabilityOption{}
-		diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
-		}
-		observabilityPayload.Metrics = &albSdk.LoadbalancerOptionMetrics{
-			CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
-			PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
+		if !utils.IsUndefined(observabilityModel.Metrics) {
+			observabilityMetricsModel := observabilityOption{}
+			diags = observabilityModel.Metrics.As(ctx, &observabilityMetricsModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting observability metrics: %w", core.DiagsToError(diags))
+			}
+			observabilityPayload.Metrics = &albSdk.LoadbalancerOptionMetrics{
+				CredentialsRef: observabilityMetricsModel.CredentialsRef.ValueStringPointer(),
+				PushUrl:        observabilityMetricsModel.PushUrl.ValueStringPointer(),
+			}
 		}
 	}
 

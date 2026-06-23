@@ -8,8 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	legacyAlb "github.com/stackitcloud/stackit-sdk-go/services/alb"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 )
 
@@ -38,14 +36,14 @@ func fixtureModel(explicitBool *bool, mods ...func(m *Model)) *Model {
 					errorsType,
 					map[string]attr.Value{
 						"description": types.StringValue("quota test error"),
-						"type":        types.StringValue(string(legacyAlb.LOADBALANCERERRORTYPE_QUOTA_SECGROUP_EXCEEDED)),
+						"type":        types.StringValue(string(albSdk.LOADBALANCERERRORTYPE_TYPE_QUOTA_SECGROUP_EXCEEDED)),
 					},
 				),
 				types.ObjectValueMust(
 					errorsType,
 					map[string]attr.Value{
 						"description": types.StringValue("fip test error"),
-						"type":        types.StringValue(string(legacyAlb.LOADBALANCERERRORTYPE_FIP_NOT_CONFIGURED)),
+						"type":        types.StringValue(string(albSdk.LOADBALANCERERRORTYPE_TYPE_FIP_NOT_CONFIGURED)),
 					},
 				),
 			},
@@ -342,18 +340,18 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 		Errors: []albSdk.LoadBalancerError{
 			{
 				Description: new("quota test error"),
-				Type:        new(string(legacyAlb.LOADBALANCERERRORTYPE_QUOTA_SECGROUP_EXCEEDED)),
+				Type:        new(albSdk.LOADBALANCERERRORTYPE_TYPE_QUOTA_SECGROUP_EXCEEDED),
 			},
 			{
 				Description: new("fip test error"),
-				Type:        new(string(legacyAlb.LOADBALANCERERRORTYPE_FIP_NOT_CONFIGURED)),
+				Type:        new(albSdk.LOADBALANCERERRORTYPE_TYPE_FIP_NOT_CONFIGURED),
 			},
 		},
 		Name:           new(lbName),
 		PlanId:         new("p10"),
 		PrivateAddress: new("10.1.11.0"),
 		Region:         new(region),
-		Status:         new("STATUS_READY"),
+		Status:         new(albSdk.LOADBALANCERSTATUS_STATUS_READY),
 		Version:        new(lbVersion),
 		Labels: &map[string]string{
 			"key":  "value",
@@ -362,18 +360,18 @@ func fixtureApplicationLoadBalancer(explicitBool *bool, mods ...func(m *albSdk.L
 		Networks: []albSdk.Network{
 			{
 				NetworkId: new("c7c92cc1-a6bd-4e15-a129-b6e2b9899bbc"),
-				Role:      utils.Ptr("ROLE_LISTENERS"),
+				Role:      new(albSdk.NETWORKROLE_ROLE_LISTENERS),
 			},
 			{
 				NetworkId: new("ed3f1822-ca1c-4969-bea6-74c6b3e9aa40"),
-				Role:      utils.Ptr("ROLE_TARGETS"),
+				Role:      new(albSdk.NETWORKROLE_ROLE_TARGETS),
 			},
 		},
 		Listeners: []albSdk.Listener{
 			{
 				Name:     new("http-80"),
 				Port:     new(int32(80)),
-				Protocol: utils.Ptr("PROTOCOL_HTTP"),
+				Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 				Http: &albSdk.ProtocolOptionsHTTP{
 					Hosts: []albSdk.HostConfig{
 						{
@@ -494,6 +492,88 @@ func TestToCreatePayload(t *testing.T) {
 			input:       nil,
 			expected:    nil,
 			isValid:     false,
+		},
+		{
+			description: "options.observability.metrics set but not logs",
+			input: fixtureModel(nil, func(m *Model) {
+				m.Options = types.ObjectValueMust(
+					optionsTypes,
+					map[string]attr.Value{
+						"access_control": types.ObjectValueMust(
+							accessControlTypes,
+							map[string]attr.Value{
+								"allowed_source_ranges": types.SetValueMust(
+									types.StringType,
+									[]attr.Value{
+										types.StringValue("192.168.0.0"),
+										types.StringValue("192.168.0.1"),
+									},
+								),
+							},
+						),
+						"ephemeral_address":    types.BoolPointerValue(nil),
+						"private_network_only": types.BoolPointerValue(nil),
+						"observability": types.ObjectValueMust(
+							observabilityTypes,
+							map[string]attr.Value{
+								"metrics": types.ObjectValueMust(
+									observabilityOptionTypes,
+									map[string]attr.Value{
+										"credentials_ref": types.StringValue(credentialsRef),
+										"push_url":        types.StringValue("http://www.example.org/pull"),
+									},
+								),
+								"logs": types.ObjectNull(observabilityOptionTypes),
+							},
+						),
+					},
+				)
+			}),
+			expected: fixtureCreatePayload(fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
+				m.Options.Observability.Logs = nil
+			})),
+			isValid: true,
+		},
+		{
+			description: "options.observability.logs set but not metrics",
+			input: fixtureModel(nil, func(m *Model) {
+				m.Options = types.ObjectValueMust(
+					optionsTypes,
+					map[string]attr.Value{
+						"access_control": types.ObjectValueMust(
+							accessControlTypes,
+							map[string]attr.Value{
+								"allowed_source_ranges": types.SetValueMust(
+									types.StringType,
+									[]attr.Value{
+										types.StringValue("192.168.0.0"),
+										types.StringValue("192.168.0.1"),
+									},
+								),
+							},
+						),
+						"ephemeral_address":    types.BoolPointerValue(nil),
+						"private_network_only": types.BoolPointerValue(nil),
+						"observability": types.ObjectValueMust(
+							observabilityTypes,
+							map[string]attr.Value{
+								"metrics": types.ObjectNull(observabilityOptionTypes),
+								"logs": types.ObjectValueMust(
+									observabilityOptionTypes,
+									map[string]attr.Value{
+										"credentials_ref": types.StringValue(credentialsRef),
+										"push_url":        types.StringValue("http://www.example.org/push"),
+									},
+								),
+							},
+						),
+					},
+				)
+			}),
+			expected: fixtureCreatePayload(fixtureApplicationLoadBalancer(nil, func(m *albSdk.LoadBalancer) {
+				m.Options.Observability.Metrics = nil
+			})),
+			isValid: true,
 		},
 	}
 	for _, tt := range tests {
@@ -805,7 +885,7 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:     new("http-80"),
 						Port:     new(int32(80)),
-						Protocol: utils.Ptr("PROTOCOL_HTTP"),
+						Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
@@ -931,7 +1011,7 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:     new("http-80"),
 						Port:     new(int32(80)),
-						Protocol: utils.Ptr("PROTOCOL_HTTP"),
+						Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
@@ -1050,7 +1130,7 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:     new("http-80"),
 						Port:     new(int32(80)),
-						Protocol: utils.Ptr("PROTOCOL_HTTP"),
+						Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
@@ -1152,7 +1232,7 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:     new("http-80"),
 						Port:     new(int32(80)),
-						Protocol: utils.Ptr("PROTOCOL_HTTP"),
+						Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: []albSdk.HostConfig{
 								{
@@ -1232,7 +1312,7 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:     new("http-80"),
 						Port:     new(int32(80)),
-						Protocol: utils.Ptr("PROTOCOL_HTTP"),
+						Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 						Http: &albSdk.ProtocolOptionsHTTP{
 							Hosts: nil,
 						},
@@ -1298,7 +1378,7 @@ func TestMapFields(t *testing.T) {
 					{
 						Name:     new("http-80"),
 						Port:     new(int32(80)),
-						Protocol: utils.Ptr("PROTOCOL_HTTP"),
+						Protocol: new(albSdk.LISTENERPROTOCOL_PROTOCOL_HTTP),
 						Http:     nil,
 						Https: &albSdk.ProtocolOptionsHTTPS{
 							CertificateConfig: new(albSdk.CertificateConfig{

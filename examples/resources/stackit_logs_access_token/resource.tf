@@ -20,6 +20,26 @@ resource "stackit_logs_access_token" "accessToken2" {
   description = "Example description"
 }
 
+resource "time_rotating" "rotate" {
+  rotation_days = 10
+}
+
+resource "stackit_logs_access_token" "accessToken_rotate" {
+  project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  region       = "eu01"
+  display_name = "logs-access-token-example"
+  lifetime     = 30
+  permissions = [
+    "write"
+  ]
+  description = "Example description"
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }
+}
+
 # Only use the import statement, if you want to import an existing logs access token
 # Note: The generated access token is only available upon creation.
 # Since this attribute is not fetched from the API call, to prevent the conflicts, you need to add:

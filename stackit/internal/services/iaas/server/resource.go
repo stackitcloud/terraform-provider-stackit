@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -25,14 +26,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas/wait"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -64,6 +66,7 @@ type Model struct {
 	ServerId          types.String `tfsdk:"server_id"`
 	MachineType       types.String `tfsdk:"machine_type"`
 	Name              types.String `tfsdk:"name"`
+	Agent             types.Object `tfsdk:"agent"`
 	AvailabilityZone  types.String `tfsdk:"availability_zone"`
 	BootVolume        types.Object `tfsdk:"boot_volume"`
 	ImageId           types.String `tfsdk:"image_id"`
@@ -76,6 +79,12 @@ type Model struct {
 	LaunchedAt        types.String `tfsdk:"launched_at"`
 	UpdatedAt         types.String `tfsdk:"updated_at"`
 	DesiredStatus     types.String `tfsdk:"desired_status"`
+}
+
+// Struct corresponding to Model.Agent
+type agentModel struct {
+	Provisioned        types.Bool   `tfsdk:"provisioned"`
+	ProvisioningPolicy types.String `tfsdk:"provisioning_policy"`
 }
 
 // Struct corresponding to Model.BootVolume
@@ -96,6 +105,12 @@ var bootVolumeTypes = map[string]attr.Type{
 	"source_id":             basetypes.StringType{},
 	"delete_on_termination": basetypes.BoolType{},
 	"id":                    basetypes.StringType{},
+}
+
+// Types corresponding to agentModel
+var agentTypes = map[string]attr.Type{
+	"provisioned":         basetypes.BoolType{},
+	"provisioning_policy": basetypes.StringType{},
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
@@ -275,6 +290,35 @@ func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 				Optional: true,
 				Computed: true,
+			},
+			"agent": schema.SingleNestedAttribute{
+				Description: "The STACKIT Server Agent configured for the server",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"provisioned": schema.BoolAttribute{
+						Description: "Whether a STACKIT Server Agent is provisioned at the server",
+						Computed:    true,
+						PlanModifiers: []planmodifier.Bool{
+							boolplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"provisioning_policy": schema.StringAttribute{
+						Description: "Agent provisioning policy: `ALWAYS`, `NEVER`, or `INHERIT`. `INHERIT` follows the image default value.",
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("INHERIT"),
+						Validators: []validator.String{
+							stringvalidator.OneOf("ALWAYS", "NEVER", "INHERIT"),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(), // trigger recreation on change
+						},
+					},
+				},
 			},
 			"boot_volume": schema.SingleNestedAttribute{
 				Description: "The boot volume for the server",
@@ -497,7 +541,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new server
 
-	server, err := r.client.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
+	server, err := r.client.DefaultAPI.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -520,14 +564,14 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
+	_, err = wait.CreateServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
 
 	// Get Server with details
-	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	server, err = serverReq.Execute()
 	if err != nil {
@@ -541,7 +585,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+	if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("update server state: %v", err))
 		return
 	}
@@ -555,18 +599,9 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 	tflog.Info(ctx, "Server created")
 }
 
-// serverControlClient provides a mockable interface for the necessary
-// client operations in [updateServerStatus]
-type serverControlClient interface {
-	wait.APIClientInterface
-	StartServerExecute(ctx context.Context, projectId string, region string, serverId string) error
-	StopServerExecute(ctx context.Context, projectId string, region string, serverId string) error
-	DeallocateServerExecute(ctx context.Context, projectId string, region string, serverId string) error
-}
-
-func startServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
+func startServer(ctx context.Context, client iaas.DefaultAPI, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "starting server to enter active state")
-	if err := client.StartServerExecute(ctx, projectId, region, serverId); err != nil {
+	if err := client.StartServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		return fmt.Errorf("cannot start server: %w", err)
 	}
 	_, err := wait.StartServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -576,9 +611,9 @@ func startServer(ctx context.Context, client serverControlClient, projectId, reg
 	return nil
 }
 
-func stopServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
+func stopServer(ctx context.Context, client iaas.DefaultAPI, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "stopping server to enter inactive state")
-	if err := client.StopServerExecute(ctx, projectId, region, serverId); err != nil {
+	if err := client.StopServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		return fmt.Errorf("cannot stop server: %w", err)
 	}
 	_, err := wait.StopServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -588,9 +623,9 @@ func stopServer(ctx context.Context, client serverControlClient, projectId, regi
 	return nil
 }
 
-func deallocateServer(ctx context.Context, client serverControlClient, projectId, region, serverId string) error {
+func deallocateServer(ctx context.Context, client iaas.DefaultAPI, projectId, region, serverId string) error {
 	tflog.Debug(ctx, "deallocating server to enter shelved state")
-	if err := client.DeallocateServerExecute(ctx, projectId, region, serverId); err != nil {
+	if err := client.DeallocateServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		return fmt.Errorf("cannot deallocate server: %w", err)
 	}
 	_, err := wait.DeallocateServerWaitHandler(ctx, client, projectId, region, serverId).WaitWithContext(ctx)
@@ -601,7 +636,7 @@ func deallocateServer(ctx context.Context, client serverControlClient, projectId
 }
 
 // updateServerStatus applies the appropriate server state changes for the actual current and the intended state
-func updateServerStatus(ctx context.Context, client serverControlClient, currentState *string, model *Model, region string) error {
+func updateServerStatus(ctx context.Context, client iaas.DefaultAPI, currentState *string, model *Model, region string) error {
 	if currentState == nil {
 		tflog.Warn(ctx, "no current state available, not updating server state")
 		return nil
@@ -621,7 +656,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServer(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()).Execute(); err != nil {
 				return err
 			}
 		}
@@ -638,7 +673,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServer(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()).Execute(); err != nil {
 				return err
 			}
 		}
@@ -655,7 +690,7 @@ func updateServerStatus(ctx context.Context, client serverControlClient, current
 			}
 		default:
 			tflog.Debug(ctx, fmt.Sprintf("nothing to do for status value %q", model.DesiredStatus.ValueString()))
-			if _, err := client.GetServerExecute(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()); err != nil {
+			if _, err := client.GetServer(ctx, model.ProjectId.ValueString(), region, model.ServerId.ValueString()).Execute(); err != nil {
 				return err
 			}
 		}
@@ -677,6 +712,11 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	serverId := model.ServerId.ValueString()
+	if serverId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	ctx = core.InitProviderContext(ctx)
 
@@ -684,12 +724,12 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -725,28 +765,28 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 
 	var updatedServer *iaas.Server
 	// Update existing server
-	updatedServer, err = r.client.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
+	updatedServer, err = r.client.DefaultAPI.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("calling API: %w", err)
 	}
 
 	// Update machine type
 	modelMachineType := conversion.StringValueToPointer(model.MachineType)
-	if modelMachineType != nil && updatedServer.MachineType != nil && *modelMachineType != *updatedServer.MachineType {
+	if modelMachineType != nil && *modelMachineType != updatedServer.MachineType {
 		payload := iaas.ResizeServerPayload{
-			MachineType: modelMachineType,
+			MachineType: *modelMachineType,
 		}
-		err := r.client.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
+		err := r.client.DefaultAPI.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
 			return nil, fmt.Errorf("resizing the server, calling API: %w", err)
 		}
 
-		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
+		_, err = wait.ResizeServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("server resize waiting: %w", err)
 		}
 		// Update server model because the API doesn't return a server object as response
-		updatedServer.MachineType = modelMachineType
+		updatedServer.MachineType = *modelMachineType
 	}
 	return updatedServer, nil
 }
@@ -782,7 +822,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		server *iaas.Server
 		err    error
 	)
-	if server, err = r.client.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
+	if server, err = r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
 
@@ -797,13 +837,13 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 		ctx = core.LogResponse(ctx)
 
-		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+		if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
 	} else {
 		// potentially unfreeze first and update afterwards
-		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
+		if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
@@ -818,7 +858,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Re-fetch the server data, to get the details values.
-	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	updatedServer, err := serverReq.Execute()
 	if err != nil {
@@ -861,15 +901,20 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Delete existing server
-	err := r.client.DeleteServer(ctx, projectId, region, serverId).Execute()
+	err := r.client.DefaultAPI.DeleteServer(ctx, projectId, region, serverId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
+	_, err = wait.DeleteServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))
 		return
@@ -942,8 +987,8 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	}
 	if serverResp.Nics != nil {
 		var respNics []string
-		for _, nic := range *serverResp.Nics {
-			respNics = append(respNics, *nic.NicId)
+		for _, nic := range serverResp.Nics {
+			respNics = append(respNics, nic.NicId)
 		}
 
 		var modelNics []string
@@ -982,6 +1027,33 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 		model.NetworkInterfaces = types.ListNull(types.StringType)
 	}
 
+	// agent{...} block, determine the intent policy from Terraform state
+	currentPolicy := types.StringValue("INHERIT")
+	if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+		var currentAgent agentModel
+		diags := model.Agent.As(ctx, &currentAgent, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+		}
+		if !currentAgent.ProvisioningPolicy.IsNull() {
+			currentPolicy = currentAgent.ProvisioningPolicy
+		}
+	}
+	// agent{...} block, determine the 'provisioned' field from API response
+	agentProvisioned := types.BoolNull()
+	if serverResp.Agent != nil && serverResp.Agent.Provisioned != nil {
+		agentProvisioned = types.BoolPointerValue(serverResp.Agent.Provisioned)
+	}
+	// agent{...} block, finalizing
+	agent, diags := types.ObjectValue(agentTypes, map[string]attr.Value{
+		"provisioned":         agentProvisioned,
+		"provisioning_policy": currentPolicy,
+	})
+	if diags.HasError() {
+		return fmt.Errorf("failed to map agent: %w", core.DiagsToError(diags))
+	}
+	model.Agent = agent
+
 	if serverResp.BootVolume != nil {
 		// convert boot volume model
 		var bootVolumeModel = &bootVolumeModel{}
@@ -1011,7 +1083,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	}
 
 	model.ServerId = types.StringValue(serverId)
-	model.MachineType = types.StringPointerValue(serverResp.MachineType)
+	model.MachineType = types.StringValue(serverResp.MachineType)
 
 	// Proposed fix: If the server is deallocated, it has no availability zone anymore
 	// reactivation will then _change_ the availability zone again, causing terraform
@@ -1022,10 +1094,7 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 		model.AvailabilityZone = types.StringPointerValue(serverResp.AvailabilityZone)
 	}
 
-	if serverResp.UserData != nil && len(*serverResp.UserData) > 0 {
-		model.UserData = types.StringValue(string(*serverResp.UserData))
-	}
-	model.Name = types.StringPointerValue(serverResp.Name)
+	model.Name = types.StringValue(serverResp.Name)
 	model.Labels = labels
 	model.ImageId = types.StringPointerValue(serverResp.ImageId)
 	model.KeypairName = types.StringPointerValue(serverResp.KeypairName)
@@ -1033,6 +1102,17 @@ func mapFields(ctx context.Context, serverResp *iaas.Server, model *Model, regio
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	model.LaunchedAt = launchedAt
+
+	// decode user data from base 64
+	model.UserData = types.StringNull()
+	if serverResp.UserData != nil {
+		userdata, err := base64.StdEncoding.DecodeString(*serverResp.UserData)
+		if err != nil {
+			return fmt.Errorf("failed to base64 decode user data: %w", err)
+		}
+
+		model.UserData = types.StringValue(string(userdata))
+	}
 
 	return nil
 }
@@ -1050,19 +1130,27 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		}
 	}
 
+	var agent = &agentModel{}
+	if !(model.Agent.IsNull() || model.Agent.IsUnknown()) {
+		diags := model.Agent.As(ctx, agent, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("convert agent object to struct: %w", core.DiagsToError(diags))
+		}
+	}
+
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
 	if err != nil {
 		return nil, fmt.Errorf("converting to Go map: %w", err)
 	}
 
-	var bootVolumePayload *iaas.ServerBootVolume
+	var bootVolumePayload *iaas.BootVolume
 	if !bootVolume.SourceId.IsNull() && !bootVolume.SourceType.IsNull() {
-		bootVolumePayload = &iaas.ServerBootVolume{
+		bootVolumePayload = &iaas.BootVolume{
 			PerformanceClass: conversion.StringValueToPointer(bootVolume.PerformanceClass),
 			Size:             conversion.Int64ValueToPointer(bootVolume.Size),
 			Source: &iaas.BootVolumeSource{
-				Id:   conversion.StringValueToPointer(bootVolume.SourceId),
-				Type: conversion.StringValueToPointer(bootVolume.SourceType),
+				Id:   bootVolume.SourceId.ValueString(),
+				Type: bootVolume.SourceType.ValueString(),
 			},
 		}
 		if !bootVolume.DeleteOnTermination.IsNull() && !bootVolume.DeleteOnTermination.IsUnknown() && bootVolume.DeleteOnTermination.ValueBool() {
@@ -1071,12 +1159,19 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		}
 	}
 
-	var userData *[]byte
+	var agentPayload *iaas.ServerAgent
+	switch agent.ProvisioningPolicy.ValueString() {
+	case "ALWAYS":
+		agentPayload = &iaas.ServerAgent{Provisioned: conversion.BoolValueToPointer(types.BoolValue(true))}
+	case "NEVER":
+		agentPayload = &iaas.ServerAgent{Provisioned: conversion.BoolValueToPointer(types.BoolValue(false))}
+	case "INHERIT":
+		agentPayload = nil // "agent" key is omitted from JSON thanks to omitempty
+	}
+
+	var userData *string
 	if !model.UserData.IsNull() && !model.UserData.IsUnknown() {
-		src := []byte(model.UserData.ValueString())
-		encodedUserData := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
-		base64.StdEncoding.Encode(encodedUserData, src)
-		userData = &encodedUserData
+		userData = new(base64.StdEncoding.EncodeToString([]byte(model.UserData.ValueString())))
 	}
 
 	if model.NetworkInterfaces.IsNull() || model.NetworkInterfaces.IsUnknown() {
@@ -1091,22 +1186,23 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateServerPaylo
 		nicIds = append(nicIds, nicString.ValueString())
 	}
 
-	network := &iaas.CreateServerPayloadAllOfNetworking{
+	network := iaas.CreateServerPayloadAllOfNetworking{
 		CreateServerNetworkingWithNics: &iaas.CreateServerNetworkingWithNics{
-			NicIds: &nicIds,
+			NicIds: nicIds,
 		},
 	}
 
 	return &iaas.CreateServerPayload{
 		AffinityGroup:    conversion.StringValueToPointer(model.AffinityGroup),
 		AvailabilityZone: conversion.StringValueToPointer(model.AvailabilityZone),
+		Agent:            agentPayload,
 		BootVolume:       bootVolumePayload,
 		ImageId:          conversion.StringValueToPointer(model.ImageId),
 		KeypairName:      conversion.StringValueToPointer(model.KeypairName),
-		Labels:           &labels,
-		Name:             conversion.StringValueToPointer(model.Name),
+		Labels:           labels,
+		Name:             model.Name.ValueString(),
 		Networking:       network,
-		MachineType:      conversion.StringValueToPointer(model.MachineType),
+		MachineType:      model.MachineType.ValueString(),
 		UserData:         userData,
 	}, nil
 }
@@ -1123,6 +1219,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 
 	return &iaas.UpdateServerPayload{
 		Name:   conversion.StringValueToPointer(model.Name),
-		Labels: &labels,
+		Labels: labels,
 	}, nil
 }

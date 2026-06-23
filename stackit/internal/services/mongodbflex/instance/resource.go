@@ -2,6 +2,7 @@ package mongodbflex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -189,6 +190,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"monthly_snapshot_retention_months": "The number of months that monthly backups will be retained.",
 		"point_in_time_window_hours":        "The number of hours back in time the point-in-time recovery feature will be able to recover.",
 		"region":                            "The resource region. If not defined, the provider region is used.",
+		"storage_class":                     "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit mongodbflex options --storages --flavor-id FLAVOR_ID\n```",
 	}
 
 	resp.Schema = schema.Schema{
@@ -274,7 +276,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Required: true,
+						Description: descriptions["storage_class"],
+						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
@@ -498,6 +501,11 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
+	if instanceId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -530,8 +538,8 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -689,6 +697,11 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing instance
 	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -756,7 +769,7 @@ func mapFields(ctx context.Context, resp *mongodbflex.InstanceResponse, model *M
 		aclList = types.ListNull(types.StringType)
 	} else {
 		respACL := instance.Acl.Items
-		modelACL, err := utils.ListValuetoStringSlice(model.ACL)
+		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
 		}

@@ -7,6 +7,9 @@ resource "stackit_sfs_export_policy" "example" {
       order  = 1
     }
   ]
+  labels = {
+    "foo" = "bar"
+  }
 }
 
 # Only use the import statement, if you want to import an existing export policy

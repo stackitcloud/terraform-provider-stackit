@@ -265,6 +265,11 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	databaseId := model.DatabaseId.ValueString()
+	if databaseId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
@@ -273,8 +278,8 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if (ok && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if (errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -330,7 +335,12 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	// Delete existing record set
 	err := r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)

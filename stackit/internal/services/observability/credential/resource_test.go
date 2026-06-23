@@ -5,28 +5,29 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 )
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
-		input       *observability.Credentials
+		input       *observabilitySdk.Credentials
 		expected    Model
 		isValid     bool
 	}{
 		{
 			"ok",
-			&observability.Credentials{
-				Username: new("username"),
-				Password: new("password"),
+			&observabilitySdk.Credentials{
+				Username: "username",
+				Password: "password",
 			},
 			Model{
-				Id:         types.StringValue("pid,iid,username"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("iid"),
-				Username:   types.StringValue("username"),
-				Password:   types.StringValue("password"),
+				Id:                types.StringValue("pid,iid,username"),
+				ProjectId:         types.StringValue("pid"),
+				InstanceId:        types.StringValue("iid"),
+				Username:          types.StringValue("username"),
+				Password:          types.StringValue("password"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -38,16 +39,16 @@ func TestMapFields(t *testing.T) {
 		},
 		{
 			"response_fields_nil_fail",
-			&observability.Credentials{
-				Password: nil,
-				Username: nil,
+			&observabilitySdk.Credentials{
+				Password: "",
+				Username: "",
 			},
 			Model{},
 			false,
 		},
 		{
 			"no_resource_id",
-			&observability.Credentials{},
+			&observabilitySdk.Credentials{},
 			Model{},
 			false,
 		},
@@ -55,8 +56,9 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
-				ProjectId:  tt.expected.ProjectId,
-				InstanceId: tt.expected.InstanceId,
+				ProjectId:         tt.expected.ProjectId,
+				InstanceId:        tt.expected.InstanceId,
+				RotateWhenChanged: types.MapNull(types.StringType),
 			}
 			err := mapFields(tt.input, state)
 			if !tt.isValid && err == nil {

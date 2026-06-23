@@ -59,7 +59,8 @@ import {
 ### Required
 
 - `name` (String) The cluster name.
-- `node_pools` (Attributes List) One or more `node_pool` block as defined below. (see [below for nested schema](#nestedatt--node_pools))
+- `node_pools` (Attributes List) One or more `node_pool` block as defined below.
+To keep your Terraform plans clean and readable, always append new node pools to the end of the list. (see [below for nested schema](#nestedatt--node_pools))
 - `project_id` (String) STACKIT project ID to which the cluster is associated.
 
 ### Optional

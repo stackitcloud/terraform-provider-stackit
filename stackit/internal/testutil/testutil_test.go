@@ -173,7 +173,7 @@ func TestConfigBuilderClientOptions(t *testing.T) {
 			name: "custom token endpoint",
 			builder: NewConfigBuilder().
 				CustomEndpoint(TokenCustomEndpoint, "http://token.example.com"),
-			want: sdkConf.Configuration{
+			want: sdkConf.Configuration{ //nolint:gosec // no hardcoded credentials, just for testcases
 				TokenCustomUrl: "http://token.example.com",
 			},
 		},

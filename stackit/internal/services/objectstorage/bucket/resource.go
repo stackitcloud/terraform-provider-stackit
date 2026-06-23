@@ -62,6 +62,12 @@ type bucketResource struct {
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
 func (r *bucketResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	// Note: This resource cannot be destroyed if the bucket contains objects. We added a check here to inform the user about this before accepting the deletion.
+	if req.Plan.Raw.IsNull() && !req.State.Raw.IsNull() {
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "stackit_object_storage", "Note: This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.")
+		return
+	}
+
 	var configModel Model
 	// skip initial empty configuration to avoid follow-up errors
 	if req.Config.Raw.IsNull() {
@@ -113,7 +119,8 @@ func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRe
 // Schema defines the schema for the resource.
 func (r *bucketResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":                     "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.",
+		"main": "ObjectStorage bucket resource schema. Must have a `region` specified in the provider configuration. If you are creating `credentialsgroup` and `bucket` resources simultaneously, please include the `depends_on` field so that they are created sequentially. This prevents errors from concurrent calls to the service enablement that is done in the background.\n\n" +
+			"~> This resource cannot be destroyed if the bucket contains objects. Please ensure the bucket is empty before attempting to destroy it.",
 		"id":                       "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`name`\".",
 		"name":                     "The bucket name. It must be DNS conform.",
 		"project_id":               "STACKIT Project ID to which the bucket is associated.",
@@ -270,8 +277,8 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	bucketResp, err := r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -327,6 +334,10 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
+			if oapiErr.StatusCode == http.StatusNotFound {
+				resp.State.RemoveResource(ctx)
+				return
+			}
 			if oapiErr.StatusCode == http.StatusUnprocessableEntity {
 				core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", "Bucket isn't empty and cannot be deleted")
 				return

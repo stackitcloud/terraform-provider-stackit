@@ -39,9 +39,19 @@ data "stackit_sfs_resource_pool" "resourcepool" {
 - `availability_zone` (String) Availability zone.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`resource_pool_id`".
 - `ip_acl` (List of String) List of IPs that can mount the resource pool in read-only; IPs must have a subnet mask (e.g. "172.16.0.0/24" for a range of IPs, or "172.16.0.250/32" for a specific IP).
+- `labels` (Map of String) Labels are key-value string pairs which can be attached to a resource pool
 - `name` (String) Name of the resource pool.
 - `performance_class` (String) Name of the performance class.
 - `performance_class_downgradable_at` (String) Time when the performance class can be downgraded again.
 - `size_gigabytes` (Number) Size of the resource pool (unit: gigabytes)
 - `size_reducible_at` (String) Time when the size can be reduced again.
+- `snapshot_policy` (Attributes) Name of the snapshot policy. (see [below for nested schema](#nestedatt--snapshot_policy))
 - `snapshots_are_visible` (Boolean) If set to true, snapshots are visible and accessible to users. (default: false)
+
+<a id="nestedatt--snapshot_policy"></a>
+### Nested Schema for `snapshot_policy`
+
+Read-Only:
+
+- `id` (String) ID of the snapshot policy.
+- `name` (String) Name of the snapshot policy.

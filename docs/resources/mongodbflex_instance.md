@@ -23,7 +23,7 @@ resource "stackit_mongodbflex_instance" "example" {
   }
   replicas = 1
   storage = {
-    class = "class"
+    class = "premium-perf2-mongodb"
     size  = 10
   }
   version = "7.0"
@@ -101,5 +101,8 @@ Optional:
 
 Required:
 
-- `class` (String)
+- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+```bash
+stackit mongodbflex options --storages --flavor-id FLAVOR_ID
+```
 - `size` (Number)

@@ -527,7 +527,8 @@ func TestAccLoadBalancerResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.1.targets.0.display_name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["target_display_name"])),
 					resource.TestCheckResourceAttrSet("stackit_loadbalancer.loadbalancer", "target_pools.1.targets.0.ip"),
 
-					resource.TestCheckNoResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.%", "1"),
+					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "target_pools.0.session_persistence.use_source_ip_address", testutil.ConvertConfigVariable(configVarsMaxUpdated()["sni_use_source_ip_address"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.private_network_only", testutil.ConvertConfigVariable(configVarsMaxUpdated()["private_network_only"])),
 					resource.TestCheckResourceAttr("stackit_loadbalancer.loadbalancer", "options.acl.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl"])),
 

@@ -54,6 +54,7 @@ func TestMapFields(t *testing.T) {
 				ResourcePoolId:          testResourcePoolId,
 				ShareId:                 testShareId,
 				Name:                    types.StringValue("testname"),
+				Labels:                  types.MapNull(types.StringType),
 				ExportPolicyName:        testPolicyName,
 				SpaceHardLimitGigabytes: types.Int32Value(42),
 				Region:                  types.StringValue("eu01"),
@@ -84,6 +85,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:               testProjectId,
 				ResourcePoolId:          testResourcePoolId,
 				Name:                    types.StringValue("testname"),
+				Labels:                  types.MapNull(types.StringType),
 				ShareId:                 testShareId,
 				ExportPolicyName:        testPolicyName,
 				SpaceHardLimitGigabytes: types.Int32Value(42),
@@ -112,7 +114,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		name    string
 		model   *Model
-		want    sfs.CreateSharePayload
+		want    *sfs.CreateSharePayload
 		wantErr bool
 	}{
 		{
@@ -126,17 +128,18 @@ func TestToCreatePayload(t *testing.T) {
 				ExportPolicyName:        testPolicyName,
 				SpaceHardLimitGigabytes: types.Int32Value(42),
 			},
-			sfs.CreateSharePayload{
+			&sfs.CreateSharePayload{
 				ExportPolicyName:        *sfs.NewNullableString(new("test-policy")),
 				Name:                    "testname",
 				SpaceHardLimitGigabytes: 42,
+				Labels:                  &map[string]string{},
 			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toCreatePayload(tt.model)
+			got, err := toCreatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -172,13 +175,14 @@ func TestToUpdatePayload(t *testing.T) {
 			&sfs.UpdateSharePayload{
 				ExportPolicyName:        *sfs.NewNullableString(testPolicyName.ValueStringPointer()),
 				SpaceHardLimitGigabytes: *sfs.NewNullableInt32(utils.Ptr[int32](42)),
+				Labels:                  &map[string]string{},
 			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := toUpdatePayload(tt.model)
+			got, err := toUpdatePayload(context.Background(), tt.model)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toCreatePayload() error = %v, wantErr %v", err, tt.wantErr)
 				return

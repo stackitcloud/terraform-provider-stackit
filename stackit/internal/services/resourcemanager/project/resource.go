@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -17,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -203,7 +203,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	ctx = tflog.SetField(ctx, "project_container_id", containerId)
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -260,12 +260,17 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = core.InitProviderContext(ctx)
 
 	containerId := model.ContainerId.ValueString()
+	if containerId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	projectResp, err := r.client.DefaultAPI.GetProject(ctx, containerId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusForbidden {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -306,7 +311,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -359,6 +364,11 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	// Delete existing project
 	err := r.client.DefaultAPI.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -419,14 +429,9 @@ func mapProjectFields(ctx context.Context, projectResp *resourcemanager.GetProje
 		return fmt.Errorf("container id not present")
 	}
 
-	var labels basetypes.MapValue
-	if projectResp.Labels != nil && len(*projectResp.Labels) != 0 {
-		labels, err = conversion.ToTerraformStringMap(ctx, *projectResp.Labels)
-		if err != nil {
-			return fmt.Errorf("converting to StringValue map: %w", err)
-		}
-	} else {
-		labels = types.MapNull(types.StringType)
+	labels, err := utils.MapLabels(ctx, projectResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	var containerParentIdTF types.String
@@ -481,7 +486,7 @@ func toMembersPayload(model *ResourceModel) ([]resourcemanager.Member, error) {
 	}, nil
 }
 
-func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayload, error) {
+func toCreatePayload(ctx context.Context, model *ResourceModel) (*resourcemanager.CreateProjectPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -491,34 +496,32 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateProjectPayloa
 		return nil, fmt.Errorf("processing members: %w", err)
 	}
 
-	modelLabels := model.Labels.Elements()
-	labels, err := conversion.ToOptStringMap(modelLabels)
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
-		return nil, fmt.Errorf("converting to Go map: %w", err)
+		return nil, err
 	}
 
 	return &resourcemanager.CreateProjectPayload{
 		ContainerParentId: model.ContainerParentId.ValueString(),
-		Labels:            labels,
+		Labels:            &labels,
 		Members:           members,
 		Name:              model.Name.ValueString(),
 	}, nil
 }
 
-func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateProjectPayload, error) {
+func toUpdatePayload(ctx context.Context, model *ResourceModel) (*resourcemanager.PartialUpdateProjectPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelLabels := model.Labels.Elements()
-	labels, err := conversion.ToOptStringMap(modelLabels)
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
-		return nil, fmt.Errorf("converting to GO map: %w", err)
+		return nil, err
 	}
 
 	return &resourcemanager.PartialUpdateProjectPayload{
 		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Name:              conversion.StringValueToPointer(model.Name),
-		Labels:            labels,
+		Labels:            &labels,
 	}, nil
 }

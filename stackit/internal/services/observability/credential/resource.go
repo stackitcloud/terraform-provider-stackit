@@ -2,8 +2,11 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
@@ -16,7 +19,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -36,6 +41,11 @@ type Model struct {
 	Description types.String `tfsdk:"description"`
 	Username    types.String `tfsdk:"username"`
 	Password    types.String `tfsdk:"password"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -45,7 +55,7 @@ func NewCredentialResource() resource.Resource {
 
 // credentialResource is the resource implementation.
 type credentialResource struct {
-	client *observability.APIClient
+	client *observabilitySdk.APIClient
 }
 
 // Metadata returns the resource type name.
@@ -124,6 +134,18 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -143,8 +165,8 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	instanceId := model.InstanceId.ValueString()
 	description := model.Description.ValueStringPointer()
 
-	got, err := r.client.CreateCredentials(ctx, instanceId, projectId).CreateCredentialsPayload(
-		observability.CreateCredentialsPayload{
+	got, err := r.client.DefaultAPI.CreateCredentials(ctx, instanceId, projectId).CreateCredentialsPayload(
+		observabilitySdk.CreateCredentialsPayload{
 			Description: description,
 		},
 	).Execute()
@@ -155,11 +177,11 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 
 	ctx = core.LogResponse(ctx)
 
-	if got == nil || got.Credentials == nil || got.Credentials.Username == nil {
+	if got == nil || got.Credentials.Username == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", "Got empty username")
 		return
 	}
-	username := *got.Credentials.Username
+	username := got.Credentials.Username
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
@@ -170,7 +192,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	err = mapFields(got.Credentials, &model)
+	err = mapFields(&got.Credentials, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -183,7 +205,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	tflog.Info(ctx, "Observability credential created")
 }
 
-func mapFields(r *observability.Credentials, model *Model) error {
+func mapFields(r *observabilitySdk.Credentials, model *Model) error {
 	if r == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -193,16 +215,16 @@ func mapFields(r *observability.Credentials, model *Model) error {
 	var userName string
 	if model.Username.ValueString() != "" {
 		userName = model.Username.ValueString()
-	} else if r.Username != nil {
-		userName = *r.Username
+	} else if r.Username != "" {
+		userName = r.Username
 	} else {
 		return fmt.Errorf("username id not present")
 	}
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), model.InstanceId.ValueString(), userName,
 	)
-	model.Username = types.StringPointerValue(r.Username)
-	model.Password = types.StringPointerValue(r.Password)
+	model.Username = types.StringValue(r.Username)
+	model.Password = types.StringValue(r.Password)
 	return nil
 }
 
@@ -220,19 +242,28 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
-	_, err := r.client.GetCredentials(ctx, instanceId, projectId, userName).Execute()
+	if userName == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	_, err := r.client.DefaultAPI.GetCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading credential",
-			fmt.Sprintf("Credential with username %q or instance with ID %q does not exist in project %q.", userName, instanceId, projectId),
+			fmt.Sprintf("Error reading credential with username %q for instance %q in project %q.", userName, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
 		)
-		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -266,8 +297,12 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	userName := model.Username.ValueString()
-	_, err := r.client.DeleteCredentials(ctx, instanceId, projectId, userName).Execute()
+	_, err := r.client.DefaultAPI.DeleteCredentials(ctx, instanceId, projectId, userName).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

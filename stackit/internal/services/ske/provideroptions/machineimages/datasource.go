@@ -154,7 +154,9 @@ func (d *machineImagesDataSource) Read(ctx context.Context, req datasource.ReadR
 	listProviderOptionsReq := d.client.DefaultAPI.ListProviderOptions(ctx, region)
 
 	if !utils.IsUndefined(model.VersionState) {
-		listProviderOptionsReq = listProviderOptionsReq.VersionState(model.VersionState.ValueString())
+		listProviderOptionsReq = listProviderOptionsReq.VersionState(
+			ske.ListProviderOptionsVersionStateParameter(model.VersionState.ValueString()),
+		)
 	}
 
 	optionsResp, err := listProviderOptionsReq.Execute()
@@ -208,7 +210,7 @@ func mapFields(ctx context.Context, optionsResp *ske.ProviderOptions, model *Mod
 					criList := make([]types.String, 0)
 					for _, cri := range ver.Cri {
 						if cri.Name != nil {
-							criList = append(criList, types.StringValue(*cri.Name))
+							criList = append(criList, types.StringValue(string(*cri.Name)))
 						}
 					}
 					criVal, diags := types.ListValueFrom(ctx, types.StringType, criList)

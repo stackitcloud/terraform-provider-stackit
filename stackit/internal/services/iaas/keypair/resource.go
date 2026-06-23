@@ -2,6 +2,7 @@ package keypair
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -16,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -161,7 +162,7 @@ func (r *keyPairResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new key pair
 
-	keyPair, err := r.client.CreateKeyPair(ctx).CreateKeyPairPayload(*payload).Execute()
+	keyPair, err := r.client.DefaultAPI.CreateKeyPair(ctx).CreateKeyPairPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating key pair", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -198,10 +199,10 @@ func (r *keyPairResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	ctx = tflog.SetField(ctx, "name", name)
 
-	keyPairResp, err := r.client.GetKeyPair(ctx, name).Execute()
+	keyPairResp, err := r.client.DefaultAPI.GetKeyPair(ctx, name).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -256,7 +257,7 @@ func (r *keyPairResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	// Update existing key pair
-	updatedKeyPair, err := r.client.UpdateKeyPair(ctx, name).UpdateKeyPairPayload(*payload).Execute()
+	updatedKeyPair, err := r.client.DefaultAPI.UpdateKeyPair(ctx, name).UpdateKeyPairPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating key pair", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -294,8 +295,13 @@ func (r *keyPairResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "name", name)
 
 	// Delete existing key pair
-	err := r.client.DeleteKeyPair(ctx, name).Execute()
+	err := r.client.DefaultAPI.DeleteKeyPair(ctx, name).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting key pair", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -343,7 +349,7 @@ func mapFields(ctx context.Context, keyPairResp *iaas.Keypair, model *Model) err
 	}
 
 	model.Id = types.StringValue(name)
-	model.PublicKey = types.StringPointerValue(keyPairResp.PublicKey)
+	model.PublicKey = types.StringValue(keyPairResp.PublicKey)
 	model.Fingerprint = types.StringPointerValue(keyPairResp.Fingerprint)
 
 	var err error
@@ -367,8 +373,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateKeyPairPayl
 
 	return &iaas.CreateKeyPairPayload{
 		Name:      conversion.StringValueToPointer(model.Name),
-		PublicKey: conversion.StringValueToPointer(model.PublicKey),
-		Labels:    &labels,
+		PublicKey: model.PublicKey.ValueString(),
+		Labels:    labels,
 	}, nil
 }
 
@@ -383,6 +389,6 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 	}
 
 	return &iaas.UpdateKeyPairPayload{
-		Labels: &labels,
+		Labels: labels,
 	}, nil
 }

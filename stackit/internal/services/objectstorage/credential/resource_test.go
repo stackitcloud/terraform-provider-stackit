@@ -54,6 +54,7 @@ func TestMapFields(t *testing.T) {
 				SecretAccessKey:     types.StringValue(""),
 				ExpirationTimestamp: types.StringNull(),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -75,6 +76,7 @@ func TestMapFields(t *testing.T) {
 				SecretAccessKey:     types.StringValue("secret-key"),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -95,6 +97,7 @@ func TestMapFields(t *testing.T) {
 				SecretAccessKey:     types.StringValue(""),
 				ExpirationTimestamp: types.StringNull(),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -113,6 +116,7 @@ func TestMapFields(t *testing.T) {
 				SecretAccessKey:     types.StringValue(""),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 		},
@@ -137,6 +141,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:          tt.expected.ProjectId,
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
+				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
 			err := mapFields(tt.input, model, "eu01")
 			if !tt.isValid && err == nil {
@@ -175,6 +180,7 @@ func TestEnableProject(t *testing.T) {
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
 				ExpirationTimestamp: types.StringNull(),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			false,
 			true,
@@ -190,6 +196,7 @@ func TestEnableProject(t *testing.T) {
 				AccessKey:           types.StringNull(),
 				SecretAccessKey:     types.StringNull(),
 				ExpirationTimestamp: types.StringNull(),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 			false,
@@ -205,6 +212,7 @@ func TestEnableProject(t *testing.T) {
 				ProjectId:          tt.expected.ProjectId,
 				CredentialsGroupId: tt.expected.CredentialsGroupId,
 				CredentialId:       tt.expected.CredentialId,
+				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
 			err := enableProject(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {
@@ -255,6 +263,7 @@ func TestReadCredentials(t *testing.T) {
 				SecretAccessKey:     types.StringNull(),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 			false,
@@ -291,6 +300,7 @@ func TestReadCredentials(t *testing.T) {
 				SecretAccessKey:     types.StringNull(),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 			false,
@@ -327,6 +337,7 @@ func TestReadCredentials(t *testing.T) {
 				SecretAccessKey:     types.StringNull(),
 				ExpirationTimestamp: types.StringValue(now.Format(time.RFC3339)),
 				Region:              types.StringValue("eu01"),
+				RotateWhenChanged:   types.MapNull(types.StringType),
 			},
 			true,
 			false,
@@ -338,7 +349,8 @@ func TestReadCredentials(t *testing.T) {
 				AccessKeys: []objectstorage.AccessKey{},
 			},
 			Model{
-				Region: types.StringValue("eu01"),
+				Region:            types.StringValue("eu01"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			false,
 			false,
@@ -369,7 +381,8 @@ func TestReadCredentials(t *testing.T) {
 				},
 			},
 			Model{
-				Region: types.StringValue("eu01"),
+				Region:            types.StringValue("eu01"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			false,
 			false,
@@ -431,6 +444,7 @@ func TestReadCredentials(t *testing.T) {
 				ProjectId:          tt.expectedModel.ProjectId,
 				CredentialsGroupId: tt.expectedModel.CredentialsGroupId,
 				CredentialId:       tt.expectedModel.CredentialId,
+				RotateWhenChanged:  types.MapNull(types.StringType),
 			}
 			found, err := readCredentials(context.Background(), model, "eu01", client)
 			if !tt.isValid && err == nil {

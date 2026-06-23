@@ -70,6 +70,9 @@ import {
 - `logs_url` (String) Specifies Logs URL.
 - `metrics_push_url` (String) Specifies URL for pushing metrics.
 - `metrics_url` (String) Specifies metrics URL.
+- `otlp_grpc_traces_url` (String)
+- `otlp_http_logs_url` (String)
+- `otlp_http_traces_url` (String)
 - `otlp_traces_url` (String)
 - `plan_id` (String) The Observability plan ID.
 - `targets_url` (String) Specifies Targets URL.

@@ -2,6 +2,7 @@ package ske
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -37,11 +38,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/serviceenablement"
-	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/wait"
-	legacySke "github.com/stackitcloud/stackit-sdk-go/services/ske"
+
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	enablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
+
 	"golang.org/x/mod/semver"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -60,14 +62,24 @@ const (
 	VersionStateDeprecated = "deprecated"
 
 	SKEUpdateDoc = "SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/)."
+
+	NodePoolsPlanTitle = "Plan for node_pools might look incorrect"
+	NodePoolsPlanDesc  = "When updating the node_pools of a stackit_ske_cluster, the Terraform plan might appear incorrect " +
+		"and shows a diff indicating that existing pools will be destroyed and recreated.\n\n" +
+		"This happens because Terraform matches list elements by their index rather than by name. " +
+		"Adding, removing, or reordering items in the list shifts these indices, causing cascading diffs.\n\n" +
+		"However, the SKE API correctly identifies node pools by name and applies the intended changes safely. " +
+		"Please review your changes carefully to ensure the correct configuration will be applied.\n\n" +
+		"Always append new node pools to the end of the node_pools list, to prevent index shifting and keep your Terraform plans clean."
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &clusterResource{}
-	_ resource.ResourceWithConfigure   = &clusterResource{}
-	_ resource.ResourceWithImportState = &clusterResource{}
-	_ resource.ResourceWithModifyPlan  = &clusterResource{}
+	_ resource.Resource                   = &clusterResource{}
+	_ resource.ResourceWithConfigure      = &clusterResource{}
+	_ resource.ResourceWithImportState    = &clusterResource{}
+	_ resource.ResourceWithModifyPlan     = &clusterResource{}
+	_ resource.ResourceWithValidateConfig = &clusterResource{}
 )
 
 type Model struct {
@@ -331,6 +343,50 @@ func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	if req.State.Raw.IsNull() {
+		return
+	}
+	var stateModel Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	checkNodePoolShift(ctx, &planModel, &stateModel, resp)
+}
+
+func checkNodePoolShift(ctx context.Context, planModel, stateModel *Model, resp *resource.ModifyPlanResponse) {
+	if planModel == nil || stateModel == nil || utils.IsUndefined(planModel.NodePools) || utils.IsUndefined(stateModel.NodePools) {
+		return
+	}
+
+	var planPools, statePools []nodePool
+	resp.Diagnostics.Append(planModel.NodePools.ElementsAs(ctx, &planPools, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(stateModel.NodePools.ElementsAs(ctx, &statePools, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if len(planPools) != len(statePools) {
+		resp.Diagnostics.AddWarning(NodePoolsPlanTitle, NodePoolsPlanDesc)
+		return
+	}
+
+	// check if names at the same index still match
+	for i := range planPools {
+		planName := planPools[i].Name.ValueString()
+		stateName := statePools[i].Name.ValueString()
+
+		if planName != stateName {
+			resp.Diagnostics.AddWarning(NodePoolsPlanTitle, NodePoolsPlanDesc)
+			return
+		}
+	}
 }
 
 // Metadata returns the resource type name.
@@ -440,8 +496,9 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"node_pools": schema.ListNestedAttribute{
-				Description: "One or more `node_pool` block as defined below.",
-				Required:    true,
+				Description: "One or more `node_pool` block as defined below.\n" +
+					"To keep your Terraform plans clean and readable, always append new node pools to the end of the list.",
+				Required: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -863,13 +920,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// If SKE functionality is not enabled, enable it
-	err := r.enablementClient.EnableServiceRegional(ctx, region, projectId, utils.SKEServiceId).Execute()
+	err := r.enablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
-	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient, region, projectId, utils.SKEServiceId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient.DefaultAPI, region, projectId, utils.SKEServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
@@ -1030,12 +1087,12 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	// Call tflog.Info here, to log the information of the updated context
 	tflog.Info(ctx, "Triggered create/update cluster")
 
-	waitResp, err := skeWait.CreateOrUpdateClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
+	waitResp, err := skeWait.CreateClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
 	}
-	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == string(legacySke.RUNTIMEERRORCODE_OBSERVABILITY_INSTANCE_NOT_FOUND) {
+	if waitResp.Status.Error != nil && waitResp.Status.Error.Message != nil && *waitResp.Status.Error.Code == ske.RUNTIMEERRORCODE_SKE_OBSERVABILITY_INSTANCE_NOT_FOUND {
 		core.LogAndAddWarning(ctx, diags, "Warning during creating/updating cluster", fmt.Sprintf("Cluster is in Impaired state due to an invalid observability instance id, the cluster is usable but metrics won't be forwarded: %s", *waitResp.Status.Error.Message))
 	}
 
@@ -1070,7 +1127,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		ts := []ske.Taint{}
 		for _, v := range taintsModel {
 			t := ske.Taint{
-				Effect: v.Effect.ValueString(),
+				Effect: ske.TaintEffect(v.Effect.ValueString()),
 				Key:    v.Key.ValueString(),
 				Value:  conversion.StringValueToPointer(v.Value),
 			}
@@ -1108,7 +1165,7 @@ func toNodepoolsPayload(ctx context.Context, m *Model, availableMachineVersions 
 		}
 
 		cn := &ske.CRI{
-			Name: conversion.StringValueToPointer(nodePool.CRI),
+			Name: (*ske.NameOfTheCriLibrary)(conversion.StringValueToPointer(nodePool.CRI)),
 		}
 
 		providedVersionMin := conversion.StringValueToPointer(nodePool.OSVersionMin)
@@ -1630,7 +1687,7 @@ func mapNodePools(ctx context.Context, cl *ske.Cluster, model *Model) error {
 			"volume_type":             types.StringPointerValue(nodePoolResp.Volume.Type),
 			"volume_size":             types.Int32Value(nodePoolResp.Volume.Size),
 			"labels":                  types.MapNull(types.StringType),
-			"cri":                     types.StringPointerValue(nodePoolResp.Cri.Name),
+			"cri":                     types.StringPointerValue((*string)(nodePoolResp.Cri.Name)),
 			"availability_zones":      types.ListNull(types.StringType),
 			"allow_system_components": types.BoolPointerValue(nodePoolResp.AllowSystemComponents),
 		}
@@ -2309,8 +2366,8 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	clResp, err := r.skeClient.DefaultAPI.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -2390,6 +2447,11 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	_, err := r.skeClient.DefaultAPI.DeleteCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Calling API: %v", err))
 		return
 	}

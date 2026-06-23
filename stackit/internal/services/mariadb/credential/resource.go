@@ -2,9 +2,12 @@ package mariadb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	mariadbUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mariadb/utils"
@@ -45,6 +48,11 @@ type Model struct {
 	Port         types.Int32  `tfsdk:"port"`
 	Uri          types.String `tfsdk:"uri"`
 	Username     types.String `tfsdk:"username"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewCredentialResource is a helper function to simplify the provider implementation.
@@ -79,7 +87,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 
 // Schema defines the schema for the resource.
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
+	descriptions := map[string]string{ //nolint:gosec // description for credential id
 		"main":          "MariaDB credential resource schema. Must have a `region` specified in the provider configuration.",
 		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
@@ -156,6 +164,18 @@ func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"username": schema.StringAttribute{
 				Computed: true,
 			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -230,14 +250,19 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
+	if credentialId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
 	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
-		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
-		if ok && oapiErr.StatusCode == http.StatusNotFound {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -290,7 +315,12 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 	// Delete existing record set
 	err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, instanceId, credentialId).Execute()
 	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			return
+		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting credential", fmt.Sprintf("Calling API: %v", err))
+		return
 	}
 
 	ctx = core.LogResponse(ctx)
@@ -350,7 +380,7 @@ func mapFields(ctx context.Context, credentialsResp *mariadb.CredentialsResponse
 		credentialId,
 	)
 
-	modelHosts, err := utils.ListValuetoStringSlice(model.Hosts)
+	modelHosts, err := utils.ListValueToStringSlice(model.Hosts)
 	if err != nil {
 		return err
 	}

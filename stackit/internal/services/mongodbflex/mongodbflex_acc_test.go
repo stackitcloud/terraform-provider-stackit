@@ -38,7 +38,7 @@ var instanceResource = map[string]string{
 	"backup_schedule_read":            "0 6 * * *",
 	"snapshot_retention_days":         "4",
 	"snapshot_retention_days_updated": "3",
-	"daily_snapshot_retention_days":   "1",
+	"daily_snapshot_retention_days":   "3",
 	"point_in_time_window_hours":      "30",
 }
 

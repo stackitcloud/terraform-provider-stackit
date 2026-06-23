@@ -43,6 +43,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				ResourcePoolId:          testResourcePoolId,
 				ShareId:                 testShareId,
 				Name:                    types.StringValue("test-name"),
+				Labels:                  types.MapNull(types.StringType),
 				ExportPolicyName:        testPolicyName,
 				SpaceHardLimitGigabytes: types.Int32Value(42),
 				MountPath:               types.StringValue("/testmount"),

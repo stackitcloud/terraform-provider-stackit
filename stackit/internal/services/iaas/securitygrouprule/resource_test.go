@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[string]attr.Value{
@@ -17,8 +17,8 @@ var fixtureModelIcmpParameters = types.ObjectValueMust(icmpParametersTypes, map[
 })
 
 var fixtureIcmpParameters = iaas.ICMPParameters{
-	Code: new(int64(1)),
-	Type: new(int64(2)),
+	Code: int64(1),
+	Type: int64(2),
 }
 
 var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]attr.Value{
@@ -27,8 +27,8 @@ var fixtureModelPortRange = types.ObjectValueMust(portRangeTypes, map[string]att
 })
 
 var fixturePortRange = iaas.PortRange{
-	Max: new(int64(2)),
-	Min: new(int64(1)),
+	Max: int64(2),
+	Min: int64(1),
 }
 
 var fixtureModelProtocol = types.ObjectValueMust(protocolTypes, map[string]attr.Value{
@@ -80,7 +80,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
-				Direction:             types.StringNull(),
+				Direction:             types.StringValue(""),
 				Description:           types.StringNull(),
 				EtherType:             types.StringNull(),
 				IpRange:               types.StringNull(),
@@ -104,7 +104,7 @@ func TestMapFields(t *testing.T) {
 				input: &iaas.SecurityGroupRule{
 					Id:                    new("sgrid"),
 					Description:           new("desc"),
-					Direction:             new("ingress"),
+					Direction:             "ingress",
 					Ethertype:             new("ether"),
 					IpRange:               new("iprange"),
 					RemoteSecurityGroupId: new("remote"),
@@ -154,7 +154,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
-				Direction:             types.StringNull(),
+				Direction:             types.StringValue(""),
 				Description:           types.StringNull(),
 				EtherType:             types.StringNull(),
 				IpRange:               types.StringNull(),
@@ -189,7 +189,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:             types.StringValue("pid"),
 				SecurityGroupId:       types.StringValue("sgid"),
 				SecurityGroupRuleId:   types.StringValue("sgrid"),
-				Direction:             types.StringNull(),
+				Direction:             types.StringValue(""),
 				Description:           types.StringNull(),
 				EtherType:             types.StringNull(),
 				IpRange:               types.StringNull(),
@@ -198,6 +198,84 @@ func TestMapFields(t *testing.T) {
 				PortRange:             types.ObjectNull(portRangeTypes),
 				Protocol:              fixtureModelProtocol,
 				Region:                types.StringValue("eu01"),
+			},
+			isValid: true,
+		},
+		{
+			description: "port range in model defined, but in response null",
+			args: args{
+				state: Model{
+					ProjectId:           types.StringValue("pid"),
+					SecurityGroupId:     types.StringValue("sgid"),
+					SecurityGroupRuleId: types.StringValue("sgrid"),
+					Region:              types.StringValue("eu01"),
+					PortRange:           fixtureModelPortRange,
+				},
+				input: &iaas.SecurityGroupRule{
+					Id:                    new("sgrid"),
+					Description:           new("desc"),
+					Direction:             "ingress",
+					Ethertype:             new("ether"),
+					IpRange:               new("iprange"),
+					RemoteSecurityGroupId: new("remote"),
+					PortRange:             nil,
+					Protocol:              &fixtureProtocol,
+				},
+				region: "eu02",
+			},
+			expected: Model{
+				Id:                    types.StringValue("pid,eu02,sgid,sgrid"),
+				ProjectId:             types.StringValue("pid"),
+				SecurityGroupId:       types.StringValue("sgid"),
+				SecurityGroupRuleId:   types.StringValue("sgrid"),
+				Direction:             types.StringValue("ingress"),
+				Description:           types.StringValue("desc"),
+				EtherType:             types.StringValue("ether"),
+				IpRange:               types.StringValue("iprange"),
+				RemoteSecurityGroupId: types.StringValue("remote"),
+				IcmpParameters:        types.ObjectNull(icmpParametersTypes),
+				PortRange:             fixtureModelPortRange,
+				Protocol:              fixtureModelProtocol,
+				Region:                types.StringValue("eu02"),
+			},
+			isValid: true,
+		},
+		{
+			description: "icmp parameters in model defined, but in response null",
+			args: args{
+				state: Model{
+					ProjectId:           types.StringValue("pid"),
+					SecurityGroupId:     types.StringValue("sgid"),
+					SecurityGroupRuleId: types.StringValue("sgrid"),
+					Region:              types.StringValue("eu01"),
+					IcmpParameters:      fixtureModelIcmpParameters,
+				},
+				input: &iaas.SecurityGroupRule{
+					Id:                    new("sgrid"),
+					Description:           new("desc"),
+					Direction:             "ingress",
+					Ethertype:             new("ether"),
+					IpRange:               new("iprange"),
+					RemoteSecurityGroupId: new("remote"),
+					IcmpParameters:        nil,
+					Protocol:              &fixtureProtocol,
+				},
+				region: "eu02",
+			},
+			expected: Model{
+				Id:                    types.StringValue("pid,eu02,sgid,sgrid"),
+				ProjectId:             types.StringValue("pid"),
+				SecurityGroupId:       types.StringValue("sgid"),
+				SecurityGroupRuleId:   types.StringValue("sgrid"),
+				Direction:             types.StringValue("ingress"),
+				Description:           types.StringValue("desc"),
+				EtherType:             types.StringValue("ether"),
+				IpRange:               types.StringValue("iprange"),
+				RemoteSecurityGroupId: types.StringValue("remote"),
+				IcmpParameters:        fixtureModelIcmpParameters,
+				PortRange:             types.ObjectNull(portRangeTypes),
+				Protocol:              fixtureModelProtocol,
+				Region:                types.StringValue("eu02"),
 			},
 			isValid: true,
 		},
@@ -258,7 +336,7 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			&iaas.CreateSecurityGroupRulePayload{
 				Description:    new("desc"),
-				Direction:      new("ingress"),
+				Direction:      "ingress",
 				IcmpParameters: &fixtureIcmpParameters,
 				PortRange:      &fixturePortRange,
 				Protocol:       &fixtureCreateProtocol,

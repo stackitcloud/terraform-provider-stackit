@@ -71,6 +71,7 @@ var (
 	ALBCertCustomEndpoint         = customEndpointConfig{envVarName: "TF_ACC_ALB_CERT_CUSTOM_ENDPOINT", providerName: "alb_certificates_custom_endpoint"}
 	CdnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_CDN_CUSTOM_ENDPOINT", providerName: "cdn_custom_endpoint"}
 	DnsCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_DNS_CUSTOM_ENDPOINT", providerName: "dns_custom_endpoint"}
+	DremioCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_DREMIO_CUSTOM_ENDPOINT", providerName: "dremio_custom_endpoint"}
 	EdgeCloudCustomEndpoint       = customEndpointConfig{envVarName: "TF_ACC_EDGECLOUD_CUSTOM_ENDPOINT", providerName: "edgecloud_custom_endpoint"}
 	GitCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_GIT_CUSTOM_ENDPOINT", providerName: "git_custom_endpoint"}
 	IaaSCustomEndpoint            = customEndpointConfig{envVarName: "TF_ACC_IAAS_CUSTOM_ENDPOINT", providerName: "iaas_custom_endpoint"}
@@ -97,7 +98,11 @@ var (
 	SFSCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SFS_CUSTOM_ENDPOINT", providerName: "sfs_custom_endpoint"}
 	ServiceAccountCustomEndpoint  = customEndpointConfig{envVarName: "TF_ACC_SERVICE_ACCOUNT_CUSTOM_ENDPOINT", providerName: "service_account_custom_endpoint"}
 	TokenCustomEndpoint           = customEndpointConfig{envVarName: "TF_ACC_TOKEN_CUSTOM_ENDPOINT", providerName: "token_custom_endpoint"}
+	VpnCustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_VPN_CUSTOM_ENDPOINT", providerName: "vpn_custom_endpoint"}
 	SKECustomEndpoint             = customEndpointConfig{envVarName: "TF_ACC_SKE_CUSTOM_ENDPOINT", providerName: "ske_custom_endpoint"}
+	IntakeCustomEndpoint          = customEndpointConfig{envVarName: "TF_ACC_INTAKE_CUSTOM_ENDPOINT", providerName: "intake_custom_endpoint"}
+	TelemetryRouterCustomEndpoint = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYROUTER_CUSTOM_ENDPOINT", providerName: "telemetryrouter_custom_endpoint"}
+	TelemetryLinkCustomEndpoint   = customEndpointConfig{envVarName: "TF_ACC_TELEMETRYLINK_CUSTOM_ENDPOINT", providerName: "telemetrylink_custom_endpoint"}
 
 	allCustomEndpoints = []customEndpointConfig{
 		ALBCustomEndpoint,
@@ -130,7 +135,10 @@ var (
 		SFSCustomEndpoint,
 		ServiceAccountCustomEndpoint,
 		TokenCustomEndpoint,
+		VpnCustomEndpoint,
 		SKECustomEndpoint,
+		TelemetryRouterCustomEndpoint,
+		TelemetryLinkCustomEndpoint,
 	}
 )
 
@@ -140,6 +148,7 @@ const (
 	ExperimentRoutingTables Experiment = "routing-tables"
 	ExperimentNetwork       Experiment = "network"
 	ExperimentIAM           Experiment = "iam"
+	ExperimentDremio        Experiment = "dremio"
 )
 
 type customEndpointConfig struct {

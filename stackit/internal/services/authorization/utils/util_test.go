@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	"github.com/stackitcloud/stackit-sdk-go/services/authorization"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -105,31 +106,35 @@ func TestTypeConverter(t *testing.T) {
 		{
 			name: "success - all fields populated",
 			input: authorization.MembersResponse{
-				Members: &[]authorization.Member{
+				Members: []authorization.Member{
 					{
-						Role:    new("editor"),
-						Subject: new("foo.bar@stackit.cloud"),
+						Role:    "editor",
+						Subject: "foo.bar@stackit.cloud",
 					},
 				},
-				ResourceId:   new("project-123"),
-				ResourceType: new("project"),
+				ResourceId:   "project-123",
+				ResourceType: "project",
 			},
 			expected: &authorization.ListMembersResponse{
-				Members: &[]authorization.Member{
+				Members: []authorization.Member{
 					{
-						Role:    new("editor"),
-						Subject: new("foo.bar@stackit.cloud"),
+						Role:                 "editor",
+						Subject:              "foo.bar@stackit.cloud",
+						AdditionalProperties: map[string]interface{}{},
 					},
 				},
-				ResourceId:   new("project-123"),
-				ResourceType: new("project"),
+				ResourceId:           "project-123",
+				ResourceType:         "project",
+				AdditionalProperties: map[string]interface{}{},
 			},
 			expectError: false,
 		},
 		{
-			name:        "success - completely empty input",
-			input:       authorization.MembersResponse{},
-			expected:    &authorization.ListMembersResponse{},
+			name:  "success - completely empty input",
+			input: authorization.MembersResponse{},
+			expected: &authorization.ListMembersResponse{
+				AdditionalProperties: map[string]interface{}{},
+			},
 			expectError: false,
 		},
 	}
@@ -140,6 +145,11 @@ func TestTypeConverter(t *testing.T) {
 
 			if (err != nil) != tc.expectError {
 				t.Fatalf("unexpected error: got error=%v, expectError=%v", err, tc.expectError)
+			}
+
+			diff := cmp.Diff(tc.expected, actual)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
 			}
 
 			if !tc.expectError && !reflect.DeepEqual(actual, tc.expected) {

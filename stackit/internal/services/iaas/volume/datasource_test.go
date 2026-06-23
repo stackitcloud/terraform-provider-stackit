@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 )
 
 func TestMapDatasourceFields(t *testing.T) {
@@ -32,6 +32,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				input: &iaas.Volume{
 					Id:                   new("nid"),
 					EncryptionParameters: nil,
+					AvailabilityZone:     "eu01-1",
 				},
 				region: "eu01",
 			},
@@ -40,7 +41,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				ProjectId:        types.StringValue("pid"),
 				VolumeId:         types.StringValue("nid"),
 				Name:             types.StringNull(),
-				AvailabilityZone: types.StringNull(),
+				AvailabilityZone: types.StringValue("eu01-1"),
 				Labels:           types.MapNull(types.StringType),
 				Description:      types.StringNull(),
 				PerformanceClass: types.StringNull(),
@@ -62,8 +63,8 @@ func TestMapDatasourceFields(t *testing.T) {
 				input: &iaas.Volume{
 					Id:               new("nid"),
 					Name:             new("name"),
-					AvailabilityZone: new("zone"),
-					Labels: &map[string]any{
+					AvailabilityZone: "zone",
+					Labels: map[string]any{
 						"key": "value",
 					},
 					Description:      new("desc"),
@@ -73,12 +74,12 @@ func TestMapDatasourceFields(t *testing.T) {
 					Source:           &iaas.VolumeSource{},
 					Encrypted:        new(true),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{
-						KekKeyId:       new("kek-key-id"),
-						KekKeyVersion:  new(int64(1)),
-						KekKeyringId:   new("kek-keyring-id"),
+						KekKeyId:       "kek-key-id",
+						KekKeyVersion:  int64(1),
+						KekKeyringId:   "kek-keyring-id",
 						KekProjectId:   new("kek-project-id"),
 						KeyPayload:     nil,
-						ServiceAccount: new("test-sa@sa.stackit.cloud"),
+						ServiceAccount: "test-sa@sa.stackit.cloud",
 					},
 				},
 				region: "eu02",
@@ -97,8 +98,8 @@ func TestMapDatasourceFields(t *testing.T) {
 				ServerId:         types.StringValue("sid"),
 				Size:             types.Int64Value(1),
 				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
-					"type": types.StringNull(),
-					"id":   types.StringNull(),
+					"type": types.StringValue(""),
+					"id":   types.StringValue(""),
 				}),
 				Region:    types.StringValue("eu02"),
 				Encrypted: types.BoolValue(true),
@@ -116,6 +117,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				input: &iaas.Volume{
 					Id:                   new("nid"),
 					EncryptionParameters: &iaas.VolumeEncryptionParameter{},
+					AvailabilityZone:     "eu01-1",
 				},
 				region: "eu01",
 			},
@@ -124,7 +126,7 @@ func TestMapDatasourceFields(t *testing.T) {
 				ProjectId:        types.StringValue("pid"),
 				VolumeId:         types.StringValue("nid"),
 				Name:             types.StringNull(),
-				AvailabilityZone: types.StringNull(),
+				AvailabilityZone: types.StringValue("eu01-1"),
 				Labels:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
 				Description:      types.StringNull(),
 				PerformanceClass: types.StringNull(),

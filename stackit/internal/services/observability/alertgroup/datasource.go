@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/services/observability"
+	observabilitySdk "github.com/stackitcloud/stackit-sdk-go/services/observability/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -34,7 +34,7 @@ func NewAlertGroupDataSource() datasource.DataSource {
 
 // alertGroupDataSource is the datasource implementation.
 type alertGroupDataSource struct {
-	client *observability.APIClient
+	client *observabilitySdk.APIClient
 }
 
 // Configure adds the provider configured client to the resource.
@@ -152,7 +152,7 @@ func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "alert_group_name", alertGroupName)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	readAlertGroupResp, err := a.client.GetAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
+	readAlertGroupResp, err := a.client.DefaultAPI.GetAlertgroup(ctx, alertGroupName, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -166,7 +166,7 @@ func (a *alertGroupDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, readAlertGroupResp.Data, &model)
+	err = mapFields(ctx, &readAlertGroupResp.Data, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading alert group", fmt.Sprintf("Error processing API response: %v", err))
 		return
