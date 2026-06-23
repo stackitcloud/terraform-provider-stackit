@@ -102,7 +102,7 @@ resource "stackit_ske_cluster" "cluster" {
   access = {
     idp = {
       enabled = var.access_idp_enabled
-      type = "stackit"
+      type    = "stackit"
     }
   }
 }

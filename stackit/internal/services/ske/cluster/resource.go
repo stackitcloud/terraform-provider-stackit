@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
+
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
@@ -431,7 +432,6 @@ var descriptions = map[string]string{
 
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
