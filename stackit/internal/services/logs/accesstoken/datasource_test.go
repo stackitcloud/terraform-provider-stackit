@@ -53,7 +53,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			description: "max values",
 			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
-				accessToken.Permissions = []string{"write"}
+				accessToken.Permissions = []logs.PermissionsInner{logs.PERMISSIONSINNER_WRITE}
 				accessToken.AccessToken = new("")
 				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"

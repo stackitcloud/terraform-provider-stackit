@@ -48,12 +48,12 @@ var fixtureInstanceParameters = redis.InstanceParameters{
 	EnableMonitoring:      new(true),
 	FailoverTimeout:       new(int32(10)),
 	Graphite:              new("1.1.1.1:91"),
-	LazyfreeLazyEviction:  new("no"),
-	LazyfreeLazyExpire:    new("no"),
+	LazyfreeLazyEviction:  new(redis.INSTANCEPARAMETERSLAZYFREELAZYEVICTION_NO),
+	LazyfreeLazyExpire:    new(redis.INSTANCEPARAMETERSLAZYFREELAZYEXPIRE_NO),
 	LuaTimeLimit:          new(int32(10)),
 	MaxDiskThreshold:      new(int32(100)),
 	Maxclients:            new(int32(10)),
-	MaxmemoryPolicy:       new("volatile-lru"),
+	MaxmemoryPolicy:       new(redis.INSTANCEPARAMETERSMAXMEMORYPOLICY_VOLATILE_LRU),
 	MaxmemorySamples:      new(int32(10)),
 	MetricsFrequency:      new(int32(10)),
 	MetricsPrefix:         new("prefix"),
@@ -64,7 +64,7 @@ var fixtureInstanceParameters = redis.InstanceParameters{
 	Syslog:                []string{"syslog", "syslog2"},
 	TlsCiphers:            []string{"ciphers1", "ciphers2"},
 	TlsCiphersuites:       new("ciphersuites"),
-	TlsProtocols:          new("TLSv1.2"),
+	TlsProtocols:          new(redis.INSTANCEPARAMETERSTLSPROTOCOLS_TLSV1_2),
 }
 
 func TestMapFields(t *testing.T) {

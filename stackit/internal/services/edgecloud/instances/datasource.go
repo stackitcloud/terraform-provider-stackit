@@ -241,7 +241,7 @@ func mapInstanceToAttrs(instance *edge.Instance, region string) map[string]attr.
 		"region":       types.StringValue(region),
 		"plan_id":      types.StringValue(instance.PlanId),
 		"frontend_url": types.StringValue(instance.FrontendUrl),
-		"status":       types.StringValue(instance.Status),
+		"status":       types.StringValue(string(instance.Status)),
 		"created":      types.StringValue(instance.Created.String()),
 		"description":  types.StringPointerValue(instance.Description),
 	}

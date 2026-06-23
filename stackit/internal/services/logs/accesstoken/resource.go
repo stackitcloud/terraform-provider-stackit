@@ -24,9 +24,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -480,7 +481,9 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		permissionDiags := model.Permissions.ElementsAs(ctx, &permissions, false)
 		diagnostics.Append(permissionDiags...)
 		if !permissionDiags.HasError() {
-			payload.Permissions = permissions
+			payload.Permissions = tfutils.Map(permissions, func(t string) logs.PermissionsInner {
+				return logs.PermissionsInner(t)
+			})
 		}
 	}
 
@@ -511,7 +514,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	model.Description = types.StringPointerValue(accessToken.Description)
 	model.DisplayName = types.StringValue(accessToken.DisplayName)
 	model.Expires = types.BoolValue(accessToken.Expires)
-	model.Status = types.StringValue(accessToken.Status)
+	model.Status = types.StringValue(string(accessToken.Status))
 
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {

@@ -496,7 +496,7 @@ func mapFields(ctx context.Context, instance *logs.LogsInstance, model *Model) e
 	model.QueryRangeURL = types.StringPointerValue(instance.QueryRangeUrl)
 	model.QueryURL = types.StringPointerValue(instance.QueryUrl)
 	model.RetentionDays = types.Int32Value(instance.RetentionDays)
-	model.Status = types.StringValue(instance.Status)
+	model.Status = types.StringValue(string(instance.Status))
 
 	return nil
 }
