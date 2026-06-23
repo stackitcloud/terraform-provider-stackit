@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 )
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{

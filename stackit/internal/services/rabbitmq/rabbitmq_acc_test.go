@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api/wait"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -261,7 +261,7 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -273,11 +273,11 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}

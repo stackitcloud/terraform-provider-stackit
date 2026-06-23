@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 )
 
 func TestMapFields(t *testing.T) {

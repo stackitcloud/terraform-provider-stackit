@@ -18,7 +18,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -50,7 +50,8 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the data source implementation.
 type credentialDataSource struct {
-	client *rabbitmq.APIClient
+	client       *rabbitmq.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -60,12 +61,13 @@ func (r *credentialDataSource) Metadata(_ context.Context, req datasource.Metada
 
 // Configure adds the provider configured client to the data source.
 func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := rabbitmqUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := rabbitmqUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -81,6 +83,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the RabbitMQ instance.",
 		"project_id":    "STACKIT project ID to which the instance is associated.",
+		"region":        "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -149,6 +152,12 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"username": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -165,13 +174,15 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

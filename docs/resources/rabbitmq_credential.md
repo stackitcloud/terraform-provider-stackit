@@ -48,6 +48,7 @@ import {
 
 ### Optional
 
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only

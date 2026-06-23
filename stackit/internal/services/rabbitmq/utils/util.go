@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -19,8 +19,6 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 	if providerData.RabbitMQCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.RabbitMQCustomEndpoint))
-	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
 	}
 	apiClient, err := rabbitmq.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {
@@ -29,4 +27,24 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 
 	return apiClient
+}
+
+// StringSliceToInstanceParametersPluginsInner takes a string slice and converts it to rabbitmq.InstanceParamtersPluginsInner.
+func StringSliceToInstanceParametersPluginsInner(s []string) []rabbitmq.InstanceParametersPluginsInner {
+	result := make([]rabbitmq.InstanceParametersPluginsInner, len(s))
+	for i, element := range s {
+		result[i] = rabbitmq.InstanceParametersPluginsInner(element)
+	}
+
+	return result
+}
+
+// StringSliceToInstanceParametersTlsProtocolsInner takes a string slice and converts it to rabbitmq.InstanceParametersTlsProtocolsInner.
+func StringSliceToInstanceParametersTlsProtocolsInner(s []string) []rabbitmq.InstanceParametersTlsProtocolsInner {
+	result := make([]rabbitmq.InstanceParametersTlsProtocolsInner, len(s))
+	for i, element := range s {
+		result[i] = rabbitmq.InstanceParametersTlsProtocolsInner(element)
+	}
+
+	return result
 }
