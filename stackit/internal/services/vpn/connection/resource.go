@@ -766,21 +766,13 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayConne
 		return nil, fmt.Errorf("nil model")
 	}
 
-	fields, err := toConnectionFields(ctx, model)
+	payload := &vpn.CreateGatewayConnectionPayload{}
+	err := toConnectionPayload(ctx, model, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	return &vpn.CreateGatewayConnectionPayload{
-		DisplayName:   fields.displayName,
-		Tunnel1:       fields.tunnel1,
-		Tunnel2:       fields.tunnel2,
-		Enabled:       fields.enabled,
-		RemoteSubnets: fields.remoteSubnets,
-		LocalSubnets:  fields.localSubnets,
-		StaticRoutes:  fields.staticRoutes,
-		Labels:        &fields.labels,
-	}, nil
+	return payload, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayConnectionPayload, error) {
@@ -788,86 +780,80 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayConne
 		return nil, fmt.Errorf("nil model")
 	}
 
-	fields, err := toConnectionFields(ctx, model)
+	payload := &vpn.UpdateGatewayConnectionPayload{}
+	err := toConnectionPayload(ctx, model, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	return &vpn.UpdateGatewayConnectionPayload{
-		DisplayName:   fields.displayName,
-		Tunnel1:       fields.tunnel1,
-		Tunnel2:       fields.tunnel2,
-		Enabled:       fields.enabled,
-		RemoteSubnets: fields.remoteSubnets,
-		LocalSubnets:  fields.localSubnets,
-		StaticRoutes:  fields.staticRoutes,
-		Labels:        &fields.labels,
-	}, nil
+	return payload, nil
 }
 
-type connectionFields struct {
-	displayName   string
-	tunnel1       vpn.TunnelConfiguration
-	tunnel2       vpn.TunnelConfiguration
-	enabled       *bool
-	remoteSubnets []string
-	localSubnets  []string
-	staticRoutes  []string
-	labels        map[string]string
+type connectionFields interface {
+	SetDisplayName(string)
+	SetTunnel1(vpn.TunnelConfiguration)
+	SetTunnel2(vpn.TunnelConfiguration)
+	SetEnabled(bool)
+	SetRemoteSubnets([]string)
+	SetLocalSubnets([]string)
+	SetStaticRoutes([]string)
+	SetLabels(map[string]string)
 }
 
-func toConnectionFields(ctx context.Context, model *Model) (*connectionFields, error) {
-	tunnel1, err := toTunnelPayload(model.Tunnel1)
-	if err != nil {
-		return nil, fmt.Errorf("converting tunnel1: %w", err)
+func toConnectionPayload(ctx context.Context, model *Model, payload connectionFields) error {
+	if payload == nil {
+		return fmt.Errorf("payload can not be nil")
 	}
+
+	tunnel1, err := toTunnelPayload(model.Tunnel1)
+	if err != nil && tunnel1 != nil {
+		return fmt.Errorf("converting tunnel1: %w", err)
+	}
+	payload.SetTunnel1(*tunnel1)
 
 	tunnel2, err := toTunnelPayload(model.Tunnel2)
-	if err != nil {
-		return nil, fmt.Errorf("converting tunnel2: %w", err)
+	if err != nil && tunnel2 != nil {
+		return fmt.Errorf("converting tunnel2: %w", err)
 	}
+	payload.SetTunnel2(*tunnel2)
 
-	fields := &connectionFields{
-		displayName: model.DisplayName.ValueString(),
-		tunnel1:     *tunnel1,
-		tunnel2:     *tunnel2,
-	}
+	payload.SetDisplayName(model.DisplayName.ValueString())
 
 	if !tfutils.IsUndefined(model.Enabled) {
-		enabled := model.Enabled.ValueBool()
-		fields.enabled = &enabled
+		payload.SetEnabled(model.Enabled.ValueBool())
 	}
 
 	if !tfutils.IsUndefined(model.RemoteSubnet) {
 		remoteSubnets, err := tfutils.ListValueToStringSlice(model.RemoteSubnet)
 		if err != nil {
-			return nil, fmt.Errorf("converting remote_subnet: %w", err)
+			return fmt.Errorf("converting remote_subnet: %w", err)
 		}
-		fields.remoteSubnets = remoteSubnets
+		payload.SetRemoteSubnets(remoteSubnets)
 	}
 
 	if !tfutils.IsUndefined(model.LocalSubnet) {
 		localSubnets, err := tfutils.ListValueToStringSlice(model.LocalSubnet)
 		if err != nil {
-			return nil, fmt.Errorf("converting local_subnet: %w", err)
+			return fmt.Errorf("converting local_subnet: %w", err)
 		}
-		fields.localSubnets = localSubnets
+		payload.SetLocalSubnets(localSubnets)
 	}
 
 	if !tfutils.IsUndefined(model.StaticRoutes) {
 		staticRoutes, err := tfutils.ListValueToStringSlice(model.StaticRoutes)
 		if err != nil {
-			return nil, fmt.Errorf("converting static_routes: %w", err)
+			return fmt.Errorf("converting static_routes: %w", err)
 		}
-		fields.staticRoutes = staticRoutes
+		payload.SetStaticRoutes(staticRoutes)
 	}
 
-	fields.labels, err = tfutils.LabelsToPayload(ctx, model.Labels)
+	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	payload.SetLabels(labels)
 
-	return fields, nil
+	return nil
 }
 
 func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
