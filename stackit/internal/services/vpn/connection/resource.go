@@ -1119,20 +1119,20 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel
 	return nil
 }
 
-type BasePhaseFields struct {
-	DhGroups             []vpn.PhaseDhGroupsInner
-	EncryptionAlgorithms []vpn.PhaseEncryptionAlgorithmsInner
-	IntegrityAlgorithms  []vpn.PhaseIntegrityAlgorithmsInner
-	RekeyTime            *int32
+type BasePhaseFields interface {
+	GetDhGroupsOk() ([]vpn.PhaseDhGroupsInner, bool)
+	GetEncryptionAlgorithmsOk() ([]vpn.PhaseEncryptionAlgorithmsInner, bool)
+	GetIntegrityAlgorithmsOk() ([]vpn.PhaseIntegrityAlgorithmsInner, bool)
+	GetRekeyTimeOk() (*int32, bool)
 }
 
-func mapBasePhase(ctx context.Context, apiPhase *BasePhaseFields) (phase BasePhaseModel, err error) {
+func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhaseModel, err error) {
 	if apiPhase == nil {
 		return phase, fmt.Errorf("api phase can not be nil")
 	}
 
-	if len(apiPhase.DhGroups) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.DhGroups)
+	if dhGroups, _ := apiPhase.GetDhGroupsOk(); len(dhGroups) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, dhGroups)
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
 		}
@@ -1140,8 +1140,9 @@ func mapBasePhase(ctx context.Context, apiPhase *BasePhaseFields) (phase BasePha
 	} else {
 		phase.DhGroups = types.ListNull(types.StringType)
 	}
-	if len(apiPhase.EncryptionAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.EncryptionAlgorithms)
+
+	if encryptionAlgorithms, _ := apiPhase.GetEncryptionAlgorithmsOk(); len(encryptionAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, encryptionAlgorithms)
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
 		}
@@ -1149,8 +1150,9 @@ func mapBasePhase(ctx context.Context, apiPhase *BasePhaseFields) (phase BasePha
 	} else {
 		phase.EncryptionAlgorithms = types.ListNull(types.StringType)
 	}
-	if len(apiPhase.IntegrityAlgorithms) > 0 {
-		list, diags := types.ListValueFrom(ctx, types.StringType, apiPhase.IntegrityAlgorithms)
+
+	if integrityAlgorithms, _ := apiPhase.GetIntegrityAlgorithmsOk(); len(integrityAlgorithms) > 0 {
+		list, diags := types.ListValueFrom(ctx, types.StringType, integrityAlgorithms)
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
 		}
@@ -1158,27 +1160,19 @@ func mapBasePhase(ctx context.Context, apiPhase *BasePhaseFields) (phase BasePha
 	} else {
 		phase.IntegrityAlgorithms = types.ListNull(types.StringType)
 	}
-	if apiPhase.RekeyTime != nil {
-		phase.RekeyTime = types.Int32Value(*apiPhase.RekeyTime)
-	} else {
-		phase.RekeyTime = types.Int32Null()
-	}
+
+	rekeyTime, _ := apiPhase.GetRekeyTimeOk()
+	phase.RekeyTime = types.Int32PointerValue(rekeyTime)
+
 	return phase, nil
 }
 
 func mapPhase1(ctx context.Context, apiPhase1 *vpn.TunnelConfigurationPhase1) (*Phase1Model, error) {
-	if apiPhase1 == nil {
-		return nil, fmt.Errorf("phase can not be nil")
-	}
-	basePhase, err := mapBasePhase(ctx, &BasePhaseFields{
-		DhGroups:             apiPhase1.DhGroups,
-		EncryptionAlgorithms: apiPhase1.EncryptionAlgorithms,
-		IntegrityAlgorithms:  apiPhase1.IntegrityAlgorithms,
-		RekeyTime:            apiPhase1.RekeyTime,
-	})
+	basePhase, err := mapBasePhase(ctx, apiPhase1)
 	if err != nil {
 		return nil, err
 	}
+
 	return &Phase1Model{
 		BasePhaseModel: basePhase,
 	}, nil
@@ -1188,27 +1182,27 @@ func mapPhase2(ctx context.Context, apiPhase2 *vpn.TunnelConfigurationPhase2) (*
 	if apiPhase2 == nil {
 		return nil, fmt.Errorf("phase can not be nil")
 	}
-	basePhase, err := mapBasePhase(ctx, &BasePhaseFields{
-		DhGroups:             apiPhase2.DhGroups,
-		EncryptionAlgorithms: apiPhase2.EncryptionAlgorithms,
-		IntegrityAlgorithms:  apiPhase2.IntegrityAlgorithms,
-		RekeyTime:            apiPhase2.RekeyTime,
-	})
+
+	basePhase, err := mapBasePhase(ctx, apiPhase2)
 	if err != nil {
 		return nil, err
 	}
+
 	phase2 := &Phase2Model{
 		BasePhaseModel: basePhase,
 	}
+
 	if apiPhase2.StartAction != nil {
 		phase2.StartAction = types.StringValue(string(*apiPhase2.StartAction))
 	} else {
 		phase2.StartAction = types.StringNull()
 	}
+
 	if apiPhase2.DpdAction != nil {
 		phase2.DpdAction = types.StringValue(string(*apiPhase2.DpdAction))
 	} else {
 		phase2.DpdAction = types.StringNull()
 	}
+
 	return phase2, nil
 }
