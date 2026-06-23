@@ -158,6 +158,10 @@ func TestAccSKEMin(t *testing.T) {
 						"stackit_ske_kubeconfig.kubeconfig", "cluster_name",
 						"stackit_ske_cluster.cluster", "name",
 					),
+
+					// Access: resource-min does not define an access block, we expect idp: { enabled: false, type: stackit } here because of the default
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", "false"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
 			},
 			// 2) Data source
