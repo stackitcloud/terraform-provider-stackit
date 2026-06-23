@@ -329,7 +329,7 @@ func TestAccSKEMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
 					// Access
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 
 					// Kubeconfig
@@ -406,7 +406,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
 					// Access
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.enabled", "true"),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
 			},
@@ -496,7 +496,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					// Access
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", "false"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
 			},
