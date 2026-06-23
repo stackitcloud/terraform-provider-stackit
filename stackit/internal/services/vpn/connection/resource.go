@@ -103,43 +103,6 @@ var (
 	dpdActionValues           = sdkUtils.EnumSliceToStringSlice(vpn.AllowedTunnelConfigurationPhase2AllOfDpdActionEnumValues)
 )
 
-var schemaDescriptions = map[string]string{
-	"id":            "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
-	"connection_id": "The server-generated UUID of the VPN connection.",
-	"project_id":    "STACKIT project ID.",
-	"region":        "STACKIT region.",
-	"gateway_id":    "The UUID of the parent VPN gateway.",
-	"display_name":  "A user-friendly name for the connection. Must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long.",
-	"enabled":       "Whether this connection is enabled. Defaults to true.",
-	"remote_subnet": "List of remote IPv4 CIDRs accessible via this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
-	"local_subnet":  "List of local IPv4 CIDRs to route through this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
-	"static_routes": "List of static routes (IPv4 CIDRs) for route-based VPN. Mandatory for ROUTE_BASED gateways.",
-	"tunnel1":       "Configuration for the first IPsec tunnel.",
-	"tunnel2":       "Configuration for the second IPsec tunnel.",
-	"labels":        "Map of custom labels.",
-}
-
-var tunnelSchemaDescriptions = map[string]string{
-	"tunnel":                       "Configuration for the IPsec tunnel.",
-	"pre_shared_key":               "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.",
-	"pre_shared_key_wo":            "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.",
-	"pre_shared_key_wo_version":    "User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.",
-	"remote_address":               "Remote IPv4 address for the tunnel endpoint.",
-	"phase1_dh_groups":             fmt.Sprintf("Diffie-Hellman groups for key exchange. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
-	"phase1_encryption_algorithms": fmt.Sprintf("Encryption algorithms for Phase 1. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
-	"phase1_integrity_algorithms":  fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
-	"phase1_rekey_time":            "Time to schedule an IKE re-keying in seconds. Range: 900-28800. Default: 14400.",
-	"phase2_dh_groups":             fmt.Sprintf("Diffie-Hellman groups for Phase 2. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
-	"phase2_encryption_algorithms": fmt.Sprintf("Encryption algorithms for Phase 2. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
-	"phase2_integrity_algorithms":  fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
-	"phase2_rekey_time":            "Time to schedule a Child SA re-keying in seconds. Range: 900-3600. Default: 3600.",
-	"phase2_start_action":          fmt.Sprintf("Action to perform after loading the connection configuration. Default: 'start'. %s", tfutils.FormatPossibleValues(startActionValues...)),
-	"phase2_dpd_action":            fmt.Sprintf("Action to perform on DPD timeout. Default: 'restart'. %s", tfutils.FormatPossibleValues(dpdActionValues...)),
-	"peering_local_address":        "Local tunnel interface IPv4 address.",
-	"peering_remote_address":       "Remote tunnel interface IPv4 address.",
-	"bgp_remote_asn":               "Remote ASN for BGP peering (private ASN range, 64512-4294967294).",
-}
-
 type vpnConnectionResource struct {
 	client       *vpn.APIClient
 	providerData core.ProviderData
@@ -170,12 +133,12 @@ func (r *vpnConnectionResource) Metadata(_ context.Context, req resource.Metadat
 
 func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
-		Description:         tunnelSchemaDescriptions["tunnel"],
-		MarkdownDescription: fmt.Sprintf("%s \n\n~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", tunnelSchemaDescriptions["tunnel"]),
+		Description:         fmt.Sprintf("Configuration for the IPsec %s.", rootAttribute),
+		MarkdownDescription: fmt.Sprintf("Configuration for the IPsec %s \n\n~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", rootAttribute),
 		Required:            true,
 		Attributes: map[string]schema.Attribute{
 			"pre_shared_key": schema.StringAttribute{
-				Description: tunnelSchemaDescriptions["pre_shared_key"],
+				Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.",
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(20),
@@ -183,7 +146,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 				},
 			},
 			"pre_shared_key_wo": schema.StringAttribute{
-				Description: tunnelSchemaDescriptions["pre_shared_key_wo"],
+				Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.",
 				Optional:    true,
 				WriteOnly:   true,
 				Validators: []validator.String{
@@ -195,14 +158,14 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 				},
 			},
 			"pre_shared_key_wo_version": schema.Int64Attribute{
-				Description: tunnelSchemaDescriptions["pre_shared_key_wo_version"],
+				Description: "User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.",
 				Optional:    true,
 				Validators: []validator.Int64{
 					int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo")),
 				},
 			},
 			"remote_address": schema.StringAttribute{
-				Description: tunnelSchemaDescriptions["remote_address"],
+				Description: "Remote IPv4 address for the tunnel endpoint.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.IP(true),
@@ -212,7 +175,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"dh_groups": schema.ListAttribute{
-						Description: tunnelSchemaDescriptions["phase1_dh_groups"],
+						Description: fmt.Sprintf("Diffie-Hellman groups for key exchange. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -222,7 +185,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"encryption_algorithms": schema.ListAttribute{
-						Description: tunnelSchemaDescriptions["phase1_encryption_algorithms"],
+						Description: fmt.Sprintf("Encryption algorithms for Phase 1. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
 						Required:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -232,7 +195,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"integrity_algorithms": schema.ListAttribute{
-						Description: tunnelSchemaDescriptions["phase1_integrity_algorithms"],
+						Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
 						Required:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -242,7 +205,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"rekey_time": schema.Int32Attribute{
-						Description: tunnelSchemaDescriptions["phase1_rekey_time"],
+						Description: "Time to schedule an IKE re-keying in seconds. Range: 900-28800. Default: 14400.",
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.Int32{
@@ -255,7 +218,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"dh_groups": schema.ListAttribute{
-						Description: tunnelSchemaDescriptions["phase2_dh_groups"],
+						Description: fmt.Sprintf("Diffie-Hellman groups for Phase 2. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
 						Optional:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -265,7 +228,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"encryption_algorithms": schema.ListAttribute{
-						Description: tunnelSchemaDescriptions["phase2_encryption_algorithms"],
+						Description: fmt.Sprintf("Encryption algorithms for Phase 2. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
 						Required:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -275,7 +238,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"integrity_algorithms": schema.ListAttribute{
-						Description: tunnelSchemaDescriptions["phase2_integrity_algorithms"],
+						Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
 						Required:    true,
 						ElementType: types.StringType,
 						Validators: []validator.List{
@@ -285,7 +248,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"rekey_time": schema.Int32Attribute{
-						Description: tunnelSchemaDescriptions["phase2_rekey_time"],
+						Description: "Time to schedule a Child SA re-keying in seconds. Range: 900-3600. Default: 3600.",
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.Int32{
@@ -293,7 +256,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"start_action": schema.StringAttribute{
-						Description: tunnelSchemaDescriptions["phase2_start_action"],
+						Description: fmt.Sprintf("Action to perform after loading the connection configuration. Default: 'start'. %s", tfutils.FormatPossibleValues(startActionValues...)),
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.String{
@@ -301,7 +264,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 						},
 					},
 					"dpd_action": schema.StringAttribute{
-						Description: tunnelSchemaDescriptions["phase2_dpd_action"],
+						Description: fmt.Sprintf("Action to perform on DPD timeout. Default: 'restart'. %s", tfutils.FormatPossibleValues(dpdActionValues...)),
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.String{
@@ -314,14 +277,14 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"local_address": schema.StringAttribute{
-						Description: tunnelSchemaDescriptions["peering_local_address"],
+						Description: "Local tunnel interface IPv4 address.",
 						Required:    true,
 						Validators: []validator.String{
 							validate.IP(true),
 						},
 					},
 					"remote_address": schema.StringAttribute{
-						Description: tunnelSchemaDescriptions["peering_remote_address"],
+						Description: "Remote tunnel interface IPv4 address.",
 						Required:    true,
 						Validators: []validator.String{
 							validate.IP(true),
@@ -333,7 +296,7 @@ func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"remote_asn": schema.Int64Attribute{
-						Description: tunnelSchemaDescriptions["bgp_remote_asn"],
+						Description: "Remote ASN for BGP peering (private ASN range, 64512-4294967294).",
 						Required:    true,
 						Validators: []validator.Int64{
 							int64validator.Between(64512, 4294967294),
@@ -350,14 +313,14 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 		Description: fmt.Sprintf("VPN Connection resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: schemaDescriptions["id"],
+				Description: "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"connection_id": schema.StringAttribute{
-				Description: schemaDescriptions["connection_id"],
+				Description: "The server-generated UUID of the VPN connection.",
 				Computed:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -368,7 +331,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: schemaDescriptions["project_id"],
+				Description: "STACKIT project ID.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -379,7 +342,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: schemaDescriptions["region"],
+				Description: "STACKIT region.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -387,7 +350,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"gateway_id": schema.StringAttribute{
-				Description: schemaDescriptions["gateway_id"],
+				Description: "The UUID of the parent VPN gateway.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -398,7 +361,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"display_name": schema.StringAttribute{
-				Description: schemaDescriptions["display_name"],
+				Description: "A user-friendly name for the connection. Must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
@@ -408,13 +371,13 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"enabled": schema.BoolAttribute{
-				Description: schemaDescriptions["enabled"],
+				Description: "Whether this connection is enabled. Defaults to true.",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
 			},
 			"remote_subnet": schema.ListAttribute{
-				Description: schemaDescriptions["remote_subnet"],
+				Description: "List of remote IPv4 CIDRs accessible via this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
@@ -424,7 +387,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"local_subnet": schema.ListAttribute{
-				Description: schemaDescriptions["local_subnet"],
+				Description: "List of local IPv4 CIDRs to route through this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
@@ -434,7 +397,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"static_routes": schema.ListAttribute{
-				Description: schemaDescriptions["static_routes"],
+				Description: "List of static routes (IPv4 CIDRs) for route-based VPN. Mandatory for ROUTE_BASED gateways.",
 				Optional:    true,
 				Computed:    true,
 				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
@@ -446,7 +409,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 			"tunnel1": tunnelSchema("tunnel1"),
 			"tunnel2": tunnelSchema("tunnel2"),
 			"labels": schema.MapAttribute{
-				Description: schemaDescriptions["labels"],
+				Description: "Map of custom labels.",
 				Optional:    true,
 				ElementType: types.StringType,
 				Validators:  validate.LabelValidators(),

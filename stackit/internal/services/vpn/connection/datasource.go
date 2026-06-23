@@ -52,41 +52,6 @@ type DataSourceModel struct {
 	Labels       types.Map              `tfsdk:"labels"`
 }
 
-var dataSourceSchemaDescriptions = map[string]string{
-	"id":            "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
-	"project_id":    "STACKIT project ID.",
-	"region":        "STACKIT region.",
-	"gateway_id":    "The UUID of the parent VPN gateway.",
-	"connection_id": "The server-generated UUID of the VPN connection.",
-	"display_name":  "A user-friendly name for the connection.",
-	"enabled":       "Whether this connection is enabled.",
-	"remote_subnet": "List of remote IPv4 CIDRs accessible via this connection.",
-	"local_subnet":  "List of local IPv4 CIDRs to route through this connection.",
-	"static_routes": "List of static routes (IPv4 CIDRs) for route-based VPN.",
-	"labels":        "Map of custom labels.",
-}
-
-var dataSourceTunnelSchemaDescriptions = map[string]string{
-	"remote_address":               "Remote peer IPv4 address for this tunnel.",
-	"phase1":                       "IKE Phase 1 configuration.",
-	"phase1_dh_groups":             "Diffie-Hellman groups.",
-	"phase1_encryption_algorithms": "Encryption algorithms.",
-	"phase1_integrity_algorithms":  "Integrity/hash algorithms.",
-	"phase1_rekey_time":            "IKE re-keying time in seconds.",
-	"phase2":                       "IKE Phase 2 configuration.",
-	"phase2_dh_groups":             "Diffie-Hellman groups for PFS.",
-	"phase2_encryption_algorithms": "Encryption algorithms.",
-	"phase2_integrity_algorithms":  "Integrity/hash algorithms.",
-	"phase2_rekey_time":            "Child SA re-keying time in seconds.",
-	"phase2_start_action":          "Start action (none or start).",
-	"phase2_dpd_action":            "DPD timeout action (clear or restart).",
-	"peering":                      "Tunnel interface peering configuration.",
-	"peering_local_address":        "Local tunnel interface IPv4 address.",
-	"peering_remote_address":       "Remote tunnel interface IPv4 address.",
-	"bgp":                          "BGP configuration for this tunnel.",
-	"bgp_remote_asn":               "Remote AS number.",
-}
-
 type vpnConnectionDataSource struct {
 	client       *vpn.APIClient
 	providerData core.ProviderData
@@ -120,87 +85,87 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		Computed: true,
 		Attributes: map[string]schema.Attribute{
 			"remote_address": schema.StringAttribute{
-				Description: dataSourceTunnelSchemaDescriptions["remote_address"],
+				Description: "Remote peer IPv4 address for this tunnel.",
 				Computed:    true,
 			},
 			"phase1": schema.SingleNestedAttribute{
-				Description: dataSourceTunnelSchemaDescriptions["phase1"],
+				Description: "IKE Phase 1 configuration.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"dh_groups": schema.ListAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase1_dh_groups"],
+						Description: "Diffie-Hellman groups.",
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"encryption_algorithms": schema.ListAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase1_encryption_algorithms"],
+						Description: "Encryption algorithms.",
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"integrity_algorithms": schema.ListAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase1_integrity_algorithms"],
+						Description: "Integrity/hash algorithms.",
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"rekey_time": schema.Int32Attribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase1_rekey_time"],
+						Description: "IKE re-keying time in seconds.",
 						Computed:    true,
 					},
 				},
 			},
 			"phase2": schema.SingleNestedAttribute{
-				Description: dataSourceTunnelSchemaDescriptions["phase2"],
+				Description: "IKE Phase 2 configuration.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"dh_groups": schema.ListAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase2_dh_groups"],
+						Description: "Diffie-Hellman groups for PFS.",
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"encryption_algorithms": schema.ListAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase2_encryption_algorithms"],
+						Description: "Encryption algorithms.",
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"integrity_algorithms": schema.ListAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase2_integrity_algorithms"],
+						Description: "Integrity/hash algorithms.",
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 					"rekey_time": schema.Int32Attribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase2_rekey_time"],
+						Description: "Child SA re-keying time in seconds.",
 						Computed:    true,
 					},
 					"start_action": schema.StringAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase2_start_action"],
+						Description: "Start action (none or start).",
 						Computed:    true,
 					},
 					"dpd_action": schema.StringAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["phase2_dpd_action"],
+						Description: "DPD timeout action (clear or restart).",
 						Computed:    true,
 					},
 				},
 			},
 			"peering": schema.SingleNestedAttribute{
-				Description: dataSourceTunnelSchemaDescriptions["peering"],
+				Description: "Tunnel interface peering configuration.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"local_address": schema.StringAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["peering_local_address"],
+						Description: "Local tunnel interface IPv4 address.",
 						Computed:    true,
 					},
 					"remote_address": schema.StringAttribute{
-						Description: dataSourceTunnelSchemaDescriptions["peering_remote_address"],
+						Description: "Remote tunnel interface IPv4 address.",
 						Computed:    true,
 					},
 				},
 			},
 			"bgp": schema.SingleNestedAttribute{
-				Description: dataSourceTunnelSchemaDescriptions["bgp"],
+				Description: "BGP configuration for this tunnel.",
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"remote_asn": schema.Int64Attribute{
-						Description: dataSourceTunnelSchemaDescriptions["bgp_remote_asn"],
+						Description: "Remote AS number.",
 						Computed:    true,
 					},
 				},
@@ -212,11 +177,11 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 		Description: fmt.Sprintf("VPN Connection data source schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: dataSourceSchemaDescriptions["id"],
+				Description: "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
-				Description: dataSourceSchemaDescriptions["project_id"],
+				Description: "STACKIT project ID.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -224,11 +189,11 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: dataSourceSchemaDescriptions["region"],
+				Description: "STACKIT region.",
 				Computed:    true,
 			},
 			"gateway_id": schema.StringAttribute{
-				Description: dataSourceSchemaDescriptions["gateway_id"],
+				Description: "The UUID of the parent VPN gateway.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -236,7 +201,7 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				},
 			},
 			"connection_id": schema.StringAttribute{
-				Description: dataSourceSchemaDescriptions["connection_id"],
+				Description: "The server-generated UUID of the VPN connection.",
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -244,32 +209,32 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				},
 			},
 			"display_name": schema.StringAttribute{
-				Description: dataSourceSchemaDescriptions["display_name"],
+				Description: "A user-friendly name for the connection.",
 				Computed:    true,
 			},
 			"enabled": schema.BoolAttribute{
-				Description: dataSourceSchemaDescriptions["enabled"],
+				Description: "Whether this connection is enabled.",
 				Computed:    true,
 			},
 			"remote_subnet": schema.ListAttribute{
-				Description: dataSourceSchemaDescriptions["remote_subnet"],
+				Description: "List of remote IPv4 CIDRs accessible via this connection.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"local_subnet": schema.ListAttribute{
-				Description: dataSourceSchemaDescriptions["local_subnet"],
+				Description: "List of local IPv4 CIDRs to route through this connection.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"static_routes": schema.ListAttribute{
-				Description: dataSourceSchemaDescriptions["static_routes"],
+				Description: "List of static routes (IPv4 CIDRs) for route-based VPN.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"tunnel1": tunnelSchema,
 			"tunnel2": tunnelSchema,
 			"labels": schema.MapAttribute{
-				Description: dataSourceSchemaDescriptions["labels"],
+				Description: "Map of custom labels.",
 				Computed:    true,
 				ElementType: types.StringType,
 			},
