@@ -65,6 +65,7 @@ To keep your Terraform plans clean and readable, always append new node pools to
 
 ### Optional
 
+- `access` (Attributes) Configure access to the cluster (see [below for nested schema](#nestedatt--access))
 - `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/). To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.
@@ -119,6 +120,23 @@ Required:
 Optional:
 
 - `value` (String) Taint value corresponding to the taint key.
+
+
+
+<a id="nestedatt--access"></a>
+### Nested Schema for `access`
+
+Optional:
+
+- `idp` (Attributes) Configure IDP (see [below for nested schema](#nestedatt--access--idp))
+
+<a id="nestedatt--access--idp"></a>
+### Nested Schema for `access.idp`
+
+Required:
+
+- `enabled` (Boolean) Enable IDP integration for the cluster.
+- `type` (String) The IDP type. Possible values: 'stackit'.
 
 
 
