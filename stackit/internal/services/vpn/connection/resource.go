@@ -505,22 +505,6 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Id == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", "Got empty connection id")
-		return
-	}
-	connectionId := *createResp.Id
-
-	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"project_id":    projectId,
-		"region":        region,
-		"gateway_id":    gatewayId,
-		"connection_id": connectionId,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	err = mapFields(ctx, createResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
