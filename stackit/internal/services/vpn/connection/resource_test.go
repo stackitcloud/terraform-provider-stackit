@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
@@ -468,7 +469,6 @@ func TestToUpdatePayload(t *testing.T) {
 		})
 	}
 }
-
 func TestToTunnelConfiguration(t *testing.T) {
 	tests := []struct {
 		description string
@@ -531,6 +531,48 @@ func TestToTunnelConfiguration(t *testing.T) {
 					t.Errorf("expected BGP config, got nil")
 				} else if config.Bgp.RemoteAsn != tt.input.Bgp.RemoteAsn.ValueInt64() {
 					t.Errorf("RemoteAsn mismatch: got %v, want %v", config.Bgp.RemoteAsn, tt.input.Bgp.RemoteAsn.ValueInt64())
+				}
+			}
+		})
+	}
+}
+
+func TestPskRotationOnUpdate(t *testing.T) {
+	type args struct {
+		resp              *resource.UpdateResponse
+		rootAttribute     string
+		modelTunnel       *TunnelModel
+		currentKeyVersion int64
+		preSharedKey      types.String
+	}
+
+	tests := []struct {
+		description string
+		input       args
+		expected    *TunnelModel
+		isValid     bool
+	}{
+		{
+			description: "no_args",
+			input:       args{},
+			isValid:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			err := pskRotationOnUpdate(tt.input.resp, tt.input.rootAttribute, tt.input.modelTunnel, tt.input.currentKeyVersion, tt.input.preSharedKey)
+
+			if !tt.isValid && err == nil {
+				t.Fatalf("expected error, got none")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(tt.expected, tt.input.modelTunnel)
+				if diff != "" {
+					t.Fatalf("Data does not match (-want +got):\n%s", diff)
 				}
 			}
 		})

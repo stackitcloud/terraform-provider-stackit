@@ -95,6 +95,41 @@ type Model struct {
 	Labels       types.Map    `tfsdk:"labels"`
 }
 
+type BasePhasePayload interface {
+	GetDhGroupsOk() ([]vpn.PhaseDhGroupsInner, bool)
+	GetEncryptionAlgorithmsOk() ([]vpn.PhaseEncryptionAlgorithmsInner, bool)
+	GetIntegrityAlgorithmsOk() ([]vpn.PhaseIntegrityAlgorithmsInner, bool)
+	GetRekeyTimeOk() (*int32, bool)
+
+	SetDhGroups([]vpn.PhaseDhGroupsInner)
+	SetEncryptionAlgorithms([]vpn.PhaseEncryptionAlgorithmsInner)
+	SetIntegrityAlgorithms([]vpn.PhaseIntegrityAlgorithmsInner)
+	SetRekeyTime(int32)
+}
+
+type connectionPayload interface {
+	SetDisplayName(string)
+	SetTunnel1(vpn.TunnelConfiguration)
+	SetTunnel2(vpn.TunnelConfiguration)
+	SetEnabled(bool)
+	SetRemoteSubnets([]string)
+	SetLocalSubnets([]string)
+	SetStaticRoutes([]string)
+	SetLabels(map[string]string)
+}
+
+type connectionResponse interface {
+	GetIdOk() (*string, bool)
+	GetDisplayName() string
+	GetTunnel1() vpn.TunnelConfiguration
+	GetTunnel2() vpn.TunnelConfiguration
+	GetEnabledOk() (*bool, bool)
+	GetRemoteSubnetsOk() ([]string, bool)
+	GetLocalSubnetsOk() ([]string, bool)
+	GetStaticRoutesOk() ([]string, bool)
+	GetLabelsOk() (*map[string]string, bool)
+}
+
 var (
 	dhGroupValues             = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseDhGroupsInnerEnumValues)
 	encryptionAlgorithmValues = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseEncryptionAlgorithmsInnerEnumValues)
@@ -587,40 +622,16 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	// tunnel1 PSK rotation
-	if !tfutils.IsUndefined(model.Tunnel1.PreSharedKeyWoVersion) {
-		planVersion := model.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
-		stateVersion := stateModel.Tunnel1.PreSharedKeyWoVersion.ValueInt64()
-		if planVersion < stateVersion {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("tunnel1").AtName("pre_shared_key_wo_version"),
-				"Version must not decrease",
-				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", planVersion, stateVersion),
-			)
-			return
-		}
-		if planVersion > stateVersion {
-			// Secret must be read from Config, not Plan — write-only values are always null in plan.
-			model.Tunnel1.PreSharedKeyWo = configModel.Tunnel1.PreSharedKeyWo
-		}
+	err := pskRotationOnUpdate(resp, "tunnel1", model.Tunnel1, stateModel.Tunnel1.PreSharedKeyWoVersion.ValueInt64(), configModel.Tunnel1.PreSharedKeyWo)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Tunnel1 PSK Rotation", err.Error())
+		return
 	}
 
-	// tunnel2 PSK rotation
-	if !tfutils.IsUndefined(model.Tunnel2.PreSharedKeyWoVersion) {
-		planVersion := model.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
-		stateVersion := stateModel.Tunnel2.PreSharedKeyWoVersion.ValueInt64()
-		if planVersion < stateVersion {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("tunnel2").AtName("pre_shared_key_wo_version"),
-				"Version must not decrease",
-				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", planVersion, stateVersion),
-			)
-			return
-		}
-		if planVersion > stateVersion {
-			// Secret must be read from Config, not Plan — write-only values are always null in plan.
-			model.Tunnel2.PreSharedKeyWo = configModel.Tunnel2.PreSharedKeyWo
-		}
+	err = pskRotationOnUpdate(resp, "tunnel2", model.Tunnel2, stateModel.Tunnel2.PreSharedKeyWoVersion.ValueInt64(), configModel.Tunnel2.PreSharedKeyWo)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Tunnel2 PSK Rotation", err.Error())
+		return
 	}
 
 	ctx = core.InitProviderContext(ctx)
@@ -696,6 +707,28 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	tflog.Info(ctx, "VPN connection deleted")
 }
 
+func pskRotationOnUpdate(resp *resource.UpdateResponse, rootAttribute string, modelTunnel *TunnelModel, currentKeyVersion int64, preSharedKey types.String) error {
+	if resp == nil || modelTunnel == nil {
+		return fmt.Errorf("pskRotationOnUpdate: arguments can not be nil")
+	}
+
+	if !tfutils.IsUndefined(modelTunnel.PreSharedKeyWoVersion) {
+		newKeyVersion := modelTunnel.PreSharedKeyWoVersion.ValueInt64()
+		if newKeyVersion < currentKeyVersion {
+			resp.Diagnostics.AddAttributeError(
+				path.Root(rootAttribute).AtName("pre_shared_key_wo_version"),
+				"Version must not decrease",
+				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", newKeyVersion, currentKeyVersion),
+			)
+		}
+		if newKeyVersion > currentKeyVersion {
+			// Secret must be read from Config, not Plan — write-only values are always null in plan.
+			modelTunnel.PreSharedKeyWo = preSharedKey
+		}
+	}
+	return nil
+}
+
 func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayConnectionPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -724,18 +757,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayConne
 	return payload, nil
 }
 
-type connectionFields interface {
-	SetDisplayName(string)
-	SetTunnel1(vpn.TunnelConfiguration)
-	SetTunnel2(vpn.TunnelConfiguration)
-	SetEnabled(bool)
-	SetRemoteSubnets([]string)
-	SetLocalSubnets([]string)
-	SetStaticRoutes([]string)
-	SetLabels(map[string]string)
-}
-
-func toConnectionPayload(ctx context.Context, model *Model, payload connectionFields) error {
+func toConnectionPayload(ctx context.Context, model *Model, payload connectionPayload) error {
 	if payload == nil {
 		return fmt.Errorf("payload can not be nil")
 	}
@@ -808,90 +830,31 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 
 	if tunnel.Phase1 != nil {
 		phase1 := vpn.TunnelConfigurationPhase1{}
-
-		if !tfutils.IsUndefined(tunnel.Phase1.DhGroups) {
-			dhGroups, err := tfutils.ListValueToStringSlice(tunnel.Phase1.DhGroups)
-			if err != nil {
-				return nil, fmt.Errorf("converting phase1 dh_groups: %w", err)
-			}
-			dhGroupsInner := []vpn.PhaseDhGroupsInner{}
-			for _, item := range dhGroups {
-				dhGroupsInner = append(dhGroupsInner, vpn.PhaseDhGroupsInner(item))
-			}
-			phase1.DhGroups = dhGroupsInner
-		}
-
-		encAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase1.EncryptionAlgorithms)
+		err := toBasePhasePayload(&tunnel.Phase1.BasePhaseModel, &phase1)
 		if err != nil {
-			return nil, fmt.Errorf("converting phase1 encryption_algorithms: %w", err)
+			return nil, err
 		}
-		encAlgsInner := []vpn.PhaseEncryptionAlgorithmsInner{}
-		for _, item := range encAlgs {
-			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
-		}
-		phase1.EncryptionAlgorithms = encAlgsInner
-
-		intAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase1.IntegrityAlgorithms)
-		if err != nil {
-			return nil, fmt.Errorf("converting phase1 integrity_algorithms: %w", err)
-		}
-		intAlgsInner := []vpn.PhaseIntegrityAlgorithmsInner{}
-		for _, item := range intAlgs {
-			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
-		}
-		phase1.IntegrityAlgorithms = intAlgsInner
-
-		if !tfutils.IsUndefined(tunnel.Phase1.RekeyTime) {
-			rekeyTime := tunnel.Phase1.RekeyTime.ValueInt32()
-			phase1.RekeyTime = &rekeyTime
-		}
-
 		config.Phase1 = phase1
 	}
 
 	if tunnel.Phase2 != nil {
 		phase2 := vpn.TunnelConfigurationPhase2{}
-		if !tfutils.IsUndefined(tunnel.Phase2.DhGroups) {
-			dhGroups, err := tfutils.ListValueToStringSlice(tunnel.Phase2.DhGroups)
-			if err != nil {
-				return nil, fmt.Errorf("converting phase2 dh_groups: %w", err)
-			}
-			dhGroupsInner := []vpn.PhaseDhGroupsInner{}
-			for _, item := range dhGroups {
-				dhGroupsInner = append(dhGroupsInner, vpn.PhaseDhGroupsInner(item))
-			}
-			phase2.DhGroups = dhGroupsInner
-		}
-		encAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase2.EncryptionAlgorithms)
+
+		err := toBasePhasePayload(&tunnel.Phase2.BasePhaseModel, &phase2)
 		if err != nil {
-			return nil, fmt.Errorf("converting phase2 encryption_algorithms: %w", err)
+			return nil, err
 		}
-		encAlgsInner := []vpn.PhaseEncryptionAlgorithmsInner{}
-		for _, item := range encAlgs {
-			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
-		}
-		phase2.EncryptionAlgorithms = encAlgsInner
-		intAlgs, err := tfutils.ListValueToStringSlice(tunnel.Phase2.IntegrityAlgorithms)
-		if err != nil {
-			return nil, fmt.Errorf("converting phase2 integrity_algorithms: %w", err)
-		}
-		intAlgsInner := []vpn.PhaseIntegrityAlgorithmsInner{}
-		for _, item := range intAlgs {
-			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
-		}
-		phase2.IntegrityAlgorithms = intAlgsInner
-		if !tfutils.IsUndefined(tunnel.Phase2.RekeyTime) {
-			rekeyTime := tunnel.Phase2.RekeyTime.ValueInt32()
-			phase2.RekeyTime = &rekeyTime
-		}
+
 		if !tfutils.IsUndefined(tunnel.Phase2.StartAction) {
 			startAction := tunnel.Phase2.StartAction.ValueString()
 			phase2.StartAction = vpn.TunnelConfigurationPhase2AllOfStartAction(startAction).Ptr()
 		}
+
 		if !tfutils.IsUndefined(tunnel.Phase2.DpdAction) {
 			dpdAction := tunnel.Phase2.DpdAction.ValueString()
 			phase2.DpdAction = vpn.TunnelConfigurationPhase2AllOfDpdAction(dpdAction).Ptr()
 		}
+
 		config.Phase2 = phase2
 	}
 
@@ -914,16 +877,46 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 	return config, nil
 }
 
-type connectionResponse interface {
-	GetIdOk() (*string, bool)
-	GetDisplayName() string
-	GetTunnel1() vpn.TunnelConfiguration
-	GetTunnel2() vpn.TunnelConfiguration
-	GetEnabledOk() (*bool, bool)
-	GetRemoteSubnetsOk() ([]string, bool)
-	GetLocalSubnetsOk() ([]string, bool)
-	GetStaticRoutesOk() ([]string, bool)
-	GetLabelsOk() (*map[string]string, bool)
+func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayload) error {
+	if phaseModel != nil {
+		if !tfutils.IsUndefined(phaseModel.DhGroups) {
+			dhGroups, err := tfutils.ListValueToStringSlice(phaseModel.DhGroups)
+			if err != nil {
+				return fmt.Errorf("converting phase dh_groups: %w", err)
+			}
+			dhGroupsInner := []vpn.PhaseDhGroupsInner{}
+			for _, item := range dhGroups {
+				dhGroupsInner = append(dhGroupsInner, vpn.PhaseDhGroupsInner(item))
+			}
+			phasePayload.SetDhGroups(dhGroupsInner)
+		}
+
+		encAlgs, err := tfutils.ListValueToStringSlice(phaseModel.EncryptionAlgorithms)
+		if err != nil {
+			return fmt.Errorf("converting phase encryption_algorithms: %w", err)
+		}
+		encAlgsInner := []vpn.PhaseEncryptionAlgorithmsInner{}
+		for _, item := range encAlgs {
+			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
+		}
+		phasePayload.SetEncryptionAlgorithms(encAlgsInner)
+
+		intAlgs, err := tfutils.ListValueToStringSlice(phaseModel.IntegrityAlgorithms)
+		if err != nil {
+			return fmt.Errorf("converting phase integrity_algorithms: %w", err)
+		}
+		intAlgsInner := []vpn.PhaseIntegrityAlgorithmsInner{}
+		for _, item := range intAlgs {
+			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
+		}
+		phasePayload.SetIntegrityAlgorithms(intAlgsInner)
+
+		if !tfutils.IsUndefined(phaseModel.RekeyTime) {
+			rekeyTime := phaseModel.RekeyTime.ValueInt32()
+			phasePayload.SetRekeyTime(rekeyTime)
+		}
+	}
+	return nil
 }
 
 func mapFields(ctx context.Context, conn connectionResponse, model *Model, region string) error {
@@ -1013,17 +1006,31 @@ func mapTunnel(ctx context.Context, apiTunnel vpn.TunnelConfiguration, tfTunnel 
 
 	tfTunnel.RemoteAddress = types.StringValue(string(apiTunnel.RemoteAddress))
 
-	phase1, err := mapPhase1(ctx, &apiTunnel.Phase1)
+	basePhase1, err := mapBasePhase(ctx, &apiTunnel.Phase1)
 	if err != nil {
 		return err
 	}
-	tfTunnel.Phase1 = phase1
+	tfTunnel.Phase1 = &Phase1Model{
+		BasePhaseModel: basePhase1,
+	}
 
-	phase2, err := mapPhase2(ctx, &apiTunnel.Phase2)
+	basePhase2, err := mapBasePhase(ctx, &apiTunnel.Phase2)
 	if err != nil {
 		return err
 	}
-	tfTunnel.Phase2 = phase2
+	tfTunnel.Phase2 = &Phase2Model{
+		BasePhaseModel: basePhase2,
+	}
+	if apiTunnel.Phase2.StartAction != nil {
+		tfTunnel.Phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
+	} else {
+		tfTunnel.Phase2.StartAction = types.StringNull()
+	}
+	if apiTunnel.Phase2.DpdAction != nil {
+		tfTunnel.Phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
+	} else {
+		tfTunnel.Phase2.DpdAction = types.StringNull()
+	}
 
 	if apiTunnel.Peering != nil {
 		peering := &PeeringConfigModel{}
@@ -1053,14 +1060,7 @@ func mapTunnel(ctx context.Context, apiTunnel vpn.TunnelConfiguration, tfTunnel 
 	return nil
 }
 
-type BasePhaseFields interface {
-	GetDhGroupsOk() ([]vpn.PhaseDhGroupsInner, bool)
-	GetEncryptionAlgorithmsOk() ([]vpn.PhaseEncryptionAlgorithmsInner, bool)
-	GetIntegrityAlgorithmsOk() ([]vpn.PhaseIntegrityAlgorithmsInner, bool)
-	GetRekeyTimeOk() (*int32, bool)
-}
-
-func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhaseModel, err error) {
+func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePhaseModel, err error) {
 	if apiPhase == nil {
 		return phase, fmt.Errorf("api phase can not be nil")
 	}
@@ -1099,44 +1099,4 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhaseFields) (phase BasePhas
 	phase.RekeyTime = types.Int32PointerValue(rekeyTime)
 
 	return phase, nil
-}
-
-func mapPhase1(ctx context.Context, apiPhase1 *vpn.TunnelConfigurationPhase1) (*Phase1Model, error) {
-	basePhase, err := mapBasePhase(ctx, apiPhase1)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Phase1Model{
-		BasePhaseModel: basePhase,
-	}, nil
-}
-
-func mapPhase2(ctx context.Context, apiPhase2 *vpn.TunnelConfigurationPhase2) (*Phase2Model, error) {
-	if apiPhase2 == nil {
-		return nil, fmt.Errorf("phase can not be nil")
-	}
-
-	basePhase, err := mapBasePhase(ctx, apiPhase2)
-	if err != nil {
-		return nil, err
-	}
-
-	phase2 := &Phase2Model{
-		BasePhaseModel: basePhase,
-	}
-
-	if apiPhase2.StartAction != nil {
-		phase2.StartAction = types.StringValue(string(*apiPhase2.StartAction))
-	} else {
-		phase2.StartAction = types.StringNull()
-	}
-
-	if apiPhase2.DpdAction != nil {
-		phase2.DpdAction = types.StringValue(string(*apiPhase2.DpdAction))
-	} else {
-		phase2.DpdAction = types.StringNull()
-	}
-
-	return phase2, nil
 }
