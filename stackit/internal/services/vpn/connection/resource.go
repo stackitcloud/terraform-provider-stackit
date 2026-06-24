@@ -944,7 +944,7 @@ func mapFields(ctx context.Context, conn connectionResponse, model *Model, regio
 	if enabled, _ := conn.GetEnabledOk(); enabled != nil {
 		model.Enabled = types.BoolValue(*enabled)
 	} else {
-		model.Enabled = types.BoolValue(true)
+		model.Enabled = types.BoolNull()
 	}
 
 	if remoteSubnets, _ := conn.GetRemoteSubnetsOk(); remoteSubnets != nil {
