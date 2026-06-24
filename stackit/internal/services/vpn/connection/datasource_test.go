@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
@@ -46,8 +47,10 @@ func fixtureDataSourceModel(mods ...func(m *DataSourceModel)) DataSourceModel {
 		LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
 			types.StringValue("192.168.0.0/24"),
 		}),
-		StaticRoutes: types.ListNull(types.StringType),
-		Tunnel1:      fixtureDataSourceTunnelModel(),
+		StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("123.45.67.89"),
+		}),
+		Tunnel1: fixtureDataSourceTunnelModel(),
 		Tunnel2: fixtureDataSourceTunnelModel(func(m *DataSourceTunnelModel) {
 			m.RemoteAddress = types.StringValue("203.0.113.2")
 		}),
@@ -71,6 +74,60 @@ func TestMapDataSourceFields(t *testing.T) {
 			input:       fixtureConnectionResponse(),
 			expected:    fixtureDataSourceModel(),
 			isValid:     true,
+		},
+		{
+			description: "minimal_connection",
+			input: &vpn.ConnectionResponse{
+				Id: new("connection-id"),
+			},
+			expected: DataSourceModel{
+				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+				ConnectionID: types.StringValue("connection-id"),
+				ProjectID:    types.StringValue(projectId),
+				Region:       types.StringValue(region),
+				GatewayID:    types.StringValue(gatewayId),
+				DisplayName:  types.StringValue(""),
+				Enabled:      types.BoolValue(true),
+				RemoteSubnet: basetypes.NewListNull(basetypes.StringType{}),
+				LocalSubnet:  basetypes.NewListNull(basetypes.StringType{}),
+				StaticRoutes: basetypes.NewListNull(basetypes.StringType{}),
+				Tunnel1: &DataSourceTunnelModel{
+					RemoteAddress: types.StringValue(""),
+					Phase1: &Phase1Model{
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             basetypes.NewListNull(basetypes.StringType{}),
+							EncryptionAlgorithms: basetypes.NewListNull(basetypes.StringType{}),
+							IntegrityAlgorithms:  basetypes.NewListNull(basetypes.StringType{}),
+						},
+					},
+					Phase2: &Phase2Model{
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             basetypes.NewListNull(basetypes.StringType{}),
+							EncryptionAlgorithms: basetypes.NewListNull(basetypes.StringType{}),
+							IntegrityAlgorithms:  basetypes.NewListNull(basetypes.StringType{}),
+						},
+					},
+				},
+				Tunnel2: &DataSourceTunnelModel{
+					RemoteAddress: types.StringValue(""),
+					Phase1: &Phase1Model{
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             basetypes.NewListNull(basetypes.StringType{}),
+							EncryptionAlgorithms: basetypes.NewListNull(basetypes.StringType{}),
+							IntegrityAlgorithms:  basetypes.NewListNull(basetypes.StringType{}),
+						},
+					},
+					Phase2: &Phase2Model{
+						BasePhaseModel: BasePhaseModel{
+							DhGroups:             basetypes.NewListNull(basetypes.StringType{}),
+							EncryptionAlgorithms: basetypes.NewListNull(basetypes.StringType{}),
+							IntegrityAlgorithms:  basetypes.NewListNull(basetypes.StringType{}),
+						},
+					},
+				},
+				Labels: basetypes.NewMapNull(basetypes.StringType{}),
+			},
+			isValid: true,
 		},
 		{
 			description: "connection_with_static_routes_and_bgp",
@@ -114,9 +171,24 @@ func TestMapDataSourceFields(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "peering",
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				m.Tunnel1.Peering = &vpn.PeeringConfig{
+					LocalAddress:  new("123.45.67.89"),
+					RemoteAddress: new("98.76.54.32"),
+				}
+			}),
+			expected: fixtureDataSourceModel(func(m *DataSourceModel) {
+				m.Tunnel1.Peering = &PeeringConfigModel{
+					LocalAddress:  types.StringValue("123.45.67.89"),
+					RemoteAddress: types.StringValue("98.76.54.32"),
+				}
+			}),
+			isValid: true,
+		},
+		{
 			description: "nil_response",
 			input:       nil,
-			expected:    DataSourceModel{},
 			isValid:     false,
 		},
 		{
@@ -125,8 +197,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Id:          nil,
 				DisplayName: "test-connection",
 			},
-			expected: DataSourceModel{},
-			isValid:  false,
+			isValid: false,
 		},
 	}
 	for _, tt := range tests {
