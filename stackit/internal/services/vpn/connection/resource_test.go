@@ -52,6 +52,7 @@ func fixtureConnectionResponse(mods ...func(m *vpn.ConnectionResponse)) *vpn.Con
 		Enabled:       new(true),
 		RemoteSubnets: []string{"10.0.0.0/16"},
 		LocalSubnets:  []string{"192.168.0.0/24"},
+		StaticRoutes:  []string{"123.45.67.89"},
 		Tunnel1:       fixtureTunnelResponse(),
 		Tunnel2: fixtureTunnelResponse(func(m *vpn.TunnelConfiguration) {
 			m.RemoteAddress = "203.0.113.2"
@@ -118,8 +119,10 @@ func fixtureModel(mods ...func(m *Model)) Model {
 		LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
 			types.StringValue("192.168.0.0/24"),
 		}),
-		StaticRoutes: types.ListNull(types.StringType),
-		Tunnel1:      fixtureTunnelModel(),
+		StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
+			types.StringValue("123.45.67.89"),
+		}),
+		Tunnel1: fixtureTunnelModel(),
 		Tunnel2: fixtureTunnelModel(func(m *TunnelModel) {
 			m.RemoteAddress = types.StringValue("203.0.113.2")
 		}),
@@ -165,6 +168,9 @@ func fixtureCreatePayload(mods ...func(m *vpn.CreateGatewayConnectionPayload)) *
 		LocalSubnets: []string{
 			"192.168.0.0/24",
 		},
+		StaticRoutes: []string{
+			"123.45.67.89",
+		},
 		Tunnel1: fixtureTunnelPayload(),
 		Tunnel2: fixtureTunnelPayload(func(m *vpn.TunnelConfiguration) {
 			m.PreSharedKey = new("secret456-at-least-20-chars")
@@ -187,6 +193,9 @@ func fixtureUpdatePayload(mods ...func(m *vpn.UpdateGatewayConnectionPayload)) *
 		},
 		LocalSubnets: []string{
 			"192.168.0.0/24",
+		},
+		StaticRoutes: []string{
+			"123.45.67.89",
 		},
 		Tunnel1: fixtureTunnelPayload(),
 		Tunnel2: fixtureTunnelPayload(func(m *vpn.TunnelConfiguration) {
@@ -311,6 +320,22 @@ func TestMapFields(t *testing.T) {
 			}),
 			expected: fixtureModel(func(m *Model) {
 				m.Labels = types.MapNull(types.StringType)
+			}),
+			isValid: true,
+		},
+		{
+			description: "peering",
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				m.Tunnel1.Peering = &vpn.PeeringConfig{
+					LocalAddress:  new("123.45.67.89"),
+					RemoteAddress: new("98.76.54.32"),
+				}
+			}),
+			expected: fixtureModel(func(m *Model) {
+				m.Tunnel1.Peering = &PeeringConfigModel{
+					LocalAddress:  types.StringValue("123.45.67.89"),
+					RemoteAddress: types.StringValue("98.76.54.32"),
+				}
 			}),
 			isValid: true,
 		},
@@ -443,6 +468,24 @@ func TestToUpdatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "peering",
+			input: new(fixtureModel(func(m *Model) {
+				m.Tunnel1.Peering = &PeeringConfigModel{
+					LocalAddress:  types.StringValue("123.45.67.89"),
+					RemoteAddress: types.StringValue("98.76.54.32"),
+				}
+			})),
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.Peering = &vpn.PeeringConfig{
+					LocalAddress:  new("123.45.67.89"),
+					RemoteAddress: new("98.76.54.32"),
+				}
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+			}),
+			isValid: true,
+		},
+		{
 			description: "nil_model",
 			input:       nil,
 			expected:    nil,
@@ -469,6 +512,7 @@ func TestToUpdatePayload(t *testing.T) {
 		})
 	}
 }
+
 func TestToTunnelConfiguration(t *testing.T) {
 	tests := []struct {
 		description string
@@ -541,7 +585,7 @@ func TestPskRotationOnUpdate(t *testing.T) {
 	type args struct {
 		resp              *resource.UpdateResponse
 		rootAttribute     string
-		modelTunnel       *TunnelModel
+		tunnelModel       *TunnelModel
 		currentKeyVersion int64
 		preSharedKey      types.String
 	}
@@ -550,8 +594,54 @@ func TestPskRotationOnUpdate(t *testing.T) {
 		description string
 		input       args
 		expected    *TunnelModel
+		tfError     bool
 		isValid     bool
 	}{
+		{
+			description: "default",
+			input: args{
+				resp:              &resource.UpdateResponse{},
+				rootAttribute:     "tunnel1",
+				tunnelModel:       &TunnelModel{},
+				currentKeyVersion: 0,
+				preSharedKey:      types.StringValue("foo-bar"),
+			},
+			expected: &TunnelModel{},
+			tfError:  false,
+			isValid:  true,
+		},
+		{
+			description: "upgrade_key",
+			input: args{
+				resp:          &resource.UpdateResponse{},
+				rootAttribute: "tunnel1",
+				tunnelModel: &TunnelModel{
+					PreSharedKeyWoVersion: types.Int64Value(1),
+				},
+				currentKeyVersion: 0,
+				preSharedKey:      types.StringValue("foo-bar"),
+			},
+			expected: &TunnelModel{
+				PreSharedKeyWoVersion: types.Int64Value(1),
+				PreSharedKeyWo:        types.StringValue("foo-bar"),
+			},
+			tfError: false,
+			isValid: true,
+		},
+		{
+			description: "downgrade_key",
+			input: args{
+				resp:          &resource.UpdateResponse{},
+				rootAttribute: "tunnel1",
+				tunnelModel: &TunnelModel{
+					PreSharedKeyWoVersion: types.Int64Value(0),
+				},
+				currentKeyVersion: 1,
+				preSharedKey:      types.StringValue("foo-bar"),
+			},
+			isValid: true,
+			tfError: true,
+		},
 		{
 			description: "no_args",
 			input:       args{},
@@ -561,7 +651,7 @@ func TestPskRotationOnUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := pskRotationOnUpdate(tt.input.resp, tt.input.rootAttribute, tt.input.modelTunnel, tt.input.currentKeyVersion, tt.input.preSharedKey)
+			err := pskRotationOnUpdate(tt.input.resp, tt.input.rootAttribute, tt.input.tunnelModel, tt.input.currentKeyVersion, tt.input.preSharedKey)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
@@ -570,9 +660,17 @@ func TestPskRotationOnUpdate(t *testing.T) {
 				t.Fatalf("expected no error, got %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.expected, tt.input.modelTunnel)
-				if diff != "" {
-					t.Fatalf("Data does not match (-want +got):\n%s", diff)
+				if tt.tfError && !tt.input.resp.Diagnostics.HasError() {
+					t.Fatalf("expected tf error, got none")
+				}
+				if !tt.tfError && tt.input.resp.Diagnostics.HasError() {
+					t.Fatalf("expected no tf error, got %v", tt.input.resp.Diagnostics.Errors())
+				}
+				if !tt.tfError {
+					modelDiff := cmp.Diff(tt.expected, tt.input.tunnelModel)
+					if modelDiff != "" {
+						t.Fatalf("Data does not match (-want +got):\n%s", modelDiff)
+					}
 				}
 			}
 		})

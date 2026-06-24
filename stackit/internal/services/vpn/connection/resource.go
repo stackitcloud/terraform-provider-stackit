@@ -707,13 +707,13 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	tflog.Info(ctx, "VPN connection deleted")
 }
 
-func pskRotationOnUpdate(resp *resource.UpdateResponse, rootAttribute string, modelTunnel *TunnelModel, currentKeyVersion int64, preSharedKey types.String) error {
-	if resp == nil || modelTunnel == nil {
+func pskRotationOnUpdate(resp *resource.UpdateResponse, rootAttribute string, tunnelModel *TunnelModel, currentKeyVersion int64, preSharedKey types.String) error {
+	if resp == nil || tunnelModel == nil {
 		return fmt.Errorf("pskRotationOnUpdate: arguments can not be nil")
 	}
 
-	if !tfutils.IsUndefined(modelTunnel.PreSharedKeyWoVersion) {
-		newKeyVersion := modelTunnel.PreSharedKeyWoVersion.ValueInt64()
+	if !tfutils.IsUndefined(tunnelModel.PreSharedKeyWoVersion) {
+		newKeyVersion := tunnelModel.PreSharedKeyWoVersion.ValueInt64()
 		if newKeyVersion < currentKeyVersion {
 			resp.Diagnostics.AddAttributeError(
 				path.Root(rootAttribute).AtName("pre_shared_key_wo_version"),
@@ -723,7 +723,7 @@ func pskRotationOnUpdate(resp *resource.UpdateResponse, rootAttribute string, mo
 		}
 		if newKeyVersion > currentKeyVersion {
 			// Secret must be read from Config, not Plan — write-only values are always null in plan.
-			modelTunnel.PreSharedKeyWo = preSharedKey
+			tunnelModel.PreSharedKeyWo = preSharedKey
 		}
 	}
 	return nil
