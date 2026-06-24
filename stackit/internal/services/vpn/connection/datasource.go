@@ -291,7 +291,7 @@ func (d *vpnConnectionDataSource) Read(ctx context.Context, req datasource.ReadR
 	})
 }
 
-func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, model *DataSourceModel, region string) error {
+func mapDataSourceFields(ctx context.Context, conn connectionResponse, model *DataSourceModel, region string) error {
 	if conn == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -300,8 +300,8 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 	}
 
 	var connectionId string
-	if conn.Id != nil {
-		connectionId = *conn.Id
+	if respConnectionId, _ := conn.GetIdOk(); respConnectionId != nil {
+		connectionId = *respConnectionId
 	} else if model.ConnectionID.ValueString() != "" {
 		connectionId = model.ConnectionID.ValueString()
 	} else {
@@ -310,17 +310,17 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 
 	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.GatewayID.ValueString(), connectionId)
 	model.ConnectionID = types.StringValue(connectionId)
-	model.DisplayName = types.StringValue(conn.DisplayName)
+	model.DisplayName = types.StringValue(conn.GetDisplayName())
 	model.Region = types.StringValue(region)
 
-	if conn.Enabled != nil {
-		model.Enabled = types.BoolValue(*conn.Enabled)
+	if enabled, _ := conn.GetEnabledOk(); enabled != nil {
+		model.Enabled = types.BoolValue(*enabled)
 	} else {
 		model.Enabled = types.BoolValue(true)
 	}
 
-	if conn.RemoteSubnets != nil {
-		list, diags := types.ListValueFrom(ctx, types.StringType, conn.RemoteSubnets)
+	if remoteSubnets, _ := conn.GetRemoteSubnetsOk(); remoteSubnets != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, remoteSubnets)
 		if diags.HasError() {
 			return fmt.Errorf("mapping remote_subnet: %w", core.DiagsToError(diags))
 		}
@@ -329,8 +329,8 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 		model.RemoteSubnet = types.ListNull(types.StringType)
 	}
 
-	if conn.LocalSubnets != nil {
-		list, diags := types.ListValueFrom(ctx, types.StringType, conn.LocalSubnets)
+	if localSubnets, _ := conn.GetLocalSubnetsOk(); localSubnets != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, localSubnets)
 		if diags.HasError() {
 			return fmt.Errorf("mapping local_subnet: %w", core.DiagsToError(diags))
 		}
@@ -339,8 +339,8 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 		model.LocalSubnet = types.ListNull(types.StringType)
 	}
 
-	if conn.StaticRoutes != nil {
-		list, diags := types.ListValueFrom(ctx, types.StringType, conn.StaticRoutes)
+	if staticRoutes, _ := conn.GetStaticRoutesOk(); staticRoutes != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, staticRoutes)
 		if diags.HasError() {
 			return fmt.Errorf("mapping static_routes: %w", core.DiagsToError(diags))
 		}
@@ -349,19 +349,18 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 		model.StaticRoutes = types.ListNull(types.StringType)
 	}
 
-	tunnel1, err := mapDataSourceTunnel(ctx, &conn.Tunnel1)
+	err := mapDataSourceTunnel(ctx, conn.GetTunnel1(), model.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
-	model.Tunnel1 = tunnel1
 
-	tunnel2, err := mapDataSourceTunnel(ctx, &conn.Tunnel2)
+	err = mapDataSourceTunnel(ctx, conn.GetTunnel2(), model.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
 	}
-	model.Tunnel2 = tunnel2
 
-	labels, err := tfutils.MapLabels(ctx, conn.Labels, model.Labels)
+	respLabels, _ := conn.GetLabelsOk()
+	labels, err := tfutils.MapLabels(ctx, respLabels, model.Labels)
 	if err != nil {
 		return fmt.Errorf("mapping labels: %w", err)
 	}
@@ -370,21 +369,38 @@ func mapDataSourceFields(ctx context.Context, conn *vpn.ConnectionResponse, mode
 	return nil
 }
 
-func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration) (*DataSourceTunnelModel, error) {
-	tunnel := &DataSourceTunnelModel{
-		RemoteAddress: types.StringValue(string(apiTunnel.RemoteAddress)),
+func mapDataSourceTunnel(ctx context.Context, apiTunnel vpn.TunnelConfiguration, tfTunnel *DataSourceTunnelModel) error {
+	if tfTunnel == nil {
+		tfTunnel = &DataSourceTunnelModel{}
 	}
-	phase1, err := mapPhase1(ctx, &apiTunnel.Phase1)
-	if err != nil {
-		return nil, err
-	}
-	tunnel.Phase1 = phase1
 
-	phase2, err := mapPhase2(ctx, &apiTunnel.Phase2)
+	tfTunnel.RemoteAddress = types.StringValue(string(apiTunnel.RemoteAddress))
+
+	basePhase1, err := mapBasePhase(ctx, &apiTunnel.Phase1)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	tunnel.Phase2 = phase2
+	tfTunnel.Phase1 = &Phase1Model{
+		BasePhaseModel: basePhase1,
+	}
+
+	basePhase2, err := mapBasePhase(ctx, &apiTunnel.Phase2)
+	if err != nil {
+		return err
+	}
+	tfTunnel.Phase2 = &Phase2Model{
+		BasePhaseModel: basePhase2,
+	}
+	if apiTunnel.Phase2.StartAction != nil {
+		tfTunnel.Phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
+	} else {
+		tfTunnel.Phase2.StartAction = types.StringNull()
+	}
+	if apiTunnel.Phase2.DpdAction != nil {
+		tfTunnel.Phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
+	} else {
+		tfTunnel.Phase2.DpdAction = types.StringNull()
+	}
 
 	if apiTunnel.Peering != nil {
 		peering := &PeeringConfigModel{}
@@ -398,14 +414,14 @@ func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration
 		} else {
 			peering.RemoteAddress = types.StringNull()
 		}
-		tunnel.Peering = peering
+		tfTunnel.Peering = peering
 	}
 
 	if apiTunnel.Bgp != nil {
-		tunnel.Bgp = &BGPTunnelConfigModel{
+		tfTunnel.Bgp = &BGPTunnelConfigModel{
 			RemoteAsn: types.Int64Value(int64(apiTunnel.Bgp.RemoteAsn)),
 		}
 	}
 
-	return tunnel, nil
+	return nil
 }
