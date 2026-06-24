@@ -349,12 +349,14 @@ func mapDataSourceFields(ctx context.Context, conn connectionResponse, model *Da
 		model.StaticRoutes = types.ListNull(types.StringType)
 	}
 
-	err := mapDataSourceTunnel(ctx, conn.GetTunnel1(), model.Tunnel1)
+	tunnel1 := conn.GetTunnel1()
+	err := mapDataSourceTunnel(ctx, &tunnel1, model.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
 
-	err = mapDataSourceTunnel(ctx, conn.GetTunnel2(), model.Tunnel2)
+	tunnel2 := conn.GetTunnel2()
+	err = mapDataSourceTunnel(ctx, &tunnel2, model.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
 	}
@@ -369,9 +371,12 @@ func mapDataSourceFields(ctx context.Context, conn connectionResponse, model *Da
 	return nil
 }
 
-func mapDataSourceTunnel(ctx context.Context, apiTunnel vpn.TunnelConfiguration, tfTunnel *DataSourceTunnelModel) error {
+func mapDataSourceTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel *DataSourceTunnelModel) error {
+	if apiTunnel == nil {
+		return fmt.Errorf("apiTunnel can not be nil")
+	}
 	if tfTunnel == nil {
-		tfTunnel = &DataSourceTunnelModel{}
+		return fmt.Errorf("tfTunnel can not be nil")
 	}
 
 	tfTunnel.RemoteAddress = types.StringValue(string(apiTunnel.RemoteAddress))
