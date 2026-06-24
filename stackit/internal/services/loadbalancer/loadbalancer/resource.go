@@ -64,6 +64,7 @@ type Model struct {
 	TargetPools                    types.List   `tfsdk:"target_pools"`
 	Region                         types.String `tfsdk:"region"`
 	SecurityGroupId                types.String `tfsdk:"security_group_id"`
+	LoadBalancerSecurityGroupId    types.String `tfsdk:"load_balancer_security_group_id"`
 	Version                        types.String `tfsdk:"version"`
 }
 
@@ -366,7 +367,8 @@ func (r *loadBalancerResource) Schema(_ context.Context, _ resource.SchemaReques
 		"targets.display_name":                  "Target display name",
 		"ip":                                    "Target IP",
 		"region":                                "The resource region. If not defined, the provider region is used.",
-		"security_group_id":                     "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
+		"security_group_id":                     "The ID of the automatically created security group that allows the targets to receive traffic from the LoadBalancer. Useful when disableTargetSecurityGroupAssignment=true to manually assign this security groups to targets.",
+		"load_balancer_security_group_id":       "The ID of the egress security group assigned to the Load Balancer's internal machines. This ID is essential for allowing traffic from the Load Balancer to targets in different networks or STACKIT network areas (SNA). To enable this, create a security group rule for your target VMs and set the `remote_security_group_id` of that rule to this value. This is typically used when `disable_security_group_assignment` is set to `true`.",
 		"tcp_options":                           "Options that are specific to the TCP protocol.",
 		"tcp_options_idle_timeout":              "Time after which an idle connection is closed. The default value is set to 300 seconds, and the maximum value is 3600 seconds. The format is a duration and the unit must be seconds. Example: 30s",
 		"udp_options":                           "Options that are specific to the UDP protocol.",
@@ -727,6 +729,13 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 			},
 			"security_group_id": schema.StringAttribute{
 				Description: descriptions["security_group_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"load_balancer_security_group_id": schema.StringAttribute{
+				Description: descriptions["load_balancer_security_group_id"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -1383,6 +1392,11 @@ func mapFields(ctx context.Context, lb *loadbalancer.LoadBalancer, m *Model, reg
 		m.SecurityGroupId = types.StringPointerValue(lb.TargetSecurityGroup.Id)
 	} else {
 		m.SecurityGroupId = types.StringNull()
+	}
+	if lb.LoadBalancerSecurityGroup != nil {
+		m.LoadBalancerSecurityGroupId = types.StringPointerValue(lb.LoadBalancerSecurityGroup.Id)
+	} else {
+		m.LoadBalancerSecurityGroupId = types.StringNull()
 	}
 	err := mapListeners(lb, m)
 	if err != nil {

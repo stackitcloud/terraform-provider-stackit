@@ -533,6 +533,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Acl: &postgresflex.ACL{
 					Items: []string{},
 				},
+				Storage: &postgresflex.StorageUpdate{},
 			},
 			true,
 		},
@@ -567,6 +568,9 @@ func TestToUpdatePayload(t *testing.T) {
 				Name:           new("name"),
 				Replicas:       new(int32(12)),
 				Version:        new("version"),
+				Storage: &postgresflex.StorageUpdate{
+					Size: new(int64(34)),
+				},
 			},
 			true,
 		},
@@ -599,6 +603,7 @@ func TestToUpdatePayload(t *testing.T) {
 				Name:           nil,
 				Replicas:       new(int32(2123456789)),
 				Version:        nil,
+				Storage:        &postgresflex.StorageUpdate{},
 			},
 			true,
 		},

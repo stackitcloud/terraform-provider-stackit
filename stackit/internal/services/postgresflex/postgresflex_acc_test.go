@@ -32,6 +32,7 @@ var instanceResource = map[string]string{
 	"replicas":                "1",
 	"storage_class":           "premium-perf12-stackit",
 	"storage_size":            "5",
+	"storage_size_updated":    "10",
 	"version":                 "14",
 	"flavor_id":               "2.4",
 }
@@ -48,7 +49,7 @@ var databaseResource = map[string]string{
 	"name": fmt.Sprintf("tfaccdb%s", acctest.RandStringFromCharSet(4, acctest.CharSetAlphaNum)),
 }
 
-func configResources(backupSchedule string, region *string) string {
+func configResources(backupSchedule, storageSize string, region *string) string {
 	var regionConfig string
 	if region != nil {
 		regionConfig = fmt.Sprintf(`region = %q`, *region)
@@ -97,7 +98,7 @@ func configResources(backupSchedule string, region *string) string {
 		instanceResource["flavor_ram"],
 		instanceResource["replicas"],
 		instanceResource["storage_class"],
-		instanceResource["storage_size"],
+		storageSize,
 		instanceResource["version"],
 		regionConfig,
 		userResource["username"],
@@ -113,7 +114,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Creation
 			{
-				Config: configResources(instanceResource["backup_schedule"], &testutil.Region),
+				Config: configResources(instanceResource["backup_schedule"], instanceResource["storage_size"], &testutil.Region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -182,7 +183,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 						database_id    = stackit_postgresflex_database.database.database_id
 					}
 					`,
-					configResources(instanceResource["backup_schedule"], nil),
+					configResources(instanceResource["backup_schedule"], instanceResource["storage_size"], nil),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
@@ -307,7 +308,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 			},
 			// Update
 			{
-				Config: configResources(instanceResource["backup_schedule_updated"], nil),
+				Config: configResources(instanceResource["backup_schedule_updated"], instanceResource["storage_size_updated"], nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance data
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "project_id", instanceResource["project_id"]),
@@ -322,7 +323,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "replicas", instanceResource["replicas"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.class", instanceResource["storage_class"]),
-					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.size", instanceResource["storage_size"]),
+					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "storage.size", instanceResource["storage_size_updated"]),
 					resource.TestCheckResourceAttr("stackit_postgresflex_instance.instance", "version", instanceResource["version"]),
 				),
 			},
@@ -363,7 +364,7 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
 			}
-			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
+			_, err = wait.ForceDeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
 			if err != nil {
 				return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
 			}
