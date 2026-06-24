@@ -238,7 +238,6 @@ func TestMapFields(t *testing.T) {
 				Region:       types.StringValue(region),
 				GatewayID:    types.StringValue(gatewayId),
 				DisplayName:  types.StringValue(""),
-				Enabled:      types.BoolValue(true),
 				RemoteSubnet: types.ListNull(types.StringType),
 				LocalSubnet:  types.ListNull(types.StringType),
 				StaticRoutes: types.ListNull(types.StringType),
