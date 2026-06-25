@@ -68,6 +68,8 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"uri":                   "The URI of the runner.",
+		"create_time":           "The creation time of the runner.",
 		"region":                "The resource region. If not defined, the provider region is used.",
 	}
 
@@ -113,6 +115,14 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			},
 			"max_messages_per_hour": schema.Int32Attribute{
 				Description: descriptions["max_messages_per_hour"],
+				Computed:    true,
+			},
+			"uri": schema.StringAttribute{
+				Description: descriptions["uri"],
+				Computed:    true,
+			},
+			"create_time": schema.StringAttribute{
+				Description: descriptions["create_time"],
 				Computed:    true,
 			},
 			"region": schema.StringAttribute{

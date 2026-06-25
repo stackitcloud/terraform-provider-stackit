@@ -32,7 +32,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.23.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.0.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.8.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v0.30.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v0.28.2
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.23.0
