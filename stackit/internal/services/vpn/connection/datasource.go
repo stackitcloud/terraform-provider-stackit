@@ -80,8 +80,8 @@ func (d *vpnConnectionDataSource) Metadata(_ context.Context, req datasource.Met
 	resp.TypeName = req.ProviderTypeName + "_vpn_connection"
 }
 
-func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	tunnelSchema := schema.SingleNestedAttribute{
+func DataSourceTunnelSchema() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
 		Computed: true,
 		Attributes: map[string]schema.Attribute{
 			"remote_address": schema.StringAttribute{
@@ -172,7 +172,9 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			},
 		},
 	}
+}
 
+func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("VPN Connection data source schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
@@ -231,8 +233,8 @@ func (d *vpnConnectionDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Computed:    true,
 				ElementType: types.StringType,
 			},
-			"tunnel1": tunnelSchema,
-			"tunnel2": tunnelSchema,
+			"tunnel1": DataSourceTunnelSchema(),
+			"tunnel2": DataSourceTunnelSchema(),
 			"labels": schema.MapAttribute{
 				Description: "Map of custom labels.",
 				Computed:    true,
@@ -350,12 +352,18 @@ func mapDataSourceFields(ctx context.Context, conn connectionResponse, model *Da
 	}
 
 	tunnel1 := conn.GetTunnel1()
+	if model.Tunnel1 == nil {
+		model.Tunnel1 = &DataSourceTunnelModel{}
+	}
 	err := mapDataSourceTunnel(ctx, &tunnel1, model.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
 
 	tunnel2 := conn.GetTunnel2()
+	if model.Tunnel1 == nil {
+		model.Tunnel2 = &DataSourceTunnelModel{}
+	}
 	err = mapDataSourceTunnel(ctx, &tunnel2, model.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
