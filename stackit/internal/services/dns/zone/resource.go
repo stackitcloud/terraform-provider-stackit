@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -98,8 +97,9 @@ type extensions struct {
 
 // Struct corresponding to extensions.Observability
 type observability struct {
-	instanceId types.String `tfsdk:"instance_id"`
-	State      types.String `tfsdk:"state"`
+	InstanceId types.String `tfsdk:"observability_instance_id"`
+	// State is response only
+	State types.String `tfsdk:"state"`
 }
 
 // Types corresponding to extensions
@@ -109,8 +109,8 @@ var extensionsTypes = map[string]attr.Type{
 
 // Types corresponding to observability
 var observabilityTypes = map[string]attr.Type{
-	"instance_id": basetypes.StringType{},
-	"state":       basetypes.StringType{},
+	"observability_instance_id": basetypes.StringType{},
+	"state":                     basetypes.StringType{},
 }
 
 // Metadata returns the resource type name.
@@ -249,13 +249,13 @@ func (r *zoneResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 						Description: "A single observability block as defined below.",
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
-							"instance_id": schema.StringAttribute{
+							"observability_instance_id": schema.StringAttribute{
 								Description: "Observability instance ID to choose which Observability instance is used.",
-								Optional:    true,
-							},
-							"state": schema.BoolAttribute{
-								Description: "Flag to enable/disable Observability extensions.",
 								Required:    true,
+							},
+							"state": schema.StringAttribute{
+								Description: "State of the extension.",
+								Computed:    true,
 							},
 						},
 					},
@@ -605,43 +605,35 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 
 	tflog.Info(ctx, "DNS zone state imported")
 }
-func mapExtensions(ctx context.Context, z *dns.ZoneResponse, m *Model) error {
+
+func mapExtensions(z *dns.ZoneResponse, m *Model) error {
 	if z.Zone.Extensions == nil {
-		m.Extensions = basetypes.NewObjectNull(extensionsTypes)
+		m.Extensions = types.ObjectNull(extensionsTypes)
 		return nil
 	}
 
-	var diags diag.Diagnostics
-	ex := extensions{}
-	if !m.Extensions.IsNull() {
-		diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
-		if diags.HasError() {
-			return fmt.Errorf("converting extensions object: %v", diags.Errors())
-		}
-	}
-	var observabilityExtension = types.ObjectNull(observabilityTypes)
 	if z.Zone.Extensions.ObservabilityExtension != nil {
 		state := types.StringValue(*z.Zone.Extensions.ObservabilityExtension.State)
 		observabilityInstanceId := types.StringValue(z.Zone.Extensions.ObservabilityExtension.ObservabilityInstanceId)
 
 		observabilityValues := map[string]attr.Value{
-			"state":       state,
-			"instance_id": observabilityInstanceId,
+			"state":                     state,
+			"observability_instance_id": observabilityInstanceId,
 		}
-		observabilityExtension, diags = types.ObjectValue(observabilityTypes, observabilityValues)
+		observabilityExtension, diags := types.ObjectValue(observabilityTypes, observabilityValues)
 		if diags.HasError() {
 			return fmt.Errorf("creating observability extension: %w", core.DiagsToError(diags))
 		}
-	}
-	extensionValue := map[string]attr.Value{
-		"observability": observabilityExtension,
-	}
+		extensionValue := map[string]attr.Value{
+			"observability": observabilityExtension,
+		}
 
-	extensions, diags := types.ObjectValue(extensionsTypes, extensionValue)
-	if diags.HasError() {
-		return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
+		extensions, diags := types.ObjectValue(extensionsTypes, extensionValue)
+		if diags.HasError() {
+			return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
+		}
+		m.Extensions = extensions
 	}
-	m.Extensions = extensions
 	return nil
 }
 
@@ -711,7 +703,7 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	model.Type = types.StringValue(string(z.Type))
 	model.Visibility = types.StringValue(string(z.Visibility))
 
-	return mapExtensions(ctx, zoneResp, model)
+	return mapExtensions(zoneResp, model)
 }
 
 func toCreatePayload(ctx context.Context, model *Model) (*dns.CreateZonePayload, error) {
@@ -730,7 +722,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*dns.CreateZonePayload,
 
 	ext, err := getExtensionsPayload(ctx, model)
 	if err != nil {
-		return nil, fmt.Errorf("could not map extensions to create payload: %v", err)
+		return nil, fmt.Errorf("could not map extensions to create payload: %w", err)
 	}
 	return &dns.CreateZonePayload{
 		Name:          model.Name.ValueString(),
@@ -757,7 +749,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*dns.PartialUpdateZoneP
 
 	ext, err := getExtensionsPayload(ctx, model)
 	if err != nil {
-		return nil, fmt.Errorf("could not map extensions to update payload: %v", err)
+		return nil, fmt.Errorf("could not map extensions to update payload: %w", err)
 	}
 	return &dns.PartialUpdateZonePayload{
 		Name:          conversion.StringValueToPointer(model.Name),
@@ -777,7 +769,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*dns.PartialUpdateZoneP
 // getExtensionsPayload reads the extensions from the model and maps it to [dns.ZoneExtensions].
 // Returns nil if the model does not provide any extensions.
 func getExtensionsPayload(ctx context.Context, model *Model) (*dns.ZoneExtensions, error) {
-	if !model.Extensions.IsNull() {
+	if !utils.IsUndefined(model.Extensions) {
 		ex := extensions{}
 		diags := model.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
@@ -789,14 +781,12 @@ func getExtensionsPayload(ctx context.Context, model *Model) (*dns.ZoneExtension
 			if diags.HasError() {
 				return nil, fmt.Errorf("failed to map extensions to domain type: %v", diags.Errors())
 			}
-			observabilityExtension := dns.NewZoneObservabilityExtension(obs.instanceId.ValueString())
-			observabilityExtension.SetState(obs.State.ValueString())
+			observabilityExtension := dns.NewZoneObservabilityExtension(obs.InstanceId.ValueString())
 			return &dns.ZoneExtensions{
 				ObservabilityExtension: observabilityExtension,
 			}, nil
-		} else {
-			return &dns.ZoneExtensions{}, nil
 		}
+		return &dns.ZoneExtensions{}, nil
 	}
 	return nil, nil
 }

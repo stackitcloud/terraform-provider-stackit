@@ -328,8 +328,8 @@ func TestToCreatePayload(t *testing.T) {
 				ExpireTime:   types.Int32Value(5),
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
 					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
-						"instance_id": types.StringValue("zone_id"),
-						"state":       types.StringValue("some state"),
+						"observability_instance_id": types.StringValue("some UUID"),
+						"state":                     types.StringNull(),
 					}),
 				}),
 				DefaultTTL:    types.Int32Value(4534534),
@@ -352,8 +352,7 @@ func TestToCreatePayload(t *testing.T) {
 				ExpireTime:   new(int32(5)),
 				Extensions: &dns.ZoneExtensions{
 					ObservabilityExtension: &dns.ZoneObservabilityExtension{
-						ObservabilityInstanceId: "zone_id",
-						State:                   new(string("some state")),
+						ObservabilityInstanceId: "some UUID",
 					},
 				},
 				DefaultTTL:    new(int32(4534534)),

@@ -139,6 +139,26 @@ func (d *zoneDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest,
 				Description: "Expire time.",
 				Computed:    true,
 			},
+			"extensions": schema.SingleNestedAttribute{
+				Description: "A single extensions block as defined below.",
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"observability": schema.SingleNestedAttribute{
+						Description: "A single observability block as defined below.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"observability_instance_id": schema.StringAttribute{
+								Description: "Observability instance ID to choose which Observability instance is used.",
+								Computed:    true,
+							},
+							"state": schema.StringAttribute{
+								Description: "State of the observability extension.",
+								Computed:    true,
+							},
+						},
+					},
+				},
+			},
 			"is_reverse_zone": schema.BoolAttribute{
 				Description: "Specifies, if the zone is a reverse zone or not.",
 				Computed:    true,
