@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"testing"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	"go.uber.org/mock/gomock"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -30,7 +30,9 @@ func TestDelete_Success(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusNotFound,
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -169,7 +171,9 @@ func TestDelete_GetInstanceFailed(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusInternalServerError,
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{

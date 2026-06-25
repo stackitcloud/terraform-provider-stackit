@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	"go.uber.org/mock/gomock"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -32,7 +32,7 @@ func TestRead_Success(t *testing.T) {
 	state := "active"
 	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
-	getTokenResp := &modelexperiments.GetTokenResponse{
+	getTokenResp := &modelexperiments.GetInstanceTokenResponse{
 		Token: modelexperiments.TokenMetadata{
 			Description: &description,
 			Id:          tokenId.String(),
@@ -246,7 +246,7 @@ func TestRead_TokenInvalidError(t *testing.T) {
 	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	getTokenResp := &modelexperiments.GetTokenResponse{
+	getTokenResp := &modelexperiments.GetInstanceTokenResponse{
 		Token: modelexperiments.TokenMetadata{
 			Description: &description,
 			Id:          tokenId.String(),

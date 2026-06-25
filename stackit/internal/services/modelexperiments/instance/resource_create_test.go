@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	"go.uber.org/mock/gomock"
 
@@ -98,7 +98,10 @@ func TestCreate_Success(t *testing.T) {
 			BucketName:                 new("bucket"),
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
+
+	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(getResp, nil)
 
 	schemaResp := resource.SchemaResponse{}
@@ -276,7 +279,9 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{})
 	tc.MockInstanceCLient.EXPECT().CreateInstanceExecute(gomock.Any()).Return(createResp, nil)
 
-	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceExecute(gomock.Any()).Return(nil, fmt.Errorf("server error"))
 
 	schemaResp := resource.SchemaResponse{}
