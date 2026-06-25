@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -18,7 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/wait"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -86,7 +86,7 @@ func (i *tokenResource) Configure(ctx context.Context, req resource.ConfigureReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	i.client = apiClient
+	i.client = apiClient.DefaultAPI
 	tflog.Info(ctx, "Model experiments client configured")
 }
 
@@ -271,7 +271,7 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	waitResp, err := CreateMExpTokenWaitHandler(ctx, i.client, region, projectId, instanceId, tokenId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceTokenWaitHandler(ctx, i.client, region, projectId, instanceId, tokenId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance token", fmt.Sprintf("Waiting for instance to be active: %v", err))
 	}
@@ -485,7 +485,7 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = DeleteMExpTokenWaitHandler(ctx, i.client, region, projectId, instanceId, tokenId).
+	_, err = wait.DeleteInstanceTokenWaitHandler(ctx, i.client, region, projectId, instanceId, tokenId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance token", fmt.Sprintf("Waiting for instance to be deleted: %v", err))
@@ -496,7 +496,7 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 }
 
 // mapCreateResponse maps the instace creation response and GET instance response to the model
-func mapCreateResponse(ctx context.Context, instanceTokenResp *modelexperiments.CreateTokenResponse, waitResp *modelexperiments.GetTokenResponse, model *Model, region string) error {
+func mapCreateResponse(ctx context.Context, instanceTokenResp *modelexperiments.CreateInstanceTokenResponse, waitResp *modelexperiments.GetInstanceTokenResponse, model *Model, region string) error {
 	if instanceTokenResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -596,47 +596,4 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstanceToken
 		Description: conversion.StringValueToPointer(model.Description),
 		Labels:      labels,
 	}, nil
-}
-
-func CreateMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetTokenResponse] {
-	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetTokenResponse, err error) {
-		getTokenReq := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
-		getTokenResp, err := a.GetInstanceTokenExecute(getTokenReq)
-		if err != nil {
-			return false, nil, err
-		}
-		if getTokenResp.Token.State == modelexperimentsutils.TOKENSTATE_ACTIVE {
-			return true, getTokenResp, nil
-		}
-
-		return false, nil, nil
-	})
-
-	handler.SetTimeout(10 * time.Minute)
-
-	return handler
-}
-
-func DeleteMExpTokenWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId, tokenId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
-	handler := wait.New(
-		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			getTokenReq := a.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
-			_, err = a.GetInstanceTokenExecute(getTokenReq)
-			if err != nil {
-				var oapiErr *oapierror.GenericOpenAPIError
-				if errors.As(err, &oapiErr) {
-					if oapiErr.StatusCode == http.StatusNotFound {
-						return true, nil, nil
-					}
-				}
-				return false, nil, err
-			}
-
-			return false, nil, nil
-		},
-	)
-
-	handler.SetTimeout(10 * time.Minute)
-
-	return handler
 }

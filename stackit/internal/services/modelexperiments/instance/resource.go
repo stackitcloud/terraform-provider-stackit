@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -18,7 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	"github.com/stackitcloud/stackit-sdk-go/core/wait"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api/wait"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	serviceEnablementWait "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api/wait"
 
@@ -55,7 +54,7 @@ type Model struct {
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
 //
-//go:generate mockgen -destination=./mock/instance.go -package=mock_instance dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api DefaultAPI
+//go:generate mockgen -destination=./mock/instance.go -package=mock_instance github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api DefaultAPI
 func NewInstanceResourceEmpty() resource.Resource {
 	return &instanceResource{}
 }
@@ -96,7 +95,7 @@ func (i *instanceResource) Configure(ctx context.Context, req resource.Configure
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	i.client = apiClient
+	i.client = apiClient.DefaultAPI
 	i.serviceEnablementClient = serviceEnablementClient
 	tflog.Info(ctx, "Model experiments client configured")
 }
@@ -313,7 +312,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// If model experiments instance is impaired, write state avoid dangling resources and return
-	waitResp, err := CreateMExpInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI model experiments instance", fmt.Sprintf("Waiting for instance to be active: %v", err))
 	}
@@ -493,7 +492,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = DeleteMExpInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).
+	_, err = wait.DeleteInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Waiting for instance to be deleted: %v", err))
@@ -526,7 +525,7 @@ func mapCreateResponse(ctx context.Context, instanceCreateResp *modelexperiments
 	if waitResp == nil {
 		model.State = types.StringValue("unknown")
 	} else {
-		model.State = types.StringValue(waitResp.Instance.State)
+		model.State = types.StringValue(string(waitResp.Instance.State))
 		model.BucketName = types.StringValue(*waitResp.Instance.BucketName)
 	}
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceCreateResp.Instance.Id)
@@ -559,7 +558,7 @@ func mapInstance(ctx context.Context, instance *modelexperiments.Instance, model
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.InstanceId.ValueString())
 	model.InstanceId = types.StringValue(instance.Id)
 	model.Name = types.StringValue(instance.Name)
-	model.State = types.StringValue(instance.State)
+	model.State = types.StringValue(string(instance.State))
 	model.Description = types.StringPointerValue(instance.Description)
 	model.DeletedExperimentRetention = types.StringPointerValue(instance.DeletedExperimentRetention)
 	model.BucketName = types.StringPointerValue(instance.BucketName)
@@ -604,52 +603,4 @@ func toUpdatePayload(model *Model) (*modelexperiments.PartialUpdateInstancePaylo
 		Labels:                     labels,
 		DeletedExperimentRetention: conversion.StringValueToPointer(model.DeletedExperimentRetention),
 	}, nil
-}
-
-func CreateMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
-	handler := wait.New(func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-		getInstanceRequest := a.GetInstance(ctx, projectId, region, instanceId)
-		getInstanceResp, err := a.GetInstanceExecute(getInstanceRequest)
-		if err != nil {
-			return false, nil, err
-		}
-		if getInstanceResp.Instance.State == modelexperimentsutils.INSTANCESTATE_ACTIVE {
-			return true, getInstanceResp, nil
-		}
-		if getInstanceResp.Instance.State == modelexperimentsutils.INSTANCESTATE_IMPAIRED {
-			return true, getInstanceResp, fmt.Errorf("AI model experiments instance is impaired")
-		}
-
-		return false, nil, nil
-	})
-
-	handler.SetTimeout(10 * time.Minute)
-
-	return handler
-}
-
-func DeleteMExpInstanceWaitHandler(ctx context.Context, a modelexperiments.DefaultAPI, region, projectId, instanceId string) *wait.AsyncActionHandler[modelexperiments.GetInstanceResponse] {
-	handler := wait.New(
-		func() (waitFinished bool, response *modelexperiments.GetInstanceResponse, err error) {
-			getInstanceReq := a.GetInstance(ctx, projectId, region, instanceId)
-			_, err = a.GetInstanceExecute(getInstanceReq)
-			if err != nil {
-				var oapiErr *oapierror.GenericOpenAPIError
-				if !errors.As(err, &oapiErr) {
-					return false, nil, err
-				}
-				if oapiErr.StatusCode != http.StatusNotFound {
-					return false, nil, err
-				}
-
-				return true, nil, nil
-			}
-
-			return false, nil, nil
-		},
-	)
-
-	handler.SetTimeout(10 * time.Minute)
-
-	return handler
 }

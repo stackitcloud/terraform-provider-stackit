@@ -53,8 +53,6 @@ require (
 	golang.org/x/mod v0.38.0
 )
 
-require go.uber.org/mock v0.6.0
-
 require github.com/stretchr/testify v1.11.1 // indirect
 
 require (

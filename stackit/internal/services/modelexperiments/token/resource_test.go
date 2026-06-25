@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 )
 
 func TestMapTokenFields(t *testing.T) {
@@ -100,8 +100,8 @@ func TestMapCreateResponseFields(t *testing.T) {
 	tests := []struct {
 		description         string
 		state               *Model
-		inputCreateResponse *modelexperiments.CreateTokenResponse
-		inputGetResponse    *modelexperiments.GetTokenResponse
+		inputCreateResponse *modelexperiments.CreateInstanceTokenResponse
+		inputGetResponse    *modelexperiments.GetInstanceTokenResponse
 		expected            Model
 		isValid             bool
 	}{
@@ -109,25 +109,25 @@ func TestMapCreateResponseFields(t *testing.T) {
 			description:         "should error when token create response is nil",
 			state:               &Model{},
 			inputCreateResponse: nil,
-			inputGetResponse:    &modelexperiments.GetTokenResponse{},
+			inputGetResponse:    &modelexperiments.GetInstanceTokenResponse{},
 			expected:            Model{},
 			isValid:             false,
 		},
 		{
 			description:         "should error when state is nil",
 			state:               nil,
-			inputCreateResponse: &modelexperiments.CreateTokenResponse{},
-			inputGetResponse:    &modelexperiments.GetTokenResponse{},
+			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{},
+			inputGetResponse:    &modelexperiments.GetInstanceTokenResponse{},
 			expected:            Model{},
 			isValid:             false,
 		},
 		{
 			description: "should error when token id is not present",
 			state:       &Model{},
-			inputCreateResponse: &modelexperiments.CreateTokenResponse{
+			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{},
 			},
-			inputGetResponse: &modelexperiments.GetTokenResponse{},
+			inputGetResponse: &modelexperiments.GetInstanceTokenResponse{},
 			expected:         Model{},
 			isValid:          false,
 		},
@@ -139,7 +139,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				InstanceId: types.StringValue("id"),
 				Region:     types.StringValue("eu01"),
 			},
-			inputCreateResponse: &modelexperiments.CreateTokenResponse{
+			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
 					Id:          "id",
 					Content:     "token",
@@ -173,7 +173,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				InstanceId: types.StringValue("id"),
 				Region:     types.StringValue("eu01"),
 			},
-			inputCreateResponse: &modelexperiments.CreateTokenResponse{
+			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
 					Id:          "id",
 					Content:     "token",
@@ -183,7 +183,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 					Name:        "name",
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 				}},
-			inputGetResponse: &modelexperiments.GetTokenResponse{
+			inputGetResponse: &modelexperiments.GetInstanceTokenResponse{
 				Token: modelexperiments.TokenMetadata{
 					State: "active",
 				},
@@ -211,7 +211,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				InstanceId: types.StringValue("id"),
 				Region:     types.StringValue("eu01"),
 			},
-			inputCreateResponse: &modelexperiments.CreateTokenResponse{
+			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
 					Id:          "id",
 					Content:     "token",
@@ -221,7 +221,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 					Name:        "name",
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 				}},
-			inputGetResponse: &modelexperiments.GetTokenResponse{
+			inputGetResponse: &modelexperiments.GetInstanceTokenResponse{
 				Token: modelexperiments.TokenMetadata{
 					State: "active",
 				},
