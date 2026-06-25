@@ -52,8 +52,6 @@ require (
 	golang.org/x/mod v0.37.0
 )
 
-require go.uber.org/mock v0.6.0
-
 require github.com/stretchr/testify v1.11.1 // indirect
 
 require (
@@ -61,7 +59,6 @@ require (
 	4d63.com/gochecknoglobals v0.2.2 // indirect
 	codeberg.org/chavacava/garif v0.2.0 // indirect
 	codeberg.org/polyfloyd/go-errorlint v1.9.0 // indirect
-	dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments v0.41.0
 	dev.gaijin.team/go/exhaustruct/v4 v4.0.0 // indirect
 	dev.gaijin.team/go/golib v0.6.0 // indirect
 	github.com/4meepo/tagalign v1.4.3 // indirect

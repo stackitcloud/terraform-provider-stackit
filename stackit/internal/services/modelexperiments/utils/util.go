@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	modelexperiment "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	modelexperiment "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -28,7 +28,7 @@ const (
 	TOKENSTATE_INACTIVE = "inactive"
 )
 
-func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) modelexperiment.DefaultAPI {
+func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *modelexperiment.APIClient {
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),
 		utils.UserAgentConfigOption(providerData.Version),
@@ -42,7 +42,7 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 		return nil
 	}
 
-	return apiClient.DefaultAPI
+	return apiClient
 }
 
 func ConfigureServiceEnablementClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) serviceenablement.DefaultAPI {
