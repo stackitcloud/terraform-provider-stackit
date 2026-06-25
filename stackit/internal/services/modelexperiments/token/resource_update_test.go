@@ -44,7 +44,9 @@ func TestUpdate_Success(t *testing.T) {
 			ValidUntil:  validUntil,
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceTokenExecute(gomock.Any()).Return(updateTokenResp, nil)
 
 	providerData := core.ProviderData{
@@ -119,7 +121,9 @@ func TestUpdate_TokenNotFound(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusNotFound,
 	}
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -191,7 +195,9 @@ func TestUpdate_TokenUpdateError(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusInternalServerError,
 	}
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -275,7 +281,9 @@ func TestUpdate_TokenInvalidStateError(t *testing.T) {
 			ValidUntil:  validUntil,
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceTokenExecute(gomock.Any()).Return(updateTokenResp, nil)
 
 	providerData := core.ProviderData{
@@ -319,7 +327,7 @@ func TestUpdate_TokenInvalidStateError(t *testing.T) {
 		t.Fatalf("update should succeed")
 	}
 
-	// state should not be removed
+	// state should be removed
 	var updatedState *token.Model
 	diags := resp.State.Get(tc.Ctx, &updatedState)
 	if diags.HasError() {

@@ -28,6 +28,7 @@ const (
 	TOKENSTATE_INACTIVE = "inactive"
 )
 
+//go:generate mockgen -destination=./mock/serviceenablement.go -package=mock_serviceenablement github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api DefaultAPI
 func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *modelexperiment.APIClient {
 	apiClientConfigOptions := []config.ConfigurationOption{
 		config.WithCustomAuth(providerData.RoundTripper),

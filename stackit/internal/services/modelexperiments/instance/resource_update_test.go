@@ -40,7 +40,9 @@ func TestUpdate_Success(t *testing.T) {
 		},
 	}
 
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceExecute(gomock.Any()).Return(updateResp, nil)
 
 	providerData := core.ProviderData{
@@ -81,14 +83,13 @@ func TestUpdate_Success(t *testing.T) {
 		t.Fatalf("Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
 	}
 
-	// Extract final state
+	//  state should be updated
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
 	if diags.HasError() {
 		t.Fatalf("Failed to get state: %v", diags.Errors())
 	}
 
-	// Verify all fields match the updated values from GetInstance, state should be updated
 	if instanceId.String() != finalState.InstanceId.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
 	}
@@ -126,7 +127,9 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: 404,
 	}
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -166,7 +169,7 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 		t.Fatalf("Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
 	}
 
-	// Extract final state, state should be deleted
+	// state should be deleted
 	var finalState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
 	if diags.HasError() {
@@ -188,7 +191,9 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 	region := "eu01"
 	instanceId := uuid.New()
 
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceExecute(gomock.Any()).Return(nil, fmt.Errorf("server error"))
 
 	providerData := core.ProviderData{
@@ -228,7 +233,7 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 		t.Fatalf("Update should not succeed, but got no errors")
 	}
 
-	// Extract final state, instance should not be updated
+	// state should not be updated
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
 	if diags.HasError() {
