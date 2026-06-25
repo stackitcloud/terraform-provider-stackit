@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	"go.uber.org/mock/gomock"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -28,7 +28,7 @@ func TestCreate_Success(t *testing.T) {
 	tokenId := uuid.New()
 	validUntil := time.Now().Add(10 * time.Minute)
 
-	createTokenResp := &modelexperiments.CreateTokenResponse{
+	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
 			Content:     "token",
 			Description: &description,
@@ -42,7 +42,7 @@ func TestCreate_Success(t *testing.T) {
 	tc.MockInstanceCLient.EXPECT().CreateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceTokenRequest{})
 	tc.MockInstanceCLient.EXPECT().CreateInstanceTokenExecute(gomock.Any()).Return(createTokenResp, nil)
 
-	getTokenResp := &modelexperiments.GetTokenResponse{
+	getTokenResp := &modelexperiments.GetInstanceTokenResponse{
 		Token: modelexperiments.TokenMetadata{
 			Description: &description,
 			Id:          tokenId.String(),
@@ -52,7 +52,9 @@ func TestCreate_Success(t *testing.T) {
 			ValidUntil:  validUntil,
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceTokenExecute(gomock.Any()).Return(getTokenResp, nil)
 
 	providerData := core.ProviderData{
@@ -122,7 +124,7 @@ func TestCreate_TokenIdEmpty(t *testing.T) {
 	instanceId := uuid.New()
 	validUntil := time.Now()
 
-	createTokenResp := &modelexperiments.CreateTokenResponse{
+	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
 			Content:     "token",
 			Description: &description,
@@ -234,7 +236,7 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	tokenId := uuid.New()
 	validUntil := time.Now().Add(10 * time.Minute)
 
-	createTokenResp := &modelexperiments.CreateTokenResponse{
+	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
 			Content:     "token",
 			Description: &description,
@@ -251,7 +253,9 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: 404,
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{

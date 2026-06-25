@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	modelexperiments "dev.azure.com/schwarzit/schwarzit.stackit-public/stackit-sdk-go-internal.git/services/modelexperiments/v1api"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	"go.uber.org/mock/gomock"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
