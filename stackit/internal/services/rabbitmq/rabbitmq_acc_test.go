@@ -288,11 +288,11 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 }
 
 func checkInstanceDeleteSuccess(i *rabbitmq.Instance) bool {
-	if i.LastOperation.Type != wait.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type != rabbitmq.INSTANCELASTOPERATIONTYPE_DELETE {
 		return false
 	}
 
-	if i.LastOperation.Type == wait.INSTANCELASTOPERATIONTYPE_DELETE {
+	if i.LastOperation.Type == rabbitmq.INSTANCELASTOPERATIONTYPE_DELETE {
 		if i.LastOperation.State != "succeeded" {
 			return false
 		} else if strings.Contains(i.LastOperation.Description, "DeleteFailed") || strings.Contains(i.LastOperation.Description, "failed") {
