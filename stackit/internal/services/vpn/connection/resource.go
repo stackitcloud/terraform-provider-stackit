@@ -979,9 +979,7 @@ func mapFields(ctx context.Context, conn connectionResponse, model *Model, regio
 
 	tunnel1 := conn.GetTunnel1()
 	if model.Tunnel1 == nil {
-		model.Tunnel1 = &TunnelModel{
-			PreSharedKeyWoVersion: types.Int64Null(),
-		}
+		model.Tunnel1 = &TunnelModel{}
 	}
 	err := mapTunnel(ctx, &tunnel1, model.Tunnel1)
 	if err != nil {
@@ -990,9 +988,7 @@ func mapFields(ctx context.Context, conn connectionResponse, model *Model, regio
 
 	tunnel2 := conn.GetTunnel2()
 	if model.Tunnel2 == nil {
-		model.Tunnel2 = &TunnelModel{
-			PreSharedKeyWoVersion: types.Int64Null(),
-		}
+		model.Tunnel2 = &TunnelModel{}
 	}
 	err = mapTunnel(ctx, &tunnel2, model.Tunnel2)
 	if err != nil {
