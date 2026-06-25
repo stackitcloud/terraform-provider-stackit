@@ -40,7 +40,7 @@ func TestCreate_Success(t *testing.T) {
 	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(nil)
 
 	serviceEnablementResp := &serviceenablement.ServiceStatus{
-		State: new("ENABLED"),
+		State: serviceenablement.SERVICESTATUSSTATE_ENABLED.Ptr(),
 	}
 	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiGetServiceStatusRegionalRequest{
 		ApiService: tc.MockServiceEnablementClient,
@@ -194,7 +194,7 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(nil)
 
 	serviceEnablementResp := &serviceenablement.ServiceStatus{
-		State: new("ENABLED"),
+		State: serviceenablement.SERVICESTATUSSTATE_ENABLED.Ptr(),
 	}
 	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiGetServiceStatusRegionalRequest{
 		ApiService: tc.MockServiceEnablementClient,
@@ -286,7 +286,7 @@ func TestCreate_InstanceCreateFailure(t *testing.T) {
 	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(nil)
 
 	serviceEnablementResp := &serviceenablement.ServiceStatus{
-		State: new("ENABLED"),
+		State: serviceenablement.SERVICESTATUSSTATE_ENABLED.Ptr(),
 	}
 	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiGetServiceStatusRegionalRequest{
 		ApiService: tc.MockServiceEnablementClient,

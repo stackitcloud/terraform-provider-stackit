@@ -24,6 +24,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
+	serviceEnablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -91,12 +92,12 @@ func (i *instanceResource) Configure(ctx context.Context, req resource.Configure
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	serviceEnablementClient := modelexperimentsutils.ConfigureServiceEnablementClient(ctx, &i.providerData, &resp.Diagnostics)
+	serviceEnablementClient := serviceEnablementUtils.ConfigureClient(ctx, &i.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	i.client = apiClient.DefaultAPI
-	i.serviceEnablementClient = serviceEnablementClient
+	i.serviceEnablementClient = serviceEnablementClient.DefaultAPI
 	tflog.Info(ctx, "Model experiments client configured")
 }
 
