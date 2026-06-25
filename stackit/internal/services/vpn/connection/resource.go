@@ -978,12 +978,22 @@ func mapFields(ctx context.Context, conn connectionResponse, model *Model, regio
 	}
 
 	tunnel1 := conn.GetTunnel1()
+	if model.Tunnel1 == nil {
+		model.Tunnel1 = &TunnelModel{
+			PreSharedKeyWoVersion: types.Int64Null(),
+		}
+	}
 	err := mapTunnel(ctx, &tunnel1, model.Tunnel1)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel1: %w", err)
 	}
 
 	tunnel2 := conn.GetTunnel2()
+	if model.Tunnel2 == nil {
+		model.Tunnel2 = &TunnelModel{
+			PreSharedKeyWoVersion: types.Int64Null(),
+		}
+	}
 	err = mapTunnel(ctx, &tunnel2, model.Tunnel2)
 	if err != nil {
 		return fmt.Errorf("mapping tunnel2: %w", err)
