@@ -3,12 +3,11 @@ package instance_test
 import (
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
 	"go.uber.org/mock/gomock"
@@ -16,11 +15,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-)
-
-const (
-	modelServingServiceId = "cloud.stackit.model-serving"
 )
 
 func TestCreate_Success(t *testing.T) {
@@ -31,46 +25,27 @@ func TestCreate_Success(t *testing.T) {
 	description := "description"
 	region := "eu01"
 	instanceId := uuid.New()
-
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == fmt.Sprintf("/v2/projects/%s/regions/%s/services/%s", projectId, region, modelServingServiceId) {
-					if r.Method == http.MethodGet {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"state":"ENABLED","scope":"PUBLIC","serviceId":"cloud.stackit.model-serving"}`))
-					}
-					if r.Method == http.MethodPost {
-						w.WriteHeader(http.StatusAccepted)
-					}
-				}
-			},
-		),
-	)
-	defer server.Close()
+	url := "url"
 
 	providerData := core.ProviderData{
-		DefaultRegion:                   "eu01",
-		Version:                         "1.0.0",
-		ServiceEnablementCustomEndpoint: server.URL,
+		DefaultRegion: "eu01",
+		Version:       "1.0.0",
 	}
 
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithoutAuthentication(),
-		config.WithHTTPClient(server.Client()),
-		utils.UserAgentConfigOption(providerData.Version),
-		config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, tc.MockServiceEnablementClient, providerData)
+
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiEnableServiceRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(nil)
+
+	serviceEnablementResp := &serviceenablement.ServiceStatus{
+		State: new("ENABLED"),
 	}
-
-	apiClient, err := serviceenablement.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, apiClient.DefaultAPI, providerData)
-
-	url := "url"
+	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiGetServiceStatusRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegionalExecute(gomock.Any()).Return(serviceEnablementResp, nil)
 
 	createResp := &modelexperiments.CreateInstanceResponse{
 		Instance: modelexperiments.Instance{
@@ -83,7 +58,9 @@ func TestCreate_Success(t *testing.T) {
 			State:                      "pending",
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().CreateInstanceExecute(gomock.Any()).Return(createResp, nil)
 
 	getResp := &modelexperiments.GetInstanceResponse{
@@ -155,42 +132,20 @@ func TestCreate_ServiceEnablementFailure(t *testing.T) {
 	description := "description"
 	region := "eu01"
 
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == fmt.Sprintf("/v2/projects/%s/regions/%s/services/%s", projectId, region, modelServingServiceId) {
-					if r.Method == http.MethodGet {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusNotFound)
-					}
-					if r.Method == http.MethodPost {
-						w.WriteHeader(http.StatusNotFound)
-					}
-				}
-			},
-		),
-	)
-	defer server.Close()
-
 	providerData := core.ProviderData{
-		DefaultRegion:                   "eu01",
-		Version:                         "1.0.0",
-		ServiceEnablementCustomEndpoint: server.URL,
+		DefaultRegion: "eu01",
+		Version:       "1.0.0",
 	}
 
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithoutAuthentication(),
-		config.WithHTTPClient(server.Client()),
-		utils.UserAgentConfigOption(providerData.Version),
-		config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
-	}
+	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, tc.MockServiceEnablementClient, providerData)
 
-	apiClient, err := serviceenablement.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		fmt.Println(err)
+	oapiErr := &oapierror.GenericOpenAPIError{
+		StatusCode: http.StatusNotFound,
 	}
-
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, apiClient.DefaultAPI, providerData)
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiEnableServiceRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(oapiErr)
 
 	schemaResp := resource.SchemaResponse{}
 	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
@@ -224,46 +179,27 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	description := "description"
 	region := "eu01"
 	instanceId := uuid.New()
-
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == fmt.Sprintf("/v2/projects/%s/regions/%s/services/%s", projectId, region, modelServingServiceId) {
-					if r.Method == http.MethodGet {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"state":"ENABLED","scope":"PUBLIC","serviceId":"cloud.stackit.model-serving"}`))
-					}
-					if r.Method == http.MethodPost {
-						w.WriteHeader(http.StatusAccepted)
-					}
-				}
-			},
-		),
-	)
-	defer server.Close()
+	url := "url"
 
 	providerData := core.ProviderData{
-		DefaultRegion:                   "eu01",
-		Version:                         "1.0.0",
-		ServiceEnablementCustomEndpoint: server.URL,
+		DefaultRegion: "eu01",
+		Version:       "1.0.0",
 	}
 
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithoutAuthentication(),
-		config.WithHTTPClient(server.Client()),
-		utils.UserAgentConfigOption(providerData.Version),
-		config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, tc.MockServiceEnablementClient, providerData)
+
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiEnableServiceRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(nil)
+
+	serviceEnablementResp := &serviceenablement.ServiceStatus{
+		State: new("ENABLED"),
 	}
-
-	apiClient, err := serviceenablement.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, apiClient.DefaultAPI, providerData)
-
-	url := "url"
+	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiGetServiceStatusRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegionalExecute(gomock.Any()).Return(serviceEnablementResp, nil)
 
 	createResp := &modelexperiments.CreateInstanceResponse{
 		Instance: modelexperiments.Instance{
@@ -276,7 +212,9 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 			State:                      "pending",
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().CreateInstanceExecute(gomock.Any()).Return(createResp, nil)
 
 	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{
@@ -335,45 +273,29 @@ func TestCreate_InstanceCreateFailure(t *testing.T) {
 	description := "description"
 	region := "eu01"
 
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == fmt.Sprintf("/v2/projects/%s/regions/%s/services/%s", projectId, region, modelServingServiceId) {
-					if r.Method == http.MethodGet {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"state":"ENABLED","scope":"PUBLIC","serviceId":"cloud.stackit.model-serving"}`))
-					}
-					if r.Method == http.MethodPost {
-						w.WriteHeader(http.StatusAccepted)
-					}
-				}
-			},
-		),
-	)
-	defer server.Close()
-
 	providerData := core.ProviderData{
-		DefaultRegion:                   "eu01",
-		Version:                         "1.0.0",
-		ServiceEnablementCustomEndpoint: server.URL,
+		DefaultRegion: "eu01",
+		Version:       "1.0.0",
 	}
 
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithoutAuthentication(),
-		config.WithHTTPClient(server.Client()),
-		utils.UserAgentConfigOption(providerData.Version),
-		config.WithEndpoint(providerData.ServiceEnablementCustomEndpoint),
+	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, tc.MockServiceEnablementClient, providerData)
+
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiEnableServiceRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().EnableServiceRegionalExecute(gomock.Any()).Return(nil)
+
+	serviceEnablementResp := &serviceenablement.ServiceStatus{
+		State: new("ENABLED"),
 	}
+	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegional(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(serviceenablement.ApiGetServiceStatusRegionalRequest{
+		ApiService: tc.MockServiceEnablementClient,
+	})
+	tc.MockServiceEnablementClient.EXPECT().GetServiceStatusRegionalExecute(gomock.Any()).Return(serviceEnablementResp, nil)
 
-	apiClient, err := serviceenablement.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, apiClient.DefaultAPI, providerData)
-
-	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().CreateInstance(gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().CreateInstanceExecute(gomock.Any()).Return(nil, fmt.Errorf("server error"))
 
 	schemaResp := resource.SchemaResponse{}
