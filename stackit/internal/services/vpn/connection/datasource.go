@@ -361,7 +361,7 @@ func mapDataSourceFields(ctx context.Context, conn connectionResponse, model *Da
 	}
 
 	tunnel2 := conn.GetTunnel2()
-	if model.Tunnel1 == nil {
+	if model.Tunnel2 == nil {
 		model.Tunnel2 = &DataSourceTunnelModel{}
 	}
 	err = mapDataSourceTunnel(ctx, &tunnel2, model.Tunnel2)
