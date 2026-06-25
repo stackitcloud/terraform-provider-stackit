@@ -242,9 +242,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	serviceEnablementReq := i.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelExperimentsServiceId)
-	err := i.serviceEnablementClient.EnableServiceRegionalExecute(serviceEnablementReq)
-
+	err := i.serviceEnablementClient.EnableServiceRegional(ctx, region, projectId, utils.ModelExperimentsServiceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -283,8 +281,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	createInstanceRequest := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload)
-	createInstanceResp, err := i.client.CreateInstanceExecute(createInstanceRequest)
+	createInstanceResp, err := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -358,8 +355,7 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getInstanceReq := i.client.GetInstance(ctx, projectId, region, instanceId)
-	getInstanceResp, err := i.client.GetInstanceExecute(getInstanceReq)
+	getInstanceResp, err := i.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -424,8 +420,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	updateInstanceReq := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload)
-	updateInstanceResp, err := i.client.PartialUpdateInstanceExecute(updateInstanceReq)
+	updateInstanceResp, err := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -476,8 +471,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	deleteInstanceReq := i.client.DeleteInstance(ctx, projectId, region, instanceId)
-	_, err := i.client.DeleteInstanceExecute(deleteInstanceReq)
+	_, err := i.client.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {

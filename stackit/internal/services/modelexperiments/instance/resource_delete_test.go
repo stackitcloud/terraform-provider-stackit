@@ -24,7 +24,9 @@ func TestDelete_Success(t *testing.T) {
 	region := "eu01"
 	instanceId := uuid.New()
 
-	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, nil)
 
 	oapiErr := &oapierror.GenericOpenAPIError{
@@ -71,7 +73,9 @@ func TestDelete_DeleteInstanceFailed(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusInternalServerError,
 	}
-	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -98,6 +102,7 @@ func TestDelete_DeleteInstanceFailed(t *testing.T) {
 		t.Fatalf("Delete should not succeed, but got no errors")
 	}
 
+	// state should not be removed
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
 	if diags.HasError() {
@@ -120,7 +125,9 @@ func TestDelete_InstanceAlreadyDeleted(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusNotFound,
 	}
-	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -147,6 +154,7 @@ func TestDelete_InstanceAlreadyDeleted(t *testing.T) {
 		t.Fatalf("Delete should succeed, but got errors: %v", resp.Diagnostics.Errors())
 	}
 
+	// state should be removed
 	var finalState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
 	if diags.HasError() {
@@ -165,7 +173,9 @@ func TestDelete_GetInstanceFailed(t *testing.T) {
 	region := "eu01"
 	instanceId := uuid.New()
 
-	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceExecute(gomock.Any()).Return(nil, nil)
 
 	oapiErr := &oapierror.GenericOpenAPIError{
@@ -200,13 +210,14 @@ func TestDelete_GetInstanceFailed(t *testing.T) {
 		t.Fatalf("Delete should not succeed, but got no errors")
 	}
 
+	// state should not be removed
 	var finalState instance.Model
 	diags := resp.State.Get(tc.Ctx, &finalState)
 	if diags.HasError() {
 		t.Fatalf("Failed to get state: %v", diags.Errors())
 	}
 
-	if instanceId.String() != state.InstanceId.ValueString() {
+	if instanceId.String() != finalState.InstanceId.ValueString() {
 		t.Fatalf("state should not have been deleted - expected %v, got %v", instanceId.String(), state.InstanceId.ValueString())
 	}
 }

@@ -25,7 +25,9 @@ func TestDelete_Success(t *testing.T) {
 	instanceId := uuid.New()
 	tokenId := uuid.New()
 
-	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceTokenExecute(gomock.Any()).Return(nil, nil)
 
 	oapiErr := &oapierror.GenericOpenAPIError{
@@ -74,7 +76,9 @@ func TestDelete_DeleteTokenFailed(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusInternalServerError,
 	}
-	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -126,7 +130,9 @@ func TestDelete_TokenNotFound(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusNotFound,
 	}
-	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -174,7 +180,9 @@ func TestDelete_GetTokenFailed(t *testing.T) {
 	instanceId := uuid.New()
 	tokenId := uuid.New()
 
-	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().DeleteInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiDeleteInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().DeleteInstanceTokenExecute(gomock.Any()).Return(nil, nil)
 
 	oapiErr := &oapierror.GenericOpenAPIError{

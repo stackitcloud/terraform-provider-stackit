@@ -242,8 +242,7 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	createTokenReq := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload)
-	createInstanceTokenResp, err := i.client.CreateInstanceTokenExecute(createTokenReq)
+	createInstanceTokenResp, err := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
@@ -320,8 +319,7 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	getTokenReq := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId)
-	getInstanceTokenResp, err := i.client.GetInstanceTokenExecute(getTokenReq)
+	getInstanceTokenResp, err := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -394,8 +392,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	updateTokenReq := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload)
-	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceTokenExecute(updateTokenReq)
+	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -469,8 +466,7 @@ func (i *tokenResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	deleteTokenReq := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId)
-	_, err := i.client.DeleteInstanceTokenExecute(deleteTokenReq)
+	_, err := i.client.DeleteInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {

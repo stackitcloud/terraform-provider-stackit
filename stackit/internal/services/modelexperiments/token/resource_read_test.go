@@ -23,6 +23,7 @@ func TestRead_Success(t *testing.T) {
 
 	projectId := uuid.New()
 	name := "token"
+	newName := "new token name"
 	region := "eu01"
 	description := "token description"
 	instanceId := uuid.New()
@@ -36,13 +37,15 @@ func TestRead_Success(t *testing.T) {
 		Token: modelexperiments.TokenMetadata{
 			Description: &description,
 			Id:          tokenId.String(),
-			Name:        name,
+			Name:        newName,
 			Region:      region,
 			State:       "active",
 			ValidUntil:  validUntil,
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceTokenExecute(gomock.Any()).Return(getTokenResp, nil)
 
 	providerData := core.ProviderData{
@@ -73,14 +76,43 @@ func TestRead_Success(t *testing.T) {
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("Get should succeed but got errors")
 	}
-	// state should be removed
-	var refreshedState *token.Model
+
+	// state should be written according to GetInstanceToken Response
+	var refreshedState token.Model
 	diags := resp.State.Get(tc.Ctx, &refreshedState)
 	if diags.HasError() {
 		t.Fatalf("failed to get state")
 	}
-	if refreshedState != nil {
-		t.Fatalf("should be nil")
+
+	if tokenId.String() != refreshedState.TokenId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", tokenId.String(), refreshedState.TokenId.ValueString())
+	}
+	if projectId.String() != refreshedState.ProjectId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", projectId.String(), refreshedState.ProjectId.ValueString())
+	}
+	if instanceId.String() != refreshedState.InstanceId.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", instanceId.String(), refreshedState.InstanceId.ValueString())
+	}
+	if newName != refreshedState.Name.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", name, refreshedState.Name.ValueString())
+	}
+	if refreshedState.State.ValueString() != "active" {
+		t.Fatalf("Should be equal - expected %v, got %v", "active", refreshedState.State.ValueString())
+	}
+	if description != refreshedState.Description.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", description, refreshedState.Description.ValueString())
+	}
+	if tokenContent != refreshedState.Token.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", tokenContent, refreshedState.Token.ValueString())
+	}
+	if id.ValueString() != refreshedState.Id.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", id.ValueString(), refreshedState.Id.ValueString())
+	}
+	if region != refreshedState.Region.ValueString() {
+		t.Fatalf("Should be equal - expected %v, got %v", region, refreshedState.Region.ValueString())
+	}
+	if refreshedState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
+		t.Fatalf("Should be equal - expected %v, got %v", "2099-01-01T00:00:00Z", refreshedState.ValidUntil.ValueString())
 	}
 }
 
@@ -100,7 +132,9 @@ func TestRead_TokenNotFound(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusNotFound,
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -160,7 +194,9 @@ func TestRead_GetTokenRequestFailed(t *testing.T) {
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusInternalServerError,
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceTokenExecute(gomock.Any()).Return(nil, oapiErr)
 
 	providerData := core.ProviderData{
@@ -256,7 +292,9 @@ func TestRead_TokenInvalidError(t *testing.T) {
 			ValidUntil:  validUntil,
 		},
 	}
-	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{})
+	tc.MockInstanceCLient.EXPECT().GetInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceTokenRequest{
+		ApiService: tc.MockInstanceCLient,
+	})
 	tc.MockInstanceCLient.EXPECT().GetInstanceTokenExecute(gomock.Any()).Return(getTokenResp, nil)
 
 	providerData := core.ProviderData{

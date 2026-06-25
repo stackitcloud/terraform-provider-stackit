@@ -19,11 +19,11 @@ import (
 
 var instanceResource = map[string]string{
 	"project_id":              testutil.ProjectId,
-	"name":                    "instance01",
+	"name":                    "tf acc test instance01",
 	"description":             "my description",
 	"description_updated":     "my description updated",
 	"region":                  testutil.Region,
-	"tokenName":               "token01",
+	"tokenName":               "tf acc test token01",
 	"tokenDescription":        "my token description",
 	"tokenDescriptionUpdated": "my token description updated",
 }
