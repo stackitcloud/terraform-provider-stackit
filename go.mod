@@ -50,6 +50,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0
 	github.com/teambition/rrule-go v1.8.2
+	go.uber.org/mock v0.6.0
 	golang.org/x/mod v0.38.0
 )
 

@@ -17,18 +17,19 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
 
+//nolint:all
 var instanceResource = map[string]string{
-	"project_id":              testutil.ProjectId,
-	"name":                    "tf acc test instance01",
-	"description":             "my description",
-	"description_updated":     "my description updated",
-	"region":                  testutil.Region,
-	"tokenName":               "tf acc test token01",
-	"tokenDescription":        "my token description",
-	"tokenDescriptionUpdated": "my token description updated",
+	"project_id":                testutil.ProjectId,
+	"name":                      "tf acc test instance01",
+	"description":               "my description",
+	"description_updated":       "my description updated",
+	"region":                    testutil.Region,
+	"token_name":                "tf acc test token01",
+	"token_description":         "my token description",
+	"token_description_updated": "my token description updated",
 }
 
-func inputInstanceConfig(instanceName, instanceDescription, tokenName, tokenDescription string) string {
+func inputInstanceConfig(instanceName, instanceDescription, token_name, token_description string) string {
 	return fmt.Sprintf(`
 		%s
 
@@ -53,9 +54,9 @@ func inputInstanceConfig(instanceName, instanceDescription, tokenName, tokenDesc
 		instanceResource["region"],
 		instanceDescription,
 		instanceResource["project_id"],
-		tokenName,
+		token_name,
 		instanceResource["region"],
-		tokenDescription,
+		token_description,
 	)
 }
 
@@ -69,8 +70,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 				Config: inputInstanceConfig(
 					instanceResource["name"],
 					instanceResource["description"],
-					instanceResource["tokenName"],
-					instanceResource["tokenDescription"],
+					instanceResource["token_name"],
+					instanceResource["token_description"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
@@ -84,8 +85,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "region", instanceResource["region"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["tokenName"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "description", instanceResource["tokenDescription"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["token_name"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "description", instanceResource["token_description"]),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "instance_id"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "token_id"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "state"),
@@ -98,8 +99,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 				Config: inputInstanceConfig(
 					instanceResource["name"],
 					instanceResource["description_updated"],
-					instanceResource["tokenName"],
-					instanceResource["tokenDescriptionUpdated"],
+					instanceResource["token_name"],
+					instanceResource["token_description_updated"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
@@ -113,8 +114,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "region", instanceResource["region"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["tokenName"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "description", instanceResource["tokenDescriptionUpdated"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["token_name"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "description", instanceResource["token_description_updated"]),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "instance_id"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "token_id"),
 					resource.TestCheckResourceAttrSet("stackit_modelexperiments_token.token", "state"),
