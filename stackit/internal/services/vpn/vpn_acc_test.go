@@ -598,7 +598,7 @@ func TestAccVpnConnectionResourceMin(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"tunnel1.pre_shared_key_wo", "tunnel2.pre_shared_key_wo"},
+				ImportStateVerifyIgnore: []string{"tunnel1.pre_shared_key", "tunnel2.pre_shared_key"},
 			},
 		},
 	})
@@ -942,8 +942,7 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 			}
 			err := client.DefaultAPI.DeleteGatewayConnection(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *conn.Id).Execute()
 			if err != nil {
-				var oapiErr *oapierror.GenericOpenAPIError
-				if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+				if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 					continue
 				}
 				return fmt.Errorf("destroying connection %s during CheckDestroy: %w", *conn.Id, err)
@@ -952,8 +951,7 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 
 		err = client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
 		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
 				continue
 			}
 			return fmt.Errorf("destroying gateway %s during CheckDestroy: %w", *gateway.Id, err)

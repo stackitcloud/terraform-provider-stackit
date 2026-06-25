@@ -34,27 +34,29 @@ func fixtureDataSourceTunnelModel(mods ...func(m *DataSourceTunnelModel)) *DataS
 
 func fixtureDataSourceModel(mods ...func(m *DataSourceModel)) DataSourceModel {
 	resp := DataSourceModel{
-		ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
-		ConnectionID: types.StringValue("connection-id"),
-		ProjectID:    types.StringValue(projectId),
-		Region:       types.StringValue(region),
-		GatewayID:    types.StringValue(gatewayId),
-		DisplayName:  types.StringValue("test-connection"),
-		Enabled:      types.BoolValue(true),
-		RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
-			types.StringValue("10.0.0.0/16"),
-		}),
-		LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
-			types.StringValue("192.168.0.0/24"),
-		}),
-		StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
-			types.StringValue("123.45.67.89"),
-		}),
+		CommonModel: CommonModel{
+			ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+			ConnectionID: types.StringValue("connection-id"),
+			ProjectID:    types.StringValue(projectId),
+			Region:       types.StringValue(region),
+			GatewayID:    types.StringValue(gatewayId),
+			DisplayName:  types.StringValue("test-connection"),
+			Enabled:      types.BoolValue(true),
+			RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("10.0.0.0/16"),
+			}),
+			LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("192.168.0.0/24"),
+			}),
+			StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("123.45.67.89"),
+			}),
+			Labels: types.MapNull(types.StringType),
+		},
 		Tunnel1: fixtureDataSourceTunnelModel(),
 		Tunnel2: fixtureDataSourceTunnelModel(func(m *DataSourceTunnelModel) {
 			m.RemoteAddress = types.StringValue("203.0.113.2")
 		}),
-		Labels: types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(&resp)
@@ -81,16 +83,19 @@ func TestMapDataSourceFields(t *testing.T) {
 				Id: new("connection-id"),
 			},
 			expected: DataSourceModel{
-				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
-				ConnectionID: types.StringValue("connection-id"),
-				ProjectID:    types.StringValue(projectId),
-				Region:       types.StringValue(region),
-				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue(""),
-				Enabled:      types.BoolValue(true),
-				RemoteSubnet: basetypes.NewListNull(basetypes.StringType{}),
-				LocalSubnet:  basetypes.NewListNull(basetypes.StringType{}),
-				StaticRoutes: basetypes.NewListNull(basetypes.StringType{}),
+				CommonModel: CommonModel{
+					ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+					ConnectionID: types.StringValue("connection-id"),
+					ProjectID:    types.StringValue(projectId),
+					Region:       types.StringValue(region),
+					GatewayID:    types.StringValue(gatewayId),
+					DisplayName:  types.StringValue(""),
+					Enabled:      types.BoolNull(),
+					RemoteSubnet: basetypes.NewListNull(basetypes.StringType{}),
+					LocalSubnet:  basetypes.NewListNull(basetypes.StringType{}),
+					StaticRoutes: basetypes.NewListNull(basetypes.StringType{}),
+					Labels:       basetypes.NewMapNull(basetypes.StringType{}),
+				},
 				Tunnel1: &DataSourceTunnelModel{
 					RemoteAddress: types.StringValue(""),
 					Phase1: &Phase1Model{
@@ -125,7 +130,6 @@ func TestMapDataSourceFields(t *testing.T) {
 						},
 					},
 				},
-				Labels: basetypes.NewMapNull(basetypes.StringType{}),
 			},
 			isValid: true,
 		},
@@ -203,11 +207,13 @@ func TestMapDataSourceFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &DataSourceModel{
-				ProjectID: types.StringValue(projectId),
-				Region:    types.StringValue(region),
-				GatewayID: types.StringValue(gatewayId),
-				Tunnel1:   &DataSourceTunnelModel{},
-				Tunnel2:   &DataSourceTunnelModel{},
+				CommonModel: CommonModel{
+					ProjectID: types.StringValue(projectId),
+					Region:    types.StringValue(region),
+					GatewayID: types.StringValue(gatewayId),
+				},
+				Tunnel1: &DataSourceTunnelModel{},
+				Tunnel2: &DataSourceTunnelModel{},
 			}
 
 			err := mapDataSourceFields(context.Background(), tt.input, state, region)

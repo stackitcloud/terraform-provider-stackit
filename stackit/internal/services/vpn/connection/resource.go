@@ -69,17 +69,14 @@ type BGPTunnelConfigModel struct {
 }
 
 type TunnelModel struct {
-	PreSharedKey          types.String          `tfsdk:"pre_shared_key"`
-	PreSharedKeyWo        types.String          `tfsdk:"pre_shared_key_wo"`
-	PreSharedKeyWoVersion types.Int64           `tfsdk:"pre_shared_key_wo_version"`
-	RemoteAddress         types.String          `tfsdk:"remote_address"`
-	Phase1                *Phase1Model          `tfsdk:"phase1"`
-	Phase2                *Phase2Model          `tfsdk:"phase2"`
-	Peering               *PeeringConfigModel   `tfsdk:"peering"`
-	Bgp                   *BGPTunnelConfigModel `tfsdk:"bgp"`
+	DataSourceTunnelModel
+	PreSharedKey          types.String `tfsdk:"pre_shared_key"`
+	PreSharedKeyWo        types.String `tfsdk:"pre_shared_key_wo"`
+	PreSharedKeyWoVersion types.Int64  `tfsdk:"pre_shared_key_wo_version"`
 }
 
-type Model struct {
+// CommonModel is used in the resource and the datasource implementation to share most of the mapping logic
+type CommonModel struct {
 	ID           types.String `tfsdk:"id"`
 	ConnectionID types.String `tfsdk:"connection_id"`
 	ProjectID    types.String `tfsdk:"project_id"`
@@ -90,9 +87,14 @@ type Model struct {
 	RemoteSubnet types.List   `tfsdk:"remote_subnet"`
 	LocalSubnet  types.List   `tfsdk:"local_subnet"`
 	StaticRoutes types.List   `tfsdk:"static_routes"`
-	Tunnel1      *TunnelModel `tfsdk:"tunnel1"`
-	Tunnel2      *TunnelModel `tfsdk:"tunnel2"`
 	Labels       types.Map    `tfsdk:"labels"`
+}
+
+// Model is used for the resource implementation
+type Model struct {
+	CommonModel
+	Tunnel1 *TunnelModel `tfsdk:"tunnel1"`
+	Tunnel2 *TunnelModel `tfsdk:"tunnel2"`
 }
 
 type BasePhasePayload interface {
@@ -157,6 +159,7 @@ func (r *vpnConnectionResource) Configure(ctx context.Context, req resource.Conf
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	r.client = apiClient
 	r.providerData = providerData
 	tflog.Info(ctx, "VPN client configured")
@@ -166,184 +169,189 @@ func (r *vpnConnectionResource) Metadata(_ context.Context, req resource.Metadat
 	resp.TypeName = req.ProviderTypeName + "_vpn_connection"
 }
 
-func tunnelSchema(rootAttribute string) schema.SingleNestedAttribute {
-	return schema.SingleNestedAttribute{
-		Description:         fmt.Sprintf("Configuration for the IPsec %s.", rootAttribute),
-		MarkdownDescription: fmt.Sprintf("Configuration for the IPsec %s \n\n~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", rootAttribute),
-		Required:            true,
-		Attributes: map[string]schema.Attribute{
-			"pre_shared_key": schema.StringAttribute{
-				Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.",
-				Optional:    true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(20),
-					stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot(rootAttribute).AtName("pre_shared_key_wo")),
-				},
-			},
-			"pre_shared_key_wo": schema.StringAttribute{
-				Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.",
-				Optional:    true,
-				WriteOnly:   true,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(20),
-					stringvalidator.ExactlyOneOf(
-						path.MatchRelative().AtParent().AtName("pre_shared_key"),
-						path.MatchRelative().AtParent().AtName("pre_shared_key_wo"),
-					),
-				},
-			},
-			"pre_shared_key_wo_version": schema.Int64Attribute{
-				Description: "User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.",
-				Optional:    true,
-				Validators: []validator.Int64{
-					int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo")),
-				},
-			},
-			"remote_address": schema.StringAttribute{
-				Description: "Remote IPv4 address for the tunnel endpoint.",
-				Required:    true,
-				Validators: []validator.String{
-					validate.IP(true),
-				},
-			},
-			"phase1": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"dh_groups": schema.ListAttribute{
-						Description: fmt.Sprintf("Diffie-Hellman groups for key exchange. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
-						Optional:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.OneOf(dhGroupValues...),
-							),
-						},
-					},
-					"encryption_algorithms": schema.ListAttribute{
-						Description: fmt.Sprintf("Encryption algorithms for Phase 1. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
-						Required:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.OneOf(encryptionAlgorithmValues...),
-							),
-						},
-					},
-					"integrity_algorithms": schema.ListAttribute{
-						Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
-						Required:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.OneOf(integrityAlgorithmValues...),
-							),
-						},
-					},
-					"rekey_time": schema.Int32Attribute{
-						Description: "Time to schedule an IKE re-keying in seconds. Range: 900-28800. Default: 14400.",
-						Optional:    true,
-						Computed:    true,
-						Validators: []validator.Int32{
-							int32validator.Between(900, 28800),
-						},
-					},
-				},
-			},
-			"phase2": schema.SingleNestedAttribute{
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"dh_groups": schema.ListAttribute{
-						Description: fmt.Sprintf("Diffie-Hellman groups for Phase 2. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
-						Optional:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.OneOf(dhGroupValues...),
-							),
-						},
-					},
-					"encryption_algorithms": schema.ListAttribute{
-						Description: fmt.Sprintf("Encryption algorithms for Phase 2. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
-						Required:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.OneOf(encryptionAlgorithmValues...),
-							),
-						},
-					},
-					"integrity_algorithms": schema.ListAttribute{
-						Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
-						Required:    true,
-						ElementType: types.StringType,
-						Validators: []validator.List{
-							listvalidator.ValueStringsAre(
-								stringvalidator.OneOf(integrityAlgorithmValues...),
-							),
-						},
-					},
-					"rekey_time": schema.Int32Attribute{
-						Description: "Time to schedule a Child SA re-keying in seconds. Range: 900-3600. Default: 3600.",
-						Optional:    true,
-						Computed:    true,
-						Validators: []validator.Int32{
-							int32validator.Between(900, 3600),
-						},
-					},
-					"start_action": schema.StringAttribute{
-						Description: fmt.Sprintf("Action to perform after loading the connection configuration. Default: 'start'. %s", tfutils.FormatPossibleValues(startActionValues...)),
-						Optional:    true,
-						Computed:    true,
-						Validators: []validator.String{
-							stringvalidator.OneOf(startActionValues...),
-						},
-					},
-					"dpd_action": schema.StringAttribute{
-						Description: fmt.Sprintf("Action to perform on DPD timeout. Default: 'restart'. %s", tfutils.FormatPossibleValues(dpdActionValues...)),
-						Optional:    true,
-						Computed:    true,
-						Validators: []validator.String{
-							stringvalidator.OneOf(dpdActionValues...),
-						},
-					},
-				},
-			},
-			"peering": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"local_address": schema.StringAttribute{
-						Description: "Local tunnel interface IPv4 address.",
-						Required:    true,
-						Validators: []validator.String{
-							validate.IP(true),
-						},
-					},
-					"remote_address": schema.StringAttribute{
-						Description: "Remote tunnel interface IPv4 address.",
-						Required:    true,
-						Validators: []validator.String{
-							validate.IP(true),
-						},
-					},
-				},
-			},
-			"bgp": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"remote_asn": schema.Int64Attribute{
-						Description: "Remote ASN for BGP peering (private ASN range, 64512-4294967294).",
-						Required:    true,
-						Validators: []validator.Int64{
-							int64validator.Between(64512, 4294967294),
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
 func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	tunnelSchema := func(rootAttribute string) schema.SingleNestedAttribute {
+		return schema.SingleNestedAttribute{
+			Description:         fmt.Sprintf("Configuration for the IPsec %s.", rootAttribute),
+			MarkdownDescription: fmt.Sprintf("Configuration for the IPsec %s \n\n~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", rootAttribute),
+			Required:            true,
+			Attributes: map[string]schema.Attribute{
+				"pre_shared_key": schema.StringAttribute{
+					Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.",
+					Optional:    true,
+					Sensitive:   true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtLeast(20),
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("pre_shared_key_wo"),
+							path.MatchRelative().AtParent().AtName("pre_shared_key_wo_version"),
+						),
+						stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot(rootAttribute).AtName("pre_shared_key_wo")),
+					},
+				},
+				"pre_shared_key_wo": schema.StringAttribute{
+					Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.",
+					Optional:    true,
+					WriteOnly:   true,
+					Sensitive:   true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtLeast(20),
+						stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
+						stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo_version")),
+					},
+				},
+				"pre_shared_key_wo_version": schema.Int64Attribute{
+					Description: "User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.",
+					Optional:    true,
+					Validators: []validator.Int64{
+						int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo")),
+						int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
+					},
+				},
+				"remote_address": schema.StringAttribute{
+					Description: "Remote IPv4 address for the tunnel endpoint.",
+					Required:    true,
+					Validators: []validator.String{
+						validate.IP(true),
+					},
+				},
+				"phase1": schema.SingleNestedAttribute{
+					Required: true,
+					Attributes: map[string]schema.Attribute{
+						"dh_groups": schema.ListAttribute{
+							Description: fmt.Sprintf("Diffie-Hellman groups for key exchange. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
+							Optional:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(dhGroupValues...),
+								),
+							},
+						},
+						"encryption_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Encryption algorithms for Phase 1. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(encryptionAlgorithmValues...),
+								),
+							},
+						},
+						"integrity_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(integrityAlgorithmValues...),
+								),
+							},
+						},
+						"rekey_time": schema.Int32Attribute{
+							Description: "Time to schedule an IKE re-keying in seconds. Range: 900-28800. Default: 14400.",
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.Int32{
+								int32validator.Between(900, 28800),
+							},
+						},
+					},
+				},
+				"phase2": schema.SingleNestedAttribute{
+					Required: true,
+					Attributes: map[string]schema.Attribute{
+						"dh_groups": schema.ListAttribute{
+							Description: fmt.Sprintf("Diffie-Hellman groups for Phase 2. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
+							Optional:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(dhGroupValues...),
+								),
+							},
+						},
+						"encryption_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Encryption algorithms for Phase 2. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(encryptionAlgorithmValues...),
+								),
+							},
+						},
+						"integrity_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(integrityAlgorithmValues...),
+								),
+							},
+						},
+						"rekey_time": schema.Int32Attribute{
+							Description: "Time to schedule a Child SA re-keying in seconds. Range: 900-3600. Default: 3600.",
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.Int32{
+								int32validator.Between(900, 3600),
+							},
+						},
+						"start_action": schema.StringAttribute{
+							Description: fmt.Sprintf("Action to perform after loading the connection configuration. Default: 'start'. %s", tfutils.FormatPossibleValues(startActionValues...)),
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.OneOf(startActionValues...),
+							},
+						},
+						"dpd_action": schema.StringAttribute{
+							Description: fmt.Sprintf("Action to perform on DPD timeout. Default: 'restart'. %s", tfutils.FormatPossibleValues(dpdActionValues...)),
+							Optional:    true,
+							Computed:    true,
+							Validators: []validator.String{
+								stringvalidator.OneOf(dpdActionValues...),
+							},
+						},
+					},
+				},
+				"peering": schema.SingleNestedAttribute{
+					Optional: true,
+					Attributes: map[string]schema.Attribute{
+						"local_address": schema.StringAttribute{
+							Description: "Local tunnel interface IPv4 address.",
+							Required:    true,
+							Validators: []validator.String{
+								validate.IP(true),
+							},
+						},
+						"remote_address": schema.StringAttribute{
+							Description: "Remote tunnel interface IPv4 address.",
+							Required:    true,
+							Validators: []validator.String{
+								validate.IP(true),
+							},
+						},
+					},
+				},
+				"bgp": schema.SingleNestedAttribute{
+					Optional: true,
+					Attributes: map[string]schema.Attribute{
+						"remote_asn": schema.Int64Attribute{
+							Description: "Remote ASN for BGP peering (private ASN range, 64512-4294967294).",
+							Required:    true,
+							Validators: []validator.Int64{
+								int64validator.Between(64512, 4294967294),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("VPN Connection resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
@@ -501,32 +509,34 @@ func (r *vpnConnectionResource) ImportState(ctx context.Context, req resource.Im
 }
 
 func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
-	diags := req.Plan.Get(ctx, &model)
+	// the regular plan model one always uses in the create implementation
+	var planModel Model
+	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// The config model - this has to be used because Terraform doesn't include write-only field values in the
+	// plan and state models - for security measures. Write-only values should be only kept in the config model
+	// so that they never end up in the state (or plan).
 	var configModel Model
 	diags = req.Config.Get(ctx, &configModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	model.Tunnel1.PreSharedKeyWo = configModel.Tunnel1.PreSharedKeyWo
-	model.Tunnel2.PreSharedKeyWo = configModel.Tunnel2.PreSharedKeyWo
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
-	region := r.providerData.GetRegionWithOverride(model.Region)
-	gatewayId := model.GatewayID.ValueString()
+	projectId := planModel.ProjectID.ValueString()
+	region := r.providerData.GetRegionWithOverride(planModel.Region)
+	gatewayId := planModel.GatewayID.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 
-	payload, err := toCreatePayload(ctx, &model)
+	payload, err := toCreatePayload(ctx, &planModel, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -540,13 +550,13 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, createResp, &model, region)
+	err = mapResourceFields(ctx, createResp, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -575,8 +585,7 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 
 	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -586,7 +595,7 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, connResp, &model, region)
+	err = mapResourceFields(ctx, connResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -601,20 +610,16 @@ func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
-	diags := req.Plan.Get(ctx, &model)
+	// the regular plan model one always uses in the update implementation
+	var planModel Model
+	diags := req.Plan.Get(ctx, &planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var configModel Model
-	diags = req.Config.Get(ctx, &configModel)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
+	// the state model - contains the "previous" values and is needed to compare the old write-only version field
+	// values to the new ones
 	var stateModel Model
 	diags = req.State.Get(ctx, &stateModel)
 	resp.Diagnostics.Append(diags...)
@@ -622,30 +627,28 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	err := pskRotationOnUpdate(resp, "tunnel1", model.Tunnel1, stateModel.Tunnel1.PreSharedKeyWoVersion.ValueInt64(), configModel.Tunnel1.PreSharedKeyWo)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Tunnel1 PSK Rotation", err.Error())
-		return
-	}
-
-	err = pskRotationOnUpdate(resp, "tunnel2", model.Tunnel2, stateModel.Tunnel2.PreSharedKeyWoVersion.ValueInt64(), configModel.Tunnel2.PreSharedKeyWo)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Tunnel2 PSK Rotation", err.Error())
+	// The config model - this has to be used because Terraform doesn't include write-only field values in the
+	// plan and state models - for security measures. Write-only values should be only kept in the config model
+	// so that they never end up in the state (or plan).
+	var configModel Model
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	ctx = core.InitProviderContext(ctx)
 
-	projectId := model.ProjectID.ValueString()
-	region := r.providerData.GetRegionWithOverride(model.Region)
-	gatewayId := model.GatewayID.ValueString()
-	connectionId := model.ConnectionID.ValueString()
+	projectId := planModel.ProjectID.ValueString()
+	region := r.providerData.GetRegionWithOverride(planModel.Region)
+	gatewayId := planModel.GatewayID.ValueString()
+	connectionId := planModel.ConnectionID.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "connection_id", connectionId)
 
-	payload, err := toUpdatePayload(ctx, &model)
+	payload, err := toUpdatePayload(ctx, &planModel, &stateModel, &configModel)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -659,13 +662,13 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, connResp, &model, region)
+	err = mapResourceFields(ctx, connResp, &planModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, planModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -694,8 +697,7 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 
 	err := r.client.DefaultAPI.DeleteGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -707,71 +709,106 @@ func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteR
 	tflog.Info(ctx, "VPN connection deleted")
 }
 
-func pskRotationOnUpdate(resp *resource.UpdateResponse, rootAttribute string, tunnelModel *TunnelModel, currentKeyVersion int64, preSharedKey types.String) error {
-	if resp == nil || tunnelModel == nil {
-		return fmt.Errorf("pskRotationOnUpdate: arguments can not be nil")
+func toCreatePayload(ctx context.Context, planModel, configModel *Model) (*vpn.CreateGatewayConnectionPayload, error) {
+	if planModel == nil {
+		return nil, fmt.Errorf("nil plan model")
 	}
-
-	if !tfutils.IsUndefined(tunnelModel.PreSharedKeyWoVersion) {
-		newKeyVersion := tunnelModel.PreSharedKeyWoVersion.ValueInt64()
-		if newKeyVersion < currentKeyVersion {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(rootAttribute).AtName("pre_shared_key_wo_version"),
-				"Version must not decrease",
-				fmt.Sprintf("`pre_shared_key_wo_version` must be incremented to rotate the pre-shared key, got %d (current: %d).", newKeyVersion, currentKeyVersion),
-			)
-		}
-		if newKeyVersion > currentKeyVersion {
-			// Secret must be read from Config, not Plan — write-only values are always null in plan.
-			tunnelModel.PreSharedKeyWo = preSharedKey
-		}
-	}
-	return nil
-}
-
-func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayConnectionPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
+	if configModel == nil {
+		return nil, fmt.Errorf("nil config model")
 	}
 
 	payload := &vpn.CreateGatewayConnectionPayload{}
-	err := toConnectionPayload(ctx, model, payload)
+	err := toConnectionPayload(ctx, planModel, payload)
 	if err != nil {
 		return nil, err
 	}
 
+	// Terraform keeps the write-only field values in the config model - and they shouldn't leave this config model
+	// to make sure they don't end up being stored in the state. In the plan model the write-only field values are just
+	// empty. That's why we read everything from the plan model. Except for the field values which are marked as
+	// write-only in the schema. They are read from the config model.
+
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing
+	getPresharedKey := func(planTunnelModel, configTunnelModel *TunnelModel) *string {
+		if !planTunnelModel.PreSharedKey.IsNull() && !planTunnelModel.PreSharedKey.IsUnknown() {
+			// handle the legacy fallback logic
+			return planTunnelModel.PreSharedKey.ValueStringPointer()
+		} else if (!configTunnelModel.PreSharedKeyWo.IsNull() && !configTunnelModel.PreSharedKeyWo.IsUnknown()) &&
+			(!planTunnelModel.PreSharedKeyWoVersion.IsNull() && !planTunnelModel.PreSharedKeyWoVersion.IsUnknown()) {
+			// the user is using the write-only field
+			return configTunnelModel.PreSharedKeyWo.ValueStringPointer()
+		}
+
+		return nil
+	}
+
+	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, configModel.Tunnel1)
+	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, configModel.Tunnel2)
+
 	return payload, nil
 }
 
-func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayConnectionPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
+func toUpdatePayload(ctx context.Context, planModel, stateModel, configModel *Model) (*vpn.UpdateGatewayConnectionPayload, error) {
+	if planModel == nil {
+		return nil, fmt.Errorf("nil plan model")
+	}
+	if stateModel == nil {
+		return nil, fmt.Errorf("nil state model")
+	}
+	if configModel == nil {
+		return nil, fmt.Errorf("nil config model")
 	}
 
 	payload := &vpn.UpdateGatewayConnectionPayload{}
-	err := toConnectionPayload(ctx, model, payload)
+	err := toConnectionPayload(ctx, planModel, payload)
 	if err != nil {
 		return nil, err
 	}
 
+	// Terraform keeps the write-only field values in the config model - and they shouldn't leave this config model
+	// to make sure they don't end up being stored in the state. In the plan model the write-only field values are just
+	// empty. That's why we read everything from the plan model. Except for the field values which are marked as
+	// write-only in the schema. They are read from the config model.
+
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing
+	getPresharedKey := func(planTunnelModel, stateTunnelModel, configTunnelModel *TunnelModel) *string {
+		if !planTunnelModel.PreSharedKey.IsNull() {
+			// handle the legacy fallback logic
+			return planTunnelModel.PreSharedKey.ValueStringPointer()
+		} else if !configTunnelModel.PreSharedKeyWo.IsNull() {
+			// write-only field is set, handle the write-only and version logic
+
+			// check if the version changed between state (old) and plan (new)
+			if !planTunnelModel.PreSharedKeyWoVersion.Equal(stateTunnelModel.PreSharedKeyWoVersion) {
+				// the user bumped the version meaning we need to send the write-only field value to the API
+				return configTunnelModel.PreSharedKeyWo.ValueStringPointer()
+			}
+		}
+
+		return nil
+	}
+
+	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, stateModel.Tunnel1, configModel.Tunnel1)
+	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, stateModel.Tunnel2, configModel.Tunnel2)
+
 	return payload, nil
 }
 
+// toConnectionPayload builds the API payloads for create and update. It does NOT set presharedkey payload since it's
+// logic differs for create and update implementations
 func toConnectionPayload(ctx context.Context, model *Model, payload connectionPayload) error {
-	if payload == nil {
-		return fmt.Errorf("payload can not be nil")
-	}
-
 	tunnel1, err := toTunnelPayload(model.Tunnel1)
-	if err != nil && tunnel1 != nil {
+	if err != nil {
 		return fmt.Errorf("converting tunnel1: %w", err)
 	}
+
 	payload.SetTunnel1(*tunnel1)
 
 	tunnel2, err := toTunnelPayload(model.Tunnel2)
-	if err != nil && tunnel2 != nil {
+	if err != nil {
 		return fmt.Errorf("converting tunnel2: %w", err)
 	}
+
 	payload.SetTunnel2(*tunnel2)
 
 	payload.SetDisplayName(model.DisplayName.ValueString())
@@ -822,12 +859,6 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 		RemoteAddress: tunnel.RemoteAddress.ValueString(),
 	}
 
-	if !tfutils.IsUndefined(tunnel.PreSharedKeyWo) {
-		config.PreSharedKey = tunnel.PreSharedKeyWo.ValueStringPointer()
-	} else if !tfutils.IsUndefined(tunnel.PreSharedKey) {
-		config.PreSharedKey = tunnel.PreSharedKey.ValueStringPointer()
-	}
-
 	if tunnel.Phase1 != nil {
 		phase1 := vpn.TunnelConfigurationPhase1{}
 		err := toBasePhasePayload(&tunnel.Phase1.BasePhaseModel, &phase1)
@@ -838,39 +869,29 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 	}
 
 	if tunnel.Phase2 != nil {
-		phase2 := vpn.TunnelConfigurationPhase2{}
+		phase2 := vpn.TunnelConfigurationPhase2{
+			StartAction: conversion.StringValueToEnumPointer[vpn.TunnelConfigurationPhase2AllOfStartAction](tunnel.Phase2.StartAction),
+			DpdAction:   conversion.StringValueToEnumPointer[vpn.TunnelConfigurationPhase2AllOfDpdAction](tunnel.Phase2.DpdAction),
+		}
 
 		err := toBasePhasePayload(&tunnel.Phase2.BasePhaseModel, &phase2)
 		if err != nil {
 			return nil, err
 		}
 
-		if !tfutils.IsUndefined(tunnel.Phase2.StartAction) {
-			startAction := tunnel.Phase2.StartAction.ValueString()
-			phase2.StartAction = vpn.TunnelConfigurationPhase2AllOfStartAction(startAction).Ptr()
-		}
-
-		if !tfutils.IsUndefined(tunnel.Phase2.DpdAction) {
-			dpdAction := tunnel.Phase2.DpdAction.ValueString()
-			phase2.DpdAction = vpn.TunnelConfigurationPhase2AllOfDpdAction(dpdAction).Ptr()
-		}
-
 		config.Phase2 = phase2
 	}
 
 	if tunnel.Peering != nil {
-		localAddr := tunnel.Peering.LocalAddress.ValueString()
-		remoteAddr := tunnel.Peering.RemoteAddress.ValueString()
 		config.Peering = &vpn.PeeringConfig{
-			LocalAddress:  &localAddr,
-			RemoteAddress: &remoteAddr,
+			LocalAddress:  new(tunnel.Peering.LocalAddress.ValueString()),
+			RemoteAddress: new(tunnel.Peering.RemoteAddress.ValueString()),
 		}
 	}
 
 	if tunnel.Bgp != nil {
-		remoteAsn := tunnel.Bgp.RemoteAsn.ValueInt64()
 		config.Bgp = &vpn.BGPTunnelConfig{
-			RemoteAsn: remoteAsn,
+			RemoteAsn: tunnel.Bgp.RemoteAsn.ValueInt64(),
 		}
 	}
 
@@ -878,48 +899,45 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 }
 
 func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayload) error {
-	if phaseModel != nil {
-		if !tfutils.IsUndefined(phaseModel.DhGroups) {
-			dhGroups, err := tfutils.ListValueToStringSlice(phaseModel.DhGroups)
-			if err != nil {
-				return fmt.Errorf("converting phase dh_groups: %w", err)
-			}
-			dhGroupsInner := []vpn.PhaseDhGroupsInner{}
-			for _, item := range dhGroups {
-				dhGroupsInner = append(dhGroupsInner, vpn.PhaseDhGroupsInner(item))
-			}
-			phasePayload.SetDhGroups(dhGroupsInner)
-		}
-
-		encAlgs, err := tfutils.ListValueToStringSlice(phaseModel.EncryptionAlgorithms)
-		if err != nil {
-			return fmt.Errorf("converting phase encryption_algorithms: %w", err)
-		}
-		encAlgsInner := []vpn.PhaseEncryptionAlgorithmsInner{}
-		for _, item := range encAlgs {
-			encAlgsInner = append(encAlgsInner, vpn.PhaseEncryptionAlgorithmsInner(item))
-		}
-		phasePayload.SetEncryptionAlgorithms(encAlgsInner)
-
-		intAlgs, err := tfutils.ListValueToStringSlice(phaseModel.IntegrityAlgorithms)
-		if err != nil {
-			return fmt.Errorf("converting phase integrity_algorithms: %w", err)
-		}
-		intAlgsInner := []vpn.PhaseIntegrityAlgorithmsInner{}
-		for _, item := range intAlgs {
-			intAlgsInner = append(intAlgsInner, vpn.PhaseIntegrityAlgorithmsInner(item))
-		}
-		phasePayload.SetIntegrityAlgorithms(intAlgsInner)
-
-		if !tfutils.IsUndefined(phaseModel.RekeyTime) {
-			rekeyTime := phaseModel.RekeyTime.ValueInt32()
-			phasePayload.SetRekeyTime(rekeyTime)
-		}
+	if phaseModel == nil {
+		return nil
 	}
+
+	if !tfutils.IsUndefined(phaseModel.DhGroups) {
+		dhGroups, err := tfutils.ListValueToStringSlice(phaseModel.DhGroups)
+		if err != nil {
+			return fmt.Errorf("converting phase dh_groups: %w", err)
+		}
+		phasePayload.SetDhGroups(tfutils.Map(dhGroups, func(t string) vpn.PhaseDhGroupsInner {
+			return vpn.PhaseDhGroupsInner(t)
+		}))
+	}
+
+	encAlgs, err := tfutils.ListValueToStringSlice(phaseModel.EncryptionAlgorithms)
+	if err != nil {
+		return fmt.Errorf("converting phase encryption_algorithms: %w", err)
+	}
+	phasePayload.SetEncryptionAlgorithms(tfutils.Map(encAlgs, func(t string) vpn.PhaseEncryptionAlgorithmsInner {
+		return vpn.PhaseEncryptionAlgorithmsInner(t)
+	}))
+
+	intAlgs, err := tfutils.ListValueToStringSlice(phaseModel.IntegrityAlgorithms)
+	if err != nil {
+		return fmt.Errorf("converting phase integrity_algorithms: %w", err)
+	}
+	phasePayload.SetIntegrityAlgorithms(tfutils.Map(intAlgs, func(t string) vpn.PhaseIntegrityAlgorithmsInner {
+		return vpn.PhaseIntegrityAlgorithmsInner(t)
+	}))
+
+	if !tfutils.IsUndefined(phaseModel.RekeyTime) {
+		rekeyTime := phaseModel.RekeyTime.ValueInt32()
+		phasePayload.SetRekeyTime(rekeyTime)
+	}
+
 	return nil
 }
 
-func mapFields(ctx context.Context, conn connectionResponse, model *Model, region string) error {
+func mapCommonFields(ctx context.Context, conn connectionResponse, model *CommonModel, region string) error {
 	if conn == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -941,58 +959,34 @@ func mapFields(ctx context.Context, conn connectionResponse, model *Model, regio
 	model.DisplayName = types.StringValue(conn.GetDisplayName())
 	model.Region = types.StringValue(region)
 
-	if enabled, _ := conn.GetEnabledOk(); enabled != nil {
-		model.Enabled = types.BoolValue(*enabled)
-	} else {
-		model.Enabled = types.BoolNull()
-	}
+	enabled, _ := conn.GetEnabledOk()
+	model.Enabled = types.BoolPointerValue(enabled)
 
+	model.RemoteSubnet = types.ListNull(types.StringType)
 	if remoteSubnets, _ := conn.GetRemoteSubnetsOk(); remoteSubnets != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, remoteSubnets)
 		if diags.HasError() {
 			return fmt.Errorf("mapping remote_subnet: %w", core.DiagsToError(diags))
 		}
 		model.RemoteSubnet = list
-	} else {
-		model.RemoteSubnet = types.ListNull(types.StringType)
 	}
 
+	model.LocalSubnet = types.ListNull(types.StringType)
 	if localSubnets, _ := conn.GetLocalSubnetsOk(); localSubnets != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, localSubnets)
 		if diags.HasError() {
 			return fmt.Errorf("mapping local_subnet: %w", core.DiagsToError(diags))
 		}
 		model.LocalSubnet = list
-	} else {
-		model.LocalSubnet = types.ListNull(types.StringType)
 	}
 
+	model.StaticRoutes = types.ListNull(types.StringType)
 	if staticRoutes, _ := conn.GetStaticRoutesOk(); staticRoutes != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, staticRoutes)
 		if diags.HasError() {
 			return fmt.Errorf("mapping static_routes: %w", core.DiagsToError(diags))
 		}
 		model.StaticRoutes = list
-	} else {
-		model.StaticRoutes = types.ListNull(types.StringType)
-	}
-
-	tunnel1 := conn.GetTunnel1()
-	if model.Tunnel1 == nil {
-		model.Tunnel1 = &TunnelModel{}
-	}
-	err := mapTunnel(ctx, &tunnel1, model.Tunnel1)
-	if err != nil {
-		return fmt.Errorf("mapping tunnel1: %w", err)
-	}
-
-	tunnel2 := conn.GetTunnel2()
-	if model.Tunnel2 == nil {
-		model.Tunnel2 = &TunnelModel{}
-	}
-	err = mapTunnel(ctx, &tunnel2, model.Tunnel2)
-	if err != nil {
-		return fmt.Errorf("mapping tunnel2: %w", err)
 	}
 
 	respLabels, _ := conn.GetLabelsOk()
@@ -1005,7 +999,34 @@ func mapFields(ctx context.Context, conn connectionResponse, model *Model, regio
 	return nil
 }
 
-func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel *TunnelModel) error {
+func mapResourceFields(ctx context.Context, conn connectionResponse, model *Model, region string) error {
+	err := mapCommonFields(ctx, conn, &model.CommonModel, region)
+	if err != nil {
+		return err
+	}
+
+	tunnel1 := conn.GetTunnel1()
+	if model.Tunnel1 == nil {
+		model.Tunnel1 = &TunnelModel{}
+	}
+	err = mapTunnel(ctx, &tunnel1, &model.Tunnel1.DataSourceTunnelModel)
+	if err != nil {
+		return fmt.Errorf("mapping tunnel1: %w", err)
+	}
+
+	tunnel2 := conn.GetTunnel2()
+	if model.Tunnel2 == nil {
+		model.Tunnel2 = &TunnelModel{}
+	}
+	err = mapTunnel(ctx, &tunnel2, &model.Tunnel2.DataSourceTunnelModel)
+	if err != nil {
+		return fmt.Errorf("mapping tunnel2: %w", err)
+	}
+
+	return nil
+}
+
+func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel *DataSourceTunnelModel) error {
 	if apiTunnel == nil {
 		return fmt.Errorf("apiTunnel can not be nil")
 	}
@@ -1013,12 +1034,13 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel
 		return fmt.Errorf("tfTunnel can not be nil")
 	}
 
-	tfTunnel.RemoteAddress = types.StringValue(string(apiTunnel.RemoteAddress))
+	tfTunnel.RemoteAddress = types.StringValue(apiTunnel.RemoteAddress)
 
 	basePhase1, err := mapBasePhase(ctx, &apiTunnel.Phase1)
 	if err != nil {
 		return err
 	}
+
 	tfTunnel.Phase1 = &Phase1Model{
 		BasePhaseModel: basePhase1,
 	}
@@ -1027,43 +1049,26 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel
 	if err != nil {
 		return err
 	}
+
 	tfTunnel.Phase2 = &Phase2Model{
 		BasePhaseModel: basePhase2,
-	}
-	if apiTunnel.Phase2.StartAction != nil {
-		tfTunnel.Phase2.StartAction = types.StringValue(string(*apiTunnel.Phase2.StartAction))
-	} else {
-		tfTunnel.Phase2.StartAction = types.StringNull()
-	}
-	if apiTunnel.Phase2.DpdAction != nil {
-		tfTunnel.Phase2.DpdAction = types.StringValue(string(*apiTunnel.Phase2.DpdAction))
-	} else {
-		tfTunnel.Phase2.DpdAction = types.StringNull()
+		StartAction:    types.StringPointerValue((*string)(apiTunnel.Phase2.StartAction)),
+		DpdAction:      types.StringPointerValue((*string)(apiTunnel.Phase2.DpdAction)),
 	}
 
+	tfTunnel.Peering = nil
 	if apiTunnel.Peering != nil {
-		peering := &PeeringConfigModel{}
-		if apiTunnel.Peering.LocalAddress != nil {
-			peering.LocalAddress = types.StringValue(*apiTunnel.Peering.LocalAddress)
-		} else {
-			peering.LocalAddress = types.StringNull()
+		tfTunnel.Peering = &PeeringConfigModel{
+			LocalAddress:  types.StringPointerValue(apiTunnel.Peering.LocalAddress),
+			RemoteAddress: types.StringPointerValue(apiTunnel.Peering.RemoteAddress),
 		}
-		if apiTunnel.Peering.RemoteAddress != nil {
-			peering.RemoteAddress = types.StringValue(*apiTunnel.Peering.RemoteAddress)
-		} else {
-			peering.RemoteAddress = types.StringNull()
-		}
-		tfTunnel.Peering = peering
-	} else {
-		tfTunnel.Peering = nil
 	}
 
+	tfTunnel.Bgp = nil
 	if apiTunnel.Bgp != nil {
 		tfTunnel.Bgp = &BGPTunnelConfigModel{
-			RemoteAsn: types.Int64Value(int64(apiTunnel.Bgp.RemoteAsn)),
+			RemoteAsn: types.Int64Value(apiTunnel.Bgp.RemoteAsn),
 		}
-	} else {
-		tfTunnel.Bgp = nil
 	}
 
 	return nil
@@ -1074,34 +1079,31 @@ func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePha
 		return phase, fmt.Errorf("api phase can not be nil")
 	}
 
-	if dhGroups, _ := apiPhase.GetDhGroupsOk(); len(dhGroups) > 0 {
+	phase.DhGroups = types.ListNull(types.StringType)
+	if dhGroups, _ := apiPhase.GetDhGroupsOk(); dhGroups != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, dhGroups)
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
 		}
 		phase.DhGroups = list
-	} else {
-		phase.DhGroups = types.ListNull(types.StringType)
 	}
 
-	if encryptionAlgorithms, _ := apiPhase.GetEncryptionAlgorithmsOk(); len(encryptionAlgorithms) > 0 {
+	phase.EncryptionAlgorithms = types.ListNull(types.StringType)
+	if encryptionAlgorithms, _ := apiPhase.GetEncryptionAlgorithmsOk(); encryptionAlgorithms != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, encryptionAlgorithms)
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
 		}
 		phase.EncryptionAlgorithms = list
-	} else {
-		phase.EncryptionAlgorithms = types.ListNull(types.StringType)
 	}
 
-	if integrityAlgorithms, _ := apiPhase.GetIntegrityAlgorithmsOk(); len(integrityAlgorithms) > 0 {
+	phase.IntegrityAlgorithms = types.ListNull(types.StringType)
+	if integrityAlgorithms, _ := apiPhase.GetIntegrityAlgorithmsOk(); integrityAlgorithms != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, integrityAlgorithms)
 		if diags.HasError() {
 			return phase, fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
 		}
 		phase.IntegrityAlgorithms = list
-	} else {
-		phase.IntegrityAlgorithms = types.ListNull(types.StringType)
 	}
 
 	rekeyTime, _ := apiPhase.GetRekeyTimeOk()

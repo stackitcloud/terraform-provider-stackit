@@ -24,7 +24,8 @@ resource "stackit_vpn_connection" "connection" {
   local_subnet  = [var.local_subnet]
 
   tunnel1 = {
-    remote_address            = var.tunnel1_remote_address
+    remote_address = var.tunnel1_remote_address
+    # in the MIN test we use the legacy field, in the MAX test the write-only field
     pre_shared_key_wo         = var.tunnel1_psk
     pre_shared_key_wo_version = var.tunnel1_psk_version
 
@@ -54,7 +55,8 @@ resource "stackit_vpn_connection" "connection" {
   }
 
   tunnel2 = {
-    remote_address            = var.tunnel2_remote_address
+    remote_address = var.tunnel2_remote_address
+    # in the MIN test we use the legacy field, in the MAX test the write-only field
     pre_shared_key_wo         = var.tunnel2_psk
     pre_shared_key_wo_version = var.tunnel2_psk_version
 

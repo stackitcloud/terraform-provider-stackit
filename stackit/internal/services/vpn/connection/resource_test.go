@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
@@ -86,16 +85,18 @@ func fixtureBasePhaseModel(mods ...func(m *BasePhaseModel)) BasePhaseModel {
 func fixtureTunnelModel(mods ...func(m *TunnelModel)) *TunnelModel {
 	resp := &TunnelModel{
 		PreSharedKeyWoVersion: types.Int64Value(1),
-		RemoteAddress:         types.StringValue("203.0.113.1"),
-		Phase1: &Phase1Model{
-			BasePhaseModel: fixtureBasePhaseModel(),
-		},
-		Phase2: &Phase2Model{
-			BasePhaseModel: fixtureBasePhaseModel(func(m *BasePhaseModel) {
-				m.RekeyTime = types.Int32Value(3600)
-			}),
-			StartAction: types.StringValue("start"),
-			DpdAction:   types.StringValue("restart"),
+		DataSourceTunnelModel: DataSourceTunnelModel{
+			RemoteAddress: types.StringValue("203.0.113.1"),
+			Phase1: &Phase1Model{
+				BasePhaseModel: fixtureBasePhaseModel(),
+			},
+			Phase2: &Phase2Model{
+				BasePhaseModel: fixtureBasePhaseModel(func(m *BasePhaseModel) {
+					m.RekeyTime = types.Int32Value(3600)
+				}),
+				StartAction: types.StringValue("start"),
+				DpdAction:   types.StringValue("restart"),
+			},
 		},
 	}
 	for _, mod := range mods {
@@ -106,27 +107,29 @@ func fixtureTunnelModel(mods ...func(m *TunnelModel)) *TunnelModel {
 
 func fixtureModel(mods ...func(m *Model)) Model {
 	resp := Model{
-		ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
-		ConnectionID: types.StringValue("connection-id"),
-		ProjectID:    types.StringValue(projectId),
-		Region:       types.StringValue(region),
-		GatewayID:    types.StringValue(gatewayId),
-		DisplayName:  types.StringValue("test-connection"),
-		Enabled:      types.BoolValue(true),
-		RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
-			types.StringValue("10.0.0.0/16"),
-		}),
-		LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
-			types.StringValue("192.168.0.0/24"),
-		}),
-		StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
-			types.StringValue("123.45.67.89"),
-		}),
+		CommonModel: CommonModel{
+			ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+			ConnectionID: types.StringValue("connection-id"),
+			ProjectID:    types.StringValue(projectId),
+			Region:       types.StringValue(region),
+			GatewayID:    types.StringValue(gatewayId),
+			DisplayName:  types.StringValue("test-connection"),
+			Enabled:      types.BoolValue(true),
+			RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("10.0.0.0/16"),
+			}),
+			LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("192.168.0.0/24"),
+			}),
+			StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
+				types.StringValue("123.45.67.89"),
+			}),
+			Labels: types.MapNull(types.StringType),
+		},
 		Tunnel1: fixtureTunnelModel(),
 		Tunnel2: fixtureTunnelModel(func(m *TunnelModel) {
 			m.RemoteAddress = types.StringValue("203.0.113.2")
 		}),
-		Labels: types.MapNull(types.StringType),
 	}
 	for _, mod := range mods {
 		mod(&resp)
@@ -232,52 +235,58 @@ func TestMapFields(t *testing.T) {
 				Tunnel2: vpn.TunnelConfiguration{},
 			},
 			expected: Model{
-				ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
-				ConnectionID: types.StringValue("connection-id"),
-				ProjectID:    types.StringValue(projectId),
-				Region:       types.StringValue(region),
-				GatewayID:    types.StringValue(gatewayId),
-				DisplayName:  types.StringValue(""),
-				RemoteSubnet: types.ListNull(types.StringType),
-				LocalSubnet:  types.ListNull(types.StringType),
-				StaticRoutes: types.ListNull(types.StringType),
+				CommonModel: CommonModel{
+					ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+					ConnectionID: types.StringValue("connection-id"),
+					ProjectID:    types.StringValue(projectId),
+					Region:       types.StringValue(region),
+					GatewayID:    types.StringValue(gatewayId),
+					DisplayName:  types.StringValue(""),
+					RemoteSubnet: types.ListNull(types.StringType),
+					LocalSubnet:  types.ListNull(types.StringType),
+					StaticRoutes: types.ListNull(types.StringType),
+					Labels:       types.MapNull(types.StringType),
+				},
 				Tunnel1: &TunnelModel{
 					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue(""),
-					Phase1: &Phase1Model{
-						BasePhaseModel: BasePhaseModel{
-							DhGroups:             types.ListNull(types.StringType),
-							EncryptionAlgorithms: types.ListNull(types.StringType),
-							IntegrityAlgorithms:  types.ListNull(types.StringType),
+					DataSourceTunnelModel: DataSourceTunnelModel{
+						RemoteAddress: types.StringValue(""),
+						Phase1: &Phase1Model{
+							BasePhaseModel: BasePhaseModel{
+								DhGroups:             types.ListNull(types.StringType),
+								EncryptionAlgorithms: types.ListNull(types.StringType),
+								IntegrityAlgorithms:  types.ListNull(types.StringType),
+							},
 						},
-					},
-					Phase2: &Phase2Model{
-						BasePhaseModel: BasePhaseModel{
-							DhGroups:             types.ListNull(types.StringType),
-							EncryptionAlgorithms: types.ListNull(types.StringType),
-							IntegrityAlgorithms:  types.ListNull(types.StringType),
+						Phase2: &Phase2Model{
+							BasePhaseModel: BasePhaseModel{
+								DhGroups:             types.ListNull(types.StringType),
+								EncryptionAlgorithms: types.ListNull(types.StringType),
+								IntegrityAlgorithms:  types.ListNull(types.StringType),
+							},
 						},
 					},
 				},
 				Tunnel2: &TunnelModel{
 					PreSharedKeyWoVersion: types.Int64Value(1),
-					RemoteAddress:         types.StringValue(""),
-					Phase1: &Phase1Model{
-						BasePhaseModel: BasePhaseModel{
-							DhGroups:             types.ListNull(types.StringType),
-							EncryptionAlgorithms: types.ListNull(types.StringType),
-							IntegrityAlgorithms:  types.ListNull(types.StringType),
+					DataSourceTunnelModel: DataSourceTunnelModel{
+						RemoteAddress: types.StringValue(""),
+						Phase1: &Phase1Model{
+							BasePhaseModel: BasePhaseModel{
+								DhGroups:             types.ListNull(types.StringType),
+								EncryptionAlgorithms: types.ListNull(types.StringType),
+								IntegrityAlgorithms:  types.ListNull(types.StringType),
+							},
 						},
-					},
-					Phase2: &Phase2Model{
-						BasePhaseModel: BasePhaseModel{
-							DhGroups:             types.ListNull(types.StringType),
-							EncryptionAlgorithms: types.ListNull(types.StringType),
-							IntegrityAlgorithms:  types.ListNull(types.StringType),
+						Phase2: &Phase2Model{
+							BasePhaseModel: BasePhaseModel{
+								DhGroups:             types.ListNull(types.StringType),
+								EncryptionAlgorithms: types.ListNull(types.StringType),
+								IntegrityAlgorithms:  types.ListNull(types.StringType),
+							},
 						},
 					},
 				},
-				Labels: types.MapNull(types.StringType),
 			},
 			isValid: true,
 		},
@@ -357,9 +366,11 @@ func TestMapFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			state := &Model{
-				ProjectID: types.StringValue(projectId),
-				Region:    types.StringValue(region),
-				GatewayID: types.StringValue(gatewayId),
+				CommonModel: CommonModel{
+					ProjectID: types.StringValue(projectId),
+					Region:    types.StringValue(region),
+					GatewayID: types.StringValue(gatewayId),
+				},
 				Tunnel1: &TunnelModel{
 					PreSharedKeyWoVersion: types.Int64Value(1),
 				},
@@ -368,7 +379,7 @@ func TestMapFields(t *testing.T) {
 				},
 			}
 
-			err := mapFields(context.Background(), tt.input, state, region)
+			err := mapResourceFields(context.Background(), tt.input, state, region)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
@@ -386,26 +397,135 @@ func TestMapFields(t *testing.T) {
 }
 
 func TestToCreatePayload(t *testing.T) {
+	type args struct {
+		planModel   *Model
+		configModel *Model
+	}
+
 	tests := []struct {
 		description string
-		input       *Model
+		args        args
 		expected    *vpn.CreateGatewayConnectionPayload
 		isValid     bool
 	}{
+		// NOTE: Before diving into these tests read the comments in the function implementation :)
 		{
-			description: "basic_connection",
-			input: new(fixtureModel(func(m *Model) {
-				m.Tunnel1.PreSharedKeyWo = types.StringValue("secret123-at-least-20-chars")
-				m.Tunnel2.PreSharedKeyWo = types.StringValue("secret456-at-least-20-chars")
-			})),
-			expected: fixtureCreatePayload(),
-			isValid:  true,
+			description: "basic connection - no pre-shared key set",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
+			expected: fixtureCreatePayload(func(m *vpn.CreateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+			}),
+			isValid: true,
+		},
+		{
+			description: "basic connection - pre-shared key set via legacy field",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringValue("secret123-at-least-20-chars")
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+
+					m.Tunnel2.PreSharedKey = types.StringValue("secret456-at-least-20-chars")
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				configModel: &Model{},
+			},
+			expected: fixtureCreatePayload(func(m *vpn.CreateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = new("secret123-at-least-20-chars")
+				m.Tunnel2.PreSharedKey = new("secret456-at-least-20-chars")
+			}),
+			isValid: true,
+		},
+		{
+			description: "basic connection - write only pre-shared key set together with write only version",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Value(1)
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Value(0)
+				})),
+				configModel: &Model{
+					Tunnel1: &TunnelModel{
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo: types.StringValue("secret123-at-least-20-chars"),
+					},
+					Tunnel2: &TunnelModel{
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo: types.StringValue("secret456-at-least-20-chars"),
+					},
+				},
+			},
+			expected: fixtureCreatePayload(func(m *vpn.CreateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = new("secret123-at-least-20-chars")
+				m.Tunnel2.PreSharedKey = new("secret456-at-least-20-chars")
+			}),
+			isValid: true,
+		},
+		{
+			description: "basic connection - write only pre-shared key set but write only version not set",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				configModel: &Model{
+					Tunnel1: &TunnelModel{
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo: types.StringValue("secret123-at-least-20-chars"),
+					},
+					Tunnel2: &TunnelModel{
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo: types.StringValue("secret456-at-least-20-chars"),
+					},
+				},
+			},
+			expected: fixtureCreatePayload(func(m *vpn.CreateGatewayConnectionPayload) {
+				// must be nil because the write only version is not set
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+			}),
+			isValid: true,
 		},
 		{
 			description: "minimal_create",
-			input: &Model{
-				Tunnel1: &TunnelModel{},
-				Tunnel2: &TunnelModel{},
+			args: args{
+				planModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
 			},
 			expected: &vpn.CreateGatewayConnectionPayload{
 				Labels: &map[string]string{},
@@ -413,15 +533,27 @@ func TestToCreatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "nil_model",
-			input:       nil,
-			expected:    nil,
-			isValid:     false,
+			description: "plan model is nil",
+			args: args{
+				planModel:   nil,
+				configModel: &Model{},
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "config model is nil",
+			args: args{
+				planModel:   &Model{},
+				configModel: nil,
+			},
+			expected: nil,
+			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toCreatePayload(context.Background(), tt.input)
+			payload, err := toCreatePayload(context.Background(), tt.args.planModel, tt.args.configModel)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
@@ -440,26 +572,196 @@ func TestToCreatePayload(t *testing.T) {
 }
 
 func TestToUpdatePayload(t *testing.T) {
+	type args struct {
+		planModel   *Model
+		stateModel  *Model
+		configModel *Model
+	}
+
 	tests := []struct {
 		description string
-		input       *Model
+		args        args
 		expected    *vpn.UpdateGatewayConnectionPayload
 		isValid     bool
 	}{
+		// NOTE: Before diving into these tests read the comments in the function implementation :)
 		{
-			description: "basic_update",
-			input: new(fixtureModel(func(m *Model) {
-				m.Tunnel1.PreSharedKeyWo = types.StringValue("secret123-at-least-20-chars")
-				m.Tunnel2.PreSharedKeyWo = types.StringValue("secret456-at-least-20-chars")
-			})),
-			expected: fixtureUpdatePayload(),
-			isValid:  true,
+			description: "basic update - update of pre-shared key legacy field",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringValue("secret123-at-least-20-chars")
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Value(1)
+
+					m.Tunnel2.PreSharedKey = types.StringValue("secret456-at-least-20-chars")
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Value(1)
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						PreSharedKey:          types.StringValue("old-secret-123-foo-bar"),
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Null(),
+					},
+					Tunnel2: &TunnelModel{
+						PreSharedKey:          types.StringValue("old-secret-456-foo-bar"),
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Null(),
+					},
+				},
+				configModel: &Model{},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = new("secret123-at-least-20-chars")
+				m.Tunnel2.PreSharedKey = new("secret456-at-least-20-chars")
+			}),
+			isValid: true,
+		},
+		{
+			description: "basic update - from pre-shared key legacy field to write only field",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Value(1)
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Value(1)
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						PreSharedKey:          types.StringValue("old-secret-123-foo-bar"),
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Null(),
+					},
+					Tunnel2: &TunnelModel{
+						PreSharedKey:          types.StringValue("old-secret-456-foo-bar"),
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Null(),
+					},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo: types.StringValue("secret123-at-least-20-chars"),
+					},
+					Tunnel2: &TunnelModel{
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo: types.StringValue("secret456-at-least-20-chars"),
+					},
+				},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = new("secret123-at-least-20-chars")
+				m.Tunnel2.PreSharedKey = new("secret456-at-least-20-chars")
+			}),
+			isValid: true,
+		},
+		{
+			description: "basic update - pre-shared key was previously set via write-only field but version was not updated now",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Value(1) // note: same version as in state model
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Value(5) // note: same version as in state model
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						PreSharedKey: types.StringNull(),
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Value(1), // note: same version as in plan model
+					},
+					Tunnel2: &TunnelModel{
+						PreSharedKey: types.StringNull(),
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Value(5), // note: same version as in plan model
+					},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{
+						// new write-only field value is irrelevant because the version didn't change
+						PreSharedKeyWo: types.StringValue("foo-bar-something-new-123"),
+					},
+					Tunnel2: &TunnelModel{
+						// new write-only field value is irrelevant because the version didn't change
+						PreSharedKeyWo: types.StringValue("foo-bar-something-new-456"),
+					},
+				},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				// pre-shared key must be nil in the update payload since the WriteOnly Version didn't change between
+				// old (stateModel) and new (planModel)
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+			}),
+			isValid: true,
+		},
+		{
+			description: "basic update - preshared key was previously set via write-only field and is updated now",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Value(2)
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Value(4)
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						PreSharedKey: types.StringNull(),
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Value(1),
+					},
+					Tunnel2: &TunnelModel{
+						PreSharedKey: types.StringNull(),
+						// write-only fields are always null in the plan and struct model - they are/should only be present in the config model
+						PreSharedKeyWo:        types.StringNull(),
+						PreSharedKeyWoVersion: types.Int64Value(5),
+					},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{
+						PreSharedKeyWo: types.StringValue("foo-bar-something-new-123"),
+					},
+					Tunnel2: &TunnelModel{
+						PreSharedKeyWo: types.StringValue("foo-bar-something-new-456"),
+					},
+				},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = new("foo-bar-something-new-123")
+				m.Tunnel2.PreSharedKey = new("foo-bar-something-new-456")
+			}),
+			isValid: true,
 		},
 		{
 			description: "minimal_update",
-			input: &Model{
-				Tunnel1: &TunnelModel{},
-				Tunnel2: &TunnelModel{},
+			args: args{
+				planModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+				stateModel: &Model{},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
 			},
 			expected: &vpn.UpdateGatewayConnectionPayload{
 				Labels: &map[string]string{},
@@ -468,12 +770,19 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			description: "peering",
-			input: new(fixtureModel(func(m *Model) {
-				m.Tunnel1.Peering = &PeeringConfigModel{
-					LocalAddress:  types.StringValue("123.45.67.89"),
-					RemoteAddress: types.StringValue("98.76.54.32"),
-				}
-			})),
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.Peering = &PeeringConfigModel{
+						LocalAddress:  types.StringValue("123.45.67.89"),
+						RemoteAddress: types.StringValue("98.76.54.32"),
+					}
+				})),
+				stateModel: &Model{},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
 			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
 				m.Tunnel1.Peering = &vpn.PeeringConfig{
 					LocalAddress:  new("123.45.67.89"),
@@ -485,16 +794,40 @@ func TestToUpdatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "nil_model",
-			input:       nil,
-			expected:    nil,
-			isValid:     false,
+			description: "plan model is nil",
+			args: args{
+				planModel:   nil,
+				stateModel:  &Model{},
+				configModel: &Model{},
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "state model is nil",
+			args: args{
+				planModel:   &Model{},
+				stateModel:  nil,
+				configModel: &Model{},
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "config model is nil",
+			args: args{
+				planModel:   &Model{},
+				stateModel:  &Model{},
+				configModel: nil,
+			},
+			expected: nil,
+			isValid:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toUpdatePayload(context.Background(), tt.input)
+			payload, err := toUpdatePayload(context.Background(), tt.args.planModel, tt.args.stateModel, tt.args.configModel)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
@@ -574,102 +907,6 @@ func TestToTunnelConfiguration(t *testing.T) {
 					t.Errorf("expected BGP config, got nil")
 				} else if config.Bgp.RemoteAsn != tt.input.Bgp.RemoteAsn.ValueInt64() {
 					t.Errorf("RemoteAsn mismatch: got %v, want %v", config.Bgp.RemoteAsn, tt.input.Bgp.RemoteAsn.ValueInt64())
-				}
-			}
-		})
-	}
-}
-
-func TestPskRotationOnUpdate(t *testing.T) {
-	type args struct {
-		resp              *resource.UpdateResponse
-		rootAttribute     string
-		tunnelModel       *TunnelModel
-		currentKeyVersion int64
-		preSharedKey      types.String
-	}
-
-	tests := []struct {
-		description string
-		input       args
-		expected    *TunnelModel
-		tfError     bool
-		isValid     bool
-	}{
-		{
-			description: "default",
-			input: args{
-				resp:              &resource.UpdateResponse{},
-				rootAttribute:     "tunnel1",
-				tunnelModel:       &TunnelModel{},
-				currentKeyVersion: 0,
-				preSharedKey:      types.StringValue("foo-bar"),
-			},
-			expected: &TunnelModel{},
-			tfError:  false,
-			isValid:  true,
-		},
-		{
-			description: "upgrade_key",
-			input: args{
-				resp:          &resource.UpdateResponse{},
-				rootAttribute: "tunnel1",
-				tunnelModel: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(1),
-				},
-				currentKeyVersion: 0,
-				preSharedKey:      types.StringValue("foo-bar"),
-			},
-			expected: &TunnelModel{
-				PreSharedKeyWoVersion: types.Int64Value(1),
-				PreSharedKeyWo:        types.StringValue("foo-bar"),
-			},
-			tfError: false,
-			isValid: true,
-		},
-		{
-			description: "downgrade_key",
-			input: args{
-				resp:          &resource.UpdateResponse{},
-				rootAttribute: "tunnel1",
-				tunnelModel: &TunnelModel{
-					PreSharedKeyWoVersion: types.Int64Value(0),
-				},
-				currentKeyVersion: 1,
-				preSharedKey:      types.StringValue("foo-bar"),
-			},
-			isValid: true,
-			tfError: true,
-		},
-		{
-			description: "no_args",
-			input:       args{},
-			isValid:     false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			err := pskRotationOnUpdate(tt.input.resp, tt.input.rootAttribute, tt.input.tunnelModel, tt.input.currentKeyVersion, tt.input.preSharedKey)
-
-			if !tt.isValid && err == nil {
-				t.Fatalf("expected error, got none")
-			}
-			if tt.isValid && err != nil {
-				t.Fatalf("expected no error, got %v", err)
-			}
-			if tt.isValid {
-				if tt.tfError && !tt.input.resp.Diagnostics.HasError() {
-					t.Fatalf("expected tf error, got none")
-				}
-				if !tt.tfError && tt.input.resp.Diagnostics.HasError() {
-					t.Fatalf("expected no tf error, got %v", tt.input.resp.Diagnostics.Errors())
-				}
-				if !tt.tfError {
-					modelDiff := cmp.Diff(tt.expected, tt.input.tunnelModel)
-					if modelDiff != "" {
-						t.Fatalf("Data does not match (-want +got):\n%s", modelDiff)
-					}
 				}
 			}
 		})
