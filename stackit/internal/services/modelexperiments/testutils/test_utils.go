@@ -13,23 +13,27 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	mock_instance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance/mock"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/token"
+	mock_serviceenablement "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils/mock"
 )
 
 type TestContext struct {
-	T                  *testing.T
-	MockCtrl           *gomock.Controller
-	MockInstanceCLient *mock_instance.MockDefaultAPI
-	Ctx                context.Context
+	T                           *testing.T
+	MockCtrl                    *gomock.Controller
+	MockInstanceCLient          *mock_instance.MockDefaultAPI
+	MockServiceEnablementClient *mock_serviceenablement.MockDefaultAPI
+	Ctx                         context.Context
 }
 
 func NewTestContext(t *testing.T) *TestContext {
 	ctrl := gomock.NewController(t)
 	mockClient := mock_instance.NewMockDefaultAPI(ctrl)
+	mockServiceClient := mock_serviceenablement.NewMockDefaultAPI(ctrl)
 	return &TestContext{
-		T:                  t,
-		MockCtrl:           ctrl,
-		MockInstanceCLient: mockClient,
-		Ctx:                context.Background(),
+		T:                           t,
+		MockCtrl:                    ctrl,
+		MockInstanceCLient:          mockClient,
+		MockServiceEnablementClient: mockServiceClient,
+		Ctx:                         context.Background(),
 	}
 }
 
