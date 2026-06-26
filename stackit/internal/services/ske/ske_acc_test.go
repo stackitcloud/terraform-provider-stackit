@@ -245,7 +245,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(configVarsMinUpdated()["region"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(configVarsMinUpdated()["network_control_plane_access_scope"])),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "service_account_issuer", testutil.ConvertConfigVariable(configVarsMinUpdated()["service_account_issuer"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer", testutil.ConvertConfigVariable(configVarsMinUpdated()["service_account_issuer"])),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
