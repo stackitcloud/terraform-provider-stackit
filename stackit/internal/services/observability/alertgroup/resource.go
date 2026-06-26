@@ -261,6 +261,7 @@ func (a *alertGroupResource) Schema(_ context.Context, _ resource.SchemaRequest,
 								mapvalidator.KeysAre(stringvalidator.LengthAtMost(200)),
 								mapvalidator.ValueStringsAre(stringvalidator.LengthAtMost(200)),
 								mapvalidator.SizeAtMost(5),
+								mapvalidator.ValueStringsAre(validate.NoLeadingOrTrailingWhitespace()),
 							},
 						},
 						"record": schema.StringAttribute{
