@@ -254,8 +254,8 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	if url != stateAfterCreate.Url.ValueString() {
 		t.Fatalf("expected %v, got %v", url, stateAfterCreate.Url.ValueString())
 	}
-	if stateAfterCreate.State.ValueString() != "unknown" {
-		t.Fatalf("expected %v, got %v", "unknown", stateAfterCreate.State.ValueString())
+	if stateAfterCreate.State.ValueString() != string(createResp.Instance.State) {
+		t.Fatalf("expected %v, got %v", "pending", stateAfterCreate.State.ValueString())
 	}
 	if region != stateAfterCreate.Region.ValueString() {
 		t.Fatalf("expected %v, got %v", region, stateAfterCreate.Region.ValueString())
