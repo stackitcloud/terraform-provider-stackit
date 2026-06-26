@@ -264,14 +264,14 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, i.serviceEnablementClient, region, projectId, utils.ModelServingServiceId).
+	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, i.serviceEnablementClient, region, projectId, utils.ModelExperimentsServiceId).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(
 			ctx,
 			&resp.Diagnostics,
 			"Error enabling AI model experiments",
-			fmt.Sprintf("Error enabling AI model serving: %v", err),
+			fmt.Sprintf("Error enabling AI model experiments: %v", err),
 		)
 		return
 	}
@@ -518,7 +518,7 @@ func mapCreateResponse(ctx context.Context, instanceCreateResp *modelexperiments
 	}
 
 	if waitResp == nil {
-		model.State = types.StringValue("unknown")
+		model.State = types.StringValue(string(instanceCreateResp.Instance.State))
 	} else {
 		model.State = types.StringValue(string(waitResp.Instance.State))
 		model.BucketName = types.StringValue(*waitResp.Instance.BucketName)

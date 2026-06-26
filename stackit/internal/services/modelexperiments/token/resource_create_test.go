@@ -310,8 +310,8 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	if name != createdState.Name.ValueString() {
 		t.Fatalf("Should be equal - expected %v, got %v", name, createdState.Name.ValueString())
 	}
-	if createdState.State.ValueString() != "unknown" {
-		t.Fatalf("Should be equal - expected %v, got %v", "unknown", createdState.State.ValueString())
+	if createdState.State.ValueString() != string(createTokenResp.Token.State) {
+		t.Fatalf("Should be equal - expected %v, got %v", "creating", createdState.State.ValueString())
 	}
 	if description != createdState.Description.ValueString() {
 		t.Fatalf("Should be equal - expected %v, got %v", description, createdState.Description.ValueString())
