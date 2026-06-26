@@ -36,6 +36,7 @@ variable "refresh_before" {}
 variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "network_control_plane_access_scope" {}
+variable "service_account_issuer" {}
 
 resource "stackit_ske_cluster" "cluster" {
   project_id = var.project_id
@@ -98,6 +99,7 @@ resource "stackit_ske_cluster" "cluster" {
       access_scope = var.network_control_plane_access_scope
     }
   }
+  service_account_issuer = var.service_account_issuer
 }
 
 resource "stackit_ske_kubeconfig" "kubeconfig" {
