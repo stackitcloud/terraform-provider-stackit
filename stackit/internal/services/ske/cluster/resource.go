@@ -507,9 +507,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"os_version_min": schema.StringAttribute{
 							Description: "The minimum OS image version. This field will be used to set the minimum OS image version on creation/update of the cluster. If unset, the latest supported OS image version will be used. " + SKEUpdateDoc + " To get the current OS image version being used for the node pool, use the read-only `os_version_used` field.",
 							Optional:    true,
-							Validators: []validator.String{
-								validate.VersionNumber(),
-							},
 						},
 						"os_version": schema.StringAttribute{
 							Description:        "This field is deprecated, use `os_version_min` to configure the version and `os_version_used` to get the currently used version instead.",
