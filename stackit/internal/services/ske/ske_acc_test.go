@@ -146,7 +146,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_start"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_end"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer", testutil.ConvertConfigVariable(testConfigVarsMin["service_account_issuer"])),
+					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
 
