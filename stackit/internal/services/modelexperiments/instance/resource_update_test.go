@@ -14,6 +14,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 func TestUpdate_Success(t *testing.T) {
@@ -27,13 +28,17 @@ func TestUpdate_Success(t *testing.T) {
 	region := "eu01"
 	instanceId := uuid.New()
 	url := "url"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
+	bucketName := "bucket"
+	deletetExpRetention := "1m"
 
 	updateResp := &modelexperiments.PartialUpdateInstanceResponse{
 		Instance: modelexperiments.Instance{
-			DeletedExperimentRetention: new("1m"),
+			DeletedExperimentRetention: &deletetExpRetention,
+			BucketName:                 &bucketName,
 			Description:                &descriptionUpdated,
 			Name:                       instanceNameUpdated,
-			Region:                     new("eu01"),
+			Region:                     &region,
 			Url:                        url,
 			Id:                         instanceId.String(),
 			State:                      "active",
@@ -54,20 +59,22 @@ func TestUpdate_Success(t *testing.T) {
 	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	currentState := instance.Model{
-		Id:          types.StringValue(fmt.Sprintf("%s,%s", projectId, instanceId)),
-		ProjectId:   types.StringValue(projectId.String()),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Name:        types.StringValue(instanceName),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		Labels:      types.MapNull(types.StringType),
+		Id:                         tfId,
+		ProjectId:                  types.StringValue(projectId.String()),
+		InstanceId:                 types.StringValue(instanceId.String()),
+		Name:                       types.StringValue(instanceName),
+		Region:                     types.StringValue(region),
+		Description:                types.StringValue(description),
+		Labels:                     types.MapNull(types.StringType),
+		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
+		BucketName:                 types.StringValue(bucketName),
+		State:                      types.StringValue("active"),
+		Url:                        types.StringValue(url),
 	}
 
 	plannedState := instance.Model{
-		Id:          types.StringValue(fmt.Sprintf("%s,%s", projectId, instanceId)),
 		ProjectId:   types.StringValue(projectId.String()),
 		Region:      types.StringValue(region),
-		InstanceId:  types.StringValue(instanceId.String()),
 		Name:        types.StringValue(instanceNameUpdated),
 		Description: types.StringValue(descriptionUpdated),
 		Labels:      types.MapNull(types.StringType),
@@ -90,6 +97,9 @@ func TestUpdate_Success(t *testing.T) {
 		t.Fatalf("Failed to get state: %v", diags.Errors())
 	}
 
+	if tfId != finalState.Id {
+		t.Fatalf("expected %v, got %v", tfId.String(), finalState.Id.ValueString())
+	}
 	if instanceId.String() != finalState.InstanceId.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
 	}
@@ -111,6 +121,12 @@ func TestUpdate_Success(t *testing.T) {
 	if region != finalState.Region.ValueString() {
 		t.Fatalf("expected %v, got %v", region, finalState.Region.ValueString())
 	}
+	if bucketName != finalState.BucketName.ValueString() {
+		t.Fatalf("expected %v, got %v", bucketName, finalState.BucketName.ValueString())
+	}
+	if deletetExpRetention != finalState.DeletedExperimentRetention.ValueString() {
+		t.Fatalf("expected %v, got %v", deletetExpRetention, finalState.DeletedExperimentRetention.ValueString())
+	}
 }
 
 func TestUpdate_InstanceNotFound(t *testing.T) {
@@ -123,6 +139,10 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 	descriptionUpdated := "description updated"
 	region := "eu01"
 	instanceId := uuid.New()
+	url := "url"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
+	bucketName := "bucket"
+	deletetExpRetention := "1m"
 
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: 404,
@@ -141,19 +161,22 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	currentState := instance.Model{
-		Id:          types.StringValue(fmt.Sprintf("%s,%s", projectId, instanceId)),
-		ProjectId:   types.StringValue(projectId.String()),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Name:        types.StringValue(instanceName),
-		Description: types.StringValue(description),
-		Labels:      types.MapNull(types.StringType),
+		Id:                         tfId,
+		ProjectId:                  types.StringValue(projectId.String()),
+		InstanceId:                 types.StringValue(instanceId.String()),
+		Name:                       types.StringValue(instanceName),
+		Region:                     types.StringValue(region),
+		Description:                types.StringValue(description),
+		Labels:                     types.MapNull(types.StringType),
+		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
+		BucketName:                 types.StringValue(bucketName),
+		State:                      types.StringValue("active"),
+		Url:                        types.StringValue(url),
 	}
 
 	plannedState := instance.Model{
-		Id:          types.StringValue(fmt.Sprintf("%s,%s", projectId, instanceId)),
 		ProjectId:   types.StringValue(projectId.String()),
 		Region:      types.StringValue(region),
-		InstanceId:  types.StringValue(instanceId.String()),
 		Name:        types.StringValue(instanceNameUpdated),
 		Description: types.StringValue(descriptionUpdated),
 		Labels:      types.MapNull(types.StringType),
@@ -190,6 +213,10 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 	descriptionUpdated := "description updated"
 	region := "eu01"
 	instanceId := uuid.New()
+	url := "url"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
+	bucketName := "bucket"
+	deletetExpRetention := "1m"
 
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{
 		ApiService: tc.MockInstanceCLient,
@@ -205,20 +232,22 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	currentState := instance.Model{
-		Id:          types.StringValue(fmt.Sprintf("%s,%s", projectId, instanceId)),
-		ProjectId:   types.StringValue(projectId.String()),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Region:      types.StringValue(region),
-		Name:        types.StringValue(instanceName),
-		Description: types.StringValue(description),
-		Labels:      types.MapNull(types.StringType),
+		Id:                         tfId,
+		ProjectId:                  types.StringValue(projectId.String()),
+		InstanceId:                 types.StringValue(instanceId.String()),
+		Name:                       types.StringValue(instanceName),
+		Region:                     types.StringValue(region),
+		Description:                types.StringValue(description),
+		Labels:                     types.MapNull(types.StringType),
+		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
+		BucketName:                 types.StringValue(bucketName),
+		State:                      types.StringValue("active"),
+		Url:                        types.StringValue(url),
 	}
 
 	plannedState := instance.Model{
-		Id:          types.StringValue(fmt.Sprintf("%s,%s", projectId, instanceId)),
 		ProjectId:   types.StringValue(projectId.String()),
 		Region:      types.StringValue(region),
-		InstanceId:  types.StringValue(instanceId.String()),
 		Name:        types.StringValue(instanceNameUpdated),
 		Description: types.StringValue(descriptionUpdated),
 		Labels:      types.MapNull(types.StringType),
@@ -240,22 +269,34 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 		t.Fatalf("Failed to get state: %v", diags.Errors())
 	}
 
-	if description != finalState.Description.ValueString() {
-		t.Fatalf("value should not have changed - expected %v, got %v", description, finalState.Description.ValueString())
-	}
-	if instanceName != finalState.Name.ValueString() {
-		t.Fatalf("value should not have changed - expected %v, got %v", instanceName, finalState.Name.ValueString())
+	if tfId != finalState.Id {
+		t.Fatalf("expected %v, got %v", tfId.String(), finalState.Id.ValueString())
 	}
 	if instanceId.String() != finalState.InstanceId.ValueString() {
-		t.Fatalf("value should not have changed - expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
-	}
-	if region != finalState.Region.ValueString() {
-		t.Fatalf("value should not have changed - expected %v, got %v", region, finalState.Region.ValueString())
+		t.Fatalf("expected %v, got %v", instanceId.String(), finalState.InstanceId.ValueString())
 	}
 	if projectId.String() != finalState.ProjectId.ValueString() {
-		t.Fatalf("value should not have changed - expected %v, got %v", projectId.String(), finalState.ProjectId.ValueString())
+		t.Fatalf("expected %v, got %v", projectId.String(), finalState.ProjectId.ValueString())
 	}
-	if fmt.Sprintf("%s,%s", projectId, instanceId) != finalState.Id.ValueString() {
-		t.Fatalf("value should not have changed - expected %v, got %v", fmt.Sprintf("%s,%s", projectId, instanceId), finalState.Id.ValueString())
+	if instanceName != finalState.Name.ValueString() {
+		t.Fatalf("expected %v, got %v", instanceName, finalState.Name.ValueString())
+	}
+	if description != finalState.Description.ValueString() {
+		t.Fatalf("expected %v, got %v", description, finalState.Description.ValueString())
+	}
+	if finalState.State.ValueString() != "active" {
+		t.Fatalf("expected %v, got %v", "active", finalState.State.ValueString())
+	}
+	if url != finalState.Url.ValueString() {
+		t.Fatalf("expected %v, got %v", url, finalState.Url.ValueString())
+	}
+	if region != finalState.Region.ValueString() {
+		t.Fatalf("expected %v, got %v", region, finalState.Region.ValueString())
+	}
+	if bucketName != finalState.BucketName.ValueString() {
+		t.Fatalf("expected %v, got %v", bucketName, finalState.BucketName.ValueString())
+	}
+	if deletetExpRetention != finalState.DeletedExperimentRetention.ValueString() {
+		t.Fatalf("expected %v, got %v", deletetExpRetention, finalState.DeletedExperimentRetention.ValueString())
 	}
 }

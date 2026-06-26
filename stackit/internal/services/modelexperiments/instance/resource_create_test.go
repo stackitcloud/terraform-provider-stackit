@@ -15,6 +15,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 func TestCreate_Success(t *testing.T) {
@@ -26,6 +27,9 @@ func TestCreate_Success(t *testing.T) {
 	region := "eu01"
 	instanceId := uuid.New()
 	url := "url"
+	bucketName := "bucket"
+	deletetExpRetention := "1m"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
 
 	providerData := core.ProviderData{
 		DefaultRegion: "eu01",
@@ -49,10 +53,10 @@ func TestCreate_Success(t *testing.T) {
 
 	createResp := &modelexperiments.CreateInstanceResponse{
 		Instance: modelexperiments.Instance{
-			DeletedExperimentRetention: new("1m"),
+			DeletedExperimentRetention: &deletetExpRetention,
 			Description:                &description,
 			Name:                       instanceName,
-			Region:                     new("eu01"),
+			Region:                     &region,
 			Url:                        url,
 			Id:                         instanceId.String(),
 			State:                      "pending",
@@ -65,14 +69,14 @@ func TestCreate_Success(t *testing.T) {
 
 	getResp := &modelexperiments.GetInstanceResponse{
 		Instance: modelexperiments.Instance{
-			DeletedExperimentRetention: new("1m"),
+			DeletedExperimentRetention: &deletetExpRetention,
+			BucketName:                 &bucketName,
 			Description:                &description,
 			Name:                       instanceName,
-			Region:                     new("eu01"),
+			Region:                     &region,
 			Url:                        url,
 			Id:                         instanceId.String(),
 			State:                      "active",
-			BucketName:                 new("bucket"),
 		},
 	}
 
@@ -101,6 +105,9 @@ func TestCreate_Success(t *testing.T) {
 	}
 
 	// state should be created correctly
+	if tfId != stateAfterCreate.Id {
+		t.Fatalf("expected %v, got %v", tfId.String(), stateAfterCreate.Id.ValueString())
+	}
 	if instanceId.String() != stateAfterCreate.InstanceId.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceId.String(), stateAfterCreate.InstanceId.ValueString())
 	}
@@ -110,17 +117,23 @@ func TestCreate_Success(t *testing.T) {
 	if instanceName != stateAfterCreate.Name.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceName, stateAfterCreate.Name.ValueString())
 	}
-	if url != stateAfterCreate.Url.ValueString() {
-		t.Fatalf("expected %v, got %v", url, stateAfterCreate.Url.ValueString())
+	if description != stateAfterCreate.Description.ValueString() {
+		t.Fatalf("expected %v, got %v", description, stateAfterCreate.Description.ValueString())
 	}
 	if stateAfterCreate.State.ValueString() != "active" {
 		t.Fatalf("expected %v, got %v", "active", stateAfterCreate.State.ValueString())
 	}
+	if url != stateAfterCreate.Url.ValueString() {
+		t.Fatalf("expected %v, got %v", url, stateAfterCreate.Url.ValueString())
+	}
 	if region != stateAfterCreate.Region.ValueString() {
 		t.Fatalf("expected %v, got %v", region, stateAfterCreate.Region.ValueString())
 	}
-	if stateAfterCreate.BucketName.ValueString() != "bucket" {
-		t.Fatalf("expected %v, got %v", "bucket", stateAfterCreate.BucketName.ValueString())
+	if bucketName != stateAfterCreate.BucketName.ValueString() {
+		t.Fatalf("expected %v, got %v", bucketName, stateAfterCreate.BucketName.ValueString())
+	}
+	if deletetExpRetention != stateAfterCreate.DeletedExperimentRetention.ValueString() {
+		t.Fatalf("expected %v, got %v", deletetExpRetention, stateAfterCreate.DeletedExperimentRetention.ValueString())
 	}
 }
 
@@ -180,6 +193,8 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	region := "eu01"
 	instanceId := uuid.New()
 	url := "url"
+	deletetExpRetention := "1m"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
 
 	providerData := core.ProviderData{
 		DefaultRegion: "eu01",
@@ -203,10 +218,10 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 
 	createResp := &modelexperiments.CreateInstanceResponse{
 		Instance: modelexperiments.Instance{
-			DeletedExperimentRetention: new("1m"),
+			DeletedExperimentRetention: &deletetExpRetention,
 			Description:                &description,
 			Name:                       instanceName,
-			Region:                     new("eu01"),
+			Region:                     &region,
 			Url:                        url,
 			Id:                         instanceId.String(),
 			State:                      "pending",
@@ -242,6 +257,9 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	}
 
 	// state should be created even if get request failed
+	if tfId != stateAfterCreate.Id {
+		t.Fatalf("expected %v, got %v", tfId.String(), stateAfterCreate.Id.ValueString())
+	}
 	if instanceId.String() != stateAfterCreate.InstanceId.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceId.String(), stateAfterCreate.InstanceId.ValueString())
 	}
@@ -251,17 +269,23 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	if instanceName != stateAfterCreate.Name.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceName, stateAfterCreate.Name.ValueString())
 	}
+	if description != stateAfterCreate.Description.ValueString() {
+		t.Fatalf("expected %v, got %v", description, stateAfterCreate.Description.ValueString())
+	}
+	if stateAfterCreate.State.ValueString() != "pending" {
+		t.Fatalf("expected %v, got %v", "pending", stateAfterCreate.State.ValueString())
+	}
 	if url != stateAfterCreate.Url.ValueString() {
 		t.Fatalf("expected %v, got %v", url, stateAfterCreate.Url.ValueString())
-	}
-	if stateAfterCreate.State.ValueString() != string(createResp.Instance.State) {
-		t.Fatalf("expected %v, got %v", "pending", stateAfterCreate.State.ValueString())
 	}
 	if region != stateAfterCreate.Region.ValueString() {
 		t.Fatalf("expected %v, got %v", region, stateAfterCreate.Region.ValueString())
 	}
-	if stateAfterCreate.BucketName.ValueString() != "" {
+	if "" != stateAfterCreate.BucketName.ValueString() {
 		t.Fatalf("expected %v, got %v", "", stateAfterCreate.BucketName.ValueString())
+	}
+	if deletetExpRetention != stateAfterCreate.DeletedExperimentRetention.ValueString() {
+		t.Fatalf("expected %v, got %v", deletetExpRetention, stateAfterCreate.DeletedExperimentRetention.ValueString())
 	}
 }
 

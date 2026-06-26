@@ -32,7 +32,7 @@ func TestUpdate_Success(t *testing.T) {
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	tokenContent := "token"
 	state := "active"
-	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	updateTokenResp := &modelexperiments.PartialUpdateInstanceTokenResponse{
 		Token: modelexperiments.TokenMetadata{
@@ -44,6 +44,7 @@ func TestUpdate_Success(t *testing.T) {
 			ValidUntil:  validUntil,
 		},
 	}
+
 	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceTokenRequest{
 		ApiService: tc.MockInstanceCLient,
 	})
@@ -66,7 +67,7 @@ func TestUpdate_Success(t *testing.T) {
 		Labels:      types.MapNull(types.StringType),
 		Token:       types.StringValue(tokenContent),
 		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
+		Id:          tfId,
 		State:       types.StringValue(state),
 		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
 	}
@@ -86,6 +87,7 @@ func TestUpdate_Success(t *testing.T) {
 	// Execute Update
 	tokenRes.Update(tc.Ctx, req, resp)
 	if resp.Diagnostics.HasError() {
+		t.Fatalf("%v", resp.Diagnostics.Errors())
 		t.Fatalf("update should succeed")
 	}
 
@@ -95,11 +97,39 @@ func TestUpdate_Success(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("failed to get state")
 	}
+
+	if updatedState.ProjectId.ValueString() != projectId.String() {
+		t.Fatalf("ProjectId mismatch: got %v, want %v", updatedState.ProjectId.ValueString(), projectId.String())
+	}
+	if updatedState.Region.ValueString() != region {
+		t.Fatalf("Region mismatch: got %v, want %v", updatedState.Region.ValueString(), region)
+	}
 	if updatedState.Name.ValueString() != nameUpdated {
-		t.Fatalf("should be equal")
+		t.Fatalf("Name mismatch: got %v, want %v", updatedState.Name.ValueString(), nameUpdated)
 	}
 	if updatedState.Description.ValueString() != descriptionUpdated {
-		t.Fatalf("should be equal")
+		t.Fatalf("Description mismatch: got %v, want %v", updatedState.Description.ValueString(), descriptionUpdated)
+	}
+	if updatedState.InstanceId.ValueString() != instanceId.String() {
+		t.Fatalf("InstanceId mismatch: got %v, want %v", updatedState.InstanceId.ValueString(), instanceId.String())
+	}
+	if updatedState.TokenId.ValueString() != tokenId.String() {
+		t.Fatalf("TokenId mismatch: got %v, want %v", updatedState.TokenId.ValueString(), tokenId.String())
+	}
+	if updatedState.Id != tfId {
+		t.Fatalf("Id mismatch: got %v, want %v", updatedState.Id.ValueString(), tfId)
+	}
+	if updatedState.State.ValueString() != "active" {
+		t.Fatalf("State mismatch: got %v, want active", updatedState.State.ValueString())
+	}
+	if updatedState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
+		t.Fatalf("ValidUntil mismatch: got %v, want 2099-01-01T00:00:00Z", updatedState.ValidUntil.ValueString())
+	}
+	if !updatedState.Labels.IsNull() {
+		t.Fatalf("Labels should be null")
+	}
+	if updatedState.Token.ValueString() != tokenContent {
+		t.Fatalf("Token mismatch: got %v, want %v", updatedState.Token.ValueString(), tokenContent)
 	}
 }
 
@@ -116,7 +146,7 @@ func TestUpdate_TokenNotFound(t *testing.T) {
 	tokenId := uuid.New()
 	tokenContent := "token"
 	state := "active"
-	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusNotFound,
@@ -143,7 +173,7 @@ func TestUpdate_TokenNotFound(t *testing.T) {
 		Labels:      types.MapNull(types.StringType),
 		Token:       types.StringValue(tokenContent),
 		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
+		Id:          tfId,
 		State:       types.StringValue(state),
 		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
 	}
@@ -190,7 +220,7 @@ func TestUpdate_TokenUpdateError(t *testing.T) {
 	tokenId := uuid.New()
 	tokenContent := "token"
 	state := "active"
-	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: http.StatusInternalServerError,
@@ -217,7 +247,7 @@ func TestUpdate_TokenUpdateError(t *testing.T) {
 		Labels:      types.MapNull(types.StringType),
 		Token:       types.StringValue(tokenContent),
 		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
+		Id:          tfId,
 		State:       types.StringValue(state),
 		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
 	}
@@ -247,11 +277,38 @@ func TestUpdate_TokenUpdateError(t *testing.T) {
 		t.Fatalf("failed to get state")
 	}
 
+	if updatedState.ProjectId.ValueString() != projectId.String() {
+		t.Fatalf("ProjectId mismatch: got %v, want %v", updatedState.ProjectId.ValueString(), projectId.String())
+	}
+	if updatedState.Region.ValueString() != region {
+		t.Fatalf("Region mismatch: got %v, want %v", updatedState.Region.ValueString(), region)
+	}
 	if updatedState.Name.ValueString() != name {
-		t.Fatalf("should be equal")
+		t.Fatalf("Name mismatch: got %v, want %v", updatedState.Name.ValueString(), name)
 	}
 	if updatedState.Description.ValueString() != description {
-		t.Fatalf("should be equal")
+		t.Fatalf("Description mismatch: got %v, want %v", updatedState.Description.ValueString(), description)
+	}
+	if updatedState.InstanceId.ValueString() != instanceId.String() {
+		t.Fatalf("InstanceId mismatch: got %v, want %v", updatedState.InstanceId.ValueString(), instanceId.String())
+	}
+	if updatedState.TokenId.ValueString() != tokenId.String() {
+		t.Fatalf("TokenId mismatch: got %v, want %v", updatedState.TokenId.ValueString(), tokenId.String())
+	}
+	if updatedState.Id != tfId {
+		t.Fatalf("Id mismatch: got %v, want %v", updatedState.Id.ValueString(), tfId)
+	}
+	if updatedState.State.ValueString() != "active" {
+		t.Fatalf("State mismatch: got %v, want active", updatedState.State.ValueString())
+	}
+	if updatedState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
+		t.Fatalf("ValidUntil mismatch: got %v, want 2099-01-01T00:00:00Z", updatedState.ValidUntil.ValueString())
+	}
+	if !updatedState.Labels.IsNull() {
+		t.Fatalf("Labels should be null")
+	}
+	if updatedState.Token.ValueString() != tokenContent {
+		t.Fatalf("Token mismatch: got %v, want %v", updatedState.Token.ValueString(), tokenContent)
 	}
 }
 
