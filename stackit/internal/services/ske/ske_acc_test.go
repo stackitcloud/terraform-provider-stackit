@@ -93,7 +93,6 @@ var testConfigVarsMax = config.Variables{
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
 	"network_control_plane_access_scope":               config.StringVariable("PUBLIC"),
-	"service_account_issuer":                           config.StringVariable("issuer"),
 }
 
 var testConfigDatasource = config.Variables{
@@ -145,7 +144,6 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.start", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_start"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMin["maintenance_end"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(testConfigVarsMin["region"])),
-					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
 
@@ -187,7 +185,6 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
-					resource.TestCheckNoResourceAttr("data.stackit_ske_cluster.cluster", "service_account_issuer"),
 				),
 			},
 			// 3) Import cluster
@@ -244,7 +241,6 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(configVarsMinUpdated()["region"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(configVarsMinUpdated()["network_control_plane_access_scope"])),
-					resource.TestCheckNoResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer"),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
@@ -323,7 +319,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "egress_address_ranges.0"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_issuer"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer", "issuer"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
@@ -401,7 +397,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
-					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "service_account_issuer", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_issuer"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "service_account_issuer", "issuer"),
 				),
 			},
 			// 3) Import cluster
@@ -489,7 +485,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
-					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer", testutil.ConvertConfigVariable(configVarsMaxUpdated()["service_account_issuer"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "service_account_issuer", "issuer"),
 				),
 			},
 			// Deletion is done by the framework implicitly
