@@ -552,6 +552,26 @@ func TestVersionNumber(t *testing.T) {
 			true,
 		},
 		{
+			"ok-patch-version-prerelease",
+			"1.20.1-alpha",
+			true,
+		},
+		{
+			"ok-patch-version-prerelease-with-dot-separator",
+			"1.20.1-alpha.1",
+			true,
+		},
+		{
+			"ok-patch-version-prerelease-without-dot-separator",
+			"1.20.1-alpha1.2",
+			true,
+		},
+		{
+			"version-ends-with-dot",
+			"1.20.1-alpha.1.",
+			false,
+		},
+		{
 			"Empty",
 			"",
 			false,
