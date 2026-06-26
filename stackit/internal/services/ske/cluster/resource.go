@@ -428,9 +428,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"kubernetes_version_min": schema.StringAttribute{
 				Description: "The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. " + SKEUpdateDoc + " To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.",
 				Optional:    true,
-				Validators: []validator.String{
-					validate.VersionNumber(),
-				},
 			},
 			"kubernetes_version_used": schema.StringAttribute{
 				Description: "Full Kubernetes version used. For example, if 1.22 was set in `kubernetes_version_min`, this value may result to 1.22.15. " + SKEUpdateDoc,
