@@ -135,10 +135,16 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`token_id`\".",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: "STACKIT project ID to which the AI model experiments instance token is associated.",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -163,6 +169,9 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"instance_id": schema.StringAttribute{
 				Description: "The AI model experiments instance ID.",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -171,6 +180,9 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"token_id": schema.StringAttribute{
 				Description: "The AI model experiments instance token ID.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -179,13 +191,11 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"labels": schema.MapAttribute{
 				Description: "A map of arbitrary key/value pairs for the AI model experiments instance token.",
 				Optional:    true,
-				Required:    false,
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"description": schema.StringAttribute{
 				Description: "The description of the AI model experiments instance token.",
-				Required:    false,
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 160),
@@ -203,11 +213,16 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"valid_until": schema.StringAttribute{
 				Description: "The time until the AI model experiments instance token is valid.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ttl_duration": schema.StringAttribute{
 				Description: "The TTL duration of the AI model experiments instance token. E.g. 5h30m40s,5h,5h30m,30m,30s",
-				Required:    false,
 				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.ValidDurationString(),
 				},
@@ -359,8 +374,8 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 // Update updates the resource and sets the updated Terraform state on success.
 func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model Model
-	diags := req.Plan.Get(ctx, &model)
+	var plan Model
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -377,16 +392,16 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := state.ProjectId.ValueString()
-	instanceId := model.InstanceId.ValueString()
+	instanceId := plan.InstanceId.ValueString()
 	tokenId := state.TokenId.ValueString()
-	region := i.providerData.GetRegionWithOverride(model.Region)
+	region := i.providerData.GetRegionWithOverride(plan.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "token_id", tokenId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(&plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -427,14 +442,14 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	model.Token = state.Token
-	err = mapToken(ctx, &updateInstanceTokenResp.Token, &model)
+	plan.Token = state.Token
+	err = mapToken(ctx, &updateInstanceTokenResp.Token, &plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
