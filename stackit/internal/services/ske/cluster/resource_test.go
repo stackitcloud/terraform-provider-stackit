@@ -39,6 +39,12 @@ func TestMapFields(t *testing.T) {
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Name: new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -284,6 +290,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Name:    new("name"),
 				Network: &ske.Network{},
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -323,6 +335,12 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Name: new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -376,6 +394,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -440,6 +464,12 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Name: new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -481,6 +511,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -614,6 +650,12 @@ func TestMapFields(t *testing.T) {
 					Aggregated: &cs,
 					Error:      nil,
 					Hibernated: nil,
+				},
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
 				},
 			},
 			testRegion,
@@ -2711,18 +2753,6 @@ func TestMapAccess(t *testing.T) {
 		want    basetypes.ObjectValue
 		wantErr bool
 	}{
-		{
-			name:  "nil access defaults to idp: { enabled: false, type: stackit }",
-			input: nil,
-			want:  defaultAccess,
-		},
-		{
-			name:  "nil IDP, default",
-			input: &ske.Access{},
-			want: types.ObjectValueMust(accessTypes, map[string]attr.Value{
-				"idp": defaultIdp,
-			}),
-		},
 		{
 			name: "valid IDP",
 			input: &ske.Access{

@@ -2128,6 +2128,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 func mapAccess(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	var diags diag.Diagnostics
 
+	// explicitly no nil checks, the API won't return nil values here, despite the types suggesting the possibility
 	idp := idp{
 		Enabled: types.BoolValue(cl.Access.Idp.Enabled),
 		Type:    types.StringValue(cl.Access.Idp.Type),
