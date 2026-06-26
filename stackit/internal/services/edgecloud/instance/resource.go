@@ -479,7 +479,7 @@ func mapFields(resp *edge.Instance, model *Model) error {
 	model.FrontendUrl = types.StringValue(resp.FrontendUrl)
 	model.DisplayName = types.StringValue(resp.DisplayName)
 	model.PlanID = types.StringValue(resp.PlanId)
-	model.Status = types.StringValue(resp.Status)
+	model.Status = types.StringValue(string(resp.Status))
 
 	if resp.Description != nil {
 		model.Description = types.StringValue(*resp.Description)

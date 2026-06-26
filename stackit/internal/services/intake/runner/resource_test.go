@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -17,6 +18,8 @@ import (
 
 func TestMapFields(t *testing.T) {
 	runnerId := uuid.New().String()
+	now := time.Now()
+
 	tests := []struct {
 		description string
 		input       *intake.IntakeRunnerResponse
@@ -34,6 +37,8 @@ func TestMapFields(t *testing.T) {
 				Labels:             map[string]string{"key": "value"},
 				MaxMessageSizeKiB:  int32(1024),
 				MaxMessagesPerHour: int32(100),
+				Uri:                "c512e9ea-b086-4945-b8e1-8f9a4b592b06.intake.eu01.onstackit.cloud:9094",
+				CreateTime:         now,
 			},
 			&Model{
 				ProjectId: types.StringValue("pid"),
@@ -49,6 +54,8 @@ func TestMapFields(t *testing.T) {
 				Labels:             types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
 				MaxMessageSizeKiB:  types.Int32Value(1024),
 				MaxMessagesPerHour: types.Int32Value(100),
+				Uri:                types.StringValue("c512e9ea-b086-4945-b8e1-8f9a4b592b06.intake.eu01.onstackit.cloud:9094"),
+				CreateTime:         types.StringValue(now.String()),
 			},
 			false,
 		},
@@ -88,6 +95,8 @@ func TestMapFields(t *testing.T) {
 				Labels:             types.MapNull(types.StringType),
 				MaxMessageSizeKiB:  types.Int32Value(0),
 				MaxMessagesPerHour: types.Int32Value(0),
+				Uri:                types.StringValue(""),
+				CreateTime:         types.StringValue(time.Time{}.String()),
 			},
 			false,
 		},

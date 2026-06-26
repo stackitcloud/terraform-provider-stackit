@@ -90,7 +90,7 @@ var fixtureInstanceParameters = logmeSdk.InstanceParameters{
 	MetricsFrequency:       new(int32(10)),
 	MetricsPrefix:          new("prefix"),
 	MonitoringInstanceId:   new("mid"),
-	OpensearchTlsCiphers:   []string{"ciphers", "ciphers2"},
+	OpensearchTlsCiphers:   []logmeSdk.InstanceParametersOpensearchTlsCiphersInner{"ciphers", "ciphers2"},
 	OpensearchTlsProtocols: []string{"protocols", "protocols2"},
 	Syslog:                 []string{"syslog", "syslog2"},
 }

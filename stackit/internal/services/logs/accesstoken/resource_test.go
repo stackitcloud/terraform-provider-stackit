@@ -70,7 +70,7 @@ func TestMapFields(t *testing.T) {
 		{
 			description: "max values",
 			input: fixtureAccessToken(func(accessToken *logs.AccessToken) {
-				accessToken.Permissions = []string{"write"}
+				accessToken.Permissions = []logs.PermissionsInner{logs.PERMISSIONSINNER_WRITE}
 				accessToken.AccessToken = new("")
 				accessToken.Description = new("description")
 				accessToken.DisplayName = "display-name"
@@ -151,7 +151,7 @@ func TestToCreatePayload(t *testing.T) {
 				model.Lifetime = types.Int32Value(7)
 			}),
 			expected: &logs.CreateAccessTokenPayload{
-				Permissions: []string{"read", "write"},
+				Permissions: []logs.PermissionsInner{logs.PERMISSIONSINNER_READ, logs.PERMISSIONSINNER_WRITE},
 				Description: new("description"),
 				DisplayName: "display-name",
 				Lifetime:    new(int32(7)),

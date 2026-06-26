@@ -47,6 +47,8 @@ type Model struct {
 	MaxMessageSizeKiB  types.Int32  `tfsdk:"max_message_size_kib"`
 	MaxMessagesPerHour types.Int32  `tfsdk:"max_messages_per_hour"`
 	Region             types.String `tfsdk:"region"`
+	Uri                types.String `tfsdk:"uri"`
+	CreateTime         types.String `tfsdk:"create_time"`
 }
 
 // NewRunnerResource is a helper function to simplify the provider implementation.
@@ -123,6 +125,8 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"uri":                   "The URI of the runner.",
+		"create_time":           "The creation time of the runner.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -181,6 +185,20 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: descriptions["max_messages_per_hour"],
 				Required:    true,
 			},
+			"uri": schema.StringAttribute{
+				Description: descriptions["uri"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: descriptions["create_time"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"region": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -234,7 +252,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Wait for creation of intake runner
-	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
+	_, err = wait.CreateIntakeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Intake runner creation waiting: %v", err))
 		return
@@ -333,7 +351,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Wait for update
-	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
+	_, err = wait.UpdateIntakeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Runner update waiting: %v", err))
 		return
@@ -443,6 +461,8 @@ func mapFields(ctx context.Context, runnerResp *intake.IntakeRunnerResponse, mod
 	model.Region = types.StringValue(region)
 	model.MaxMessageSizeKiB = types.Int32Value(runnerResp.MaxMessageSizeKiB)
 	model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
+	model.Uri = types.StringValue(runnerResp.Uri)
+	model.CreateTime = types.StringValue(runnerResp.CreateTime.String())
 
 	return nil
 }

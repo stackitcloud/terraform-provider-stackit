@@ -430,7 +430,7 @@ func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePaylo
 	}
 
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		payload.Flavor = model.Flavor.ValueStringPointer()
+		payload.Flavor = conversion.StringValueToEnumPointer[git.CreateInstancePayloadFlavor](model.Flavor)
 	}
 
 	return payload, diags

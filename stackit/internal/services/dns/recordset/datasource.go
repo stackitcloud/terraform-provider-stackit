@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
@@ -181,7 +180,7 @@ func (d *recordSetDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	ctx = core.LogResponse(ctx)
 
-	if recordSetResp != nil && recordSetResp.Rrset.State == wait.RECORDSETSTATE_DELETE_SUCCEEDED {
+	if recordSetResp != nil && recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", "Record set was deleted successfully")
 		return
