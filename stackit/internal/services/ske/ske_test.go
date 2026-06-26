@@ -246,6 +246,12 @@ resource "stackit_ske_cluster" "cluster" {
 			PodAddressRanges: []string{"100.64.0.0/10"},
 		}),
 		Extensions: new(ske.Extension{}),
+		Access: &ske.Access{
+			Idp: &ske.IDP{
+				Enabled: false,
+				Type:    "stackit",
+			},
+		},
 	}
 
 	resource.UnitTest(t, resource.TestCase{

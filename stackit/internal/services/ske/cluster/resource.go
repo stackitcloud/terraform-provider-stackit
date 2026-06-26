@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
-
 	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
@@ -300,21 +298,6 @@ var idpTypes = map[string]attr.Type{
 	"enabled": basetypes.BoolType{},
 	"type":    basetypes.StringType{},
 }
-
-var defaultIdp = types.ObjectValueMust(
-	idpTypes,
-	map[string]attr.Value{
-		"enabled": types.BoolValue(false),
-		"type":    types.StringValue("stackit"),
-	},
-)
-
-var defaultAccess = types.ObjectValueMust(
-	accessTypes,
-	map[string]attr.Value{
-		"idp": defaultIdp,
-	},
-)
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
@@ -839,19 +822,23 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: descriptions["access"],
 				Optional:    true,
 				Computed:    true,
-				Default:     objectdefault.StaticValue(defaultAccess),
 				Attributes: map[string]schema.Attribute{
 					"idp": schema.SingleNestedAttribute{
 						Description: descriptions["access_idp"],
 						Optional:    true,
+						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: descriptions["access_idp_enabled"],
-								Required:    true,
+								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
 							},
 							"type": schema.StringAttribute{
 								Description: descriptions["access_idp_type"],
-								Required:    true,
+								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString("stackit"),
 								Validators: []validator.String{
 									stringvalidator.OneOf("stackit"),
 								},
@@ -2139,25 +2126,15 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 }
 
 func mapAccess(ctx context.Context, cl *ske.Cluster, m *Model) error {
-	if cl.Access == nil {
-		m.Access = defaultAccess
-		return nil
-	}
-
 	var diags diag.Diagnostics
 
-	var idpObject basetypes.ObjectValue
-	if cl.Access.Idp == nil {
-		idpObject = defaultIdp
-	} else {
-		idp := idp{
-			Enabled: types.BoolValue(cl.Access.Idp.Enabled),
-			Type:    types.StringValue(cl.Access.Idp.Type),
-		}
-		idpObject, diags = types.ObjectValueFrom(ctx, idpTypes, idp)
-		if diags.HasError() {
-			return fmt.Errorf("creating idp object: %w", core.DiagsToError(diags))
-		}
+	idp := idp{
+		Enabled: types.BoolValue(cl.Access.Idp.Enabled),
+		Type:    types.StringValue(cl.Access.Idp.Type),
+	}
+	idpObject, diags := types.ObjectValueFrom(ctx, idpTypes, idp)
+	if diags.HasError() {
+		return fmt.Errorf("creating idp object: %w", core.DiagsToError(diags))
 	}
 
 	access := access{

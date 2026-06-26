@@ -133,7 +133,7 @@ Optional:
 <a id="nestedatt--access--idp"></a>
 ### Nested Schema for `access.idp`
 
-Required:
+Optional:
 
 - `enabled` (Boolean) Enable IDP integration for the cluster.
 - `type` (String) The IDP type. Possible values: 'stackit'.

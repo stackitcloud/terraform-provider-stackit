@@ -2816,3 +2816,18 @@ func TestToAccessPayload(t *testing.T) {
 		})
 	}
 }
+
+var defaultIdp = types.ObjectValueMust(
+	idpTypes,
+	map[string]attr.Value{
+		"enabled": types.BoolValue(false),
+		"type":    types.StringValue("stackit"),
+	},
+)
+
+var defaultAccess = types.ObjectValueMust(
+	accessTypes,
+	map[string]attr.Value{
+		"idp": defaultIdp,
+	},
+)
