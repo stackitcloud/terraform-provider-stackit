@@ -1157,7 +1157,7 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 
 			tfStatusCode := types.Int32Null()
 			if r.StatusCode > 0 {
-				tfStatusCode = types.Int32Value(r.StatusCode)
+				tfStatusCode = types.Int32Value(int32(r.StatusCode))
 			}
 
 			tfRuleMatchCond := types.StringValue("ANY")
@@ -1517,7 +1517,7 @@ func convertRedirectconfig(redirectConfigModel *redirectConfig) *cdnSdk.Redirect
 					Enabled:            rule.Enabled,
 					Matchers:           matchers,
 					RuleMatchCondition: ruleMatchCond,
-					StatusCode:         rule.StatusCode,
+					StatusCode:         cdnSdk.RedirectRuleStatusCode(rule.StatusCode),
 					TargetUrl:          targetUrl,
 				}
 				sdkRules = append(sdkRules, sdkConfigRule)
@@ -1601,7 +1601,7 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 					Enabled:            rule.Enabled,
 					Matchers:           matchers,
 					RuleMatchCondition: ruleMatchCond,
-					StatusCode:         rule.StatusCode,
+					StatusCode:         cdnSdk.RedirectRuleStatusCode(rule.StatusCode),
 					TargetUrl:          rule.TargetUrl,
 				}
 				sdkRules = append(sdkRules, sdkConfigRule)

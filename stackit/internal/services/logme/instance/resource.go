@@ -894,7 +894,7 @@ func toInstanceParams(parameters *parametersModel) (*logmeSdk.InstanceParameters
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 
 	var err error
-	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToSlice(parameters.OpensearchTlsCiphers)
+	payloadParams.OpensearchTlsCiphers, err = conversion.StringListToEnumSlice[logmeSdk.InstanceParametersOpensearchTlsCiphersInner](parameters.OpensearchTlsCiphers)
 	if err != nil {
 		return nil, fmt.Errorf("convert opensearch_tls_ciphers: %w", err)
 	}

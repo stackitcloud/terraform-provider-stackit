@@ -217,7 +217,7 @@ func mapDataSourceFields(ctx context.Context, accessToken *logs.AccessToken, mod
 	model.Description = types.StringPointerValue(accessToken.Description)
 	model.DisplayName = types.StringValue(accessToken.DisplayName)
 	model.Expires = types.BoolValue(accessToken.Expires)
-	model.Status = types.StringValue(accessToken.Status)
+	model.Status = types.StringValue(string(accessToken.Status))
 
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {

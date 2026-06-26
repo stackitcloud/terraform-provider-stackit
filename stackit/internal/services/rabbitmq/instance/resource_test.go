@@ -51,11 +51,11 @@ var fixtureInstanceParameters = rabbitmq.InstanceParameters{
 	MetricsFrequency:     new(int32(10)),
 	MetricsPrefix:        new("prefix"),
 	MonitoringInstanceId: new("mid"),
-	Plugins:              []string{"plugin1", "plugin2"},
+	Plugins:              []rabbitmq.InstanceParametersPluginsInner{"plugin1", "plugin2"},
 	Roles:                []string{"role1", "role2"},
 	Syslog:               []string{"syslog", "syslog2"},
 	TlsCiphers:           []string{"ciphers1", "ciphers2"},
-	TlsProtocols:         []string{"tlsv1.2", "tlsv1.3"},
+	TlsProtocols:         []rabbitmq.InstanceParametersTlsProtocolsInner{"tlsv1.2", "tlsv1.3"},
 }
 
 func TestMapFields(t *testing.T) {
