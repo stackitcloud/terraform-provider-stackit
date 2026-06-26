@@ -13,6 +13,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/instance"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/testutils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 func TestRead_Success(t *testing.T) {
@@ -25,17 +26,20 @@ func TestRead_Success(t *testing.T) {
 	instanceId := uuid.New()
 	url := "url"
 	instanceNameUpdated := "updatedName"
+	bucketName := "bucket"
+	deletetExpRetention := "1m"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
 
 	getResp := &modelexperiments.GetInstanceResponse{
 		Instance: modelexperiments.Instance{
-			DeletedExperimentRetention: new("1m"),
+			DeletedExperimentRetention: &deletetExpRetention,
+			BucketName:                 &bucketName,
 			Description:                &description,
 			Name:                       instanceNameUpdated,
-			Region:                     new("eu01"),
+			Region:                     &region,
 			Url:                        url,
 			Id:                         instanceId.String(),
 			State:                      "active",
-			BucketName:                 new("bucket"),
 		},
 	}
 	tc.MockInstanceCLient.EXPECT().GetInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiGetInstanceRequest{
@@ -51,15 +55,21 @@ func TestRead_Success(t *testing.T) {
 	schemaResp := resource.SchemaResponse{}
 	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
-	state := instance.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(instanceName),
-		Labels:     types.MapNull(types.StringType),
+	currentState := instance.Model{
+		Id:                         tfId,
+		ProjectId:                  types.StringValue(projectId.String()),
+		InstanceId:                 types.StringValue(instanceId.String()),
+		Name:                       types.StringValue(instanceName),
+		Region:                     types.StringValue(region),
+		Description:                types.StringValue(description),
+		Labels:                     types.MapNull(types.StringType),
+		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
+		BucketName:                 types.StringValue(bucketName),
+		State:                      types.StringValue("active"),
+		Url:                        types.StringValue(url),
 	}
 
-	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, state)
+	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, currentState)
 	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, nil)
 
 	instanceRes.Read(tc.Ctx, req, resp)
@@ -75,6 +85,9 @@ func TestRead_Success(t *testing.T) {
 	}
 
 	// state should be written according to GetInstance Response
+	if tfId != refreshedState.Id {
+		t.Fatalf("expected %v, got %v", tfId.String(), refreshedState.Id.ValueString())
+	}
 	if instanceId.String() != refreshedState.InstanceId.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceId.String(), refreshedState.InstanceId.ValueString())
 	}
@@ -84,17 +97,23 @@ func TestRead_Success(t *testing.T) {
 	if instanceNameUpdated != refreshedState.Name.ValueString() {
 		t.Fatalf("expected %v, got %v", instanceNameUpdated, refreshedState.Name.ValueString())
 	}
-	if url != refreshedState.Url.ValueString() {
-		t.Fatalf("expected %v, got %v", url, refreshedState.Url.ValueString())
+	if description != refreshedState.Description.ValueString() {
+		t.Fatalf("expected %v, got %v", description, refreshedState.Description.ValueString())
 	}
 	if refreshedState.State.ValueString() != "active" {
 		t.Fatalf("expected %v, got %v", "active", refreshedState.State.ValueString())
 	}
+	if url != refreshedState.Url.ValueString() {
+		t.Fatalf("expected %v, got %v", url, refreshedState.Url.ValueString())
+	}
 	if region != refreshedState.Region.ValueString() {
 		t.Fatalf("expected %v, got %v", region, refreshedState.Region.ValueString())
 	}
-	if refreshedState.BucketName.ValueString() != "bucket" {
-		t.Fatalf("expected %v, got %v", "bucket", refreshedState.BucketName.ValueString())
+	if bucketName != refreshedState.BucketName.ValueString() {
+		t.Fatalf("expected %v, got %v", bucketName, refreshedState.BucketName.ValueString())
+	}
+	if deletetExpRetention != refreshedState.DeletedExperimentRetention.ValueString() {
+		t.Fatalf("expected %v, got %v", deletetExpRetention, refreshedState.DeletedExperimentRetention.ValueString())
 	}
 }
 
@@ -195,8 +214,13 @@ func TestRead_GetRequestFailed(t *testing.T) {
 
 	projectId := uuid.New()
 	instanceName := "test"
+	description := "description"
 	region := "eu01"
 	instanceId := uuid.New()
+	url := "url"
+	bucketName := "bucket"
+	deletetExpRetention := "1m"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
 
 	oapiErr := &oapierror.GenericOpenAPIError{
 		StatusCode: 400,
@@ -214,15 +238,21 @@ func TestRead_GetRequestFailed(t *testing.T) {
 	schemaResp := resource.SchemaResponse{}
 	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
-	state := instance.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(instanceName),
-		Labels:     types.MapNull(types.StringType),
+	currentState := instance.Model{
+		Id:                         tfId,
+		ProjectId:                  types.StringValue(projectId.String()),
+		InstanceId:                 types.StringValue(instanceId.String()),
+		Name:                       types.StringValue(instanceName),
+		Region:                     types.StringValue(region),
+		Description:                types.StringValue(description),
+		Labels:                     types.MapNull(types.StringType),
+		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
+		BucketName:                 types.StringValue(bucketName),
+		State:                      types.StringValue("active"),
+		Url:                        types.StringValue(url),
 	}
 
-	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, state)
+	req := testutils.ReadInstanceRequest(tc.Ctx, schemaResp, currentState)
 	resp := testutils.ReadInstanceResponse(tc.Ctx, schemaResp, nil)
 
 	instanceRes.Read(tc.Ctx, req, resp)
@@ -230,13 +260,14 @@ func TestRead_GetRequestFailed(t *testing.T) {
 		t.Fatalf("Get should not succeed")
 	}
 
-	// state should not be set
+	// resp state should not be set
 	var refreshedState *instance.Model
 	diags := resp.State.Get(tc.Ctx, &refreshedState)
 	if diags.HasError() {
 		t.Fatalf("Failed to get state: %v", diags.Errors())
 	}
+
 	if refreshedState != nil {
-		t.Fatalf("expected nil, got %v", refreshedState)
+		t.Fatalf("State not nil")
 	}
 }

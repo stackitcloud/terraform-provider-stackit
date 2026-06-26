@@ -33,7 +33,7 @@ func inputInstanceConfig(instanceName, instanceDescription, token_name, token_de
 	return fmt.Sprintf(`
 		%s
 
-		resource "stackit_modelexperiments_instance" "example" {
+		resource "stackit_modelexperiments_instance" "instance" {
   			project_id   = "%s"
   			name         = "%s"
   			region       = "%s"
@@ -44,7 +44,7 @@ func inputInstanceConfig(instanceName, instanceDescription, token_name, token_de
   			project_id   = "%s"
   			name         = "%s"
   			region       = "%s"
-  			instance_id = stackit_modelexperiments_instance.example.instance_id
+  			instance_id = stackit_modelexperiments_instance.instance.instance_id
   			description =  "%s"
 		}
 		`,
@@ -63,7 +63,7 @@ func inputInstanceConfig(instanceName, instanceDescription, token_name, token_de
 func TestAccModelExperimentsInstanceResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckModelServingTokenDestroy,
+		CheckDestroy:             testAccCheckModelExperimentsInstanceDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -74,15 +74,15 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 					instanceResource["token_description"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "region", instanceResource["region"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "description", instanceResource["description"]),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "instance_id"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "state"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "bucket_name"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "deleted_experiment_retention"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "region", instanceResource["region"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "description", instanceResource["description"]),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "state"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "bucket_name"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "deleted_experiment_retention"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "url"),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "region", instanceResource["region"]),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["token_name"]),
@@ -103,15 +103,15 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 					instanceResource["token_description_updated"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "project_id", instanceResource["project_id"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "region", instanceResource["region"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "name", instanceResource["name"]),
-					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.example", "description", instanceResource["description_updated"]),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "instance_id"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "state"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "bucket_name"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "deleted_experiment_retention"),
-					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.example", "url"),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "project_id", instanceResource["project_id"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "region", instanceResource["region"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "name", instanceResource["name"]),
+					resource.TestCheckResourceAttr("stackit_modelexperiments_instance.instance", "description", instanceResource["description_updated"]),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "instance_id"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "state"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "bucket_name"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "deleted_experiment_retention"),
+					resource.TestCheckResourceAttrSet("stackit_modelexperiments_instance.instance", "url"),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "project_id", instanceResource["project_id"]),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "region", instanceResource["region"]),
 					resource.TestCheckResourceAttr("stackit_modelexperiments_token.token", "name", instanceResource["token_name"]),
@@ -128,7 +128,8 @@ func TestAccModelExperimentsInstanceResource(t *testing.T) {
 	})
 }
 
-func testAccCheckModelServingTokenDestroy(s *terraform.State) error {
+func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
+	fmt.Println("destroying resources")
 	ctx := context.Background()
 	client, err := modelexperiments.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.ModelExperimentsCustomEndpoint, false)...)
 	if err != nil {

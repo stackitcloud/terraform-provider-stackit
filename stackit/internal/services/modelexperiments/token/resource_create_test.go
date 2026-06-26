@@ -26,11 +26,13 @@ func TestCreate_Success(t *testing.T) {
 	description := "token description"
 	instanceId := uuid.New()
 	tokenId := uuid.New()
-	validUntil := time.Now().Add(10 * time.Minute)
+	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
+	content := "token"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
-			Content:     "token",
+			Content:     content,
 			Description: &description,
 			Id:          tokenId.String(),
 			Name:        name,
@@ -90,29 +92,38 @@ func TestCreate_Success(t *testing.T) {
 		t.Fatalf("failed to get state")
 	}
 
-	if tokenId.String() != createdState.TokenId.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", tokenId.String(), createdState.TokenId.ValueString())
+	if createdState.ProjectId.ValueString() != projectId.String() {
+		t.Fatalf("ProjectId mismatch: got %v, want %v", createdState.ProjectId.ValueString(), projectId.String())
 	}
-	if projectId.String() != createdState.ProjectId.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", projectId.String(), createdState.ProjectId.ValueString())
+	if createdState.Region.ValueString() != region {
+		t.Fatalf("Region mismatch: got %v, want %v", createdState.Region.ValueString(), region)
 	}
-	if instanceId.String() != createdState.InstanceId.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", instanceId.String(), createdState.InstanceId.ValueString())
+	if createdState.Name.ValueString() != name {
+		t.Fatalf("Name mismatch: got %v, want %v", createdState.Name.ValueString(), name)
 	}
-	if name != createdState.Name.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", name, createdState.Name.ValueString())
+	if createdState.Description.ValueString() != description {
+		t.Fatalf("Description mismatch: got %v, want %v", createdState.Description.ValueString(), description)
+	}
+	if createdState.InstanceId.ValueString() != instanceId.String() {
+		t.Fatalf("InstanceId mismatch: got %v, want %v", createdState.InstanceId.ValueString(), instanceId.String())
+	}
+	if createdState.TokenId.ValueString() != tokenId.String() {
+		t.Fatalf("TokenId mismatch: got %v, want %v", createdState.TokenId.ValueString(), tokenId.String())
+	}
+	if createdState.Id != tfId {
+		t.Fatalf("Id mismatch: got %v, want %v", createdState.Id.ValueString(), tfId)
 	}
 	if createdState.State.ValueString() != "active" {
-		t.Fatalf("Should be equal - expected %v, got %v", "active", createdState.State.ValueString())
+		t.Fatalf("State mismatch: got %v, want active", createdState.State.ValueString())
 	}
-	if description != createdState.Description.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", description, createdState.Description.ValueString())
+	if createdState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
+		t.Fatalf("ValidUntil mismatch: got %v, want 2099-01-01T00:00:00Z", createdState.ValidUntil.ValueString())
 	}
-	if createdState.Token.ValueString() != "token" {
-		t.Fatalf("Should be equal - expected %v, got %v", "token", createdState.Token.ValueString())
+	if !createdState.Labels.IsNull() {
+		t.Fatalf("Labels should be null")
 	}
-	if utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString() != createdState.Id.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString(), createdState.Id.ValueString())
+	if createdState.Token.ValueString() != content {
+		t.Fatalf("Token mismatch: got %v, want %v", createdState.Token.ValueString(), content)
 	}
 }
 
@@ -125,10 +136,11 @@ func TestCreate_TokenIdEmpty(t *testing.T) {
 	description := "token description"
 	instanceId := uuid.New()
 	validUntil := time.Now()
+	content := "token"
 
 	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
-			Content:     "token",
+			Content:     content,
 			Description: &description,
 			Id:          "",
 			Name:        name,
@@ -240,11 +252,13 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	description := "token description"
 	instanceId := uuid.New()
 	tokenId := uuid.New()
-	validUntil := time.Now().Add(10 * time.Minute)
+	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
+	content := "token"
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
-			Content:     "token",
+			Content:     content,
 			Description: &description,
 			Id:          tokenId.String(),
 			Name:        name,
@@ -298,28 +312,37 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 		t.Fatalf("failed to get state")
 	}
 
-	if tokenId.String() != createdState.TokenId.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", tokenId.String(), createdState.TokenId.ValueString())
+	if createdState.ProjectId.ValueString() != projectId.String() {
+		t.Fatalf("ProjectId mismatch: got %v, want %v", createdState.ProjectId.ValueString(), projectId.String())
 	}
-	if projectId.String() != createdState.ProjectId.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", projectId.String(), createdState.ProjectId.ValueString())
+	if createdState.Region.ValueString() != region {
+		t.Fatalf("Region mismatch: got %v, want %v", createdState.Region.ValueString(), region)
 	}
-	if instanceId.String() != createdState.InstanceId.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", instanceId.String(), createdState.InstanceId.ValueString())
+	if createdState.Name.ValueString() != name {
+		t.Fatalf("Name mismatch: got %v, want %v", createdState.Name.ValueString(), name)
 	}
-	if name != createdState.Name.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", name, createdState.Name.ValueString())
+	if createdState.Description.ValueString() != description {
+		t.Fatalf("Description mismatch: got %v, want %v", createdState.Description.ValueString(), description)
 	}
-	if createdState.State.ValueString() != string(createTokenResp.Token.State) {
-		t.Fatalf("Should be equal - expected %v, got %v", "creating", createdState.State.ValueString())
+	if createdState.InstanceId.ValueString() != instanceId.String() {
+		t.Fatalf("InstanceId mismatch: got %v, want %v", createdState.InstanceId.ValueString(), instanceId.String())
 	}
-	if description != createdState.Description.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", description, createdState.Description.ValueString())
+	if createdState.TokenId.ValueString() != tokenId.String() {
+		t.Fatalf("TokenId mismatch: got %v, want %v", createdState.TokenId.ValueString(), tokenId.String())
 	}
-	if createdState.Token.ValueString() != "token" {
-		t.Fatalf("Should be equal - expected %v, got %v", "token", createdState.Token.ValueString())
+	if createdState.Id != tfId {
+		t.Fatalf("Id mismatch: got %v, want %v", createdState.Id.ValueString(), tfId)
 	}
-	if utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString() != createdState.Id.ValueString() {
-		t.Fatalf("Should be equal - expected %v, got %v", utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String()).ValueString(), createdState.Id.ValueString())
+	if createdState.State.ValueString() != "creating" {
+		t.Fatalf("State mismatch: got %v, want creating", createdState.State.ValueString())
+	}
+	if createdState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
+		t.Fatalf("ValidUntil mismatch: got %v, want 2099-01-01T00:00:00Z", createdState.ValidUntil.ValueString())
+	}
+	if !createdState.Labels.IsNull() {
+		t.Fatalf("Labels should be null")
+	}
+	if createdState.Token.ValueString() != content {
+		t.Fatalf("Token mismatch: got %v, want %v", createdState.Token.ValueString(), content)
 	}
 }
