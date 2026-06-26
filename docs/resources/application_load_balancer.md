@@ -26,7 +26,7 @@ variable "project_id" {
 variable "image_id" {
   description = "A valid Debian 12 Image ID available in all projects"
   type        = string
-  default     = "939249d1-6f48-4ab7-929b-95170728311a"
+  default     = "d333affd-9f00-446d-978f-524cb0384360"
 }
 
 variable "availability_zone" {
@@ -205,7 +205,9 @@ resource "stackit_application_load_balancer" "example" {
     }
   ]
   options = {
-    acl                  = ["123.123.123.123/24", "12.12.12.12/24"]
+    access_control = {
+      allowed_source_ranges = ["123.123.123.123/24", "12.12.12.12/24"]
+    }
     ephemeral_address    = true
     private_network_only = false
     observability = {
