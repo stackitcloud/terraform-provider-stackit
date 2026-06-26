@@ -507,7 +507,7 @@ func mapCreateResponse(ctx context.Context, instanceTokenResp *modelexperiments.
 	}
 
 	if waitResp == nil {
-		model.State = types.StringValue("unknown")
+		model.State = types.StringValue(string(instanceTokenResp.Token.State))
 	} else {
 		model.State = types.StringValue(string(waitResp.Token.State))
 	}
