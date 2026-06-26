@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	_ "time/tzdata"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
@@ -393,6 +394,32 @@ func IsLowercased() *Validator {
 					val,
 				))
 				return
+			}
+		},
+	}
+}
+
+// NoLeadingOrTrailingWhitespace returns a Validator that checks if the input string has leading or trailing whitespace.
+// Examples:
+// - "example": valid
+// - "": valid, empty value
+// - " example": invalid, leading whitespace
+// - "example ": invalid, trailing whitespace
+func NoLeadingOrTrailingWhitespace() *Validator {
+	description := "Value must not have leading or trailing whitespace, as defined by gos unicode.IsSpace(rune)."
+	return &Validator{
+		description: description,
+		validate: func(_ context.Context, request validator.StringRequest, response *validator.StringResponse) {
+			val := request.ConfigValue.ValueString()
+			if val == "" {
+				return
+			}
+			if unicode.IsSpace(rune(val[0])) || unicode.IsSpace(rune(val[len(val)-1])) {
+				response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					request.Path,
+					description,
+					val,
+				))
 			}
 		},
 	}
