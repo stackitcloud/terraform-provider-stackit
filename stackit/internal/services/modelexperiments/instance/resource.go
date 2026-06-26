@@ -146,10 +146,16 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: "STACKIT project ID to which the AI model experiments instance is associated.",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -167,6 +173,9 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"instance_id": schema.StringAttribute{
 				Description: "The AI model experiments instance ID.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
@@ -175,13 +184,11 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"labels": schema.MapAttribute{
 				Description: "A map of arbitrary key/value pairs that can be attached to the AI model experiments instance",
 				Optional:    true,
-				Required:    false,
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"description": schema.StringAttribute{
 				Description: "The description of the AI model experiments instance.",
-				Required:    false,
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 160),
@@ -208,7 +215,6 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"deleted_experiment_retention": schema.StringAttribute{
 				Description: "The deleted experiment retention of the AI model experiments instance.",
 				Optional:    true,
-				Required:    false,
 				Computed:    true,
 			},
 			"bucket_name": schema.StringAttribute{
@@ -217,8 +223,6 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"error_message": schema.StringAttribute{
 				Description: "Error messages of the AI model experiments instance.",
-				Optional:    true,
-				Required:    false,
 				Computed:    true,
 			},
 		},
@@ -389,8 +393,8 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 // Update updates the resource and sets the updated Terraform state on success.
 func (i *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	// Retrieve values from plan
-	var model Model
-	diags := req.Plan.Get(ctx, &model)
+	var plan Model
+	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -409,13 +413,13 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	projectId := state.ProjectId.ValueString()
 	instanceId := state.InstanceId.ValueString()
 
-	region := i.providerData.GetRegionWithOverride(model.Region)
+	region := i.providerData.GetRegionWithOverride(plan.Region)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(&plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -436,13 +440,13 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapInstance(ctx, &updateInstanceResp.Instance, &model)
+	err = mapInstance(ctx, &updateInstanceResp.Instance, &plan)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI model experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, model)
+	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -487,8 +491,7 @@ func (i *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).
-		WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, i.client, region, projectId, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting AI model experiments instance", fmt.Sprintf("Waiting for instance to be deleted: %v", err))
 		return
@@ -550,7 +553,7 @@ func mapInstance(ctx context.Context, instance *modelexperiments.Instance, model
 		return fmt.Errorf("failure in mapping labels")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.InstanceId.ValueString())
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), instance.Id)
 	model.InstanceId = types.StringValue(instance.Id)
 	model.Name = types.StringValue(instance.Name)
 	model.State = types.StringValue(string(instance.State))
@@ -559,7 +562,7 @@ func mapInstance(ctx context.Context, instance *modelexperiments.Instance, model
 	model.BucketName = types.StringPointerValue(instance.BucketName)
 	model.ErrorMessage = types.StringPointerValue(instance.ErrorMessage)
 	model.Labels = mapValue
-	model.Url = types.StringPointerValue(&instance.Url)
+	model.Url = types.StringValue(instance.Url)
 
 	return nil
 }
