@@ -20,20 +20,20 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.12.2
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.0.0
+	github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.0.1
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0
-	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.10.0
-	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.0.0
+	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.9.0
