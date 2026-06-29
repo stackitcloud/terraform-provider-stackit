@@ -157,7 +157,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				InstanceId:  types.StringValue("id"),
 				Name:        types.StringValue("name"),
 				Description: types.StringValue("description"),
-				State:       types.StringValue("unknown"),
+				State:       types.StringValue("active"),
 				Token:       types.StringValue("token"),
 				TokenId:     types.StringValue("id"),
 				Labels:      types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),

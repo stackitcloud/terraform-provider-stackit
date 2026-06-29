@@ -281,7 +281,7 @@ func TestCreate_GetInstanceFailure(t *testing.T) {
 	if region != stateAfterCreate.Region.ValueString() {
 		t.Fatalf("expected %v, got %v", region, stateAfterCreate.Region.ValueString())
 	}
-	if "" != stateAfterCreate.BucketName.ValueString() {
+	if stateAfterCreate.BucketName.ValueString() != "" {
 		t.Fatalf("expected %v, got %v", "", stateAfterCreate.BucketName.ValueString())
 	}
 	if deletetExpRetention != stateAfterCreate.DeletedExperimentRetention.ValueString() {
