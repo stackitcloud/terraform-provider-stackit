@@ -991,7 +991,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 	// stripResponseCookies
 	if !utils.IsUndefined(configModel.StripResponseCookies) {
-		configPatch.StripResponseCookies = new(configModel.StripResponseCookies.ValueBool())
+		configPatch.StripResponseCookies = configModel.StripResponseCookies.ValueBoolPointer()
 	}
 
 	configPatch.Waf = &cdnSdk.WafConfigPatch{
@@ -1579,10 +1579,10 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	}
 
 	if !utils.IsUndefined(rawConfig.ForwardHostHeader) {
-		payload.ForwardHostHeader = new(rawConfig.ForwardHostHeader.ValueBool())
+		payload.ForwardHostHeader = rawConfig.ForwardHostHeader.ValueBoolPointer()
 	}
 	if !utils.IsUndefined(rawConfig.StripResponseCookies) {
-		payload.StripResponseCookies = new(rawConfig.StripResponseCookies.ValueBool())
+		payload.StripResponseCookies = rawConfig.StripResponseCookies.ValueBoolPointer()
 	}
 
 	return payload, nil
