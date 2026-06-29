@@ -161,7 +161,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				InstanceId:                 types.StringValue("id"),
 				Name:                       types.StringValue("name"),
 				Description:                types.StringValue("description"),
-				State:                      types.StringValue("unknown"),
+				State:                      types.StringValue("pending"),
 				DeletedExperimentRetention: types.StringValue("30d"),
 				Url:                        types.StringValue("url"),
 				ErrorMessage:               types.StringNull(),

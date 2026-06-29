@@ -87,7 +87,6 @@ func TestUpdate_Success(t *testing.T) {
 	// Execute Update
 	tokenRes.Update(tc.Ctx, req, resp)
 	if resp.Diagnostics.HasError() {
-		t.Fatalf("%v", resp.Diagnostics.Errors())
 		t.Fatalf("update should succeed")
 	}
 
