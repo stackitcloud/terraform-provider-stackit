@@ -401,7 +401,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -454,7 +454,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -532,7 +532,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -611,7 +611,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "RabbitMQ instance state imported")
 }
 
-func mapFields(instance *rabbitmq.Instance, model *Model) error {
+func mapFields(instance *rabbitmq.Instance, model *Model, region string) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -628,7 +628,8 @@ func mapFields(instance *rabbitmq.Instance, model *Model) error {
 		return fmt.Errorf("instance id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
+	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.PlanId = types.StringValue(instance.PlanId)
 	model.CfGuid = types.StringValue(instance.CfGuid)

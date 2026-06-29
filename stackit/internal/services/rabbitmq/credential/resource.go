@@ -95,7 +95,7 @@ func (r *credentialResource) Configure(ctx context.Context, req resource.Configu
 func (r *credentialResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
 		"main":          "RabbitMQ credential resource schema. Must have a `region` specified in the provider configuration.",
-		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
+		"id":            "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the RabbitMQ instance.",
 		"project_id":    "STACKIT Project ID to which the instance is associated.",
@@ -256,7 +256,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model)
+	err = mapFields(ctx, waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -308,7 +308,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapFields(ctx, recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -393,7 +393,7 @@ func (r *credentialResource) ImportState(ctx context.Context, req resource.Impor
 	tflog.Info(ctx, "RabbitMQ credential state imported")
 }
 
-func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsResponse, model *Model) error {
+func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsResponse, model *Model, region string) error {
 	if credentialsResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -414,8 +414,9 @@ func mapFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsRespons
 		return fmt.Errorf("credentials id not present")
 	}
 
+	model.Region = types.StringValue(region)
 	model.Id = utils.BuildInternalTerraformId(
-		model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId,
+		model.ProjectId.ValueString(), model.Region.ValueString(), model.InstanceId.ValueString(), credentialId,
 	)
 	model.CredentialId = types.StringValue(credentialId)
 

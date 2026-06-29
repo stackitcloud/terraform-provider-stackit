@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -11,6 +12,7 @@ import (
 )
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
 	tests := []struct {
 		description string
 		state       Model
@@ -30,10 +32,11 @@ func TestMapFields(t *testing.T) {
 				Raw: &rabbitmq.RawCredentials{},
 			},
 			Model{
-				Id:                types.StringValue("pid,iid,cid"),
+				Id:                types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId:      types.StringValue("cid"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue(testRegion),
 				Host:              types.StringValue(""),
 				Hosts:             types.ListNull(types.StringType),
 				HttpAPIURI:        types.StringNull(),
@@ -82,10 +85,11 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue("host"),
 				Hosts: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("host_1"),
@@ -161,10 +165,11 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue("host"),
 				Hosts: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("host_2"),
@@ -216,10 +221,11 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                types.StringValue("pid,iid,cid"),
+				Id:                types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId:      types.StringValue("cid"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue(testRegion),
 				Host:              types.StringValue(""),
 				Hosts:             types.ListValueMust(types.StringType, []attr.Value{}),
 				HttpAPIURI:        types.StringNull(),
@@ -272,7 +278,7 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state)
+			err := mapFields(context.Background(), tt.input, &tt.state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

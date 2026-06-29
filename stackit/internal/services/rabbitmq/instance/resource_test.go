@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -59,6 +60,7 @@ var fixtureInstanceParameters = rabbitmq.InstanceParameters{
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
 	tests := []struct {
 		description string
 		input       *rabbitmq.Instance
@@ -69,9 +71,10 @@ func TestMapFields(t *testing.T) {
 			"default_values",
 			&rabbitmq.Instance{},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
+				Region:             types.StringValue(testRegion),
 				PlanId:             types.StringValue(""),
 				Name:               types.StringValue(""),
 				CfGuid:             types.StringValue(""),
@@ -111,9 +114,10 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
+				Region:             types.StringValue(testRegion),
 				PlanId:             types.StringValue("plan"),
 				Name:               types.StringValue("name"),
 				CfGuid:             types.StringValue("cf"),
@@ -165,7 +169,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
