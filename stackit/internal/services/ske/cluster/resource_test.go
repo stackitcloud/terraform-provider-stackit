@@ -39,6 +39,12 @@ func TestMapFields(t *testing.T) {
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
 			&ske.Cluster{
 				Name: new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -54,6 +60,7 @@ func TestMapFields(t *testing.T) {
 				PodAddressRanges:      types.ListNull(types.StringType),
 				Region:                types.StringValue(testRegion),
 				KubernetesVersionUsed: types.StringValue(""),
+				Access:                defaultAccess,
 			},
 			true,
 		},
@@ -144,6 +151,12 @@ func TestMapFields(t *testing.T) {
 					Hibernated:          nil,
 					EgressAddressRanges: []string{"0.0.0.0/32", "1.1.1.1/32"},
 					PodAddressRanges:    []string{"0.0.0.0/32", "1.1.1.1/32"},
+				},
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: true,
+						Type:    "stackit",
+					},
 				},
 			},
 			testRegion,
@@ -261,6 +274,12 @@ func TestMapFields(t *testing.T) {
 					}),
 				}),
 				Region: types.StringValue(testRegion),
+				Access: types.ObjectValueMust(accessTypes, map[string]attr.Value{
+					"idp": types.ObjectValueMust(idpTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+						"type":    types.StringValue("stackit"),
+					}),
+				}),
 			},
 			true,
 		},
@@ -271,6 +290,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Name:    new("name"),
 				Network: &ske.Network{},
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -286,6 +311,7 @@ func TestMapFields(t *testing.T) {
 				PodAddressRanges:      types.ListNull(types.StringType),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
+				Access:                defaultAccess,
 			},
 			true,
 		},
@@ -309,6 +335,12 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Name: new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -337,6 +369,7 @@ func TestMapFields(t *testing.T) {
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
+				Access:                defaultAccess,
 			},
 			true,
 		},
@@ -361,6 +394,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -389,6 +428,7 @@ func TestMapFields(t *testing.T) {
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
+				Access:                defaultAccess,
 			},
 			true,
 		},
@@ -424,6 +464,12 @@ func TestMapFields(t *testing.T) {
 					},
 				},
 				Name: new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -454,6 +500,7 @@ func TestMapFields(t *testing.T) {
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
+				Access:                defaultAccess,
 			},
 			true,
 		},
@@ -464,6 +511,12 @@ func TestMapFields(t *testing.T) {
 			&ske.Cluster{
 				Extensions: &ske.Extension{},
 				Name:       new("name"),
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -478,6 +531,7 @@ func TestMapFields(t *testing.T) {
 				PodAddressRanges:      types.ListNull(types.StringType),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
+				Access:                defaultAccess,
 			},
 			true,
 		},
@@ -597,6 +651,12 @@ func TestMapFields(t *testing.T) {
 					Error:      nil,
 					Hibernated: nil,
 				},
+				Access: &ske.Access{
+					Idp: &ske.IDP{
+						Enabled: false,
+						Type:    "stackit",
+					},
+				},
 			},
 			testRegion,
 			Model{
@@ -689,6 +749,7 @@ func TestMapFields(t *testing.T) {
 					}),
 				}),
 				Region: types.StringValue(testRegion),
+				Access: defaultAccess,
 			},
 			true,
 		},
@@ -2683,3 +2744,120 @@ func TestValidateConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestMapAccess(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   *ske.Access
+		want    basetypes.ObjectValue
+		wantErr bool
+	}{
+		{
+			name: "valid IDP",
+			input: &ske.Access{
+				Idp: &ske.IDP{
+					Enabled: true,
+					Type:    "stackit",
+				},
+			},
+			want: types.ObjectValueMust(accessTypes, map[string]attr.Value{
+				"idp": types.ObjectValueMust(idpTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(true),
+					"type":    types.StringValue("stackit"),
+				}),
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Model{}
+			cluster := &ske.Cluster{
+				Access: tt.input,
+			}
+
+			err := mapAccess(t.Context(), cluster, m)
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected error, but got none")
+			}
+			if diff := cmp.Diff(tt.want, m.Access); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestToAccessPayload(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   basetypes.ObjectValue
+		want    *ske.Access
+		wantErr bool
+	}{
+		{
+			name:  "null access",
+			input: types.ObjectNull(accessTypes),
+			want:  nil,
+		},
+		{
+			name:  "unknown access",
+			input: types.ObjectUnknown(accessTypes),
+			want:  nil,
+		},
+		{
+			name: "valid access",
+			input: types.ObjectValueMust(accessTypes, map[string]attr.Value{
+				"idp": types.ObjectValueMust(idpTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(true),
+					"type":    types.StringValue("stackit"),
+				}),
+			}),
+			want: &ske.Access{
+				Idp: &ske.IDP{
+					Enabled: true,
+					Type:    "stackit",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Model{
+				Access: tt.input,
+			}
+			got, err := toAccessPayload(t.Context(), m)
+			if err != nil && !tt.wantErr {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err == nil && tt.wantErr {
+				t.Fatalf("expected error, but got none")
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+var defaultIdp = types.ObjectValueMust(
+	idpTypes,
+	map[string]attr.Value{
+		"enabled": types.BoolValue(false),
+		"type":    types.StringValue("stackit"),
+	},
+)
+
+var defaultAccess = types.ObjectValueMust(
+	accessTypes,
+	map[string]attr.Value{
+		"idp": defaultIdp,
+	},
+)

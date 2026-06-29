@@ -330,6 +330,26 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Optional:    true,
 				Description: "The resource region. If not defined, the provider region is used.",
 			},
+			"access": schema.SingleNestedAttribute{
+				Description: descriptions["access"],
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"idp": schema.SingleNestedAttribute{
+						Description: descriptions["access_idp"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: descriptions["access_idp_enabled"],
+								Computed:    true,
+							},
+							"type": schema.StringAttribute{
+								Description: descriptions["access_idp_type"],
+								Computed:    true,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

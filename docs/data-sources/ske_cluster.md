@@ -33,6 +33,7 @@ data "stackit_ske_cluster" "example" {
 
 ### Read-Only
 
+- `access` (Attributes) Configure access to the cluster (see [below for nested schema](#nestedatt--access))
 - `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
@@ -43,6 +44,23 @@ data "stackit_ske_cluster" "example" {
 - `network` (Attributes) Network block as defined below. (see [below for nested schema](#nestedatt--network))
 - `node_pools` (Attributes List) One or more `node_pool` block as defined below. (see [below for nested schema](#nestedatt--node_pools))
 - `pod_address_ranges` (List of String) The network ranges (in CIDR notation) used by pods of the cluster.
+
+<a id="nestedatt--access"></a>
+### Nested Schema for `access`
+
+Read-Only:
+
+- `idp` (Attributes) Configure IDP (see [below for nested schema](#nestedatt--access--idp))
+
+<a id="nestedatt--access--idp"></a>
+### Nested Schema for `access.idp`
+
+Read-Only:
+
+- `enabled` (Boolean) Enable IDP integration for the cluster.
+- `type` (String) The IDP type. Possible values: 'stackit'.
+
+
 
 <a id="nestedatt--extensions"></a>
 ### Nested Schema for `extensions`
