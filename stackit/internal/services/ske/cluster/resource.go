@@ -96,6 +96,7 @@ type Model struct {
 	PodAddressRanges      types.List   `tfsdk:"pod_address_ranges"`
 	ServiceAccountIssuer  types.String `tfsdk:"service_account_issuer"`
 	Region                types.String `tfsdk:"region"`
+	Access                types.Object `tfsdk:"access"`
 }
 
 // Struct corresponding to Model.NodePools[i]
@@ -281,6 +282,24 @@ type clusterResource struct {
 	providerData     core.ProviderData
 }
 
+type access struct {
+	IDP types.Object `tfsdk:"idp"`
+}
+
+var accessTypes = map[string]attr.Type{
+	"idp": basetypes.ObjectType{AttrTypes: idpTypes},
+}
+
+type idp struct {
+	Enabled types.Bool   `tfsdk:"enabled"`
+	Type    types.String `tfsdk:"type"`
+}
+
+var idpTypes = map[string]attr.Type{
+	"enabled": basetypes.BoolType{},
+	"type":    basetypes.StringType{},
+}
+
 // ModifyPlan implements resource.ResourceWithModifyPlan.
 // Use the modifier to set the effective region in the current plan.
 func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
@@ -381,18 +400,22 @@ func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureR
 	tflog.Info(ctx, "SKE cluster clients configured")
 }
 
+var descriptions = map[string]string{
+	"main": "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
+	"node_pools_plan_note": "When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. " +
+		"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
+	"max_surge":           "Maximum number of additional VMs that are created during an update.",
+	"max_unavailable":     "Maximum number of VMs that that can be unavailable during an update.",
+	"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.",
+	"region":              "The resource region. If not defined, the provider region is used.",
+	"access":              "Configure access to the cluster",
+	"access_idp":          "Configure IDP",
+	"access_idp_enabled":  "Enable IDP integration for the cluster.",
+	"access_idp_type":     "The IDP type. Possible values: 'stackit'.",
+}
+
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main": "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
-		"node_pools_plan_note": "When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. " +
-			"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
-		"max_surge":           "Maximum number of additional VMs that are created during an update.",
-		"max_unavailable":     "Maximum number of VMs that that can be unavailable during an update.",
-		"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.",
-		"region":              "The resource region. If not defined, the provider region is used.",
-	}
-
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
@@ -803,6 +826,35 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"access": schema.SingleNestedAttribute{
+				Description: descriptions["access"],
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"idp": schema.SingleNestedAttribute{
+						Description: descriptions["access_idp"],
+						Optional:    true,
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: descriptions["access_idp_enabled"],
+								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
+							},
+							"type": schema.StringAttribute{
+								Description: descriptions["access_idp_type"],
+								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString("stackit"),
+								Validators: []validator.String{
+									stringvalidator.OneOf("stackit"),
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -920,7 +972,7 @@ func sortK8sVersions(versions []ske.KubernetesVersion) {
 }
 
 // loadAvailableVersions loads the available k8s and machine versions from the API.
-// The k8s versions are sorted  descending order, i.e. the latest versions (including previews)
+// The k8s versions are sorted descending order, i.e. the latest versions (including previews)
 // are listed first
 func (r *clusterResource) loadAvailableVersions(ctx context.Context, region string) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
 	res, err := r.skeClient.DefaultAPI.ListProviderOptions(ctx, region).Execute()
@@ -1003,6 +1055,11 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating extension API payload: %v", err))
 		return
 	}
+	access, err := toAccessPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating access API payload: %v", err))
+		return
+	}
 
 	payload := ske.CreateOrUpdateClusterPayload{
 		Extensions:  extensions,
@@ -1011,6 +1068,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Maintenance: maintenance,
 		Network:     network,
 		Nodepools:   nodePools,
+		Access:      access,
 	}
 	_, err = r.skeClient.DefaultAPI.CreateOrUpdateCluster(ctx, projectId, region, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
@@ -1417,6 +1475,26 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}, nil
 }
 
+func toAccessPayload(ctx context.Context, m *Model) (*ske.Access, error) {
+	if utils.IsUndefined(m.Access) {
+		return nil, nil
+	}
+	access := access{}
+	diags := m.Access.As(ctx, &access, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting access object: %v", diags.Errors())
+	}
+	idp := idp{}
+	diags = access.IDP.As(ctx, &idp, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting idp object: %v", diags.Errors())
+	}
+
+	return &ske.Access{
+		Idp: ske.NewIDP(idp.Enabled.ValueBool(), idp.Type.ValueString()),
+	}, nil
+}
+
 func parseMaintenanceWindowTime(t string) (time.Time, error) {
 	v, err := time.Parse("15:04:05-07:00", t)
 	if err != nil {
@@ -1560,6 +1638,10 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 	err = mapExtensions(ctx, cl, m)
 	if err != nil {
 		return fmt.Errorf("map extensions: %w", err)
+	}
+	err = mapAccess(ctx, cl, m)
+	if err != nil {
+		return fmt.Errorf("map access: %w", err)
 	}
 	return nil
 }
@@ -2053,6 +2135,31 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
 	}
 	m.Extensions = extensions
+	return nil
+}
+
+func mapAccess(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	var diags diag.Diagnostics
+
+	// explicitly no nil checks, the API won't return nil values here, despite the types suggesting the possibility
+	idp := idp{
+		Enabled: types.BoolValue(cl.Access.Idp.Enabled),
+		Type:    types.StringValue(cl.Access.Idp.Type),
+	}
+	idpObject, diags := types.ObjectValueFrom(ctx, idpTypes, idp)
+	if diags.HasError() {
+		return fmt.Errorf("creating idp object: %w", core.DiagsToError(diags))
+	}
+
+	access := access{
+		IDP: idpObject,
+	}
+	accessObject, diags := types.ObjectValueFrom(ctx, accessTypes, access)
+	if diags.HasError() {
+		return fmt.Errorf("creating access object: %w", core.DiagsToError(diags))
+	}
+
+	m.Access = accessObject
 	return nil
 }
 

@@ -93,6 +93,7 @@ var testConfigVarsMax = config.Variables{
 	"dns_zone_name":                                    config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)),
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
 	"network_control_plane_access_scope":               config.StringVariable("PUBLIC"),
+	"access_idp_enabled":                               config.BoolVariable(true),
 }
 
 var testConfigDatasource = config.Variables{
@@ -111,6 +112,7 @@ func configVarsMaxUpdated() config.Variables {
 	updatedConfig["kubernetes_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateK8sVersion())
 	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
+	updatedConfig["access_idp_enabled"] = config.BoolVariable(false)
 
 	return updatedConfig
 }
@@ -156,6 +158,10 @@ func TestAccSKEMin(t *testing.T) {
 						"stackit_ske_kubeconfig.kubeconfig", "cluster_name",
 						"stackit_ske_cluster.cluster", "name",
 					),
+
+					// Access: resource-min does not define an access block, we expect idp: { enabled: false, type: stackit } here because of the default
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", "false"),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
 			},
 			// 2) Data source
@@ -323,6 +329,9 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
+					// Access
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
@@ -398,6 +407,9 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "service_account_issuer"),
+					// Access
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
 			},
 			// 3) Import cluster
@@ -424,7 +436,7 @@ func TestAccSKEMax(t *testing.T) {
 				// The fields are not provided in the SKE API when disabled, although set actively.
 				ImportStateVerifyIgnore: []string{"kubernetes_version_min", "node_pools.0.os_version_min", "extensions.observability.%", "extensions.observability.instance_id", "extensions.observability.enabled"},
 			},
-			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
+			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version, set access.idp.enabled to false
 			{
 				Config:          resourceMax,
 				ConfigVariables: configVarsMaxUpdated(),
@@ -486,6 +498,9 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "service_account_issuer"),
+					// Access
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["access_idp_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
 			},
 			// Deletion is done by the framework implicitly
