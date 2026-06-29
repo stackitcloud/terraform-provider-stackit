@@ -54,8 +54,6 @@ require (
 	golang.org/x/mod v0.38.0
 )
 
-require github.com/stretchr/testify v1.11.1 // indirect
-
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
