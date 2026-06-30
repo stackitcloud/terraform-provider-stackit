@@ -56,7 +56,7 @@ resource "stackit_vpn_connection" "example" {
 # Only use the import statement, if you want to import an existing VPN connection
 import {
   to = stackit_vpn_connection.example
-  id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,eu01,xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  id = "${var.project_id},${var.region},${var.gateway_id},${var.connection_id}"
 }
 ```
 
@@ -79,9 +79,9 @@ import {
 
 - `enabled` (Boolean) Whether this connection is enabled. Defaults to true.
 - `labels` (Map of String) Map of custom labels.
-- `local_subnet` (List of String) List of local IPv4 CIDRs to route through this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.
+- `local_subnets` (List of String) List of local IPv4 CIDRs to route through this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.
 - `region` (String) STACKIT region.
-- `remote_subnet` (List of String) List of remote IPv4 CIDRs accessible via this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.
+- `remote_subnets` (List of String) List of remote IPv4 CIDRs accessible via this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.
 - `static_routes` (List of String) List of static routes (IPv4 CIDRs) for route-based VPN. Mandatory for ROUTE_BASED gateways.
 
 ### Read-Only

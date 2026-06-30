@@ -41,5 +41,5 @@ resource "stackit_vpn_connection" "example" {
 # Only use the import statement, if you want to import an existing VPN connection
 import {
   to = stackit_vpn_connection.example
-  id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,eu01,xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  id = "${var.project_id},${var.region},${var.gateway_id},${var.connection_id}"
 }

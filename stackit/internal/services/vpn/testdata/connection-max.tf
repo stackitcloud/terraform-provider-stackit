@@ -20,8 +20,8 @@ resource "stackit_vpn_connection" "connection" {
   gateway_id   = stackit_vpn_gateway.gateway.gateway_id
   display_name = var.connection_display_name
 
-  remote_subnet = [var.remote_subnet]
-  local_subnet  = [var.local_subnet]
+  remote_subnets = [var.remote_subnet]
+  local_subnets  = [var.local_subnet]
 
   tunnel1 = {
     remote_address = var.tunnel1_remote_address

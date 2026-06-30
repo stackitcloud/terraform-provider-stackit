@@ -12,19 +12,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
+
+	listplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
@@ -77,17 +80,17 @@ type TunnelModel struct {
 
 // CommonModel is used in the resource and the datasource implementation to share most of the mapping logic
 type CommonModel struct {
-	ID           types.String `tfsdk:"id"`
-	ConnectionID types.String `tfsdk:"connection_id"`
-	ProjectID    types.String `tfsdk:"project_id"`
-	Region       types.String `tfsdk:"region"`
-	GatewayID    types.String `tfsdk:"gateway_id"`
-	DisplayName  types.String `tfsdk:"display_name"`
-	Enabled      types.Bool   `tfsdk:"enabled"`
-	RemoteSubnet types.List   `tfsdk:"remote_subnet"`
-	LocalSubnet  types.List   `tfsdk:"local_subnet"`
-	StaticRoutes types.List   `tfsdk:"static_routes"`
-	Labels       types.Map    `tfsdk:"labels"`
+	ID            types.String `tfsdk:"id"`
+	ConnectionID  types.String `tfsdk:"connection_id"`
+	ProjectID     types.String `tfsdk:"project_id"`
+	Region        types.String `tfsdk:"region"`
+	GatewayID     types.String `tfsdk:"gateway_id"`
+	DisplayName   types.String `tfsdk:"display_name"`
+	Enabled       types.Bool   `tfsdk:"enabled"`
+	RemoteSubnets types.List   `tfsdk:"remote_subnets"`
+	LocalSubnets  types.List   `tfsdk:"local_subnets"`
+	StaticRoutes  types.List   `tfsdk:"static_routes"`
+	Labels        types.Map    `tfsdk:"labels"`
 }
 
 // Model is used for the resource implementation
@@ -252,6 +255,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							Description: "Time to schedule an IKE re-keying in seconds. Range: 900-28800. Default: 14400.",
 							Optional:    true,
 							Computed:    true,
+							Default:     int32default.StaticInt32(14400),
 							Validators: []validator.Int32{
 								int32validator.Between(900, 28800),
 							},
@@ -295,22 +299,25 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							Description: "Time to schedule a Child SA re-keying in seconds. Range: 900-3600. Default: 3600.",
 							Optional:    true,
 							Computed:    true,
+							Default:     int32default.StaticInt32(3600),
 							Validators: []validator.Int32{
 								int32validator.Between(900, 3600),
 							},
 						},
 						"start_action": schema.StringAttribute{
-							Description: fmt.Sprintf("Action to perform after loading the connection configuration. Default: 'start'. %s", tfutils.FormatPossibleValues(startActionValues...)),
+							Description: fmt.Sprintf("Action to perform after loading the connection configuration. Default: '%s'. %s", vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START, tfutils.FormatPossibleValues(startActionValues...)),
 							Optional:    true,
 							Computed:    true,
+							Default:     stringdefault.StaticString(string(vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START)),
 							Validators: []validator.String{
 								stringvalidator.OneOf(startActionValues...),
 							},
 						},
 						"dpd_action": schema.StringAttribute{
-							Description: fmt.Sprintf("Action to perform on DPD timeout. Default: 'restart'. %s", tfutils.FormatPossibleValues(dpdActionValues...)),
+							Description: fmt.Sprintf("Action to perform on DPD timeout. Default: '%s'. %s", vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART, tfutils.FormatPossibleValues(dpdActionValues...)),
 							Optional:    true,
 							Computed:    true,
+							Default:     stringdefault.StaticString(string(vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART)),
 							Validators: []validator.String{
 								stringvalidator.OneOf(dpdActionValues...),
 							},
@@ -419,32 +426,41 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
 			},
-			"remote_subnet": schema.ListAttribute{
+			"remote_subnets": schema.ListAttribute{
 				Description: "List of remote IPv4 CIDRs accessible via this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
 				Optional:    true,
-				Computed:    true,
+				Computed:    true, // API sets default 0.0.0.0/0, must be computed to prevent state drift errors
 				ElementType: types.StringType,
 				Validators: []validator.List{
 					listvalidator.SizeBetween(1, 100),
 					listvalidator.ValueStringsAre(validate.CIDR()),
 				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"local_subnet": schema.ListAttribute{
+			"local_subnets": schema.ListAttribute{
 				Description: "List of local IPv4 CIDRs to route through this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
 				Optional:    true,
-				Computed:    true,
+				Computed:    true, // API sets default 0.0.0.0/0, must be computed to prevent state drift errors
 				ElementType: types.StringType,
 				Validators: []validator.List{
 					listvalidator.SizeBetween(1, 100),
 					listvalidator.ValueStringsAre(validate.CIDR()),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"static_routes": schema.ListAttribute{
 				Description: "List of static routes (IPv4 CIDRs) for route-based VPN. Mandatory for ROUTE_BASED gateways.",
 				Optional:    true,
-				Computed:    true,
-				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+				Computed:    true, // Needed because of suppress-null-empty-list plan modifier
 				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					// When sending nil to the API, the API returns an empty slice. We suppress this using the plan modifier to not cause state drifts.
+					listplanmodifierCustom.SuppressNullEmptyList(),
+				},
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(validate.CIDR()),
 				},
@@ -817,18 +833,18 @@ func toConnectionPayload(ctx context.Context, model *Model, payload connectionPa
 		payload.SetEnabled(model.Enabled.ValueBool())
 	}
 
-	if !tfutils.IsUndefined(model.RemoteSubnet) {
-		remoteSubnets, err := tfutils.ListValueToStringSlice(model.RemoteSubnet)
+	if !tfutils.IsUndefined(model.RemoteSubnets) {
+		remoteSubnets, err := tfutils.ListValueToStringSlice(model.RemoteSubnets)
 		if err != nil {
-			return fmt.Errorf("converting remote_subnet: %w", err)
+			return fmt.Errorf("converting remote_subnets: %w", err)
 		}
 		payload.SetRemoteSubnets(remoteSubnets)
 	}
 
-	if !tfutils.IsUndefined(model.LocalSubnet) {
-		localSubnets, err := tfutils.ListValueToStringSlice(model.LocalSubnet)
+	if !tfutils.IsUndefined(model.LocalSubnets) {
+		localSubnets, err := tfutils.ListValueToStringSlice(model.LocalSubnets)
 		if err != nil {
-			return fmt.Errorf("converting local_subnet: %w", err)
+			return fmt.Errorf("converting local_subnets: %w", err)
 		}
 		payload.SetLocalSubnets(localSubnets)
 	}
@@ -962,22 +978,22 @@ func mapCommonFields(ctx context.Context, conn connectionResponse, model *Common
 	enabled, _ := conn.GetEnabledOk()
 	model.Enabled = types.BoolPointerValue(enabled)
 
-	model.RemoteSubnet = types.ListNull(types.StringType)
+	model.RemoteSubnets = types.ListNull(types.StringType)
 	if remoteSubnets, _ := conn.GetRemoteSubnetsOk(); remoteSubnets != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, remoteSubnets)
 		if diags.HasError() {
-			return fmt.Errorf("mapping remote_subnet: %w", core.DiagsToError(diags))
+			return fmt.Errorf("mapping remote_subnets: %w", core.DiagsToError(diags))
 		}
-		model.RemoteSubnet = list
+		model.RemoteSubnets = list
 	}
 
-	model.LocalSubnet = types.ListNull(types.StringType)
+	model.LocalSubnets = types.ListNull(types.StringType)
 	if localSubnets, _ := conn.GetLocalSubnetsOk(); localSubnets != nil {
 		list, diags := types.ListValueFrom(ctx, types.StringType, localSubnets)
 		if diags.HasError() {
-			return fmt.Errorf("mapping local_subnet: %w", core.DiagsToError(diags))
+			return fmt.Errorf("mapping local_subnets: %w", core.DiagsToError(diags))
 		}
-		model.LocalSubnet = list
+		model.LocalSubnets = list
 	}
 
 	model.StaticRoutes = types.ListNull(types.StringType)

@@ -35,17 +35,17 @@ func fixtureDataSourceTunnelModel(mods ...func(m *DataSourceTunnelModel)) *DataS
 func fixtureDataSourceModel(mods ...func(m *DataSourceModel)) DataSourceModel {
 	resp := DataSourceModel{
 		CommonModel: CommonModel{
-			ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+			ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, gatewayId, "connection-id")),
 			ConnectionID: types.StringValue("connection-id"),
 			ProjectID:    types.StringValue(projectId),
-			Region:       types.StringValue(region),
+			Region:       types.StringValue(testRegion),
 			GatewayID:    types.StringValue(gatewayId),
 			DisplayName:  types.StringValue("test-connection"),
 			Enabled:      types.BoolValue(true),
-			RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
+			RemoteSubnets: types.ListValueMust(types.StringType, []attr.Value{
 				types.StringValue("10.0.0.0/16"),
 			}),
-			LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
+			LocalSubnets: types.ListValueMust(types.StringType, []attr.Value{
 				types.StringValue("192.168.0.0/24"),
 			}),
 			StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
@@ -84,17 +84,17 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 			expected: DataSourceModel{
 				CommonModel: CommonModel{
-					ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
-					ConnectionID: types.StringValue("connection-id"),
-					ProjectID:    types.StringValue(projectId),
-					Region:       types.StringValue(region),
-					GatewayID:    types.StringValue(gatewayId),
-					DisplayName:  types.StringValue(""),
-					Enabled:      types.BoolNull(),
-					RemoteSubnet: basetypes.NewListNull(basetypes.StringType{}),
-					LocalSubnet:  basetypes.NewListNull(basetypes.StringType{}),
-					StaticRoutes: basetypes.NewListNull(basetypes.StringType{}),
-					Labels:       basetypes.NewMapNull(basetypes.StringType{}),
+					ID:            types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, gatewayId, "connection-id")),
+					ConnectionID:  types.StringValue("connection-id"),
+					ProjectID:     types.StringValue(projectId),
+					Region:        types.StringValue(testRegion),
+					GatewayID:     types.StringValue(gatewayId),
+					DisplayName:   types.StringValue(""),
+					Enabled:       types.BoolNull(),
+					RemoteSubnets: basetypes.NewListNull(basetypes.StringType{}),
+					LocalSubnets:  basetypes.NewListNull(basetypes.StringType{}),
+					StaticRoutes:  basetypes.NewListNull(basetypes.StringType{}),
+					Labels:        basetypes.NewMapNull(basetypes.StringType{}),
 				},
 				Tunnel1: &DataSourceTunnelModel{
 					RemoteAddress: types.StringValue(""),
@@ -209,14 +209,14 @@ func TestMapDataSourceFields(t *testing.T) {
 			state := &DataSourceModel{
 				CommonModel: CommonModel{
 					ProjectID: types.StringValue(projectId),
-					Region:    types.StringValue(region),
+					Region:    types.StringValue(testRegion),
 					GatewayID: types.StringValue(gatewayId),
 				},
 				Tunnel1: &DataSourceTunnelModel{},
 				Tunnel2: &DataSourceTunnelModel{},
 			}
 
-			err := mapDataSourceFields(context.Background(), tt.input, state, region)
+			err := mapDataSourceFields(context.Background(), tt.input, state, testRegion)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")

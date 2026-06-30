@@ -35,9 +35,9 @@ data "stackit_vpn_connection" "example" {
 - `enabled` (Boolean) Whether this connection is enabled.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`,`connection_id`".
 - `labels` (Map of String) Map of custom labels.
-- `local_subnet` (List of String) List of local IPv4 CIDRs to route through this connection.
+- `local_subnets` (List of String) List of local IPv4 CIDRs to route through this connection.
 - `region` (String) STACKIT region.
-- `remote_subnet` (List of String) List of remote IPv4 CIDRs accessible via this connection.
+- `remote_subnets` (List of String) List of remote IPv4 CIDRs accessible via this connection.
 - `static_routes` (List of String) List of static routes (IPv4 CIDRs) for route-based VPN.
 - `tunnel1` (Attributes) (see [below for nested schema](#nestedatt--tunnel1))
 - `tunnel2` (Attributes) (see [below for nested schema](#nestedatt--tunnel2))

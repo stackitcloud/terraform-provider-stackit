@@ -14,10 +14,11 @@ import (
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
+const testRegion = "eu01"
+
 var (
 	projectId = uuid.NewString()
 	gatewayId = uuid.NewString()
-	region    = "eu01"
 )
 
 func fixtureTunnelResponse(mods ...func(m *vpn.TunnelConfiguration)) vpn.TunnelConfiguration {
@@ -108,17 +109,17 @@ func fixtureTunnelModel(mods ...func(m *TunnelModel)) *TunnelModel {
 func fixtureModel(mods ...func(m *Model)) Model {
 	resp := Model{
 		CommonModel: CommonModel{
-			ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
+			ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, gatewayId, "connection-id")),
 			ConnectionID: types.StringValue("connection-id"),
 			ProjectID:    types.StringValue(projectId),
-			Region:       types.StringValue(region),
+			Region:       types.StringValue(testRegion),
 			GatewayID:    types.StringValue(gatewayId),
 			DisplayName:  types.StringValue("test-connection"),
 			Enabled:      types.BoolValue(true),
-			RemoteSubnet: types.ListValueMust(types.StringType, []attr.Value{
+			RemoteSubnets: types.ListValueMust(types.StringType, []attr.Value{
 				types.StringValue("10.0.0.0/16"),
 			}),
-			LocalSubnet: types.ListValueMust(types.StringType, []attr.Value{
+			LocalSubnets: types.ListValueMust(types.StringType, []attr.Value{
 				types.StringValue("192.168.0.0/24"),
 			}),
 			StaticRoutes: types.ListValueMust(types.StringType, []attr.Value{
@@ -236,16 +237,16 @@ func TestMapFields(t *testing.T) {
 			},
 			expected: Model{
 				CommonModel: CommonModel{
-					ID:           types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, region, gatewayId, "connection-id")),
-					ConnectionID: types.StringValue("connection-id"),
-					ProjectID:    types.StringValue(projectId),
-					Region:       types.StringValue(region),
-					GatewayID:    types.StringValue(gatewayId),
-					DisplayName:  types.StringValue(""),
-					RemoteSubnet: types.ListNull(types.StringType),
-					LocalSubnet:  types.ListNull(types.StringType),
-					StaticRoutes: types.ListNull(types.StringType),
-					Labels:       types.MapNull(types.StringType),
+					ID:            types.StringValue(fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, gatewayId, "connection-id")),
+					ConnectionID:  types.StringValue("connection-id"),
+					ProjectID:     types.StringValue(projectId),
+					Region:        types.StringValue(testRegion),
+					GatewayID:     types.StringValue(gatewayId),
+					DisplayName:   types.StringValue(""),
+					RemoteSubnets: types.ListNull(types.StringType),
+					LocalSubnets:  types.ListNull(types.StringType),
+					StaticRoutes:  types.ListNull(types.StringType),
+					Labels:        types.MapNull(types.StringType),
 				},
 				Tunnel1: &TunnelModel{
 					PreSharedKeyWoVersion: types.Int64Value(1),
@@ -368,7 +369,7 @@ func TestMapFields(t *testing.T) {
 			state := &Model{
 				CommonModel: CommonModel{
 					ProjectID: types.StringValue(projectId),
-					Region:    types.StringValue(region),
+					Region:    types.StringValue(testRegion),
 					GatewayID: types.StringValue(gatewayId),
 				},
 				Tunnel1: &TunnelModel{
@@ -379,7 +380,7 @@ func TestMapFields(t *testing.T) {
 				},
 			}
 
-			err := mapResourceFields(context.Background(), tt.input, state, region)
+			err := mapResourceFields(context.Background(), tt.input, state, testRegion)
 
 			if !tt.isValid && err == nil {
 				t.Fatalf("expected error, got none")
