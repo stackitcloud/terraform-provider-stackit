@@ -3,8 +3,11 @@ package vpn_test
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"maps"
+	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -23,6 +27,12 @@ var gatewayMinConfig string
 
 //go:embed testdata/gateway-max.tf
 var gatewayMaxConfig string
+
+//go:embed testdata/connection-min.tf
+var connectionMinConfig string
+
+//go:embed testdata/connection-max.tf
+var connectionMaxConfig string
 
 var gatewayMinVars = config.Variables{
 	"project_id":   config.StringVariable(testutil.ProjectId),
@@ -79,10 +89,71 @@ var gatewayMaxVarsUpdated2 = func() config.Variables {
 	return updated
 }()
 
+var connectionMinVars = func() config.Variables {
+	vars := make(config.Variables, len(gatewayMinVars)+5)
+	maps.Copy(vars, gatewayMinVars)
+	vars["connection_display_name"] = config.StringVariable("vpn-conn-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+	vars["tunnel1_remote_address"] = config.StringVariable("203.0.113.1")
+	vars["tunnel1_psk"] = config.StringVariable("Super.Secret_$hared3Key_1")
+	vars["tunnel2_remote_address"] = config.StringVariable("203.0.113.2")
+	vars["tunnel2_psk"] = config.StringVariable("Super.Secret_$hared3Key_2")
+	return vars
+}()
+
+var connectionMinVarsUpdated = func() config.Variables {
+	updated := make(config.Variables, len(connectionMinVars))
+	maps.Copy(updated, connectionMinVars)
+	updated["connection_display_name"] = config.StringVariable("vpn-conn-updated-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+	return updated
+}()
+
+var connectionMaxVars = func() config.Variables {
+	vars := make(config.Variables)
+	maps.Copy(vars, gatewayMaxVars) // BGP_ROUTE_BASED gateway with local_asn, labels, etc.
+	vars["connection_display_name"] = config.StringVariable("vpn-conn-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+	vars["tunnel1_remote_address"] = config.StringVariable("203.0.113.1")
+	vars["tunnel1_psk"] = config.StringVariable("Super.Secret_$hared3Key_1")
+	vars["tunnel1_psk_version"] = config.IntegerVariable(1)
+	vars["tunnel1_bgp_remote_asn"] = config.IntegerVariable(65001)
+	vars["tunnel2_remote_address"] = config.StringVariable("203.0.113.2")
+	vars["tunnel2_psk"] = config.StringVariable("Super.Secret_$hared3Key_2")
+	vars["tunnel2_psk_version"] = config.IntegerVariable(1)
+	vars["tunnel2_bgp_remote_asn"] = config.IntegerVariable(65002)
+	vars["remote_subnet"] = config.StringVariable("10.10.10.0/24")
+	vars["local_subnet"] = config.StringVariable("192.168.0.0/24")
+	vars["tunnel1_local_peering"] = config.StringVariable("192.168.0.1")
+	vars["tunnel1_remote_peering"] = config.StringVariable("10.10.10.1")
+	vars["tunnel2_local_peering"] = config.StringVariable("192.168.0.2")
+	vars["tunnel2_remote_peering"] = config.StringVariable("10.10.10.2")
+	return vars
+}()
+
+// connectionMaxVarsUpdated changes non-PSK mutable fields to exercise updates.
+var connectionMaxVarsUpdated = func() config.Variables {
+	updated := make(config.Variables)
+	maps.Copy(updated, connectionMaxVars)
+	updated["connection_display_name"] = config.StringVariable("vpn-conn-updated-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+	updated["tunnel1_bgp_remote_asn"] = config.IntegerVariable(65003)
+	updated["tunnel2_bgp_remote_asn"] = config.IntegerVariable(65004)
+	return updated
+}()
+
+// connectionMaxVarsPskRotated exercises the write-only PSK rotation workflow:
+// both tunnel PSKs are replaced and their versions incremented from 1 → 2.
+var connectionMaxVarsPskRotated = func() config.Variables {
+	rotated := make(config.Variables)
+	maps.Copy(rotated, connectionMaxVarsUpdated)
+	rotated["tunnel1_psk"] = config.StringVariable("Super.Secret_Rotated_$hared3Key_1!")
+	rotated["tunnel1_psk_version"] = config.IntegerVariable(2)
+	rotated["tunnel2_psk"] = config.StringVariable("Super.Secret_Rotated_$hared3Key_2!")
+	rotated["tunnel2_psk_version"] = config.IntegerVariable(2)
+	return rotated
+}()
+
 func TestAccVpnGatewayResourceMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckVpnGatewayDestroy,
+		CheckDestroy:             testAccCheckVpnResourcesDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -203,7 +274,7 @@ func TestAccVpnGatewayResourceMin(t *testing.T) {
 func TestAccVpnGatewayResourceMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckVpnGatewayDestroy,
+		CheckDestroy:             testAccCheckVpnResourcesDestroy,
 		Steps: []resource.TestStep{
 			// Creation
 			{
@@ -351,40 +422,539 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 	})
 }
 
-func testAccCheckVpnGatewayDestroy(s *terraform.State) error {
+func TestAccVpnConnectionResourceMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckVpnResourcesDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: connectionMinVars,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, connectionMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Gateway
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(connectionMinVars["display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(connectionMinVars["plan_id"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "routing_type", testutil.ConvertConfigVariable(connectionMinVars["routing_type"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(connectionMinVars["az_tunnel1"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(connectionMinVars["az_tunnel2"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
+					// Connection – identity & top-level
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMinVars["connection_display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					// Connection – tunnel1
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMinVars["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase1.rekey_time"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.dh_groups.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.encryption_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.integrity_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.rekey_time"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.start_action"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.dpd_action"),
+					// Connection – tunnel2
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMinVars["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase1.rekey_time"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.dh_groups.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.encryption_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.integrity_algorithms.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.rekey_time"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.start_action"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.dpd_action"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: connectionMinVars,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+						%s
+
+						data "stackit_vpn_connection" "connection" {
+							project_id    = stackit_vpn_connection.connection.project_id
+							gateway_id    = stackit_vpn_connection.connection.gateway_id
+							connection_id = stackit_vpn_connection.connection.connection_id
+						}
+						`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, connectionMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "region", testutil.Region),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMinVars["connection_display_name"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMinVars["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMinVars["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.0", "sha2_384"),
+
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_connection.connection", "gateway_id"),
+
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "project_id", "stackit_vpn_connection.connection", "project_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "region", "stackit_vpn_connection.connection", "region"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_connection.connection", "gateway_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "connection_id", "stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "display_name", "stackit_vpn_connection.connection", "display_name"),
+				),
+			},
+			// Update
+			{
+				ConfigVariables: connectionMinVarsUpdated,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, connectionMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Gateway unchanged
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(connectionMinVarsUpdated["display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(connectionMinVarsUpdated["plan_id"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "routing_type", testutil.ConvertConfigVariable(connectionMinVarsUpdated["routing_type"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(connectionMinVarsUpdated["az_tunnel1"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(connectionMinVarsUpdated["az_tunnel2"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
+					// Connection – all fields
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMinVarsUpdated["connection_display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMinVarsUpdated["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase1.rekey_time"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.rekey_time"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.start_action"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMinVarsUpdated["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase1.rekey_time"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.dh_groups.0", "ecp384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.integrity_algorithms.0", "sha2_384"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.rekey_time"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.start_action"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.dpd_action"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: connectionMinVars,
+				ResourceName:    "stackit_vpn_connection.connection",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_vpn_connection.connection"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_vpn_connection.connection")
+					}
+					connectionId, ok := r.Primary.Attributes["connection_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute connection_id")
+					}
+					gatewayId, ok := r.Primary.Attributes["gateway_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute gateway_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						testutil.ProjectId,
+						testutil.Region,
+						gatewayId,
+						connectionId,
+					), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"tunnel1.pre_shared_key", "tunnel2.pre_shared_key"},
+			},
+		},
+	})
+}
+
+func TestAccVpnConnectionResourceMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckVpnResourcesDestroy,
+		Steps: []resource.TestStep{
+			// Creation – BGP_ROUTE_BASED gateway + full connection config including BGP tunnel peers
+			{
+				ConfigVariables: connectionMaxVars,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Gateway
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(connectionMaxVars["display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(connectionMaxVars["plan_id"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "routing_type", testutil.ConvertConfigVariable(connectionMaxVars["routing_type"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(connectionMaxVars["az_tunnel1"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(connectionMaxVars["az_tunnel2"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(connectionMaxVars["local_asn"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.0", testutil.ConvertConfigVariable(connectionMaxVars["advertised_route_1"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(connectionMaxVars["advertised_route_2"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(connectionMaxVars["label_key"]), testutil.ConvertConfigVariable(connectionMaxVars["label_value"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
+					// Connection – identity & top-level
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVars["connection_display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "remote_subnets.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "remote_subnets.0", testutil.ConvertConfigVariable(connectionMaxVars["remote_subnet"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "local_subnets.#", "1"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "local_subnets.0", testutil.ConvertConfigVariable(connectionMaxVars["local_subnet"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					// Connection – tunnel1
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_psk_version"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.dh_groups.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.encryption_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.integrity_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.start_action", "start"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_local_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_remote_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_bgp_remote_asn"])),
+					// Connection – tunnel2
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_psk_version"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.dh_groups.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.encryption_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.integrity_algorithms.#", "2"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.start_action", "start"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_local_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_remote_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_bgp_remote_asn"])),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: connectionMaxVars,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+						%s
+
+						data "stackit_vpn_connection" "connection" {
+							project_id    = stackit_vpn_connection.connection.project_id
+							gateway_id    = stackit_vpn_connection.connection.gateway_id
+							connection_id = stackit_vpn_connection.connection.connection_id
+						}
+						`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVars["region"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVars["connection_display_name"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "remote_subnets.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "remote_subnets.0", testutil.ConvertConfigVariable(connectionMaxVars["remote_subnet"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "local_subnets.#", "1"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "local_subnets.0", testutil.ConvertConfigVariable(connectionMaxVars["local_subnet"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.phase2.start_action", "start"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_local_peering"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_remote_peering"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel1.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVars["tunnel1_bgp_remote_asn"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.phase2.start_action", "start"),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_local_peering"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_remote_peering"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_connection.connection", "tunnel2.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVars["tunnel2_bgp_remote_asn"])),
+
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_vpn_connection.connection", "gateway_id"),
+
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "project_id", "stackit_vpn_connection.connection", "project_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "region", "stackit_vpn_connection.connection", "region"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_connection.connection", "gateway_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "connection_id", "stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_connection.connection", "display_name", "stackit_vpn_connection.connection", "display_name"),
+				),
+			},
+			// Update – change display name and BGP remote ASNs; verify no other drift
+			{
+				ConfigVariables: connectionMaxVarsUpdated,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Gateway unchanged
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "region", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["region"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "display_name", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "plan_id", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["plan_id"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "routing_type", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["routing_type"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["local_asn"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
+					// Connection
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["region"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["connection_display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "remote_subnets.0", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["remote_subnet"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "local_subnets.0", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["local_subnet"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					// tunnel1
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel1_psk_version"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.start_action", "start"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel1_local_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel1_remote_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel1_bgp_remote_asn"])),
+					// tunnel2
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel2_psk_version"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.0", "modp2048"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.dh_groups.1", "ecp256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.0", "aes256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.encryption_algorithms.1", "aes128gcm16"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.0", "sha2_256"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.integrity_algorithms.1", "sha2_384"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.start_action", "start"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel2_local_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel2_remote_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVarsUpdated["tunnel2_bgp_remote_asn"])),
+				),
+			},
+			// PSK rotation – increment pre_shared_key_wo_version 1 → 2 on both tunnels.
+			// The write-only pre_shared_key_wo values are replaced; the provider reads the
+			// version from state to detect the rotation and re-sends the new key to the API.
+			// Verifying the new version value in state (and no unintended plan diff) is the
+			// observable signal that the rotation was applied correctly.
+			{
+				ConfigVariables: connectionMaxVarsPskRotated,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMaxConfig, connectionMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Rotated version counters must be persisted in state
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel1_psk_version"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.pre_shared_key_wo_version", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel2_psk_version"])),
+					// All other fields must be unchanged – catches unintended drift
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "region", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["region"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "display_name", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["connection_display_name"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "enabled", "true"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "remote_subnets.0", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["remote_subnet"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "local_subnets.0", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["local_subnet"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "connection_id"),
+					resource.TestCheckResourceAttrPair("stackit_vpn_connection.connection", "gateway_id", "stackit_vpn_gateway.gateway", "gateway_id"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel1_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.phase2.start_action", "start"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel1.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel1_local_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel1_remote_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel1.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel1_bgp_remote_asn"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel2_remote_address"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase1.rekey_time", "25920"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.rekey_time", "3240"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.phase2.start_action", "start"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_connection.connection", "tunnel2.phase2.dpd_action"),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.peering.local_address", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel2_local_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.peering.remote_address", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel2_remote_peering"])),
+					resource.TestCheckResourceAttr("stackit_vpn_connection.connection", "tunnel2.bgp.remote_asn", testutil.ConvertConfigVariable(connectionMaxVarsPskRotated["tunnel2_bgp_remote_asn"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: connectionMaxVars,
+				ResourceName:    "stackit_vpn_connection.connection",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_vpn_connection.connection"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_vpn_connection.connection")
+					}
+					connectionId, ok := r.Primary.Attributes["connection_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute connection_id")
+					}
+					gatewayId, ok := r.Primary.Attributes["gateway_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute gateway_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						testutil.ProjectId,
+						testutil.Region,
+						gatewayId,
+						connectionId,
+					), nil
+				},
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"tunnel1.pre_shared_key_wo", "tunnel2.pre_shared_key_wo", "tunnel1.pre_shared_key_wo_version", "tunnel2.pre_shared_key_wo_version"},
+			},
+		},
+	})
+}
+
+func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	client, err := vpn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.VpnCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	gatewaysToDestroy := []string{}
+	gatewayIdsToDestroy := []string{}
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "stackit_vpn_gateway" {
+		var gatewayId string
+		switch rs.Type {
+		case "stackit_vpn_gateway":
+			// gateway terraform ID: "[project_id],[region],[gateway_id]"
+			parts := strings.Split(rs.Primary.ID, core.Separator)
+			if len(parts) > 2 {
+				gatewayId = parts[2]
+			} else if attrId, ok := rs.Primary.Attributes["gateway_id"]; ok && attrId != "" {
+				gatewayId = attrId
+			}
+		case "stackit_vpn_connection":
+			// connection terraform ID: "[project_id],[region],[gateway_id],[connection_id]"
+			parts := strings.Split(rs.Primary.ID, core.Separator)
+			if len(parts) > 2 {
+				gatewayId = parts[2]
+			} else if attrId, ok := rs.Primary.Attributes["gateway_id"]; ok && attrId != "" {
+				gatewayId = attrId
+			}
+		default:
 			continue
 		}
-		// gateway terraform ID: "[project_id],[region],[gateway_id]"
-		gatewayId := strings.Split(rs.Primary.ID, core.Separator)[2]
-		gatewaysToDestroy = append(gatewaysToDestroy, gatewayId)
+		if gatewayId == "" {
+			continue
+		}
+		if !slices.Contains(gatewayIdsToDestroy, gatewayId) {
+			gatewayIdsToDestroy = append(gatewayIdsToDestroy, gatewayId)
+		}
+	}
+
+	if len(gatewayIdsToDestroy) == 0 {
+		return nil
 	}
 
 	gatewaysResp, err := client.DefaultAPI.ListGateways(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
-		return fmt.Errorf("getting gateways: %w", err)
+		return fmt.Errorf("listing gateways during CheckDestroy: %w", err)
 	}
 
-	gateways := gatewaysResp.Gateways
-	for _, gateway := range gateways {
-		if gateway.Id == nil {
+	for _, gateway := range gatewaysResp.Gateways {
+		if gateway.Id == nil || !slices.Contains(gatewayIdsToDestroy, *gateway.Id) {
 			continue
 		}
-		for _, gatewayId := range gatewaysToDestroy {
-			if *gateway.Id == gatewayId {
-				err := client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
-				if err != nil {
-					return fmt.Errorf("destroying gateway %s during CheckDestroy: %w", gatewayId, err)
-				}
+
+		connectionsResp, err := client.DefaultAPI.ListGatewayConnections(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
+		if err != nil {
+			return fmt.Errorf("listing connections for gateway %s during CheckDestroy: %w", *gateway.Id, err)
+		}
+		for _, conn := range connectionsResp.Connections {
+			if conn.Id == nil {
+				continue
 			}
+			err := client.DefaultAPI.DeleteGatewayConnection(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *conn.Id).Execute()
+			if err != nil {
+				if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+					continue
+				}
+				return fmt.Errorf("destroying connection %s during CheckDestroy: %w", *conn.Id, err)
+			}
+		}
+
+		err = client.DefaultAPI.DeleteGateway(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
+		if err != nil {
+			if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+				continue
+			}
+			return fmt.Errorf("destroying gateway %s during CheckDestroy: %w", *gateway.Id, err)
 		}
 	}
 	return nil
