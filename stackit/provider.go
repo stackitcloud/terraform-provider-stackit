@@ -83,6 +83,7 @@ import (
 	compliancelock "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/compliance-lock"
 	objecStorageCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credential"
 	objecStorageCredentialsGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/credentialsgroup"
+	objectstorageDefaultRetention "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/default-retention"
 	alertGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/alertgroup"
 	observabilityCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/credential"
 	observabilityInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/instance"
@@ -715,6 +716,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		objectStorageBucket.NewBucketDataSource,
 		objecStorageCredentialsGroup.NewCredentialsGroupDataSource,
 		objecStorageCredential.NewCredentialDataSource,
+		objectstorageDefaultRetention.NewDefaultRetentionDataSource,
 		observabilityInstance.NewInstanceDataSource,
 		observabilityScrapeConfig.NewScrapeConfigDataSource,
 		openSearchInstance.NewInstanceDataSource,
@@ -822,6 +824,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		objectStorageBucket.NewBucketResource,
 		objecStorageCredentialsGroup.NewCredentialsGroupResource,
 		objecStorageCredential.NewCredentialResource,
+		objectstorageDefaultRetention.NewDefaultRetentionResource,
 		observabilityCredential.NewCredentialResource,
 		observabilityInstance.NewInstanceResource,
 		observabilityScrapeConfig.NewScrapeConfigResource,
