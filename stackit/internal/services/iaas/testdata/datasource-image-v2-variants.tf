@@ -46,17 +46,17 @@ data "stackit_image_v2" "name_windows_2022_standard" {
   name       = "Windows Server 2022 Standard"
 }
 
-data "stackit_image_v2" "ubuntu_arm64_latest" {
+data "stackit_image_v2" "ubuntu_latest" {
   project_id = var.project_id
   filter = {
-    distro = "ubuntu-arm64"
+    distro = "ubuntu"
   }
 }
 
-data "stackit_image_v2" "ubuntu_arm64_oldest" {
+data "stackit_image_v2" "ubuntu_oldest" {
   project_id = var.project_id
   filter = {
-    distro = "ubuntu-arm64"
+    distro = "ubuntu"
   }
   sort_ascending = true
 }
