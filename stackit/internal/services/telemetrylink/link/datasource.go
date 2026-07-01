@@ -1,0 +1,201 @@
+package link
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1betaapi"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/utils"
+	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+)
+
+var (
+	_ datasource.DataSource = &telemetryLinkDataSource{}
+)
+
+func NewTelemetryLinkDataSource() datasource.DataSource {
+	return &telemetryLinkDataSource{}
+}
+
+type DataSourceModel struct {
+	ID                types.String `tfsdk:"id"` // Required by Terraform
+	Region            types.String `tfsdk:"region"`
+	ResourceType      types.String `tfsdk:"resource_type"`
+	ResourceID        types.String `tfsdk:"resource_id"`
+	DisplayName       types.String `tfsdk:"display_name"`
+	Description       types.String `tfsdk:"description"`
+	TelemetryRouterID types.String `tfsdk:"telemetry_router_id"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	Status            types.String `tfsdk:"status"`
+}
+
+type telemetryLinkDataSource struct {
+	client       *telemetrylink.APIClient
+	providerData core.ProviderData
+}
+
+func (d *telemetryLinkDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_telemetrylink"
+}
+
+func (d *telemetryLinkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+	d.providerData = providerData
+
+	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	d.client = apiClient
+	tflog.Info(ctx, "TelemetryLink client configured")
+}
+
+func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: fmt.Sprintf("TelemetryLink data source schema. %s", core.DatasourceRegionFallbackDocstring),
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: schemaDescriptions["id"],
+				Computed:    true,
+			},
+			"resource_type": schema.StringAttribute{
+				Description: schemaDescriptions["resource_type"],
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf(resourceTypes...),
+					validate.NoSeparator(),
+				},
+			},
+			"resource_id": schema.StringAttribute{
+				Description: schemaDescriptions["resource_id"],
+				Required:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: schemaDescriptions["region"],
+				// the region cannot be found, so it has to be passed
+				Optional: true,
+			},
+			"display_name": schema.StringAttribute{
+				Description: schemaDescriptions["display_name"],
+				Computed:    true,
+			},
+			"description": schema.StringAttribute{
+				Description: schemaDescriptions["description"],
+				Computed:    true,
+			},
+			"telemetry_router_id": schema.StringAttribute{
+				Description: schemaDescriptions["telemetry_router_id"],
+				Computed:    true,
+			},
+			"create_time": schema.StringAttribute{
+				Description: schemaDescriptions["create_time"],
+				Computed:    true,
+			},
+			"status": schema.StringAttribute{
+				Description: schemaDescriptions["status"],
+				Computed:    true,
+			},
+		},
+	}
+}
+
+func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model DataSourceModel
+	diags := req.Config.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	resourceType := model.ResourceType.ValueString()
+	resourceID := model.ResourceID.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
+
+	ctx = tflog.SetField(ctx, "resource_type", resourceType)
+	ctx = tflog.SetField(ctx, "resource_id", resourceID)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	var response *telemetrylink.TelemetryLinkResponse
+	var err error
+	switch resourceType {
+	case resourceTypeOrganization:
+		response, err = d.client.DefaultAPI.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
+	case resourceTypeFolder:
+		response, err = d.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
+	case resourceTypeProject:
+		response, err = d.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
+	default:
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
+		return
+	}
+	if err != nil {
+		tfutils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Error reading TelemetryLink",
+			fmt.Sprintf("TelemetryLink for resource type %q and resource ID %q does not exist.", resourceType, resourceID),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Resource with type %q ID %q not found or forbidden access", resourceType, resourceID),
+			},
+		)
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	ctx = core.LogResponse(ctx)
+
+	err = mapDataSourceFields(ctx, response, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Processing response: %v", err))
+		return
+	}
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "TelemetryLink read", map[string]interface{}{
+		"resource_type": resourceType,
+		"resource_id":   resourceID,
+	})
+}
+
+func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkResponse, model *DataSourceModel, region string) error {
+	if link == nil {
+		return fmt.Errorf("link is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model is nil")
+	}
+
+	model.ID = tfutils.BuildInternalTerraformId(model.ResourceType.ValueString(), model.ResourceID.ValueString(), region)
+	model.Region = types.StringValue(region)
+	model.DisplayName = types.StringValue(link.DisplayName)
+	model.Description = types.StringPointerValue(link.Description)
+	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
+	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
+	model.Status = types.StringValue(string(link.Status))
+
+	return nil
+}

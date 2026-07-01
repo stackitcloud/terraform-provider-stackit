@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	legacyAlb "github.com/stackitcloud/stackit-sdk-go/services/alb"
 	albSdk "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/alb/v2api/wait"
 
@@ -390,9 +389,9 @@ func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req res
 
 // Schema defines the schema for the resource.
 func (r *applicationLoadBalancerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	protocolOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedListenerProtocolEnumValues)
-	roleOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedNetworkRoleEnumValues)
-	errorOptions := sdkUtils.EnumSliceToStringSlice(legacyAlb.AllowedLoadBalancerErrorTypesEnumValues)
+	protocolOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedListenerProtocolEnumValues)
+	roleOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedNetworkRoleEnumValues)
+	errorOptions := sdkUtils.EnumSliceToStringSlice(albSdk.AllowedLoadBalancerErrorTypeEnumValues)
 
 	descriptions := map[string]string{
 		"main":       "Application Load Balancer resource schema.",
@@ -1464,7 +1463,7 @@ func toListenersPayload(ctx context.Context, model *Model) ([]albSdk.Listener, e
 			Https:         httpsPayload,
 			Name:          conversion.StringValueToPointer(listenerModel.Name),
 			Port:          conversion.Int32ValueToPointer(listenerModel.Port),
-			Protocol:      conversion.StringValueToPointer(listenerModel.Protocol),
+			Protocol:      conversion.StringValueToEnumPointer[albSdk.ListenerProtocol](listenerModel.Protocol),
 			WafConfigName: conversion.StringValueToPointer(listenerModel.WafConfigName),
 		})
 	}
@@ -1718,7 +1717,7 @@ func toNetworksPayload(ctx context.Context, model *Model) ([]albSdk.Network, err
 		networkModel := networksModel[i]
 		payload = append(payload, albSdk.Network{
 			NetworkId: conversion.StringValueToPointer(networkModel.NetworkId),
-			Role:      conversion.StringValueToPointer(networkModel.Role),
+			Role:      conversion.StringValueToEnumPointer[albSdk.NetworkRole](networkModel.Role),
 		})
 	}
 

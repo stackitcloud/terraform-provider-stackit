@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 )
 
 func TestMapFields(t *testing.T) {
@@ -84,7 +83,7 @@ func TestMapFields(t *testing.T) {
 					RetryTime:         4,
 					SerialNumber:      5,
 					NegativeCache:     6,
-					State:             wait.ZONESTATE_CREATING,
+					State:             dns.ZONESTATE_CREATING,
 					Type:              "primary",
 					Primaries:         []string{"primary"},
 					PrimaryNameServer: "pns",
@@ -113,7 +112,7 @@ func TestMapFields(t *testing.T) {
 				SerialNumber:      types.Int32Value(5),
 				NegativeCache:     types.Int32Value(6),
 				Type:              types.StringValue("primary"),
-				State:             types.StringValue(wait.ZONESTATE_CREATING),
+				State:             types.StringValue(string(dns.ZONESTATE_CREATING)),
 				PrimaryNameServer: types.StringValue("pns"),
 				Primaries: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("primary"),
@@ -219,7 +218,7 @@ func TestMapFields(t *testing.T) {
 					RetryTime:         int32(4),
 					SerialNumber:      int32(5),
 					NegativeCache:     int32(0),
-					State:             wait.ZONESTATE_CREATING,
+					State:             dns.ZONESTATE_CREATING,
 					Type:              "primary",
 					Primaries:         nil,
 					PrimaryNameServer: "pns",
@@ -248,7 +247,7 @@ func TestMapFields(t *testing.T) {
 				NegativeCache:     types.Int32Value(0),
 				Type:              types.StringValue("primary"),
 				Primaries:         types.ListNull(types.StringType),
-				State:             types.StringValue(wait.ZONESTATE_CREATING),
+				State:             types.StringValue(string(dns.ZONESTATE_CREATING)),
 				PrimaryNameServer: types.StringValue("pns"),
 				Visibility:        types.StringValue("public"),
 				ContactEmail:      types.StringNull(),
@@ -339,7 +338,7 @@ func TestToCreatePayload(t *testing.T) {
 				DnsName:       "DnsName",
 				Acl:           new("Acl"),
 				Description:   new("Description"),
-				Type:          new("primary"),
+				Type:          new(dns.CREATEZONEPAYLOADTYPE_PRIMARY),
 				ContactEmail:  new("ContactEmail"),
 				Primaries:     []string{"primary"},
 				RetryTime:     new(int32(3)),

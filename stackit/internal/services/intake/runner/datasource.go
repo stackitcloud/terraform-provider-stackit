@@ -68,6 +68,8 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"uri":                   "The URI of the runner.",
+		"create_time":           "The creation time of the runner.",
 		"region":                "The resource region. If not defined, the provider region is used.",
 	}
 
@@ -115,6 +117,14 @@ func (r *runnerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 				Description: descriptions["max_messages_per_hour"],
 				Computed:    true,
 			},
+			"uri": schema.StringAttribute{
+				Description: descriptions["uri"],
+				Computed:    true,
+			},
+			"create_time": schema.StringAttribute{
+				Description: descriptions["create_time"],
+				Computed:    true,
+			},
 			"region": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["region"],
@@ -155,7 +165,7 @@ func (r *runnerDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
 		return

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 
@@ -631,6 +632,158 @@ func TestTerraformStringSetToList(t *testing.T) {
 
 			if d := cmp.Diff(got, tt.want); d != "" {
 				t.Fatalf("no match, diff: %s", d)
+			}
+		})
+	}
+}
+
+func TestStringValueToPointer(t *testing.T) {
+	type args struct {
+		s basetypes.StringValue
+	}
+	tests := []struct {
+		name string
+		args args
+		want *string
+	}{
+		{
+			name: "default",
+			args: args{
+				s: basetypes.NewStringValue("abc"),
+			},
+			want: new("abc"),
+		},
+		{
+			name: "unknown",
+			args: args{
+				s: basetypes.NewStringUnknown(),
+			},
+			want: nil,
+		},
+		{
+			name: "null",
+			args: args{
+				s: basetypes.NewStringNull(),
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := StringValueToPointer(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("StringValueToPointer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringValueToEnumPointer(t *testing.T) {
+	type args struct {
+		s basetypes.StringValue
+	}
+	type testCase[T interface{ ~string }] struct {
+		name string
+		args args
+		want *T
+	}
+	tests := []testCase[opensearch.InstanceParametersJavaGarbageCollector]{
+		{
+			name: "default",
+			args: args{
+				s: basetypes.NewStringValue("UseG1GC"),
+			},
+			want: new(opensearch.INSTANCEPARAMETERSJAVAGARBAGECOLLECTOR_USE_G1_GC),
+		},
+		{
+			name: "unknown",
+			args: args{
+				s: basetypes.NewStringUnknown(),
+			},
+			want: nil,
+		},
+		{
+			name: "null",
+			args: args{
+				s: basetypes.NewStringNull(),
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := StringValueToEnumPointer[opensearch.InstanceParametersJavaGarbageCollector](tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("StringValueToEnumPointer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringListToEnumSlice(t *testing.T) {
+	type args struct {
+		list basetypes.ListValue
+	}
+	type testCase[T interface{ ~string }] struct {
+		name    string
+		args    args
+		want    []T
+		wantErr bool
+	}
+	tests := []testCase[opensearch.InstanceParametersPluginsInner]{
+		{
+			name: "default",
+			args: args{
+				list: basetypes.NewListValueMust(types.StringType, []attr.Value{
+					types.StringValue("repository-s3"),
+					types.StringValue("repository-azure"),
+				}),
+			},
+			want: []opensearch.InstanceParametersPluginsInner{
+				opensearch.INSTANCEPARAMETERSPLUGINSINNER_REPOSITORY_S3,
+				opensearch.INSTANCEPARAMETERSPLUGINSINNER_REPOSITORY_AZURE,
+			},
+			wantErr: false,
+		},
+		{
+			name: "unknown",
+			args: args{
+				list: basetypes.NewListUnknown(types.StringType),
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "null",
+			args: args{
+				list: basetypes.NewListNull(types.StringType),
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "empty list",
+			args: args{
+				list: basetypes.NewListValueMust(types.StringType, []attr.Value{}),
+			},
+			want:    []opensearch.InstanceParametersPluginsInner{},
+			wantErr: false,
+		},
+		{
+			name: "invalid type",
+			args: args{
+				list: basetypes.NewListValueMust(types.Int64Type, []attr.Value{types.Int64Value(123)}),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := StringListToEnumSlice[opensearch.InstanceParametersPluginsInner](tt.args.list)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StringListToEnumSlice() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("StringListToEnumSlice() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

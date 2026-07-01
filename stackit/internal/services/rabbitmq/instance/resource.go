@@ -776,7 +776,7 @@ func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 
 	var err error
-	payloadParams.Plugins, err = conversion.StringListToSlice(parameters.Plugins)
+	payloadParams.Plugins, err = conversion.StringListToEnumSlice[rabbitmq.InstanceParametersPluginsInner](parameters.Plugins)
 	if err != nil {
 		return nil, fmt.Errorf("converting plugins: %w", err)
 	}
@@ -796,7 +796,7 @@ func toInstanceParams(parameters *parametersModel) (*rabbitmq.InstanceParameters
 		return nil, fmt.Errorf("converting tls_ciphers: %w", err)
 	}
 
-	payloadParams.TlsProtocols, err = conversion.StringListToSlice(parameters.TlsProtocols)
+	payloadParams.TlsProtocols, err = conversion.StringListToEnumSlice[rabbitmq.InstanceParametersTlsProtocolsInner](parameters.TlsProtocols)
 	if err != nil {
 		return nil, fmt.Errorf("converting tls_protocol_versions: %w", err)
 	}

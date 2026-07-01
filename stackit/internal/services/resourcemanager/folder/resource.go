@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
@@ -202,7 +201,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -313,7 +312,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -432,15 +431,9 @@ func mapFolderFields(
 		return fmt.Errorf("container id not present")
 	}
 
-	var err error
-	var tfLabels basetypes.MapValue
-	if folderGetResponse.Labels != nil && len(*folderGetResponse.Labels) > 0 {
-		tfLabels, err = conversion.ToTerraformStringMap(ctx, *folderGetResponse.Labels)
-		if err != nil {
-			return fmt.Errorf("converting to StringValue map: %w", err)
-		}
-	} else {
-		tfLabels = types.MapNull(types.StringType)
+	labels, err := utils.MapLabels(ctx, folderGetResponse.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	var containerParentIdTF types.String
@@ -457,7 +450,7 @@ func mapFolderFields(
 	model.ContainerId = types.StringValue(containerId)
 	model.ContainerParentId = containerParentIdTF
 	model.Name = types.StringValue(folderGetResponse.Name)
-	model.Labels = tfLabels
+	model.Labels = labels
 	model.CreationTime = types.StringValue(folderGetResponse.CreationTime.Format(time.RFC3339))
 	model.UpdateTime = types.StringValue(folderGetResponse.UpdateTime.Format(time.RFC3339))
 
@@ -495,7 +488,7 @@ func toMembersPayload(model *ResourceModel) ([]resourcemanager.Member, error) {
 	}, nil
 }
 
-func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateFolderPayload, error) {
+func toCreatePayload(ctx context.Context, model *ResourceModel) (*resourcemanager.CreateFolderPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -505,34 +498,32 @@ func toCreatePayload(model *ResourceModel) (*resourcemanager.CreateFolderPayload
 		return nil, fmt.Errorf("processing members: %w", err)
 	}
 
-	modelLabels := model.Labels.Elements()
-	labels, err := conversion.ToOptStringMap(modelLabels)
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
-		return nil, fmt.Errorf("converting to Go map: %w", err)
+		return nil, err
 	}
 
 	return &resourcemanager.CreateFolderPayload{
 		ContainerParentId: model.ContainerParentId.ValueString(),
-		Labels:            labels,
+		Labels:            &labels,
 		Members:           members,
 		Name:              model.Name.ValueString(),
 	}, nil
 }
 
-func toUpdatePayload(model *ResourceModel) (*resourcemanager.PartialUpdateFolderPayload, error) {
+func toUpdatePayload(ctx context.Context, model *ResourceModel) (*resourcemanager.PartialUpdateFolderPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	modelLabels := model.Labels.Elements()
-	labels, err := conversion.ToOptStringMap(modelLabels)
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
-		return nil, fmt.Errorf("converting to GO map: %w", err)
+		return nil, err
 	}
 
 	return &resourcemanager.PartialUpdateFolderPayload{
 		ContainerParentId: conversion.StringValueToPointer(model.ContainerParentId),
 		Name:              conversion.StringValueToPointer(model.Name),
-		Labels:            labels,
+		Labels:            &labels,
 	}, nil
 }

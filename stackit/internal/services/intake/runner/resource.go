@@ -47,6 +47,8 @@ type Model struct {
 	MaxMessageSizeKiB  types.Int32  `tfsdk:"max_message_size_kib"`
 	MaxMessagesPerHour types.Int32  `tfsdk:"max_messages_per_hour"`
 	Region             types.String `tfsdk:"region"`
+	Uri                types.String `tfsdk:"uri"`
+	CreateTime         types.String `tfsdk:"create_time"`
 }
 
 // NewRunnerResource is a helper function to simplify the provider implementation.
@@ -123,6 +125,8 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"labels":                "User-defined labels.",
 		"max_message_size_kib":  "The maximum message size in KiB.",
 		"max_messages_per_hour": "The maximum number of messages per hour.",
+		"uri":                   "The URI of the runner.",
+		"create_time":           "The creation time of the runner.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -181,6 +185,20 @@ func (r *runnerResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: descriptions["max_messages_per_hour"],
 				Required:    true,
 			},
+			"uri": schema.StringAttribute{
+				Description: descriptions["uri"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: descriptions["create_time"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"region": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -209,7 +227,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// prepare the payload struct for the create bar request
-	payload, err := toCreatePayload(&model)
+	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -234,13 +252,13 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Wait for creation of intake runner
-	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
+	_, err = wait.CreateIntakeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Intake runner creation waiting: %v", err))
 		return
 	}
 
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -285,7 +303,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading runner", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -317,7 +335,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model, &state)
+	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -333,14 +351,14 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Wait for update
-	_, err = wait.CreateOrUpdateIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
+	_, err = wait.UpdateIntakeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Runner update waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(runnerResp, &model, region)
+	err = mapFields(ctx, runnerResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Processing API response: %v", err))
 		return
@@ -417,7 +435,7 @@ func (r *runnerResource) ImportState(ctx context.Context, req resource.ImportSta
 }
 
 // Maps runner fields to the provider internal model
-func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region string) error {
+func mapFields(ctx context.Context, runnerResp *intake.IntakeRunnerResponse, model *Model, region string) error {
 	if runnerResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -431,41 +449,33 @@ func mapFields(runnerResp *intake.IntakeRunnerResponse, model *Model, region str
 		runnerResp.Id,
 	)
 
-	model.RunnerId = types.StringValue(runnerResp.Id)
-
-	if len(runnerResp.Labels) == 0 {
-		model.Labels = types.MapNull(types.StringType)
-	} else {
-		labels, diags := types.MapValueFrom(context.Background(), types.StringType, runnerResp.Labels)
-		if diags.HasError() {
-			return fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
-		}
-		model.Labels = labels
+	labels, err := utils.MapLabels(ctx, &runnerResp.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
+	model.RunnerId = types.StringValue(runnerResp.Id)
 	model.Name = types.StringValue(runnerResp.DisplayName)
-
+	model.Labels = labels
 	model.Description = types.StringPointerValue(runnerResp.Description)
 	model.Region = types.StringValue(region)
-
 	model.MaxMessageSizeKiB = types.Int32Value(runnerResp.MaxMessageSizeKiB)
 	model.MaxMessagesPerHour = types.Int32Value(runnerResp.MaxMessagesPerHour)
+	model.Uri = types.StringValue(runnerResp.Uri)
+	model.CreateTime = types.StringValue(runnerResp.CreateTime.String())
 
 	return nil
 }
 
 // Build CreateIntakeRunnerPayload from provider's model
-func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	var labels map[string]string
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		diags := model.Labels.ElementsAs(context.Background(), &labels, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("converting labels: %w", core.DiagsToError(diags))
-		}
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
 
 	return &intake.CreateIntakeRunnerPayload{
@@ -478,12 +488,9 @@ func toCreatePayload(model *Model) (*intake.CreateIntakeRunnerPayload, error) {
 }
 
 // Build UpdateIntakeRunnerPayload from provider's model
-func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*intake.UpdateIntakeRunnerPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
-	}
-	if state == nil {
-		return nil, fmt.Errorf("state is nil")
 	}
 
 	payload := &intake.UpdateIntakeRunnerPayload{}
@@ -499,14 +506,11 @@ func toUpdatePayload(model, state *Model) (*intake.UpdateIntakeRunnerPayload, er
 	payload.DisplayName = conversion.StringValueToPointer(model.Name)
 	payload.Description = conversion.StringValueToPointer(model.Description)
 
-	var labels map[string]string
-	if !model.Labels.IsNull() && !model.Labels.IsUnknown() {
-		diags := model.Labels.ElementsAs(context.Background(), &labels, false)
-		if diags.HasError() {
-			return nil, fmt.Errorf("failed to convert labels: %w", core.DiagsToError(diags))
-		}
-		payload.Labels = labels
+	labels, err := utils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return nil, err
 	}
+	payload.Labels = labels
 
 	return payload, nil
 }

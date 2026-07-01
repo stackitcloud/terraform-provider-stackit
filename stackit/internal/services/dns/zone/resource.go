@@ -405,7 +405,7 @@ func (r *zoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	ctx = core.LogResponse(ctx)
 
-	if zoneResp != nil && zoneResp.Zone.State == wait.ZONESTATE_DELETE_SUCCEEDED {
+	if zoneResp != nil && zoneResp.Zone.State == dns.ZONESTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -617,9 +617,9 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	model.RefreshTime = types.Int32Value(z.RefreshTime)
 	model.RetryTime = types.Int32Value(z.RetryTime)
 	model.SerialNumber = types.Int32Value(z.SerialNumber)
-	model.State = types.StringValue(z.State)
-	model.Type = types.StringValue(z.Type)
-	model.Visibility = types.StringValue(z.Visibility)
+	model.State = types.StringValue(string(z.State))
+	model.Type = types.StringValue(string(z.Type))
+	model.Visibility = types.StringValue(string(z.Visibility))
 	return nil
 }
 
@@ -642,7 +642,7 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
 		Description:   conversion.StringValueToPointer(model.Description),
 		Acl:           conversion.StringValueToPointer(model.Acl),
-		Type:          conversion.StringValueToPointer(model.Type),
+		Type:          conversion.StringValueToEnumPointer[dns.CreateZonePayloadType](model.Type),
 		DefaultTTL:    conversion.Int32ValueToPointer(model.DefaultTTL),
 		ExpireTime:    conversion.Int32ValueToPointer(model.ExpireTime),
 		RefreshTime:   conversion.Int32ValueToPointer(model.RefreshTime),

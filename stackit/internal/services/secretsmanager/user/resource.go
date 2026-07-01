@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
@@ -43,6 +45,11 @@ type Model struct {
 	WriteEnabled types.Bool   `tfsdk:"write_enabled"`
 	Username     types.String `tfsdk:"username"`
 	Password     types.String `tfsdk:"password"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 // NewUserResource is a helper function to simplify the provider implementation.
@@ -135,9 +142,6 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"write_enabled": schema.BoolAttribute{
 				Description: descriptions["write_enabled"],
@@ -151,6 +155,18 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: descriptions["password"],
 				Computed:    true,
 				Sensitive:   true,
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 	}
@@ -396,7 +412,8 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateUserPayload, error) {
 		return nil, fmt.Errorf("nil model")
 	}
 	return &secretsmanager.UpdateUserPayload{
-		Write: conversion.BoolValueToPointer(model.WriteEnabled),
+		Description: conversion.StringValueToPointer(model.Description),
+		Write:       conversion.BoolValueToPointer(model.WriteEnabled),
 	}, nil
 }
 

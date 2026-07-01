@@ -248,7 +248,7 @@ func TestToCreatePayload(t *testing.T) {
 					tt.input.Labels = convertedLabels
 				}
 			}
-			output, err := toCreatePayload(tt.input)
+			output, err := toCreatePayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -279,7 +279,7 @@ func TestToUpdatePayload(t *testing.T) {
 			nil,
 			&resourcemanager.PartialUpdateProjectPayload{
 				ContainerParentId: nil,
-				Labels:            nil,
+				Labels:            &map[string]string{},
 				Name:              nil,
 			},
 			true,
@@ -328,7 +328,7 @@ func TestToUpdatePayload(t *testing.T) {
 					tt.input.Labels = convertedLabels
 				}
 			}
-			output, err := toUpdatePayload(tt.input)
+			output, err := toUpdatePayload(context.Background(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

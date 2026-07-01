@@ -208,7 +208,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 			Id:        "test-distribution-id",
 			ProjectId: "test-project-id",
-			Status:    string(cdnSdk.DOMAINSTATUS_ACTIVE),
+			Status:    cdnSdk.DISTRIBUTIONSTATUS_ACTIVE,
 			UpdatedAt: updatedAt,
 		}
 		for _, mod := range mods {
@@ -314,7 +314,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				m.Status = types.StringValue("ERROR")
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
-				d.Status = string(cdnSdk.DOMAINSTATUS_ERROR)
+				d.Status = cdnSdk.DISTRIBUTIONSTATUS_ERROR
 			}),
 			IsValid: true,
 		},
