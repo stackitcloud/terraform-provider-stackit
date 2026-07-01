@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	defaultretention "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -50,7 +50,7 @@ func NewDefaultRetentionResource() resource.Resource {
 
 // defaultRetentionResource is the resource implementation.
 type defaultRetentionResource struct {
-	client       *defaultretention.APIClient
+	client       *objectstorage.APIClient
 	providerData core.ProviderData
 }
 
@@ -100,7 +100,6 @@ func (r *defaultRetentionResource) ImportState(ctx context.Context, req resource
 		"bucket_name": idParts[2],
 	})
 	tflog.Info(ctx, "ObjectStorage default-retention state imported")
-
 }
 
 // Configure implements [resource.ResourceWithConfigure].
@@ -117,11 +116,10 @@ func (r *defaultRetentionResource) Configure(ctx context.Context, req resource.C
 	}
 	r.client = apiClient
 	tflog.Info(ctx, "ObjectStorage bucket client configured")
-
 }
 
 // Schema implements [resource.Resource].
-func (r *defaultRetentionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *defaultRetentionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "ObjectStorage default-retention resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`bucket_name`\".",
@@ -185,22 +183,21 @@ func (r *defaultRetentionResource) Schema(ctx context.Context, req resource.Sche
 				Required:    true,
 				Description: descriptions["mode"],
 				Validators: []validator.String{
-					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(defaultretention.AllowedRetentionModeEnumValues)...),
+					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(objectstorage.AllowedRetentionModeEnumValues)...),
 					validate.NoSeparator(),
 				},
 			},
 		},
 	}
-
 }
 
 // Metadata implements [resource.Resource].
-func (r *defaultRetentionResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *defaultRetentionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_objectstorage_default_retention"
 }
 
 // Create implements [resource.Resource].
-func (r *defaultRetentionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *defaultRetentionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic
 	var model model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -217,7 +214,7 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	//Create default-retention
+	// Create default-retention
 	apiRequest, err := toSetDefaultRetentionRequest(ctx, r.client.DefaultAPI, &model, projectId, bucketName, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Parsing model: %v", err))
@@ -246,7 +243,7 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 }
 
 // Delete implements [resource.Resource].
-func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic
 	var model model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -263,7 +260,7 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	//Delete default-retention
+	// Delete default-retention
 	_, err := r.client.DefaultAPI.DeleteDefaultRetention(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
@@ -283,11 +280,10 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 	ctx = core.LogResponse(ctx)
 
 	tflog.Info(ctx, "ObjectStorage default-retention deleted")
-
 }
 
 // Read implements [resource.Resource].
-func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic
 	var model model
 	diags := req.State.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -304,7 +300,7 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	//Read default-retention
+	// Read default-retention
 	result, err := r.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -331,11 +327,10 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 	tflog.Info(ctx, "ObjectStorage default-retention read")
-
 }
 
 // Update implements [resource.Resource].
-func (r *defaultRetentionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *defaultRetentionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic
 	var model model
 	diags := req.Plan.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -352,7 +347,7 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	//Update default-retention
+	// Update default-retention
 	apiRequest, err := toSetDefaultRetentionRequest(ctx, r.client.DefaultAPI, &model, projectId, bucketName, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error setting default-retention", fmt.Sprintf("Parsing model: %v", err))
@@ -378,24 +373,23 @@ func (r *defaultRetentionResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	tflog.Info(ctx, "ObjectStorage default-retention set")
-
 }
 
-func toSetDefaultRetentionRequest(ctx context.Context, client defaultretention.DefaultAPI, m *model, projectId, bucketName, region string) (defaultretention.ApiSetDefaultRetentionRequest, error) {
+func toSetDefaultRetentionRequest(ctx context.Context, client objectstorage.DefaultAPI, m *model, projectId, bucketName, region string) (objectstorage.ApiSetDefaultRetentionRequest, error) {
 	days := m.Days.ValueInt32()
 	stringMode := m.Mode.ValueString()
-	mode, err := defaultretention.NewRetentionModeFromValue(stringMode)
+	mode, err := objectstorage.NewRetentionModeFromValue(stringMode)
 	if err != nil {
-		return defaultretention.ApiSetDefaultRetentionRequest{}, fmt.Errorf("Could not parse provided retention mode to enum: %w", err)
+		return objectstorage.ApiSetDefaultRetentionRequest{}, fmt.Errorf("could not parse provided retention mode to enum: %w", err)
 	}
-	apiRequest := client.SetDefaultRetention(ctx, projectId, region, bucketName).SetDefaultRetentionPayload(defaultretention.SetDefaultRetentionPayload{
+	apiRequest := client.SetDefaultRetention(ctx, projectId, region, bucketName).SetDefaultRetentionPayload(objectstorage.SetDefaultRetentionPayload{
 		Days: days,
 		Mode: *mode,
 	})
 	return apiRequest, nil
 }
 
-func mapFields(res *defaultretention.DefaultRetentionResponse, m *model, region string) error {
+func mapFields(res *objectstorage.DefaultRetentionResponse, m *model, region string) error {
 	if res == nil {
 		return fmt.Errorf("response input is nil")
 	}

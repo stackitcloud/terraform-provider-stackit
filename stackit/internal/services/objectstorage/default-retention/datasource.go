@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-	defaultretention "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -52,7 +51,7 @@ func (r *defaultRetentionDataSource) Configure(ctx context.Context, req datasour
 }
 
 // Schema implements [datasource.DataSource].
-func (d *defaultRetentionDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *defaultRetentionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) { // nolint:gocritic
 	descriptions := map[string]string{
 		"main":        "ObjectStorage default-retention resource schema. Must have a `region` specified in the provider configuration.",
 		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`bucket_name`\".",
@@ -99,22 +98,21 @@ func (d *defaultRetentionDataSource) Schema(ctx context.Context, req datasource.
 				Required:    true,
 				Description: descriptions["mode"],
 				Validators: []validator.String{
-					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(defaultretention.AllowedRetentionModeEnumValues)...),
+					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(objectstorage.AllowedRetentionModeEnumValues)...),
 					validate.NoSeparator(),
 				},
 			},
 		},
 	}
-
 }
 
 // Metadata implements [datasource.DataSource].
-func (d *defaultRetentionDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *defaultRetentionDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_objectstorage_default_retention"
 }
 
 // Read implements [datasource.DataSource].
-func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic
 	var model model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -131,7 +129,7 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "bucket_name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	//Read default-retention
+	// Read default-retention
 	result, err := d.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
@@ -158,5 +156,4 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 		return
 	}
 	tflog.Info(ctx, "ObjectStorage default-retention read")
-
 }

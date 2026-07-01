@@ -9,21 +9,6 @@ import (
 	defaultretention "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 )
 
-type mockSettings struct {
-	returnError bool
-}
-
-func newAPIMock(settings *mockSettings) defaultretention.DefaultAPI {
-	return &defaultretention.DefaultAPIServiceMock{
-		SetDefaultRetentionExecuteMock: new(func(r defaultretention.ApiSetDefaultRetentionRequest) (*defaultretention.DefaultRetentionResponse, error) {
-			if settings.returnError {
-				return nil, fmt.Errorf("set default retention failed")
-			}
-			return &defaultretention.DefaultRetentionResponse{}, nil
-		}),
-	}
-}
-
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
 	const testProjectId = "97bed312-5705-4246-9621-03e3a06af0af"
@@ -62,7 +47,6 @@ func TestMapFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-
 			model := &model{
 				ProjectId: tt.expected.ProjectId,
 			}
