@@ -58,7 +58,7 @@ import {
 - `hosts` (List of String)
 - `http_api_uri` (String)
 - `http_api_uris` (List of String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`credential_id`".
 - `management` (String)
 - `password` (String, Sensitive)
 - `port` (Number)

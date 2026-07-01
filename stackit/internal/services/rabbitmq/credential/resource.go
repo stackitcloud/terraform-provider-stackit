@@ -226,7 +226,7 @@ func (r *credentialResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Create new recordset
-	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, instanceId, region).Execute()
+	credentialsResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -374,10 +374,10 @@ func (r *credentialResource) Delete(ctx context.Context, req resource.DeleteRequ
 // The expected format of the resource import identifier is: project_id,region,instance_id,credential_id
 func (r *credentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
-	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing credential",
-			fmt.Sprintf("Expected import identifier with format [project_id],[instance_id],[credential_id], got %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format [project_id],[region],[instance_id],[credential_id], got %q", req.ID),
 		)
 		return
 	}
