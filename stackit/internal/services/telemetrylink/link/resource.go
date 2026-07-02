@@ -226,6 +226,16 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 	var response *telemetrylink.TelemetryLinkResponse
 	switch model.ResourceType.ValueString() {
 	case resourceTypeOrganization:
+		_, err := r.client.DefaultAPI.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			ok := errors.As(err, &oapiErr)
+			if !ok || oapiErr.StatusCode != http.StatusNotFound {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error checking if TelemetryLink already exists", fmt.Sprintf("Calling API: %v", err))
+				return
+			}
+		}
+
 		payload, err := toCreateOrUpdateOrganizationTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
@@ -262,6 +272,16 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 		}
 
 	case resourceTypeFolder:
+		_, err := r.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			ok := errors.As(err, &oapiErr)
+			if !ok || oapiErr.StatusCode != http.StatusNotFound {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error checking if TelemetryLink already exists", fmt.Sprintf("Calling API: %v", err))
+				return
+			}
+		}
+
 		payload, err := toCreateOrUpdateFolderTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
@@ -297,6 +317,16 @@ func (r *telemetryLinkResource) Create(ctx context.Context, req resource.CreateR
 			return
 		}
 	case resourceTypeProject:
+		_, err := r.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
+		if err != nil {
+			var oapiErr *oapierror.GenericOpenAPIError
+			ok := errors.As(err, &oapiErr)
+			if !ok || oapiErr.StatusCode != http.StatusNotFound {
+				core.LogAndAddError(ctx, &resp.Diagnostics, "Error checking if TelemetryLink already exists", fmt.Sprintf("Calling API: %v", err))
+				return
+			}
+		}
+
 		payload, err := toCreateOrUpdateProjectTelemetryLinkPayload(ctx, resp.Diagnostics, &model)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating TelemetryLink", fmt.Sprintf("Creating API payload: %v", err))
