@@ -18,7 +18,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -33,7 +33,8 @@ func NewInstanceDataSource() datasource.DataSource {
 
 // instanceDataSource is the data source implementation.
 type instanceDataSource struct {
-	client *rabbitmq.APIClient
+	client       *rabbitmq.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
@@ -43,12 +44,13 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := rabbitmqUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := rabbitmqUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -60,13 +62,14 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "RabbitMQ instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`\".",
+		"id":          "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the RabbitMQ instance.",
 		"project_id":  "STACKIT Project ID to which the instance is associated.",
 		"name":        "Instance name.",
 		"version":     "The service version.",
 		"plan_name":   "The selected plan name.",
 		"plan_id":     "The selected plan ID.",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	parametersDescriptions := map[string]string{
@@ -201,6 +204,12 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"cf_organization_guid": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
@@ -218,10 +227,12 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -239,14 +250,14 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Compute and store values not present in the API response
-	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	err = loadPlanNameAndVersion(ctx, r.client, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
 		return
