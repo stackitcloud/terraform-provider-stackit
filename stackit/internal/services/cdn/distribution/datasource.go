@@ -213,12 +213,10 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 					},
 					"strip_response_cookies": schema.BoolAttribute{
-						Optional:    true,
 						Computed:    true,
 						Description: schemaDescriptions["config_strip_response_cookies"],
 					},
 					"forward_host_header": schema.BoolAttribute{
-						Optional:    true,
 						Computed:    true,
 						Description: schemaDescriptions["config_forward_host_header"],
 					},
