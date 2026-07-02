@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	SKEServiceId          = "cloud.stackit.ske"
-	ModelServingServiceId = "cloud.stackit.model-serving"
-	EdgecloudServiceId    = "cloud.stackit.edge-cloud"
+	SKEServiceId              = "cloud.stackit.ske"
+	ModelServingServiceId     = "cloud.stackit.model-serving"
+	EdgecloudServiceId        = "cloud.stackit.edge-cloud"
+	ModelExperimentsServiceId = "cloud.stackit.model-experiments"
 )
 
 var (

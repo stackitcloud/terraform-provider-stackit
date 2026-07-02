@@ -1,0 +1,46 @@
+package utils
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/stackitcloud/stackit-sdk-go/core/config"
+	modelexperiment "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+)
+
+const (
+	INSTANCESTATE_CREATING    = "creating"
+	INSTANCESTATE_ACTIVE      = "active"
+	INSTANCESTATE_DELETING    = "deleting"
+	INSTANCESTATE_PENDING     = "pending"
+	INSTANCESTATE_UPDATING    = "updating"
+	INSTANCESTATE_IMPAIRED    = "impaired"
+	INSTANCESTATE_RECONCILING = "reconciling"
+
+	TOKENSTATE_ACTIVE   = "active"
+	TOKENSTATE_CREATING = "creating"
+	TOKENSTATE_DELETING = "deleting"
+	TOKENSTATE_INACTIVE = "inactive"
+)
+
+//go:generate mockgen -destination=./mock/serviceenablement.go -package=mock_serviceenablement github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api DefaultAPI
+func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *modelexperiment.APIClient {
+	apiClientConfigOptions := []config.ConfigurationOption{
+		config.WithCustomAuth(providerData.RoundTripper),
+		utils.UserAgentConfigOption(providerData.Version),
+	}
+	if providerData.ModelExperimentsCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.ModelExperimentsCustomEndpoint))
+	}
+	apiClient, err := modelexperiment.NewAPIClient(apiClientConfigOptions...)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
+		return nil
+	}
+
+	return apiClient
+}
