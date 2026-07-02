@@ -214,6 +214,7 @@ type providerModel struct {
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
 	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
+	ServiceConnectionID             types.String `tfsdk:"service_connection_id"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
 	EnableBetaResources types.Bool `tfsdk:"enable_beta_resources"`
@@ -233,6 +234,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"service_account_federated_token_path": "Path for workload identity assertion. It can also be set using the environment variable STACKIT_FEDERATED_TOKEN_FILE.",
 		"service_account_federated_token":      "The OIDC ID token for use when authenticating as a Service Account using OpenID Connect.",
 		"use_oidc":                             "Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
+		"service_connection_id":                "The ID of the Azure DevOps pipeline service connection. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
 		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
@@ -322,6 +324,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"use_oidc": schema.BoolAttribute{
 				Optional:    true,
 				Description: descriptions["use_oidc"],
+			},
+			"service_connection_id": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["service_connection_id"],
 			},
 			"oidc_request_token": schema.StringAttribute{
 				Optional:    true,
@@ -635,7 +641,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 		oidcReqToken = utils.GetEnvStringOrDefault(providerConfig.OIDCTokenRequestToken, "SYSTEM_ACCESSTOKEN", "")
 		// This can be set to the ID of the service connection to restrict the token exchange to that connection, not supported by default to avoid additional configuration
 		// for users that don't need it, can be added as an additional provider config parameter in the future if there is demand
-		serviceConnectionID := ""
+		serviceConnectionID := utils.GetEnvStringOrDefault(providerConfig.ServiceConnectionID, "STACKIT_SERVICE_CONNECTION_ID", "")
 		if oidcReqURL != "" && oidcReqToken != "" {
 			sdkConfig.ServiceAccountFederatedTokenFunc = oidcadapters.RequestAzureDevOpsOIDCToken(oidcReqURL, oidcReqToken, serviceConnectionID)
 		}
