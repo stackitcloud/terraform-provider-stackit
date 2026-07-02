@@ -44,6 +44,7 @@ data "stackit_ske_cluster" "example" {
 - `network` (Attributes) Network block as defined below. (see [below for nested schema](#nestedatt--network))
 - `node_pools` (Attributes List) One or more `node_pool` block as defined below. (see [below for nested schema](#nestedatt--node_pools))
 - `pod_address_ranges` (List of String) The network ranges (in CIDR notation) used by pods of the cluster.
+- `service_account_issuer` (String) Service Account Issuer of the cluster.
 
 <a id="nestedatt--access"></a>
 ### Nested Schema for `access`

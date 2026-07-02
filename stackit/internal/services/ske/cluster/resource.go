@@ -94,6 +94,7 @@ type Model struct {
 	Extensions            types.Object `tfsdk:"extensions"`
 	EgressAddressRanges   types.List   `tfsdk:"egress_address_ranges"`
 	PodAddressRanges      types.List   `tfsdk:"pod_address_ranges"`
+	ServiceAccountIssuer  types.String `tfsdk:"service_account_issuer"`
 	Region                types.String `tfsdk:"region"`
 	Access                types.Object `tfsdk:"access"`
 }
@@ -476,6 +477,13 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"service_account_issuer": schema.StringAttribute{
+				Description: "Service Account Issuer of the cluster.",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"node_pools": schema.ListNestedAttribute{
@@ -1604,6 +1612,11 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 		if diags.HasError() {
 			return fmt.Errorf("map podAddressRanges: %w", core.DiagsToError(diags))
 		}
+	}
+
+	m.ServiceAccountIssuer = types.StringNull()
+	if cl.Status != nil && cl.Status.ServiceAccountIssuer != nil {
+		m.ServiceAccountIssuer = types.StringValue(*cl.Status.ServiceAccountIssuer)
 	}
 
 	err := mapNodePools(ctx, cl, m)
