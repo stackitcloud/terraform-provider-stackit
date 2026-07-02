@@ -29,13 +29,17 @@ data "stackit_rabbitmq_credential" "example" {
 - `instance_id` (String) ID of the RabbitMQ instance.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `host` (String)
 - `hosts` (List of String)
 - `http_api_uri` (String)
 - `http_api_uris` (List of String)
-- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
+- `id` (String) Terraform's internal data source. identifier. It is structured as "`project_id`,`region`,`instance_id`,`credential_id`".
 - `management` (String)
 - `password` (String, Sensitive)
 - `port` (Number)

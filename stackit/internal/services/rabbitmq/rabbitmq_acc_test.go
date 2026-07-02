@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api/wait"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -196,11 +196,15 @@ func TestAccRabbitMQResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_rabbitmq_instance.instance")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -212,6 +216,10 @@ func TestAccRabbitMQResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_rabbitmq_credential.credential")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -220,7 +228,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -246,7 +254,7 @@ func TestAccRabbitMQResource(t *testing.T) {
 
 func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := rabbitmq.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RabbitMQCustomEndpoint, true)...)
+	client, err := rabbitmq.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.RabbitMQCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -261,7 +269,7 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, "eu01").Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -273,11 +281,11 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, "eu01", *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, "eu01", *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}
