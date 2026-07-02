@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/dns/v1api/wait"
 )
 
 func TestMapFields(t *testing.T) {
@@ -67,7 +66,7 @@ func TestMapFields(t *testing.T) {
 						{Content: "record_1"},
 						{Content: "record_2"},
 					},
-					State: wait.RECORDSETSTATE_CREATING,
+					State: dns.RECORDSETSTATE_CREATING,
 					Ttl:   1,
 					Type:  "A",
 				},
@@ -86,7 +85,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("record_1"),
 					types.StringValue("record_2"),
 				}),
-				State: types.StringValue(wait.RECORDSETSTATE_CREATING),
+				State: types.StringValue(string(dns.RECORDSETSTATE_CREATING)),
 				TTL:   types.Int32Value(1),
 				Type:  types.StringValue("A"),
 			},
@@ -113,7 +112,7 @@ func TestMapFields(t *testing.T) {
 						{Content: "record_1"},
 						{Content: "record_2"},
 					},
-					State: wait.RECORDSETSTATE_CREATING,
+					State: dns.RECORDSETSTATE_CREATING,
 					Ttl:   1,
 					Type:  "A",
 				},
@@ -132,7 +131,7 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("record_2"),
 					types.StringValue("record_1"),
 				}),
-				State: types.StringValue(wait.RECORDSETSTATE_CREATING),
+				State: types.StringValue(string(dns.RECORDSETSTATE_CREATING)),
 				TTL:   types.Int32Value(1),
 				Type:  types.StringValue("A"),
 			},
@@ -153,7 +152,7 @@ func TestMapFields(t *testing.T) {
 					Error:   nil,
 					Name:    "name",
 					Records: nil,
-					State:   wait.RECORDSETSTATE_CREATING,
+					State:   dns.RECORDSETSTATE_CREATING,
 					Ttl:     2123456789,
 					Type:    "A",
 				},
@@ -169,7 +168,7 @@ func TestMapFields(t *testing.T) {
 				Name:        types.StringValue("other-name"),
 				FQDN:        types.StringValue("name"),
 				Records:     types.ListNull(types.StringType),
-				State:       types.StringValue(wait.RECORDSETSTATE_CREATING),
+				State:       types.StringValue(string(dns.RECORDSETSTATE_CREATING)),
 				TTL:         types.Int32Value(2123456789),
 				Type:        types.StringValue("A"),
 			},

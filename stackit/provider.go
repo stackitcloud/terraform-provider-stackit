@@ -30,6 +30,8 @@ import (
 	cdn "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/distribution"
 	dnsRecordSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/recordset"
 	dnsZone "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/zone"
+	dremioInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/instance"
+	dremioUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/user"
 	edgeCloudInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instance"
 	edgeCloudInstances "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/instances"
 	edgeCloudKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/kubeconfig"
@@ -122,6 +124,13 @@ import (
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
+	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
+	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
+	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
+	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
+	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
+	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -172,6 +181,7 @@ type providerModel struct {
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	ALBCertificatesCustomEndpoint   types.String `tfsdk:"alb_certificates_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
+	DremioCustomEndpoint            types.String `tfsdk:"dremio_custom_endpoint"`
 	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
 	GitCustomEndpoint               types.String `tfsdk:"git_custom_endpoint"`
 	IaaSCustomEndpoint              types.String `tfsdk:"iaas_custom_endpoint"`
@@ -199,7 +209,10 @@ type providerModel struct {
 	SfsCustomEndpoint               types.String `tfsdk:"sfs_custom_endpoint"`
 	SkeCustomEndpoint               types.String `tfsdk:"ske_custom_endpoint"`
 	SqlServerFlexCustomEndpoint     types.String `tfsdk:"sqlserverflex_custom_endpoint"`
+	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
+	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
 
@@ -228,6 +241,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
+		"dremio_custom_endpoint":               "Custom endpoint for the Dremio service",
 		"edgecloud_custom_endpoint":            "Custom endpoint for the Edge Cloud service",
 		"git_custom_endpoint":                  "Custom endpoint for the Git service",
 		"iaas_custom_endpoint":                 "Custom endpoint for the IaaS service",
@@ -256,7 +270,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"ske_custom_endpoint":                  "Custom endpoint for the Kubernetes Engine (SKE) service",
 		"service_enablement_custom_endpoint":   "Custom endpoint for the Service Enablement API",
 		"sfs_custom_endpoint":                  "Custom endpoint for the Stackit Filestorage API",
+		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
+		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
 	}
@@ -354,6 +371,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["dns_custom_endpoint"],
+			},
+			"dremio_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["dremio_custom_endpoint"],
 			},
 			"edgecloud_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -467,6 +488,18 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["sfs_custom_endpoint"],
 			},
+			"telemetryrouter_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["telemetryrouter_custom_endpoint"],
+			},
+			"telemetrylink_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["telemetrylink_custom_endpoint"],
+			},
+			"vpn_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["vpn_custom_endpoint"],
+			},
 			"token_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["token_custom_endpoint"],
@@ -527,6 +560,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
+	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { providerData.DremioCustomEndpoint = v })
 	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
 	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
 	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
@@ -554,6 +588,9 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { providerData.SfsCustomEndpoint = v })
 	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
+	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -635,6 +672,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		cdnCustomDomain.NewCustomDomainDataSource,
 		dnsZone.NewZoneDataSource,
 		dnsRecordSet.NewRecordSetDataSource,
+		dremioInstance.NewInstanceDataSource,
+		dremioUser.NewUserDataSource,
 		edgeCloudInstances.NewInstancesDataSource,
 		edgeCloudPlans.NewPlansDataSource,
 		gitInstance.NewGitDataSource,
@@ -715,6 +754,13 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		compliancelock.NewComplianceLockDataSource,
 		serverBackupEnable.NewServerBackupEnableDataSource,
 		serverUpdateEnable.NewServerUpdateEnableDataSource,
+		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenDataSource,
+		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
+		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
+		telemetryLink.NewTelemetryLinkDataSource,
+		vpnGateway.NewVPNGatewayDataSource,
+		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
+		vpnConnection.NewVPNConnectionDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -732,6 +778,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		cdnCustomDomain.NewCustomDomainResource,
 		dnsZone.NewZoneResource,
 		dnsRecordSet.NewRecordSetResource,
+		dremioInstance.NewInstanceResource,
+		dremioUser.NewUserResource,
 		edgeCloudInstance.NewInstanceResource,
 		edgeCloudKubeconfig.NewKubeconfigResource,
 		edgeCloudToken.NewTokenResource,
@@ -808,6 +856,12 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		compliancelock.NewComplianceLockResource,
 		serverBackupEnable.NewServerBackupEnableResource,
 		serverUpdateEnable.NewServerUpdateEnableResource,
+		telemetryRouterAccessToken.NewTelemetryRouterAccessTokenResource,
+		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
+		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
+		telemetryLink.NewTelemetryLinkResource,
+		vpnConnection.NewVpnConnectionResource,
+		vpnGateway.NewGatewayResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)

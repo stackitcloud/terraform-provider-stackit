@@ -552,6 +552,26 @@ func TestVersionNumber(t *testing.T) {
 			true,
 		},
 		{
+			"ok-patch-version-prerelease",
+			"1.20.1-alpha",
+			true,
+		},
+		{
+			"ok-patch-version-prerelease-with-dot-separator",
+			"1.20.1-alpha.1",
+			true,
+		},
+		{
+			"ok-patch-version-prerelease-without-dot-separator",
+			"1.20.1-alpha1.2",
+			true,
+		},
+		{
+			"version-ends-with-dot",
+			"1.20.1-alpha.1.",
+			false,
+		},
+		{
 			"Empty",
 			"",
 			false,
@@ -999,6 +1019,63 @@ func TestIsLowercased(t *testing.T) {
 				ConfigValue: types.StringValue(tt.input),
 			}, &r)
 
+			if tt.wantErr && !r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to fail for input: %q", tt.input)
+			}
+			if !tt.wantErr && r.Diagnostics.HasError() {
+				t.Fatalf("Expected validation to succeed for input: %q, but got errors: %v", tt.input, r.Diagnostics.Errors())
+			}
+		})
+	}
+}
+
+func TestNoLeadingOrtTrailingWhitespace(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{
+			name:  "empty",
+			input: "",
+		},
+		{
+			name:  "valid",
+			input: "valid",
+		},
+		{
+			name:  "single char, valid",
+			input: "a",
+		},
+		{
+			name:    "leading whitespace",
+			input:   " leading",
+			wantErr: true,
+		},
+		{
+			name:    "trailing whitespace",
+			input:   "trailing ",
+			wantErr: true,
+		},
+		{
+			name:    "leading and trailing whitespace",
+			input:   " leading and trailing ",
+			wantErr: true,
+		},
+		{
+			name:    "single space",
+			input:   " ",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := validator.StringResponse{}
+			NoLeadingOrTrailingWhitespace().ValidateString(context.Background(), validator.StringRequest{
+				ConfigValue: types.StringValue(tt.input),
+			}, &r)
 			if tt.wantErr && !r.Diagnostics.HasError() {
 				t.Fatalf("Expected validation to fail for input: %q", tt.input)
 			}

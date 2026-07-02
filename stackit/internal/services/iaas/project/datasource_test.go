@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas" //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 )
 
 const (
@@ -74,7 +74,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			},
 			input: &iaas.Project{
 				AreaId: new(iaas.AreaId{
-					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(),
+					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(), //nolint:staticcheck // TODO: will be done within STACKITTPR-713
 				}),
 				Id: utils.Ptr(projectId),
 			},

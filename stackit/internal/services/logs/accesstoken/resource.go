@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -23,9 +24,10 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/logs/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -72,6 +74,11 @@ type Model struct {
 	Lifetime      types.Int32  `tfsdk:"lifetime"`
 	Permissions   types.List   `tfsdk:"permissions"`
 	Status        types.String `tfsdk:"status"`
+	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
+	// recreation of the resource when they change, enabling resource rotation based on
+	// external conditions such as a rotating timestamp. Changing this forces a new
+	// resource to be created.
+	RotateWhenChanged types.Map `tfsdk:"rotate_when_changed"`
 }
 
 type logsAccessTokenResource struct {
@@ -232,6 +239,18 @@ func (r *logsAccessTokenResource) Schema(_ context.Context, _ resource.SchemaReq
 			"status": schema.StringAttribute{
 				Description: schemaDescriptions["status"],
 				Computed:    true,
+			},
+			"rotate_when_changed": schema.MapAttribute{
+				Description: "A map of arbitrary key/value pairs that will force " +
+					"recreation of the resource when they change, enabling resource rotation " +
+					"based on external conditions such as a rotating timestamp. Changing " +
+					"this forces a new resource to be created.",
+				Optional:    true,
+				Required:    false,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 	}
@@ -462,7 +481,9 @@ func toCreatePayload(ctx context.Context, diagnostics diag.Diagnostics, model *M
 		permissionDiags := model.Permissions.ElementsAs(ctx, &permissions, false)
 		diagnostics.Append(permissionDiags...)
 		if !permissionDiags.HasError() {
-			payload.Permissions = permissions
+			payload.Permissions = tfutils.Map(permissions, func(t string) logs.PermissionsInner {
+				return logs.PermissionsInner(t)
+			})
 		}
 	}
 
@@ -493,7 +514,7 @@ func mapFields(ctx context.Context, accessToken *logs.AccessToken, model *Model)
 	model.Description = types.StringPointerValue(accessToken.Description)
 	model.DisplayName = types.StringValue(accessToken.DisplayName)
 	model.Expires = types.BoolValue(accessToken.Expires)
-	model.Status = types.StringValue(accessToken.Status)
+	model.Status = types.StringValue(string(accessToken.Status))
 
 	model.ValidUntil = types.StringNull()
 	if accessToken.ValidUntil != nil {

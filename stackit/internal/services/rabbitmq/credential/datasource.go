@@ -26,6 +26,23 @@ var (
 	_ datasource.DataSource = &credentialDataSource{}
 )
 
+type DataSourceModel struct {
+	Id           types.String `tfsdk:"id"` // needed by TF
+	CredentialId types.String `tfsdk:"credential_id"`
+	InstanceId   types.String `tfsdk:"instance_id"`
+	ProjectId    types.String `tfsdk:"project_id"`
+	Host         types.String `tfsdk:"host"`
+	Hosts        types.List   `tfsdk:"hosts"`
+	HttpAPIURI   types.String `tfsdk:"http_api_uri"`
+	HttpAPIURIs  types.List   `tfsdk:"http_api_uris"`
+	Management   types.String `tfsdk:"management"`
+	Password     types.String `tfsdk:"password"`
+	Port         types.Int32  `tfsdk:"port"`
+	Uri          types.String `tfsdk:"uri"`
+	Uris         types.List   `tfsdk:"uris"`
+	Username     types.String `tfsdk:"username"`
+}
+
 // NewCredentialDataSource is a helper function to simplify the provider implementation.
 func NewCredentialDataSource() datasource.DataSource {
 	return &credentialDataSource{}
@@ -138,7 +155,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -173,7 +190,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapDataSourceFields(ctx, recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -186,4 +203,94 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 	tflog.Info(ctx, "RabbitMQ credential read")
+}
+
+func mapDataSourceFields(ctx context.Context, credentialsResp *rabbitmq.CredentialsResponse, model *DataSourceModel) error {
+	if credentialsResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if credentialsResp.Raw == nil {
+		return fmt.Errorf("response credentials raw is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+	credentials := credentialsResp.Raw.Credentials
+
+	var credentialId string
+	if model.CredentialId.ValueString() != "" {
+		credentialId = model.CredentialId.ValueString()
+	} else if credentialsResp.Id != "" {
+		credentialId = credentialsResp.Id
+	} else {
+		return fmt.Errorf("credentials id not present")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(
+		model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId,
+	)
+	model.CredentialId = types.StringValue(credentialId)
+
+	modelHosts, err := utils.ListValueToStringSlice(model.Hosts)
+	if err != nil {
+		return err
+	}
+	modelHttpApiUris, err := utils.ListValueToStringSlice(model.HttpAPIURIs)
+	if err != nil {
+		return err
+	}
+	modelUris, err := utils.ListValueToStringSlice(model.Uris)
+	if err != nil {
+		return err
+	}
+
+	model.Hosts = types.ListNull(types.StringType)
+	model.Uris = types.ListNull(types.StringType)
+	model.HttpAPIURIs = types.ListNull(types.StringType)
+	if credentials.Hosts != nil {
+		respHosts := credentials.Hosts
+		reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
+
+		hostsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHosts)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+		}
+
+		model.Hosts = hostsTF
+	}
+	model.Host = types.StringValue(credentials.Host)
+	if credentials.HttpApiUris != nil {
+		respHttpApiUris := credentials.HttpApiUris
+
+		reconciledHttpApiUris := utils.ReconcileStringSlices(modelHttpApiUris, respHttpApiUris)
+
+		httpApiUrisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHttpApiUris)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map httpApiUris: %w", core.DiagsToError(diags))
+		}
+
+		model.HttpAPIURIs = httpApiUrisTF
+	}
+
+	if credentials.Uris != nil {
+		respUris := credentials.Uris
+
+		reconciledUris := utils.ReconcileStringSlices(modelUris, respUris)
+
+		urisTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledUris)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map uris: %w", core.DiagsToError(diags))
+		}
+
+		model.Uris = urisTF
+	}
+
+	model.HttpAPIURI = types.StringPointerValue(credentials.HttpApiUri)
+	model.Management = types.StringPointerValue(credentials.Management)
+	model.Password = types.StringValue(credentials.Password)
+	model.Port = types.Int32PointerValue(credentials.Port)
+	model.Uri = types.StringPointerValue(credentials.Uri)
+	model.Username = types.StringValue(credentials.Username)
+
+	return nil
 }

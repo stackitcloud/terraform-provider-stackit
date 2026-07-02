@@ -125,7 +125,7 @@ data "stackit_image_v2" "filter_distro_version" {
 
 Optional:
 
-- `distro` (String) Filter images by operating system distribution. For example: `ubuntu`, `ubuntu-arm64`, `debian`, `rhel`, etc.
+- `distro` (String) Filter images by operating system distribution. For example: `ubuntu`, `debian`, `rhel`, etc.
 - `os` (String) Filter images by operating system type, such as `linux` or `windows`.
 - `secure_boot` (Boolean) Filter images with Secure Boot support. Set to `true` to match images that support Secure Boot.
 - `uefi` (Boolean) Filter images based on UEFI support. Set to `true` to match images that support UEFI.

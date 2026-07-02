@@ -20,6 +20,21 @@ resource "stackit_secretsmanager_user" "example" {
   write_enabled = false
 }
 
+resource "time_rotating" "rotate" {
+  rotation_days = 80
+}
+
+resource "stackit_secretsmanager_user" "example_rotate" {
+  project_id    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  instance_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  description   = "Example user"
+  write_enabled = false
+
+  rotate_when_changed = {
+    rotation = time_rotating.rotate.id
+  }
+}
+
 # Only use the import statement, if you want to import an existing secretsmanager user
 import {
   to = stackit_secretsmanager_user.import-example
@@ -36,6 +51,10 @@ import {
 - `instance_id` (String) ID of the Secrets Manager instance.
 - `project_id` (String) STACKIT Project ID to which the instance is associated.
 - `write_enabled` (Boolean) If true, the user has writeaccess to the secrets engine.
+
+### Optional
+
+- `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
 

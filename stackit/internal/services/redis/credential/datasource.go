@@ -26,6 +26,20 @@ var (
 	_ datasource.DataSource = &credentialDataSource{}
 )
 
+type DataSourceModel struct {
+	Id               types.String `tfsdk:"id"` // needed by TF
+	CredentialId     types.String `tfsdk:"credential_id"`
+	InstanceId       types.String `tfsdk:"instance_id"`
+	ProjectId        types.String `tfsdk:"project_id"`
+	Host             types.String `tfsdk:"host"`
+	Hosts            types.List   `tfsdk:"hosts"`
+	LoadBalancedHost types.String `tfsdk:"load_balanced_host"`
+	Password         types.String `tfsdk:"password"`
+	Port             types.Int32  `tfsdk:"port"`
+	Uri              types.String `tfsdk:"uri"`
+	Username         types.String `tfsdk:"username"`
+}
+
 // NewCredentialDataSource is a helper function to simplify the provider implementation.
 func NewCredentialDataSource() datasource.DataSource {
 	return &credentialDataSource{}
@@ -129,7 +143,7 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 
 // Read refreshes the Terraform state with the latest data.
 func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
-	var model Model
+	var model DataSourceModel
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -164,7 +178,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(ctx, recordSetResp, &model)
+	err = mapDataSourceFields(ctx, recordSetResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -177,4 +191,57 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 	tflog.Info(ctx, "Redis credential read")
+}
+
+func mapDataSourceFields(ctx context.Context, credentialsResp *redis.CredentialsResponse, model *DataSourceModel) error {
+	if credentialsResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if credentialsResp.Raw == nil {
+		return fmt.Errorf("response credentials raw is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+	credentials := credentialsResp.Raw.Credentials
+
+	var credentialId string
+	if model.CredentialId.ValueString() != "" {
+		credentialId = model.CredentialId.ValueString()
+	} else if credentialsResp.Id != "" {
+		credentialId = credentialsResp.Id
+	} else {
+		return fmt.Errorf("credentials id not present")
+	}
+
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.InstanceId.ValueString(), credentialId)
+
+	modelHosts, err := utils.ListValueToStringSlice(model.Hosts)
+	if err != nil {
+		return err
+	}
+
+	model.Hosts = types.ListNull(types.StringType)
+	model.CredentialId = types.StringValue(credentialId)
+
+	if credentials.Hosts != nil {
+		respHosts := credentials.Hosts
+
+		reconciledHosts := utils.ReconcileStringSlices(modelHosts, respHosts)
+
+		hostsTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledHosts)
+		if diags.HasError() {
+			return fmt.Errorf("failed to map hosts: %w", core.DiagsToError(diags))
+		}
+
+		model.Hosts = hostsTF
+	}
+	model.Host = types.StringValue(credentials.Host)
+	model.LoadBalancedHost = types.StringPointerValue(credentials.LoadBalancedHost)
+	model.Password = types.StringValue(credentials.Password)
+	model.Port = types.Int32PointerValue(credentials.Port)
+	model.Uri = types.StringPointerValue(credentials.Uri)
+	model.Username = types.StringValue(credentials.Username)
+
+	return nil
 }

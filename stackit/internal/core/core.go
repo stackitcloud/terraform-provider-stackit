@@ -45,6 +45,7 @@ type ProviderData struct {
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
+	DremioCustomEndpoint            string
 	EdgeCloudCustomEndpoint         string
 	GitCustomEndpoint               string
 	IaaSCustomEndpoint              string
@@ -72,6 +73,9 @@ type ProviderData struct {
 	ServiceEnablementCustomEndpoint string
 	SfsCustomEndpoint               string
 	ServiceAccountCustomEndpoint    string
+	TelemetryLinkCustomEndpoint     string
+	TelemetryRouterCustomEndpoint   string
+	VpnCustomEndpoint               string
 	EnableBetaResources             bool
 	Experiments                     []string
 

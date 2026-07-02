@@ -86,8 +86,16 @@ func StringValueToPointer(s basetypes.StringValue) *string {
 	if s.IsNull() || s.IsUnknown() {
 		return nil
 	}
-	value := s.ValueString()
-	return &value
+	return new(s.ValueString())
+}
+
+// StringValueToPointer converts basetypes.StringValue to a pointer to enum.
+// It returns nil if the value is null or unknown.
+func StringValueToEnumPointer[T ~string](s basetypes.StringValue) *T {
+	if s.IsNull() || s.IsUnknown() {
+		return nil
+	}
+	return new(T(s.ValueString()))
 }
 
 // Int32ValueToPointer converts basetypes.Int32Value to a pointer to int32.
@@ -153,18 +161,24 @@ func StringListToPointer(list basetypes.ListValue) (*[]string, error) {
 // StringListToSlice converts basetypes.ListValue to a list of strings.
 // It returns nil if the value is null or unknown.
 func StringListToSlice(list basetypes.ListValue) ([]string, error) {
+	return StringListToEnumSlice[string](list)
+}
+
+// StringListToEnumSlice converts basetypes.ListValue to a list of enums.
+// It returns nil if the value is null or unknown.
+func StringListToEnumSlice[T ~string](list basetypes.ListValue) ([]T, error) {
 	if list.IsNull() || list.IsUnknown() {
 		return nil, nil
 	}
 
 	// Instantiate an empty slice to ensure the slice is not nil
-	listStr := []string{}
+	listStr := []T{}
 	for i, el := range list.Elements() {
 		elStr, ok := el.(types.String)
 		if !ok {
 			return nil, fmt.Errorf("element %d is not a string", i)
 		}
-		listStr = append(listStr, elStr.ValueString())
+		listStr = append(listStr, T(elStr.ValueString()))
 	}
 
 	return listStr, nil

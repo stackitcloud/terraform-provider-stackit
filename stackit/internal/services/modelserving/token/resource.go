@@ -576,7 +576,7 @@ func mapCreateResponse(tokenCreateResp *modelserving.CreateTokenResponse, waitRe
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, tokenCreateResp.Token.Id)
 	model.TokenId = types.StringValue(token.Id)
 	model.Name = types.StringValue(token.Name)
-	model.State = types.StringValue(waitResp.Token.State)
+	model.State = types.StringValue(string(waitResp.Token.State))
 	model.ValidUntil = validUntil
 	model.Token = types.StringValue(token.Content)
 	model.Description = types.StringPointerValue(token.Description)
@@ -596,7 +596,7 @@ func mapGetResponse(tokenGetResp *modelserving.GetTokenResponse, model *Model) e
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), model.Region.ValueString(), model.TokenId.ValueString())
 	model.TokenId = types.StringValue(tokenGetResp.Token.Id)
 	model.Name = types.StringValue(tokenGetResp.Token.Name)
-	model.State = types.StringValue(tokenGetResp.Token.State)
+	model.State = types.StringValue(string(tokenGetResp.Token.State))
 	model.ValidUntil = types.StringValue(tokenGetResp.Token.ValidUntil.Format(time.RFC3339))
 	model.Description = types.StringPointerValue(tokenGetResp.Token.Description)
 

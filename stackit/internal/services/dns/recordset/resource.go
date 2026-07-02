@@ -314,7 +314,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading record set", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-	if recordSetResp != nil && recordSetResp.Rrset.State == wait.RECORDSETSTATE_DELETE_SUCCEEDED {
+	if recordSetResp != nil && recordSetResp.Rrset.State == dns.RECORDSETSTATE_DELETE_SUCCEEDED {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -520,9 +520,9 @@ func mapFields(ctx context.Context, recordSetResp *dns.RecordSetResponse, model 
 		model.Name = types.StringValue(recordSet.Name)
 	}
 	model.FQDN = types.StringValue(recordSet.Name)
-	model.State = types.StringValue(recordSet.State)
+	model.State = types.StringValue(string(recordSet.State))
 	model.TTL = types.Int32Value(recordSet.Ttl)
-	model.Type = types.StringValue(recordSet.Type)
+	model.Type = types.StringValue(string(recordSet.Type))
 	return nil
 }
 
@@ -547,7 +547,7 @@ func toCreatePayload(model *Model) (*dns.CreateRecordSetPayload, error) {
 		Name:    model.Name.ValueString(),
 		Records: records,
 		Ttl:     conversion.Int32ValueToPointer(model.TTL),
-		Type:    model.Type.ValueString(),
+		Type:    dns.CreateRecordSetPayloadType(model.Type.ValueString()),
 	}, nil
 }
 

@@ -742,7 +742,10 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		FlavorId:       conversion.StringValueToPointer(flavor.Id),
 		Name:           conversion.StringValueToPointer(model.Name),
 		Replicas:       conversion.Int32ValueToPointer(model.Replicas),
-		Version:        conversion.StringValueToPointer(model.Version),
+		Storage: &postgresflex.StorageUpdate{
+			Size: conversion.Int64ValueToPointer(storage.Size),
+		},
+		Version: conversion.StringValueToPointer(model.Version),
 	}, nil
 }
 

@@ -64,7 +64,7 @@ func TestMapInstanceToAttrs(t *testing.T) {
 		"region":       types.StringValue(region),
 		"plan_id":      types.StringValue(validInstance.PlanId),
 		"frontend_url": types.StringValue(validInstance.FrontendUrl),
-		"status":       types.StringValue(validInstance.Status),
+		"status":       types.StringValue(string(validInstance.Status)),
 		"created":      types.StringValue(testTime.String()),
 		"description":  types.StringPointerValue(validInstance.Description),
 	}
