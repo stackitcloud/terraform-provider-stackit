@@ -317,15 +317,21 @@ func TestToCreatePayload(t *testing.T) {
 		{
 			"mapping_with_conversions_ok",
 			&Model{
-				Name:          types.StringValue("Name"),
-				DnsName:       types.StringValue("DnsName"),
-				Acl:           types.StringValue("Acl"),
-				Description:   types.StringValue("Description"),
-				Type:          types.StringValue("primary"),
-				ContactEmail:  types.StringValue("ContactEmail"),
-				RetryTime:     types.Int32Value(3),
-				RefreshTime:   types.Int32Value(4),
-				ExpireTime:    types.Int32Value(5),
+				Name:         types.StringValue("Name"),
+				DnsName:      types.StringValue("DnsName"),
+				Acl:          types.StringValue("Acl"),
+				Description:  types.StringValue("Description"),
+				Type:         types.StringValue("primary"),
+				ContactEmail: types.StringValue("ContactEmail"),
+				RetryTime:    types.Int32Value(3),
+				RefreshTime:  types.Int32Value(4),
+				ExpireTime:   types.Int32Value(5),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"observability_instance_id": types.StringValue("some UUID"),
+						"state":                     types.StringNull(),
+					}),
+				}),
 				DefaultTTL:    types.Int32Value(4534534),
 				NegativeCache: types.Int32Value(-4534534),
 				Primaries: types.ListValueMust(types.StringType, []attr.Value{
@@ -334,16 +340,21 @@ func TestToCreatePayload(t *testing.T) {
 				IsReverseZone: types.BoolValue(true),
 			},
 			&dns.CreateZonePayload{
-				Name:          "Name",
-				DnsName:       "DnsName",
-				Acl:           new("Acl"),
-				Description:   new("Description"),
-				Type:          new(dns.CREATEZONEPAYLOADTYPE_PRIMARY),
-				ContactEmail:  new("ContactEmail"),
-				Primaries:     []string{"primary"},
-				RetryTime:     new(int32(3)),
-				RefreshTime:   new(int32(4)),
-				ExpireTime:    new(int32(5)),
+				Name:         "Name",
+				DnsName:      "DnsName",
+				Acl:          new("Acl"),
+				Description:  new("Description"),
+				Type:         new(dns.CREATEZONEPAYLOADTYPE_PRIMARY),
+				ContactEmail: new("ContactEmail"),
+				Primaries:    []string{"primary"},
+				RetryTime:    new(int32(3)),
+				RefreshTime:  new(int32(4)),
+				ExpireTime:   new(int32(5)),
+				Extensions: &dns.ZoneExtensions{
+					ObservabilityExtension: &dns.ZoneObservabilityExtension{
+						ObservabilityInstanceId: "some UUID",
+					},
+				},
 				DefaultTTL:    new(int32(4534534)),
 				NegativeCache: new(int32(-4534534)),
 				IsReverseZone: new(true),
@@ -359,7 +370,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input)
+			output, err := toCreatePayload(t.Context(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -430,7 +441,7 @@ func TestToPayloadUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input)
+			output, err := toUpdatePayload(t.Context(), tt.input)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

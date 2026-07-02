@@ -40,6 +40,7 @@ data "stackit_dns_zone" "example" {
 - `default_ttl` (Number) Default time to live.
 - `description` (String) Description of the zone.
 - `expire_time` (Number) Expire time.
+- `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`zone_id`".
 - `is_reverse_zone` (Boolean) Specifies, if the zone is a reverse zone or not.
 - `name` (String) The user given name of the zone.
@@ -60,3 +61,19 @@ data "stackit_dns_zone" "example" {
 Optional:
 
 - `read` (String) A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+
+
+<a id="nestedatt--extensions"></a>
+### Nested Schema for `extensions`
+
+Read-Only:
+
+- `observability` (Attributes) A single observability block as defined below. (see [below for nested schema](#nestedatt--extensions--observability))
+
+<a id="nestedatt--extensions--observability"></a>
+### Nested Schema for `extensions.observability`
+
+Read-Only:
+
+- `observability_instance_id` (String) Observability instance ID to choose which Observability instance is used.
+- `state` (String) State of the observability extension.

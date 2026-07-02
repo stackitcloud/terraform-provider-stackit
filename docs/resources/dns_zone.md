@@ -48,6 +48,7 @@ import {
 - `default_ttl` (Number) Default time to live. E.g. 3600.
 - `description` (String) Description of the zone.
 - `expire_time` (Number) Expire time. E.g. 1209600.
+- `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `is_reverse_zone` (Boolean) Specifies, if the zone is a reverse zone or not. Defaults to `false`
 - `negative_cache` (Number) Negative caching. E.g. 60
 - `primaries` (List of String) Primary name server for secondary zone. E.g. ["1.2.3.4"]
@@ -65,6 +66,26 @@ import {
 - `state` (String) Zone state. E.g. `CREATE_SUCCEEDED`.
 - `visibility` (String) Visibility of the zone. E.g. `public`.
 - `zone_id` (String) The zone ID.
+
+<a id="nestedatt--extensions"></a>
+### Nested Schema for `extensions`
+
+Optional:
+
+- `observability` (Attributes) A single observability block as defined below. (see [below for nested schema](#nestedatt--extensions--observability))
+
+<a id="nestedatt--extensions--observability"></a>
+### Nested Schema for `extensions.observability`
+
+Required:
+
+- `observability_instance_id` (String) Observability instance ID to choose which Observability instance is used.
+
+Read-Only:
+
+- `state` (String) State of the extension.
+
+
 
 <a id="nestedatt--timeouts"></a>
 ### Nested Schema for `timeouts`
