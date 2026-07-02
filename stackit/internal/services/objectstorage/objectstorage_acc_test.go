@@ -32,6 +32,9 @@ var testConfigVarsMin = config.Variables{
 
 	"objectstorage_bucket_name_with_lock": config.StringVariable(fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(20, acctest.CharSetAlpha))),
 	"object_lock":                         config.BoolVariable(true),
+
+	"retention_days": config.IntegerVariable(2),
+	"retention_mode": config.StringVariable(string(objectstorage.RETENTIONMODE_GOVERNANCE)),
 }
 
 func TestAccObjectStorageResourceMin(t *testing.T) {
@@ -96,6 +99,12 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket_object_lock", "url_path_style"),
 					resource.TestCheckResourceAttrSet("stackit_objectstorage_bucket.bucket_object_lock", "url_virtual_hosted_style"),
 					resource.TestCheckResourceAttr("stackit_objectstorage_bucket.bucket_object_lock", "object_lock", testutil.ConvertConfigVariable(testConfigVarsMin["object_lock"])),
+
+					// default retention of object storage
+					resource.TestCheckResourceAttr("stackit_objectstorage_default_retention.retention", "bucket_name", testutil.ConvertConfigVariable(testConfigVarsMin["objectstorage_bucket_name_with_lock"])),
+					resource.TestCheckResourceAttr("stackit_objectstorage_default_retention.retention", "project_id", testutil.ConvertConfigVariable(testConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr("stackit_objectstorage_default_retention.retention", "days", testutil.ConvertConfigVariable(testConfigVarsMin["retention_days"])),
+					resource.TestCheckResourceAttr("stackit_objectstorage_default_retention.retention", "mode", testutil.ConvertConfigVariable(testConfigVarsMin["retention_mode"])),
 				),
 			},
 			// Data source
@@ -131,7 +140,15 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 							data "stackit_objectstorage_bucket" "bucket_object_lock" {
 								project_id  = stackit_objectstorage_bucket.bucket_object_lock.project_id
 								name = stackit_objectstorage_bucket.bucket_object_lock.name
-							}`,
+							}
+					
+							data "stackit_objectstorage_default_retention" "retention" {
+  							bucket_name = stackit_objectstorage_bucket.bucket_object_lock.name
+  							project_id  = var.project_id
+  							days        = var.retention_days
+  							mode        = var.retention_mode
+							}
+					`,
 					testutil.NewConfigBuilder().BuildProviderConfig()+resourceMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -234,6 +251,24 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						"stackit_objectstorage_bucket.bucket_object_lock", "object_lock",
 						"data.stackit_objectstorage_bucket.bucket_object_lock", "object_lock",
+					),
+
+					// default retention of object storage
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_default_retention.retention", "bucket_name",
+						"data.stackit_objectstorage_default_retention.retention", "bucket_name",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_default_retention.retention", "project_id",
+						"data.stackit_objectstorage_default_retention.retention", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_default_retention.retention", "days",
+						"data.stackit_objectstorage_default_retention.retention", "days",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_objectstorage_default_retention.retention", "mode",
+						"data.stackit_objectstorage_default_retention.retention", "mode",
 					),
 				),
 			},
