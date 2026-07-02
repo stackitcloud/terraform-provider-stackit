@@ -4,11 +4,14 @@ page_title: "stackit_network_area_region Resource - stackit"
 subcategory: ""
 description: |-
   Network area region resource schema.
+  This resource is for SNA, not VPC, based networks.
 ---
 
 # stackit_network_area_region (Resource)
 
 Network area region resource schema.
+
+This resource is for SNA, not VPC, based networks.
 
 ## Example Usage
 

@@ -4,11 +4,15 @@ page_title: "stackit_network_area_route Resource - stackit"
 subcategory: ""
 description: |-
   Network area route resource schema. Must have a `region` specified in the provider configuration.
+
+This resource is for SNA, not VPC, based networks.
 ---
 
 # stackit_network_area_route (Resource)
 
 Network area route resource schema. Must have a `region` specified in the provider configuration.
+
+This resource is for SNA, not VPC, based networks.
 
 ## Example Usage
 

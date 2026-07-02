@@ -4,11 +4,14 @@ page_title: "stackit_network_area Data Source - stackit"
 subcategory: ""
 description: |-
   Network area datasource schema. Must have a region specified in the provider configuration.
+  This datasource is for SNA, not VPC, networks.
 ---
 
 # stackit_network_area (Data Source)
 
 Network area datasource schema. Must have a `region` specified in the provider configuration.
+
+This datasource is for SNA, not VPC, networks.
 
 ## Example Usage
 

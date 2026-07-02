@@ -60,7 +60,8 @@ func (d *networkAreaRegionDataSource) Configure(ctx context.Context, req datasou
 
 // Schema defines the schema for the resource.
 func (d *networkAreaRegionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Network area region data source schema."
+	description := "Network area region data source schema.\n\n" +
+		"This datasource is for SNA, not VPC, based networks."
 
 	resp.Schema = schema.Schema{
 		MarkdownDescription: description,
