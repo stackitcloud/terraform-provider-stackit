@@ -58,7 +58,8 @@ func (d *networkAreaRouteDataSource) Configure(ctx context.Context, req datasour
 
 // Schema defines the schema for the data source.
 func (d *networkAreaRouteDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Network area route data resource schema. Must have a `region` specified in the provider configuration."
+	description := "Network area route data resource schema. Must have a `region` specified in the provider configuration.\n\n" +
+		"This datasource is for SNA, not VPC, networks."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,

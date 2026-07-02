@@ -4,12 +4,15 @@ page_title: "stackit_routing_table_route Resource - stackit"
 subcategory: ""
 description: |-
   Routing table route resource schema. Must have a region specified in the provider configuration.
+  This resource is for SNA, not VPC, based networks.
   ~> This resource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_routing_table_route (Resource)
 
 Routing table route resource schema. Must have a `region` specified in the provider configuration.
+
+This resource is for SNA, not VPC, based networks.
 
 ~> This resource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 

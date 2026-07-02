@@ -73,7 +73,8 @@ func (d *routingTableRoutesDataSource) Configure(ctx context.Context, req dataso
 
 // Schema defines the schema for the data source.
 func (d *routingTableRoutesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	description := "Routing table routes datasource schema. Must have a `region` specified in the provider configuration."
+	description := "Routing table routes datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
+		"This datasource is for SNA, not VPC, based networks."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Datasource),
