@@ -134,7 +134,8 @@ func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.C
 
 // Schema defines the schema for the resource.
 func (r *networkAreaRouteResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Network area route resource schema. Must have a `region` specified in the provider configuration."
+	description := "Network area route resource schema. Must have a `region` specified in the provider configuration.\n\n" +
+		"This resource is for SNA, not VPC, based networks."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,

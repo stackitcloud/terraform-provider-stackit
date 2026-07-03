@@ -64,7 +64,8 @@ func (d *networkAreaDataSource) Configure(ctx context.Context, req datasource.Co
 // Schema defines the schema for the data source.
 func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	deprecationMsg := "Deprecated because of the IaaS API v1 -> v2 migration. Will be removed in May 2026."
-	description := "Network area datasource schema. Must have a `region` specified in the provider configuration."
+	description := "Network area datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
+		"This datasource is for SNA, not VPC, networks."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,

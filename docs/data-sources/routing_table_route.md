@@ -4,12 +4,15 @@ page_title: "stackit_routing_table_route Data Source - stackit"
 subcategory: ""
 description: |-
   Routing table route datasource schema. Must have a region specified in the provider configuration.
+  This datasource is for SNA, not VPC, networks.
   ~> This datasource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_routing_table_route (Data Source)
 
 Routing table route datasource schema. Must have a `region` specified in the provider configuration.
+
+This datasource is for SNA, not VPC, networks.
 
 ~> This datasource is part of the routing-tables experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 

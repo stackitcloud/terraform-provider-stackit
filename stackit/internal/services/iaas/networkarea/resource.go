@@ -193,7 +193,8 @@ func (r *networkAreaResource) ValidateConfig(ctx context.Context, req resource.V
 // Schema defines the schema for the resource.
 func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	deprecationMsg := "Deprecated because of the IaaS API v1 -> v2 migration. Will be removed in May 2026. Use the new `stackit_network_area_region` resource instead."
-	description := "Network area resource schema."
+	description := "Network area resource schema.\n\n" +
+		"This resource is for SNA, not VPC, networks."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: description,

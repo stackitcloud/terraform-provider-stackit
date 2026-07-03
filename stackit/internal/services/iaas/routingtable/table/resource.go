@@ -122,7 +122,8 @@ func (r *routingTableResource) ModifyPlan(ctx context.Context, req resource.Modi
 }
 
 func (r *routingTableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	description := "Routing table resource schema. Must have a `region` specified in the provider configuration."
+	description := "Routing table resource schema. Must have a `region` specified in the provider configuration.\n\n" +
+		"This resource is for SNA, not VPC, based networks."
 	resp.Schema = schema.Schema{
 		Description:         description,
 		MarkdownDescription: features.AddExperimentDescription(description, features.RoutingTablesExperiment, core.Resource),
