@@ -58,14 +58,20 @@ func TestMapDataSourceFields(t *testing.T) {
 		"disabled_rule_collection_ids":  emptyWafSet,
 		"log_only_rule_collection_ids":  emptyWafSet,
 	})
-
+	defaultTls := types.ObjectValueMust(tlsTypes, map[string]attr.Value{
+		"enable_tls_10": types.BoolValue(false),
+		"enable_tls_11": types.BoolValue(false),
+	})
 	config := types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-		"backend":           backend,
-		"regions":           regionsFixture,
-		"blocked_countries": blockedCountriesFixture,
-		"optimizer":         types.ObjectNull(optimizerTypes),
-		"redirects":         types.ObjectNull(redirectsTypes),
-		"waf":               emptyWaf,
+		"backend":                backend,
+		"regions":                regionsFixture,
+		"blocked_countries":      blockedCountriesFixture,
+		"optimizer":              types.ObjectNull(optimizerTypes),
+		"redirects":              types.ObjectNull(redirectsTypes),
+		"waf":                    emptyWaf,
+		"tls":                    defaultTls,
+		"strip_response_cookies": types.BoolValue(false),
+		"forward_host_header":    types.BoolValue(false),
 	})
 	redirectsInput := cdnSdk.RedirectConfig{
 		Rules: []cdnSdk.RedirectRule{
@@ -233,12 +239,15 @@ func TestMapDataSourceFields(t *testing.T) {
 		"happy_path_with_optimizer": {
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-					"backend":           backend,
-					"regions":           regionsFixture,
-					"optimizer":         optimizer,
-					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsTypes),
-					"waf":               emptyWaf,
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              optimizer,
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -260,12 +269,15 @@ func TestMapDataSourceFields(t *testing.T) {
 			}),
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-					"backend":           bucketBackendExpected,
-					"regions":           regionsFixture,
-					"blocked_countries": blockedCountriesFixture,
-					"optimizer":         types.ObjectNull(optimizerTypes),
-					"redirects":         types.ObjectNull(redirectsTypes),
-					"waf":               emptyWaf,
+					"backend":                bucketBackendExpected,
+					"regions":                regionsFixture,
+					"blocked_countries":      blockedCountriesFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
 				})
 			}),
 			IsValid: true,
@@ -281,12 +293,15 @@ func TestMapDataSourceFields(t *testing.T) {
 					"region":                 types.StringNull(),
 				})
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-					"backend":           backendWithGeofencing,
-					"regions":           regionsFixture,
-					"optimizer":         types.ObjectNull(optimizerTypes),
-					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsTypes),
-					"waf":               emptyWaf,
+					"backend":                backendWithGeofencing,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -306,12 +321,15 @@ func TestMapDataSourceFields(t *testing.T) {
 		"happy_path_with_redirects": {
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-					"backend":           backend,
-					"regions":           regionsFixture,
-					"optimizer":         types.ObjectNull(optimizerTypes),
-					"blocked_countries": blockedCountriesFixture,
-					"redirects":         redirectsConfigExpected,
-					"waf":               emptyWaf,
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              redirectsConfigExpected,
+					"waf":                    emptyWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -322,12 +340,15 @@ func TestMapDataSourceFields(t *testing.T) {
 		"happy_path_with_waf": {
 			Expected: expectedModel(func(m *Model) {
 				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
-					"backend":           backend,
-					"regions":           regionsFixture,
-					"optimizer":         types.ObjectNull(optimizerTypes),
-					"blocked_countries": blockedCountriesFixture,
-					"redirects":         types.ObjectNull(redirectsTypes),
-					"waf":               populatedWaf,
+					"backend":                backend,
+					"regions":                regionsFixture,
+					"optimizer":              types.ObjectNull(optimizerTypes),
+					"blocked_countries":      blockedCountriesFixture,
+					"redirects":              types.ObjectNull(redirectsTypes),
+					"waf":                    populatedWaf,
+					"tls":                    defaultTls,
+					"strip_response_cookies": types.BoolValue(false),
+					"forward_host_header":    types.BoolValue(false),
 				})
 			}),
 			Input: distributionFixture(func(d *cdnSdk.Distribution) {
@@ -365,6 +386,33 @@ func TestMapDataSourceFields(t *testing.T) {
 						Type:   "custom",
 					},
 				}
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_tls_and_strip_response_and_cookies_forward": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = types.ObjectValueMust(dataSourceConfigTypes, map[string]attr.Value{
+					"backend":           backend,
+					"regions":           regionsFixture,
+					"optimizer":         types.ObjectNull(optimizerTypes),
+					"blocked_countries": blockedCountriesFixture,
+					"redirects":         types.ObjectNull(redirectsTypes),
+					"waf":               emptyWaf,
+					"tls": types.ObjectValueMust(tlsTypes, map[string]attr.Value{
+						"enable_tls_10": types.BoolValue(true),
+						"enable_tls_11": types.BoolValue(true),
+					}),
+					"strip_response_cookies": types.BoolValue(true),
+					"forward_host_header":    types.BoolValue(true),
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.Tls = cdnSdk.TlsConfig{
+					EnableTls10: true,
+					EnableTls11: true,
+				}
+				d.Config.ForwardHostHeader = true
+				d.Config.StripResponseCookies = true
 			}),
 			IsValid: true,
 		},
