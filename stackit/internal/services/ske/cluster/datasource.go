@@ -329,6 +329,16 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 					},
 				},
 			},
+			"audit": schema.SingleNestedAttribute{
+				Description: descriptions["audit"],
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						Description: descriptions["audit_enabled"],
+						Computed:    true,
+					},
+				},
+			},
 			"region": schema.StringAttribute{
 				// the region cannot be found, so it has to be passed
 				Optional:    true,
