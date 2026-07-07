@@ -6,13 +6,20 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
+	int32planmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int32planmodifier"
+	listplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
+	objectplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/objectplanmodifier"
 	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -30,14 +37,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api/wait"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3beta2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3beta2api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -49,34 +55,52 @@ var (
 )
 
 type Model struct {
-	Id             types.String `tfsdk:"id"` // needed by TF
-	InstanceId     types.String `tfsdk:"instance_id"`
-	ProjectId      types.String `tfsdk:"project_id"`
-	Name           types.String `tfsdk:"name"`
+	Id         types.String `tfsdk:"id"` // needed by TF
+	InstanceId types.String `tfsdk:"instance_id"`
+	ProjectId  types.String `tfsdk:"project_id"`
+	Name       types.String `tfsdk:"name"`
+	// Deprecated: ACL is deprecated and will be removed after January 2027
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Flavor         types.Object `tfsdk:"flavor"`
+	FlavorId       types.String `tfsdk:"flavor_id"`
 	Storage        types.Object `tfsdk:"storage"`
 	Version        types.String `tfsdk:"version"`
 	Replicas       types.Int32  `tfsdk:"replicas"`
-	Options        types.Object `tfsdk:"options"`
-	Region         types.String `tfsdk:"region"`
+	Edition        types.String `tfsdk:"edition"`
+	// Deprecated: Options is deprecated and will be removed after January 2027
+	Options       types.Object `tfsdk:"options"`
+	RetentionDays types.Int32  `tfsdk:"retention_days"`
+	Network       types.Object `tfsdk:"network"`
+	Region        types.String `tfsdk:"region"`
+}
+
+// Struct corresponding to Model.Network
+type networkModel struct {
+	AccessScope types.String `tfsdk:"access_scope"`
+	Acl         types.List   `tfsdk:"acl"`
+}
+
+// types corresponding to Network
+var networkTypes = map[string]attr.Type{
+	"access_scope": basetypes.StringType{},
+	"acl":          basetypes.ListType{ElemType: types.StringType},
 }
 
 // Struct corresponding to Model.Flavor
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
-	CPU         types.Int32  `tfsdk:"cpu"`
-	RAM         types.Int32  `tfsdk:"ram"`
+	CPU         types.Int64  `tfsdk:"cpu"`
+	RAM         types.Int64  `tfsdk:"ram"`
 }
 
 // Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
-	"cpu":         basetypes.Int32Type{},
-	"ram":         basetypes.Int32Type{},
+	"cpu":         basetypes.Int64Type{},
+	"ram":         basetypes.Int64Type{},
 }
 
 // Struct corresponding to Model.Storage
@@ -94,13 +118,13 @@ var storageTypes = map[string]attr.Type{
 // Struct corresponding to Model.Options
 type optionsModel struct {
 	Edition       types.String `tfsdk:"edition"`
-	RetentionDays types.Int64  `tfsdk:"retention_days"`
+	RetentionDays types.Int32  `tfsdk:"retention_days"`
 }
 
 // Types corresponding to optionsModel
 var optionsTypes = map[string]attr.Type{
 	"edition":        basetypes.StringType{},
-	"retention_days": basetypes.Int64Type{},
+	"retention_days": basetypes.Int32Type{},
 }
 
 // NewInstanceResource is a helper function to simplify the provider implementation.
@@ -159,25 +183,135 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 		return
 	}
 
+	handleV3Migration(ctx, &planModel, &configModel, resp)
+
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 }
 
+func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp *resource.ModifyPlanResponse) {
+	// backup_schedule
+	if configModel.BackupSchedule.IsNull() || configModel.BackupSchedule.IsUnknown() {
+		if planModel.BackupSchedule.IsNull() || planModel.BackupSchedule.IsUnknown() {
+			planModel.BackupSchedule = types.StringValue("0 0 * * *")
+		}
+		resp.Diagnostics.AddAttributeWarning(path.Root("backup_schedule"),
+			"backup_schedule will be required in future", "backup_schedule will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to '0 0 * * *' during deprecation period.")
+	}
+
+	// storage
+	if configModel.Storage.IsNull() || configModel.Storage.IsUnknown() {
+		if planModel.Storage.IsNull() || planModel.Storage.IsUnknown() {
+			planModel.Storage = types.ObjectValueMust(storageTypes, map[string]attr.Value{
+				"class": types.StringValue("premium-perf12-stackit"),
+				"size":  types.Int64Value(40),
+			})
+		}
+		resp.Diagnostics.AddAttributeWarning(path.Root("storage"),
+			"storage will be required in future", "storage will be a required field after January 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
+	} else {
+		var storageConfig = &storageModel{}
+		resp.Diagnostics.Append(configModel.Storage.As(ctx, storageConfig, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		var storagePlan = &storageModel{}
+		resp.Diagnostics.Append(configModel.Storage.As(ctx, storagePlan, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// storage.class
+		if storageConfig.Class.IsNull() || storageConfig.Class.ValueString() == "" {
+			if storagePlan.Class.IsNull() || storagePlan.Class.ValueString() == "" {
+				storagePlan.Class = types.StringValue("premium-perf12-stackit")
+			}
+			resp.Diagnostics.AddAttributeWarning(path.Root("storage.class"),
+				"storage.class will be required in future", "storage.class will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 'premium-perf12-stackit' during deprecation period.")
+		}
+
+		// storage.size
+		if storageConfig.Size.IsNull() {
+			if storagePlan.Size.IsNull() {
+				storagePlan.Size = types.Int64Value(40)
+			}
+			resp.Diagnostics.AddAttributeWarning(path.Root("storage.size"),
+				"storage.size will be required in future", "storage.size will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 40 gigabytes during deprecation period.")
+		}
+
+		var diags diag.Diagnostics
+		planModel.Storage, diags = types.ObjectValue(storageTypes, map[string]attr.Value{
+			"class": storagePlan.Class,
+			"size":  storagePlan.Size,
+		})
+		resp.Diagnostics.Append(diags...)
+	}
+
+	// version
+	if configModel.Version.IsNull() || configModel.Version.IsUnknown() {
+		if planModel.Version.IsNull() || planModel.Version.IsUnknown() {
+			planModel.Version = types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022))
+		}
+		resp.Diagnostics.AddAttributeWarning(path.Root("version"),
+			"version will be required in future", "version will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to '2022' during deprecation period.")
+	}
+
+	// acl
+	if (configModel.ACL.IsNull() || configModel.ACL.IsUnknown()) && (configModel.Network.IsNull() || configModel.Network.IsUnknown()) {
+		// Not setting default ACL and scope to the configModel, instead we send an empty array to the API, where they set the default value.
+		resp.Diagnostics.AddAttributeWarning(path.Root("network").AtName("acl"),
+			"network.acl will be required in future", "network.acl will be a required field after January 2027. Set values to prevent breaking changes.")
+	}
+
+	// retention_days
+	var optionsConfig = &optionsModel{}
+	if !(configModel.Options.IsNull() || configModel.Options.IsUnknown()) {
+		resp.Diagnostics.Append(configModel.Options.As(ctx, optionsConfig, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	var optionsPlan = &optionsModel{}
+	if !(configModel.Options.IsNull() || configModel.Options.IsUnknown()) {
+		resp.Diagnostics.Append(configModel.Options.As(ctx, optionsPlan, basetypes.ObjectAsOptions{})...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	if (optionsConfig.RetentionDays.IsNull() || optionsConfig.RetentionDays.IsUnknown()) && (configModel.RetentionDays.IsNull() || configModel.RetentionDays.IsUnknown()) {
+		if (optionsPlan.RetentionDays.IsNull() || optionsPlan.RetentionDays.IsUnknown()) && (planModel.RetentionDays.IsNull() || planModel.RetentionDays.IsUnknown()) {
+			planModel.RetentionDays = types.Int32Value(30)
+		}
+		resp.Diagnostics.AddAttributeWarning(path.Root("retention_days"),
+			"retention_days will be required in future", "retention_days will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 30 days during deprecation period.")
+	}
+}
+
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	willBeRequired := " Will be required in the future. Set a value to prevent breaking changes."
 	descriptions := map[string]string{
-		"main":            "SQLServer Flex instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":              "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id":     "ID of the SQLServer Flex instance.",
-		"project_id":      "STACKIT project ID to which the instance is associated.",
-		"name":            "Instance name.",
-		"acl":             "The Access Control List (ACL) for the SQLServer Flex instance.",
-		"backup_schedule": `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")`,
-		"options":         "Custom parameters for the SQLServer Flex instance.",
-		"region":          "The resource region. If not defined, the provider region is used.",
-		"storage_class":   "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```",
+		"main":                 "SQLServer Flex instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":                   "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":          "ID of the SQLServer Flex instance.",
+		"project_id":           "STACKIT project ID to which the instance is associated.",
+		"name":                 "Instance name.",
+		"acl":                  "The Access Control List (ACL) for the SQLServer Flex instance.",
+		"backup_schedule":      `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")` + willBeRequired,
+		"options":              "Custom parameters for the SQLServer Flex instance.",
+		"flavor_id":            "The flavor ID of the SQLServer Flex instance.",
+		"network":              "The network configuration of the instance." + willBeRequired,
+		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
+		"network.acl":          "List of IPV4 cidr." + willBeRequired,
+		"retention_days":       "The days for how long the backup files should be stored before cleaned up." + willBeRequired,
+		"edition":              "Edition of the MSSQL server instance",
+		"region":               "The resource region. If not defined, the provider region is used.",
+		"storage":              "The object containing information about the storage size and class." + willBeRequired,
+		"storage.class":        "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```" + willBeRequired,
+		"storage.size":         "The storage size in Gigabytes." + willBeRequired,
+		"version":              "The sqlserver version used for the instance. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(sqlserverflex.AllowedInstanceVersionEnumValues)...) + willBeRequired,
 	}
 
 	resp.Schema = schema.Schema{
@@ -224,12 +358,18 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Optional:    true,
-				Computed:    true,
+				Description:        descriptions["acl"],
+				DeprecationMessage: "acl is deprecated and will be removed after January 2027. Use instead `network.acl`.",
+				ElementType:        types.StringType,
+				Optional:           true,
+				Computed:           true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier.UseStateForUnknown(),
+					listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListChanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
+				},
+				Validators: []validator.List{
+					listvalidator.ConflictsWith(
+						path.Root("network").AtName("acl").Expression(),
+					),
 				},
 			},
 			"backup_schedule": schema.StringAttribute{
@@ -242,7 +382,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Required: true,
+				Computed: true,
+				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -256,11 +397,62 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"cpu": schema.Int32Attribute{
+					"cpu": schema.Int64Attribute{
 						Required: true,
 					},
-					"ram": schema.Int32Attribute{
+					"ram": schema.Int64Attribute{
 						Required: true,
+					},
+				},
+				Validators: []validator.Object{
+					objectvalidator.ExactlyOneOf(
+						path.Root("flavor_id").Expression(),
+						path.Root("flavor").Expression(),
+					),
+				},
+			},
+			"flavor_id": schema.StringAttribute{
+				Description: descriptions["flavor_id"],
+				Computed:    true,
+				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(
+						path.Root("flavor_id").Expression(),
+						path.Root("flavor").Expression(),
+					),
+				},
+			},
+			"network": schema.SingleNestedAttribute{
+				Description: descriptions["network"],
+				Computed:    true,
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.ListChanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+				},
+				Attributes: map[string]schema.Attribute{
+					"access_scope": schema.StringAttribute{
+						Description: "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(sqlserverflex.AllowedInstanceNetworkAccessScopeEnumValues)...),
+						Computed:    true,
+						Optional:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
+					"acl": schema.ListAttribute{
+						Description: "List of IPV4 cidr.",
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListChanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+						},
+						Validators: []validator.List{
+							listvalidator.ConflictsWith(
+								path.Root("acl").Expression(),
+							),
+							listvalidator.SizeAtLeast(1),
+						},
 					},
 				},
 			},
@@ -271,15 +463,16 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"storage": schema.SingleNestedAttribute{
-				Optional: true,
-				Computed: true,
+				Description: descriptions["storage"],
+				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"class": schema.StringAttribute{
-						Description: descriptions["storage_class"],
+						Description: descriptions["storage.class"],
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
@@ -288,8 +481,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						},
 					},
 					"size": schema.Int64Attribute{
-						Optional: true,
-						Computed: true,
+						Description: descriptions["storage.size"],
+						Optional:    true,
+						Computed:    true,
 						PlanModifiers: []planmodifier.Int64{
 							int64planmodifier.RequiresReplace(),
 							int64planmodifier.UseStateForUnknown(),
@@ -298,35 +492,61 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"version": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Description: descriptions["version"],
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"edition": schema.StringAttribute{
+				Description: descriptions["edition"],
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"options": schema.SingleNestedAttribute{
-				Optional: true,
-				Computed: true,
+				DeprecationMessage: "option is deprecated and will be removed after January 2027.",
+				Optional:           true,
+				Computed:           true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.RequiresReplace(),
-					objectplanmodifier.UseStateForUnknown(),
+					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.Int32Changed(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
 				},
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						Computed: true,
+						DeprecationMessage: "edition is deprecated and will be removed after January 2027.",
+						Computed:           true,
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
-					"retention_days": schema.Int64Attribute{
-						Optional: true,
-						Computed: true,
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.RequiresReplace(),
-							int64planmodifier.UseStateForUnknown(),
+					"retention_days": schema.Int32Attribute{
+						DeprecationMessage: "retention_days is deprecated and will be removed after January 2027. Use instead `retention_days` from root.",
+						Optional:           true,
+						Computed:           true,
+						PlanModifiers: []planmodifier.Int32{
+							int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Changed(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
+						},
+						Validators: []validator.Int32{
+							int32validator.ConflictsWith(
+								path.Root("retention_days").Expression(),
+							),
 						},
 					},
+				},
+			},
+			"retention_days": schema.Int32Attribute{
+				Description: descriptions["retention_days"],
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Changed(path.Root("options").AtName("retention_days")), "sets `UseStateForUnknown` only if `options.retention_days` has not changed"),
+				},
+				Validators: []validator.Int32{
+					int32validator.ConflictsWith(
+						path.Root("options").AtName("retention_days").Expression(),
+					),
 				},
 			},
 			"region": schema.StringAttribute{
@@ -398,8 +618,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		}
 	}
 
+	var network = &networkModel{}
+	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model, acl, flavor, storage, options)
+	payload, err := toCreatePayload(&model, acl, flavor, storage, options, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -413,12 +642,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Id == nil {
+	if createResp.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
 		return
 	}
 
-	instanceId := *createResp.Id
+	instanceId := createResp.Id
 	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
@@ -430,14 +659,14 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	// The creation waiter sometimes returns an error from the API: "instance with id xxx has unexpected status Failure"
 	// which can be avoided by sleeping before wait
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).SetSleepBeforeWait(30 * time.Second).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
+	err = mapFields(ctx, waitResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -449,9 +678,13 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	// After the instance creation, database might not be ready to accept connections immediately.
-	// That is why we add a sleep
-	time.Sleep(120 * time.Second)
+	select {
+	case <-ctx.Done():
+		return
+	// After the instance creation, database might not be ready to accept connections immediately. That is why we add a sleep
+	case <-time.After(120 * time.Second):
+		// continue
+	}
 
 	tflog.Info(ctx, "SQLServer Flex instance created")
 }
@@ -480,36 +713,9 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
-		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	var options = &optionsModel{}
-	if !(model.Options.IsNull() || model.Options.IsUnknown()) {
-		diags = model.Options.As(ctx, options, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -519,8 +725,31 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
+	// Get flavor
+	var flavor = &flavorModel{}
+	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
+		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		// Read the flavor here from the API, because during an import the flavor should be set
+		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
+			return
+		}
+		flavor = &flavorModel{
+			Id:          types.StringValue(flavorResp.Id),
+			Description: types.StringValue(flavorResp.Description),
+			CPU:         types.Int64Value(flavorResp.Cpu),
+			RAM:         types.Int64Value(flavorResp.Memory),
+		}
+	}
+
 	// Map response body to schema
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, options, region)
+	err = mapFields(ctx, instanceResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -593,14 +822,23 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
+	var network = &networkModel{}
+	if !(model.Network.IsNull() || model.Network.IsUnknown()) {
+		diags = model.Network.As(ctx, network, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model, acl, flavor)
+	payload, err := toUpdatePayload(&model, acl, flavor, storage, options, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 	// Update existing instance
-	_, err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -608,14 +846,14 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(ctx, waitResp, &model, flavor, storage, options, region)
+	err = mapFields(ctx, waitResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -648,10 +886,9 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId, region).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -661,7 +898,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -690,33 +927,29 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "SQLServer Flex instance state imported")
 }
 
-func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, storage *storageModel, options *optionsModel, region string) error {
+func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, model *Model, flavor *flavorModel, region string) error {
 	if resp == nil {
 		return fmt.Errorf("response input is nil")
-	}
-	if resp.Item == nil {
-		return fmt.Errorf("no instance provided")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	instance := resp.Item
 
 	var instanceId string
 	if model.InstanceId.ValueString() != "" {
 		instanceId = model.InstanceId.ValueString()
-	} else if instance.Id != nil {
-		instanceId = *instance.Id
+	} else if resp.Id != "" {
+		instanceId = resp.Id
 	} else {
 		return fmt.Errorf("instance id not present")
 	}
 
 	var aclList basetypes.ListValue
 	var diags diag.Diagnostics
-	if instance.Acl == nil || instance.Acl.Items == nil {
+	if resp.Network.Acl == nil {
 		aclList = types.ListNull(types.StringType)
 	} else {
-		respACL := instance.Acl.Items
+		respACL := resp.Network.Acl
 		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err
@@ -730,71 +963,38 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		}
 	}
 
-	var flavorValues map[string]attr.Value
-	if instance.Flavor == nil {
-		flavorValues = map[string]attr.Value{
-			"id":          flavor.Id,
-			"description": flavor.Description,
-			"cpu":         flavor.CPU,
-			"ram":         flavor.RAM,
-		}
-	} else {
-		flavorValues = map[string]attr.Value{
-			"id":          types.StringValue(*instance.Flavor.Id),
-			"description": types.StringValue(*instance.Flavor.Description),
-			"cpu":         types.Int32PointerValue(instance.Flavor.Cpu),
-			"ram":         types.Int32PointerValue(instance.Flavor.Memory),
-		}
+	networkValues := map[string]attr.Value{
+		"acl":          aclList,
+		"access_scope": types.StringPointerValue((*string)(resp.Network.AccessScope)),
+	}
+	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
+	if diags.HasError() {
+		return fmt.Errorf("mapping network: %w", core.DiagsToError(diags))
+	}
+
+	flavorValues := map[string]attr.Value{
+		"id":          flavor.Id,
+		"description": flavor.Description,
+		"cpu":         flavor.CPU,
+		"ram":         flavor.RAM,
 	}
 	flavorObject, diags := types.ObjectValue(flavorTypes, flavorValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating flavor: %w", core.DiagsToError(diags))
 	}
 
-	var storageValues map[string]attr.Value
-	if instance.Storage == nil {
-		storageValues = map[string]attr.Value{
-			"class": storage.Class,
-			"size":  storage.Size,
-		}
-	} else {
-		storageValues = map[string]attr.Value{
-			"class": types.StringValue(*instance.Storage.Class),
-			"size":  types.Int64PointerValue(instance.Storage.Size),
-		}
+	storageValues := map[string]attr.Value{
+		"class": types.StringPointerValue(resp.Storage.Class),
+		"size":  types.Int64PointerValue(resp.Storage.Size),
 	}
 	storageObject, diags := types.ObjectValue(storageTypes, storageValues)
 	if diags.HasError() {
 		return fmt.Errorf("creating storage: %w", core.DiagsToError(diags))
 	}
 
-	var optionsValues map[string]attr.Value
-	if instance.Options == nil {
-		optionsValues = map[string]attr.Value{
-			"edition":        options.Edition,
-			"retention_days": options.RetentionDays,
-		}
-	} else {
-		retentionDays := options.RetentionDays
-		retentionDaysString, ok := (*instance.Options)["retentionDays"]
-		if ok {
-			retentionDaysValue, err := strconv.ParseInt(retentionDaysString, 10, 64)
-			if err != nil {
-				return fmt.Errorf("parse retentionDays to int64: %w", err)
-			}
-			retentionDays = types.Int64Value(retentionDaysValue)
-		}
-
-		edition := options.Edition
-		editionValue, ok := (*instance.Options)["edition"]
-		if ok {
-			edition = types.StringValue(editionValue)
-		}
-
-		optionsValues = map[string]attr.Value{
-			"edition":        edition,
-			"retention_days": retentionDays,
-		}
+	optionsValues := map[string]attr.Value{
+		"edition":        types.StringValue(string(resp.Edition)),
+		"retention_days": types.Int32Value(resp.RetentionDays),
 	}
 	optionsObject, diags := types.ObjectValue(optionsTypes, optionsValues)
 	if diags.HasError() {
@@ -803,81 +1003,148 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 
 	// If the API returned "0 0 * * *" but user defined "00 00 * * *" in its config,
 	// we keep the user's "00 00 * * *" in the state to satisfy Terraform.
-	backupScheduleApiResp := types.StringPointerValue(instance.BackupSchedule)
+	backupScheduleApiResp := types.StringValue(resp.BackupSchedule)
 	if utils.SimplifyCronString(model.BackupSchedule.ValueString()) != utils.SimplifyCronString(backupScheduleApiResp.ValueString()) {
 		// If the API actually changed it to something else, use the API value
-		model.BackupSchedule = types.StringPointerValue(instance.BackupSchedule)
+		model.BackupSchedule = types.StringValue(resp.BackupSchedule)
 	}
 
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
-	model.Name = types.StringPointerValue(instance.Name)
+	model.Name = types.StringValue(resp.Name)
 	model.ACL = aclList
 	model.Flavor = flavorObject
-	model.Replicas = types.Int32PointerValue(instance.Replicas)
+	model.FlavorId = types.StringValue(resp.FlavorId)
+	model.Replicas = types.Int32Value(int32(resp.Replicas))
 	model.Storage = storageObject
-	model.Version = types.StringPointerValue(instance.Version)
+	model.Version = types.StringValue(string(resp.Version))
 	model.Options = optionsObject
 	model.Region = types.StringValue(region)
+	model.RetentionDays = types.Int32Value(resp.RetentionDays)
+	model.Edition = types.StringValue(string(resp.Edition))
+	model.Network = networkObject
 	return nil
 }
 
-func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel) (*sqlserverflex.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel, network *networkModel) (*sqlserverflex.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	aclPayload := &sqlserverflex.InstanceDocumentationACL{}
+
+	// Network
+	networkPayload := sqlserverflex.CreateInstancePayloadNetwork{}
 	if acl != nil {
-		aclPayload.Items = acl
-	}
-	if flavor == nil {
-		return nil, fmt.Errorf("nil flavor")
-	}
-	storagePayload := &sqlserverflex.InstanceDocumentationStorage{}
-	if storage != nil {
-		storagePayload.Class = conversion.StringValueToPointer(storage.Class)
-		storagePayload.Size = conversion.Int64ValueToPointer(storage.Size)
-	}
-	optionsPayload := &sqlserverflex.InstanceDocumentationOptions{}
-	if options != nil {
-		optionsPayload.Edition = conversion.StringValueToPointer(options.Edition)
-		retentionDaysInt := conversion.Int64ValueToPointer(options.RetentionDays)
-		var retentionDays *string
-		if retentionDaysInt != nil {
-			retentionDays = new(strconv.FormatInt(*retentionDaysInt, 10))
+		networkPayload.Acl = acl
+	} else if network != nil && !(network.Acl.IsNull() || network.Acl.IsUnknown()) {
+		var err error
+		networkPayload.Acl, err = conversion.StringListToSlice(network.Acl)
+		if err != nil {
+			return nil, err
 		}
-		optionsPayload.RetentionDays = retentionDays
+		networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
+	} else {
+		// Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
+		networkPayload.Acl = []string{}
+	}
+
+	// Flavor
+	var flavorId string
+	if flavor != nil && !(flavor.Id.IsNull() || flavor.Id.IsUnknown()) {
+		flavorId = flavor.Id.ValueString()
+	} else if !model.FlavorId.IsNull() {
+		flavorId = model.FlavorId.ValueString()
+	} else {
+		return nil, fmt.Errorf("flavor is missing")
+	}
+
+	// Storage
+	storagePayload := sqlserverflex.StorageCreate{}
+	if storage == nil {
+		return nil, fmt.Errorf("storage configuration is missing")
+	}
+	storagePayload.Class = storage.Class.ValueString()
+	storagePayload.Size = storage.Size.ValueInt64()
+
+	// Retention days
+	var retentionDays int32
+	if options != nil && !options.RetentionDays.IsNull() {
+		retentionDays = options.RetentionDays.ValueInt32()
+	} else if !model.RetentionDays.IsNull() {
+		retentionDays = model.RetentionDays.ValueInt32()
+	} else {
+		return nil, fmt.Errorf("retention days are missing")
 	}
 
 	return &sqlserverflex.CreateInstancePayload{
-		Acl:            aclPayload,
-		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       flavor.Id.ValueString(),
-		Name:           model.Name.ValueString(),
-		Storage:        storagePayload,
-		Version:        conversion.StringValueToPointer(model.Version),
-		Options:        optionsPayload,
+		BackupSchedule:       model.BackupSchedule.ValueString(),
+		Encryption:           nil,
+		FlavorId:             flavorId,
+		Labels:               nil,
+		Name:                 model.Name.ValueString(),
+		Network:              networkPayload,
+		RetentionDays:        retentionDays,
+		Storage:              storagePayload,
+		Version:              sqlserverflex.InstanceVersion(model.Version.ValueString()),
+		AdditionalProperties: nil,
 	}, nil
 }
 
-func toUpdatePayload(model *Model, acl []string, flavor *flavorModel) (*sqlserverflex.PartialUpdateInstancePayload, error) {
+func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel, network *networkModel) (*sqlserverflex.PartialUpdateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
-	aclPayload := &sqlserverflex.InstanceDocumentationACL{}
+	networkPayload := &sqlserverflex.PartialUpdateInstancePayloadNetwork{}
 	if acl != nil {
-		aclPayload.Items = acl
+		networkPayload.Acl = acl
+	} else if network != nil && !(network.Acl.IsNull() || network.Acl.IsUnknown()) {
+		var err error
+		networkPayload.Acl, err = conversion.StringListToSlice(network.Acl)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
+		networkPayload.Acl = []string{}
 	}
-	if flavor == nil {
-		return nil, fmt.Errorf("nil flavor")
+
+	var flavorId *string
+	if flavor != nil && !(flavor.Id.IsNull() || flavor.Id.IsUnknown()) {
+		flavorId = flavor.Id.ValueStringPointer()
+	} else if !(model.FlavorId.IsNull() || model.FlavorId.IsUnknown()) {
+		flavorId = model.FlavorId.ValueStringPointer()
+	} else {
+		return nil, fmt.Errorf("flavor is missing")
+	}
+
+	var versionPayload *sqlserverflex.InstanceVersionOpt
+	if version := conversion.StringValueToPointer(model.Version); version != nil {
+		versionPayload = new(sqlserverflex.InstanceVersionOpt(*version))
+	}
+
+	storagePayload := &sqlserverflex.StorageUpdate{}
+	if storage == nil || storage.Size.IsNull() {
+		return nil, fmt.Errorf("storage configuration is missing")
+	}
+	storagePayload.Size = storage.Size.ValueInt64Pointer()
+
+	// Retention days
+	var retentionDays *int32
+	if !(model.RetentionDays.IsNull() || model.RetentionDays.IsUnknown()) {
+		retentionDays = model.RetentionDays.ValueInt32Pointer()
+	} else if !(options.RetentionDays.IsNull() || options.RetentionDays.IsUnknown()) {
+		retentionDays = options.RetentionDays.ValueInt32Pointer()
 	}
 
 	return &sqlserverflex.PartialUpdateInstancePayload{
-		Acl:            aclPayload,
-		BackupSchedule: conversion.StringValueToPointer(model.BackupSchedule),
-		FlavorId:       conversion.StringValueToPointer(flavor.Id),
-		Name:           conversion.StringValueToPointer(model.Name),
-		Version:        conversion.StringValueToPointer(model.Version),
+		BackupSchedule:       conversion.StringValueToPointer(model.BackupSchedule),
+		FlavorId:             flavorId,
+		Labels:               nil,
+		Name:                 conversion.StringValueToPointer(model.Name),
+		Network:              networkPayload,
+		RetentionDays:        retentionDays,
+		Storage:              storagePayload,
+		Version:              versionPayload,
+		AdditionalProperties: nil,
 	}, nil
 }
 
@@ -893,11 +1160,11 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	if flavor == nil {
 		return fmt.Errorf("nil flavor")
 	}
-	cpu := conversion.Int32ValueToPointer(flavor.CPU)
+	cpu := conversion.Int64ValueToPointer(flavor.CPU)
 	if cpu == nil {
 		return fmt.Errorf("nil CPU")
 	}
-	ram := conversion.Int32ValueToPointer(flavor.RAM)
+	ram := conversion.Int64ValueToPointer(flavor.RAM)
 	if ram == nil {
 		return fmt.Errorf("nil RAM")
 	}
@@ -915,19 +1182,33 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
 	for _, f := range res.Flavors {
-		if f.Id == nil || f.Cpu == nil || f.Memory == nil {
+		if f.Id == "" || f.Cpu == 0 || f.Memory == 0 {
 			continue
 		}
-		if *f.Cpu == *cpu && *f.Memory == *ram {
-			flavor.Id = types.StringValue(*f.Id)
-			flavor.Description = types.StringValue(*f.Description)
+		if f.Cpu == *cpu && f.Memory == *ram {
+			flavor.Id = types.StringValue(f.Id)
+			flavor.Description = types.StringValue(f.Description)
 			break
 		}
-		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, *f.Cpu, *f.Memory)
+		avl = fmt.Sprintf("%s\n- %d CPU, %d GB RAM", avl, f.Cpu, f.Memory)
 	}
 	if flavor.Id.ValueString() == "" {
 		return fmt.Errorf("couldn't find flavor, available specs are:%s", avl)
 	}
 
 	return nil
+}
+
+func getFlavor(ctx context.Context, client sqlserverflexClient, projectId, region, flavorId string) (*sqlserverflex.ListFlavors, error) {
+	req := client.ListFlavors(ctx, projectId, region)
+	flavorsResp, err := client.ListFlavorsExecute(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list flavors: %w", err)
+	}
+	for _, flavor := range flavorsResp.Flavors {
+		if flavor.Id == flavorId {
+			return &flavor, nil
+		}
+	}
+	return nil, fmt.Errorf("flavor with ID %q not found in project %q", flavorId, projectId)
 }

@@ -7,8 +7,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3beta2api"
 )
 
 type sqlserverflexClientMocked struct {
@@ -21,7 +22,7 @@ func (c *sqlserverflexClientMocked) ListFlavors(_ context.Context, _, _ string) 
 	return c.listFlavorsReq
 }
 
-func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ sqlserverflex.ApiListFlavorsRequest) (*sqlserverflex.ListFlavorsResponse, error) {
+func (c *sqlserverflexClientMocked) ListFlavorsExecute(_ sqlserverflex.ApiListFlavorsRequest) (*sqlserverflex.ListFlavorsResponse, error) { // nolint:gocritic // function signature required by generated SDK
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
@@ -36,94 +37,84 @@ func TestMapFields(t *testing.T) {
 		state       Model
 		input       *sqlserverflex.GetInstanceResponse
 		flavor      *flavorModel
-		storage     *storageModel
-		options     *optionsModel
 		region      string
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			Model{
+			description: "default_values",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&sqlserverflex.GetInstanceResponse{
-				Item: &sqlserverflex.Instance{},
-			},
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			testRegion,
-			Model{
+			input:  &sqlserverflex.GetInstanceResponse{},
+			flavor: &flavorModel{},
+			region: testRegion,
+			expected: Model{
 				Id:             types.StringValue("pid,region,iid"),
 				InstanceId:     types.StringValue("iid"),
 				ProjectId:      types.StringValue("pid"),
-				Name:           types.StringNull(),
+				Name:           types.StringValue(""),
 				ACL:            types.ListNull(types.StringType),
 				BackupSchedule: types.StringNull(),
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int32Null(),
-					"ram":         types.Int32Null(),
+					"cpu":         types.Int64Null(),
+					"ram":         types.Int64Null(),
 				}),
-				Replicas: types.Int32Null(),
+				FlavorId: types.StringValue(""),
+				Replicas: types.Int32Value(0),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringNull(),
 					"size":  types.Int64Null(),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"edition":        types.StringNull(),
-					"retention_days": types.Int64Null(),
+					"edition":        types.StringValue(""),
+					"retention_days": types.Int32Value(0),
 				}),
-				Version: types.StringNull(),
-				Region:  types.StringValue(testRegion),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListNull(types.StringType),
+					"access_scope": types.StringNull(),
+				}),
+				RetentionDays: types.Int32Value(0),
+				Edition:       types.StringValue(""),
+				Version:       types.StringValue(""),
+				Region:        types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			Model{
+			description: "simple_values",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&sqlserverflex.GetInstanceResponse{
-				Item: &sqlserverflex.Instance{
-					Acl: &sqlserverflex.ACL{
-						Items: []string{
-							"ip1",
-							"ip2",
-							"",
-						},
+			input: &sqlserverflex.GetInstanceResponse{
+				Network: sqlserverflex.InstanceNetwork{
+					Acl: []string{
+						"ip1",
+						"ip2",
+						"",
 					},
-					BackupSchedule: new("schedule"),
-					Flavor: &sqlserverflex.Flavor{
-						Cpu:         new(int32(12)),
-						Description: new("description"),
-						Id:          new("flavor_id"),
-						Memory:      new(int32(34)),
-					},
-					Id:       new("iid"),
-					Name:     new("name"),
-					Replicas: new(int32(56)),
-					Status:   new("status"),
-					Storage: &sqlserverflex.Storage{
-						Class: new("class"),
-						Size:  new(int64(78)),
-					},
-					Options: &map[string]string{
-						"edition":       "edition",
-						"retentionDays": "1",
-					},
-					Version: new("version"),
 				},
+				BackupSchedule: "schedule",
+				FlavorId:       "flavor_id",
+				Id:             "iid",
+				Name:           "name",
+				Replicas:       56,
+				State:          "status",
+				Storage: sqlserverflex.Storage{
+					Class: new("class"),
+					Size:  new(int64(78)),
+				},
+				Edition:       "edition",
+				RetentionDays: 1,
+				Version:       "version",
 			},
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			testRegion,
-			Model{
+			flavor: &flavorModel{},
+			region: testRegion,
+			expected: Model{
 				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -135,83 +126,17 @@ func TestMapFields(t *testing.T) {
 				}),
 				BackupSchedule: types.StringValue("schedule"),
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringValue("flavor_id"),
-					"description": types.StringValue("description"),
-					"cpu":         types.Int32Value(12),
-					"ram":         types.Int32Value(34),
+					"id":          types.StringNull(),
+					"description": types.StringNull(),
+					"cpu":         types.Int64Null(),
+					"ram":         types.Int64Null(),
 				}),
-				Replicas: types.Int32Value(56),
-				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
-					"class": types.StringValue("class"),
-					"size":  types.Int64Value(78),
-				}),
-				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
-					"edition":        types.StringValue("edition"),
-					"retention_days": types.Int64Value(1),
-				}),
-				Version: types.StringValue("version"),
-				Region:  types.StringValue(testRegion),
-			},
-			true,
-		},
-		{
-			"simple_values_no_flavor_and_storage",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
-			&sqlserverflex.GetInstanceResponse{
-				Item: &sqlserverflex.Instance{
-					Acl: &sqlserverflex.ACL{
-						Items: []string{
-							"ip1",
-							"ip2",
-							"",
-						},
-					},
-					BackupSchedule: new("schedule"),
-					Flavor:         nil,
-					Id:             new("iid"),
-					Name:           new("name"),
-					Replicas:       new(int32(56)),
-					Status:         new("status"),
-					Storage:        nil,
-					Options: &map[string]string{
-						"edition":       "edition",
-						"retentionDays": "1",
-					},
-					Version: new("version"),
-				},
-			},
-			&flavorModel{
-				CPU: types.Int32Value(12),
-				RAM: types.Int32Value(34),
-			},
-			&storageModel{
-				Class: types.StringValue("class"),
-				Size:  types.Int64Value(78),
-			},
-			&optionsModel{
+				FlavorId:      types.StringValue("flavor_id"),
 				Edition:       types.StringValue("edition"),
-				RetentionDays: types.Int64Value(1),
-			},
-			testRegion,
-			Model{
-				Id:         types.StringValue("pid,region,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringValue("name"),
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ip1"),
-					types.StringValue("ip2"),
-					types.StringValue(""),
-				}),
-				BackupSchedule: types.StringValue("schedule"),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringNull(),
-					"description": types.StringNull(),
-					"cpu":         types.Int32Value(12),
-					"ram":         types.Int32Value(34),
+				RetentionDays: types.Int32Value(1),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip1"), types.StringValue("ip2"), types.StringValue("")}),
+					"access_scope": types.StringNull(),
 				}),
 				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
@@ -220,58 +145,123 @@ func TestMapFields(t *testing.T) {
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"edition":        types.StringValue("edition"),
-					"retention_days": types.Int64Value(1),
+					"retention_days": types.Int32Value(1),
 				}),
 				Version: types.StringValue("version"),
 				Region:  types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"acls_unordered",
-			Model{
+			description: "simple_values_no_flavor_and_storage",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ip2"),
-					types.StringValue(""),
-					types.StringValue("ip1"),
-				}),
 			},
-			&sqlserverflex.GetInstanceResponse{
-				Item: &sqlserverflex.Instance{
-					Acl: &sqlserverflex.ACL{
-						Items: []string{
-							"",
-							"ip1",
-							"ip2",
-						},
-					},
-					BackupSchedule: new("schedule"),
-					Flavor:         nil,
-					Id:             new("iid"),
-					Name:           new("name"),
-					Replicas:       new(int32(56)),
-					Status:         new("status"),
-					Storage:        nil,
-					Options: &map[string]string{
-						"edition":       "edition",
-						"retentionDays": "1",
-					},
-					Version: new("version"),
+			input: &sqlserverflex.GetInstanceResponse{
+				BackupSchedule: "schedule",
+				FlavorId:       "",
+				Id:             "iid",
+				Name:           "name",
+				Replicas:       56,
+				State:          "status",
+				Storage: sqlserverflex.Storage{
+					Class: new("class"),
+					Size:  new(int64(78)),
 				},
+				Network: sqlserverflex.InstanceNetwork{
+					Acl: []string{
+						"ip1",
+						"ip2",
+						"",
+					},
+				},
+				Edition:       "edition",
+				RetentionDays: 1,
+				Version:       "version",
 			},
-			&flavorModel{
-				CPU: types.Int32Value(12),
-				RAM: types.Int32Value(34),
+			flavor: &flavorModel{
+				CPU: types.Int64Value(12),
+				RAM: types.Int64Value(34),
 			},
-			&storageModel{
-				Class: types.StringValue("class"),
-				Size:  types.Int64Value(78),
+			region: testRegion,
+			expected: Model{
+				Id:         types.StringValue("pid,region,iid"),
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue("name"),
+				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("ip1"),
+					types.StringValue("ip2"),
+					types.StringValue(""),
+				}),
+				BackupSchedule: types.StringValue("schedule"),
+				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
+					"id":          types.StringNull(),
+					"description": types.StringNull(),
+					"cpu":         types.Int64Value(12),
+					"ram":         types.Int64Value(34),
+				}),
+				FlavorId:      types.StringValue(""),
+				Edition:       types.StringValue("edition"),
+				RetentionDays: types.Int32Value(1),
+				Replicas:      types.Int32Value(56),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip1"), types.StringValue("ip2"), types.StringValue("")}),
+					"access_scope": types.StringNull(),
+				}),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("class"),
+					"size":  types.Int64Value(78),
+				}),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int32Value(1),
+				}),
+				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
 			},
-			&optionsModel{},
-			testRegion,
-			Model{
+			isValid: true,
+		},
+		{
+			description: "acls_unordered",
+			state: Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("ip2"),
+					types.StringValue(""),
+					types.StringValue("ip1"),
+				}),
+			},
+			input: &sqlserverflex.GetInstanceResponse{
+				Network: sqlserverflex.InstanceNetwork{
+					Acl: []string{
+						"",
+						"ip1",
+						"ip2",
+					},
+				},
+				BackupSchedule: "schedule",
+				FlavorId:       "",
+				Id:             "iid",
+				Name:           "name",
+				Replicas:       56,
+				State:          "status",
+				Storage: sqlserverflex.Storage{
+					Class: new("class"),
+					Size:  new(int64(78)),
+				},
+				Edition:       "edition",
+				RetentionDays: 1,
+				Version:       "version",
+			},
+			flavor: &flavorModel{
+				CPU: types.Int64Value(12),
+				RAM: types.Int64Value(34),
+			},
+			region: testRegion,
+			expected: Model{
 				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -285,55 +275,57 @@ func TestMapFields(t *testing.T) {
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 					"id":          types.StringNull(),
 					"description": types.StringNull(),
-					"cpu":         types.Int32Value(12),
-					"ram":         types.Int32Value(34),
+					"cpu":         types.Int64Value(12),
+					"ram":         types.Int64Value(34),
 				}),
-				Replicas: types.Int32Value(56),
+				FlavorId:      types.StringValue(""),
+				Edition:       types.StringValue("edition"),
+				RetentionDays: types.Int32Value(1),
+				Replicas:      types.Int32Value(56),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip2"), types.StringValue(""), types.StringValue("ip1")}),
+					"access_scope": types.StringNull(),
+				}),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
 					"edition":        types.StringValue("edition"),
-					"retention_days": types.Int64Value(1),
+					"retention_days": types.Int32Value(1),
 				}),
 				Version: types.StringValue("version"),
 				Region:  types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			Model{
+			description: "nil_response",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			nil,
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			testRegion,
-			Model{},
-			false,
+			input:    nil,
+			flavor:   &flavorModel{},
+			region:   testRegion,
+			expected: Model{},
+			isValid:  false,
 		},
 		{
-			"no_resource_id",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
+			description: "no_resource_id",
+			state: Model{
+				ProjectId: types.StringValue("pid"),
 			},
-			&sqlserverflex.GetInstanceResponse{},
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			testRegion,
-			Model{},
-			false,
+			input:    &sqlserverflex.GetInstanceResponse{},
+			flavor:   &flavorModel{},
+			region:   testRegion,
+			expected: Model{},
+			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.options, tt.region)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -341,7 +333,7 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.state, tt.expected)
+				diff := cmp.Diff(tt.expected, tt.state)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -358,180 +350,179 @@ func TestToCreatePayload(t *testing.T) {
 		inputFlavor  *flavorModel
 		inputStorage *storageModel
 		inputOptions *optionsModel
+		inputNetwork *networkModel
 		expected     *sqlserverflex.CreateInstancePayload
 		isValid      bool
 	}{
 		{
-			"default_values",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{},
-				},
-				Storage: &sqlserverflex.InstanceDocumentationStorage{},
-				Options: &sqlserverflex.InstanceDocumentationOptions{},
+			description: "default_values",
+			input: &Model{
+				FlavorId:      types.StringValue("fid"),
+				RetentionDays: types.Int32Value(1),
 			},
-			true,
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.CreateInstancePayload{
+				FlavorId:      "fid",
+				RetentionDays: 1,
+				Network: sqlserverflex.CreateInstancePayloadNetwork{
+					Acl: []string{},
+				},
+				Storage: sqlserverflex.StorageCreate{
+					Class: "",
+					Size:  0,
+				},
+			},
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&Model{
+			description: "simple_values",
+			input: &Model{
+				FlavorId:       types.StringValue("fid"),
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
 				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
-			[]string{
+			inputAcl: []string{
 				"ip_1",
 				"ip_2",
 			},
-			&flavorModel{
-				Id: types.StringValue("flavor_id"),
-			},
-			&storageModel{
+			inputFlavor: &flavorModel{},
+			inputStorage: &storageModel{
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(34),
 			},
-			&optionsModel{
+			inputOptions: &optionsModel{
 				Edition:       types.StringValue("edition"),
-				RetentionDays: types.Int64Value(1),
+				RetentionDays: types.Int32Value(1),
 			},
-			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{
-						"ip_1",
-						"ip_2",
-					},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.CreateInstancePayload{
+				Network: sqlserverflex.CreateInstancePayloadNetwork{
+					Acl: []string{"ip_1", "ip_2"},
 				},
-				BackupSchedule: new("schedule"),
-				FlavorId:       "flavor_id",
+				BackupSchedule: "schedule",
+				FlavorId:       "fid",
 				Name:           "name",
-				Storage: &sqlserverflex.InstanceDocumentationStorage{
-					Class: new("class"),
-					Size:  new(int64(34)),
+				Storage: sqlserverflex.StorageCreate{
+					Class: "class",
+					Size:  34,
 				},
-				Options: &sqlserverflex.InstanceDocumentationOptions{
-					Edition:       new("edition"),
-					RetentionDays: new("1"),
-				},
-				Version: new("version"),
+				RetentionDays: 1,
+				Version:       "version",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&Model{
+			description: "null_fields_and_int_conversions",
+			input: &Model{
+				FlavorId:       types.StringValue("fid"),
+				RetentionDays:  types.Int32Value(1),
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
 				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
-			[]string{
+			inputAcl: []string{
 				"",
 			},
-			&flavorModel{
-				Id: types.StringNull(),
-			},
-			&storageModel{
+			inputFlavor: &flavorModel{},
+			inputStorage: &storageModel{
 				Class: types.StringNull(),
 				Size:  types.Int64Null(),
 			},
-			&optionsModel{
+			inputOptions: &optionsModel{
 				Edition:       types.StringNull(),
-				RetentionDays: types.Int64Null(),
+				RetentionDays: types.Int32Null(),
 			},
-			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{
-						"",
-					},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.CreateInstancePayload{
+				Network: sqlserverflex.CreateInstancePayloadNetwork{
+					Acl: []string{""},
 				},
-				BackupSchedule: nil,
-				FlavorId:       "",
+				RetentionDays:  1,
+				BackupSchedule: "",
+				FlavorId:       "fid",
 				Name:           "",
-				Storage: &sqlserverflex.InstanceDocumentationStorage{
-					Class: nil,
-					Size:  nil,
+				Storage: sqlserverflex.StorageCreate{
+					Class: "",
+					Size:  0,
 				},
-				Options: &sqlserverflex.InstanceDocumentationOptions{},
-				Version: nil,
+				Version: "",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_model",
-			nil,
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			nil,
-			false,
+			description:  "nil_model",
+			input:        nil,
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected:     nil,
+			isValid:      false,
 		},
 		{
-			"nil_acl",
-			&Model{},
-			nil,
-			&flavorModel{},
-			&storageModel{},
-			&optionsModel{},
-			&sqlserverflex.CreateInstancePayload{
-				Acl:     &sqlserverflex.InstanceDocumentationACL{},
-				Storage: &sqlserverflex.InstanceDocumentationStorage{},
-				Options: &sqlserverflex.InstanceDocumentationOptions{},
+			description: "nil_acl",
+			input: &Model{
+				FlavorId:      types.StringValue("fid"),
+				RetentionDays: types.Int32Value(0),
 			},
-			true,
-		},
-		{
-			"nil_flavor",
-			&Model{},
-			[]string{},
-			nil,
-			&storageModel{},
-			&optionsModel{},
-			nil,
-			false,
-		},
-		{
-			"nil_storage",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			nil,
-			&optionsModel{},
-			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{},
+			inputAcl:     nil,
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.CreateInstancePayload{
+				FlavorId: "fid",
+				Network: sqlserverflex.CreateInstancePayloadNetwork{
+					Acl: []string{},
 				},
-				Storage: &sqlserverflex.InstanceDocumentationStorage{},
-				Options: &sqlserverflex.InstanceDocumentationOptions{},
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_options",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			nil,
-			&sqlserverflex.CreateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{},
-				},
-				Storage: &sqlserverflex.InstanceDocumentationStorage{},
-				Options: &sqlserverflex.InstanceDocumentationOptions{},
-			},
-			true,
+			description:  "nil_flavor",
+			input:        &Model{},
+			inputAcl:     []string{},
+			inputFlavor:  nil,
+			inputStorage: &storageModel{},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected:     nil,
+			isValid:      false,
+		},
+		{
+			description:  "nil_storage",
+			input:        &Model{},
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: nil,
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected:     &sqlserverflex.CreateInstancePayload{},
+			isValid:      false,
+		},
+		{
+			description:  "nil_options",
+			input:        &Model{},
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputOptions: nil,
+			inputNetwork: &networkModel{},
+			expected:     &sqlserverflex.CreateInstancePayload{},
+			isValid:      false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions)
+			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions, tt.inputNetwork)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -550,111 +541,165 @@ func TestToCreatePayload(t *testing.T) {
 
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
-		description string
-		input       *Model
-		inputAcl    []string
-		inputFlavor *flavorModel
-		expected    *sqlserverflex.PartialUpdateInstancePayload
-		isValid     bool
+		description  string
+		input        *Model
+		inputAcl     []string
+		inputFlavor  *flavorModel
+		inputStorage *storageModel
+		inputOptions *optionsModel
+		inputNetwork *networkModel
+		expected     *sqlserverflex.PartialUpdateInstancePayload
+		isValid      bool
 	}{
 		{
-			"default_values",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{},
+			description: "default_values",
+			input: &Model{
+				FlavorId: types.StringValue("fid"),
+			},
+			inputAcl:    []string{},
+			inputFlavor: &flavorModel{},
+			inputStorage: &storageModel{
+				Class: types.StringValue("class"),
+				Size:  types.Int64Value(34),
+			},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.PartialUpdateInstancePayload{
+				FlavorId: new("fid"),
+				Network: &sqlserverflex.PartialUpdateInstancePayloadNetwork{
+					Acl: []string{},
+				},
+				Storage: &sqlserverflex.StorageUpdate{
+					Size: new(int64(34)),
 				},
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&Model{
+			description: "simple_values",
+			input: &Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
 				Replicas:       types.Int32Value(12),
-				Version:        types.StringValue("version"),
+				Version:        types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 			},
-			[]string{
+			inputAcl: []string{
 				"ip_1",
 				"ip_2",
 			},
-			&flavorModel{
+			inputFlavor: &flavorModel{
 				Id: types.StringValue("flavor_id"),
 			},
-			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{
+			inputStorage: &storageModel{
+				Class: types.StringValue("class"),
+				Size:  types.Int64Value(34),
+			},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.PartialUpdateInstancePayload{
+				Network: &sqlserverflex.PartialUpdateInstancePayloadNetwork{
+					Acl: []string{
 						"ip_1",
 						"ip_2",
 					},
 				},
+				Storage: &sqlserverflex.StorageUpdate{
+					Size: new(int64(34)),
+				},
 				BackupSchedule: new("schedule"),
 				FlavorId:       new("flavor_id"),
 				Name:           new("name"),
-				Version:        new("version"),
+				Version:        new(sqlserverflex.INSTANCEVERSIONOPT__2022),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&Model{
+			description: "null_fields_and_int_conversions",
+			input: &Model{
+				FlavorId:       types.StringValue("fid"),
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
 				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
 			},
-			[]string{
+			inputAcl: []string{
 				"",
 			},
-			&flavorModel{
+			inputFlavor: &flavorModel{
 				Id: types.StringNull(),
 			},
-			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{
-					Items: []string{
+			inputNetwork: &networkModel{},
+			inputStorage: &storageModel{
+				Size: types.Int64Value(0),
+			},
+			inputOptions: &optionsModel{},
+			expected: &sqlserverflex.PartialUpdateInstancePayload{
+				Network: &sqlserverflex.PartialUpdateInstancePayloadNetwork{
+					Acl: []string{
 						"",
 					},
 				},
+				Storage: &sqlserverflex.StorageUpdate{
+					Size: new(int64(0)),
+				},
 				BackupSchedule: nil,
-				FlavorId:       nil,
+				FlavorId:       new("fid"),
 				Name:           nil,
 				Version:        nil,
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_model",
-			nil,
-			[]string{},
-			&flavorModel{},
-			nil,
-			false,
+			description:  "nil_model",
+			input:        nil,
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected:     nil,
+			isValid:      false,
 		},
 		{
-			"nil_acl",
-			&Model{},
-			nil,
-			&flavorModel{},
-			&sqlserverflex.PartialUpdateInstancePayload{
-				Acl: &sqlserverflex.InstanceDocumentationACL{},
+			description: "nil_acl",
+			input: &Model{
+				FlavorId: types.StringValue("fid"),
 			},
-			true,
+			inputAcl:    nil,
+			inputFlavor: &flavorModel{},
+			inputStorage: &storageModel{
+				Size: types.Int64Value(34),
+			},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected: &sqlserverflex.PartialUpdateInstancePayload{
+				FlavorId: new("fid"),
+				Network: &sqlserverflex.PartialUpdateInstancePayloadNetwork{
+					Acl: []string{},
+				},
+				Storage: &sqlserverflex.StorageUpdate{
+					Size: new(int64(34)),
+				},
+			},
+			isValid: true,
 		},
 		{
-			"nil_flavor",
-			&Model{},
-			[]string{},
-			nil,
-			nil,
-			false,
+			description: "nil_flavor",
+			input:       &Model{},
+			inputAcl:    []string{},
+			inputFlavor: nil,
+			inputStorage: &storageModel{
+				Size: types.Int64Value(34),
+			},
+			inputOptions: &optionsModel{},
+			inputNetwork: &networkModel{},
+			expected:     nil,
+			isValid:      false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor)
+			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions, tt.inputNetwork)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -683,24 +728,24 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"ok_flavor",
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{
-				Flavors: []sqlserverflex.InstanceFlavorEntry{
+				Flavors: []sqlserverflex.ListFlavors{
 					{
-						Id:          new("fid-1"),
-						Cpu:         new(int32(2)),
-						Description: new("description"),
-						Memory:      new(int32(8)),
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description",
+						Memory:      8,
 					},
 				},
 			},
 			&flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
-				CPU:         types.Int32Value(2),
-				RAM:         types.Int32Value(8),
+				CPU:         types.Int64Value(2),
+				RAM:         types.Int64Value(8),
 			},
 			false,
 			true,
@@ -708,30 +753,30 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"ok_flavor_2",
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{
-				Flavors: []sqlserverflex.InstanceFlavorEntry{
+				Flavors: []sqlserverflex.ListFlavors{
 					{
-						Id:          new("fid-1"),
-						Cpu:         new(int32(2)),
-						Description: new("description"),
-						Memory:      new(int32(8)),
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description",
+						Memory:      8,
 					},
 					{
-						Id:          new("fid-2"),
-						Cpu:         new(int32(1)),
-						Description: new("description"),
-						Memory:      new(int32(4)),
+						Id:          "fid-2",
+						Cpu:         1,
+						Description: "description",
+						Memory:      4,
 					},
 				},
 			},
 			&flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
-				CPU:         types.Int32Value(2),
-				RAM:         types.Int32Value(8),
+				CPU:         types.Int64Value(2),
+				RAM:         types.Int64Value(8),
 			},
 			false,
 			true,
@@ -739,28 +784,28 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"no_matching_flavor",
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{
-				Flavors: []sqlserverflex.InstanceFlavorEntry{
+				Flavors: []sqlserverflex.ListFlavors{
 					{
-						Id:          new("fid-1"),
-						Cpu:         new(int32(1)),
-						Description: new("description"),
-						Memory:      new(int32(8)),
+						Id:          "fid-1",
+						Cpu:         1,
+						Description: "description",
+						Memory:      8,
 					},
 					{
-						Id:          new("fid-2"),
-						Cpu:         new(int32(1)),
-						Description: new("description"),
-						Memory:      new(int32(4)),
+						Id:          "fid-2",
+						Cpu:         1,
+						Description: "description",
+						Memory:      4,
 					},
 				},
 			},
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			false,
 			false,
@@ -768,13 +813,13 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"nil_response",
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{},
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			false,
 			false,
@@ -782,13 +827,13 @@ func TestLoadFlavorId(t *testing.T) {
 		{
 			"error_response",
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			&sqlserverflex.ListFlavorsResponse{},
 			&flavorModel{
-				CPU: types.Int32Value(2),
-				RAM: types.Int32Value(8),
+				CPU: types.Int64Value(2),
+				RAM: types.Int64Value(8),
 			},
 			true,
 			false,
@@ -816,6 +861,440 @@ func TestLoadFlavorId(t *testing.T) {
 			}
 			if tt.isValid {
 				diff := cmp.Diff(flavorModel, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleV3Migration(t *testing.T) {
+	tests := []struct {
+		name         string
+		configModel  *Model
+		planModel    *Model
+		expectedPlan *Model
+		warnings     int
+	}{
+		{
+			name: "all_values_provided_no_migration",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("custom-class"),
+					"size":  types.Int64Value(100),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(45),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("custom-class"),
+					"size":  types.Int64Value(100),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(45),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("custom-class"),
+					"size":  types.Int64Value(100),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(45),
+			},
+			warnings: 0,
+		},
+		{
+			name: "migration_triggered_for_all_null_fields",
+			configModel: &Model{
+				BackupSchedule: types.StringNull(),
+				Storage:        types.ObjectNull(storageTypes),
+				Version:        types.StringNull(),
+				ACL:            types.ListNull(types.StringType),
+				Network:        types.ObjectNull(networkTypes),
+				RetentionDays:  types.Int32Null(),
+				Options:        types.ObjectNull(optionsTypes),
+			},
+			planModel: &Model{
+				BackupSchedule: types.StringNull(),
+				Storage:        types.ObjectNull(storageTypes),
+				Version:        types.StringNull(),
+				ACL:            types.ListNull(types.StringType),
+				Network:        types.ObjectNull(networkTypes),
+				RetentionDays:  types.Int32Null(),
+				Options:        types.ObjectNull(optionsTypes),
+			},
+			expectedPlan: &Model{
+				BackupSchedule: types.StringValue("0 0 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version:       types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				ACL:           types.ListNull(types.StringType),
+				Network:       types.ObjectNull(networkTypes),
+				RetentionDays: types.Int32Value(30),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			warnings: 5,
+		},
+		{
+			name: "no_storage_size_set",
+			configModel: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Null(),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			planModel: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Null(),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			expectedPlan: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			warnings: 1,
+		},
+		{
+			name: "no_storage_class_set",
+			configModel: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringNull(),
+					"size":  types.Int64Value(20),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			planModel: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringNull(),
+					"size":  types.Int64Value(20),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			expectedPlan: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(20),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			warnings: 1,
+		},
+		{
+			name: "no_version_set",
+			configModel: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringNull(),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			planModel: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringNull(),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			expectedPlan: &Model{
+				BackupSchedule: types.StringValue("1 2 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				ACL:     types.ListNull(types.StringType),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Value(1),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			warnings: 1,
+		},
+		{
+			name: "retention_days_provided_in_options_no_migration",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 0 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Null(),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int32Value(15),
+				}),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 0 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Null(),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int32Value(15),
+				}),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 0 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("premium-perf12-stackit"),
+					"size":  types.Int64Value(40),
+				}),
+				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
+					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+				}),
+				RetentionDays: types.Int32Null(),
+				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
+					"edition":        types.StringValue("edition"),
+					"retention_days": types.Int32Value(15),
+				}),
+			},
+			warnings: 0,
+		},
+		{
+			name: "config ",
+			configModel: &Model{
+				BackupSchedule: types.StringNull(),
+				Storage:        types.ObjectNull(storageTypes),
+				Version:        types.StringNull(),
+				ACL:            types.ListNull(types.StringType),
+				Network:        types.ObjectNull(networkTypes),
+				RetentionDays:  types.Int32Null(),
+				Options:        types.ObjectNull(optionsTypes),
+			},
+			planModel: &Model{
+				BackupSchedule: types.StringValue("1 1 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("custom-class"),
+					"size":  types.Int64Value(80),
+				}),
+				Version:       types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				ACL:           types.ListNull(types.StringType),
+				Network:       types.ObjectNull(networkTypes),
+				RetentionDays: types.Int32Value(60),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			expectedPlan: &Model{
+				BackupSchedule: types.StringValue("1 1 * * *"),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("custom-class"),
+					"size":  types.Int64Value(80),
+				}),
+				Version:       types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
+				ACL:           types.ListNull(types.StringType),
+				Network:       types.ObjectNull(networkTypes),
+				RetentionDays: types.Int32Value(60),
+				Options:       types.ObjectNull(optionsTypes),
+			},
+			warnings: 5,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := &resource.ModifyPlanResponse{}
+			handleV3Migration(context.Background(), tt.planModel, tt.configModel, resp)
+
+			if len(resp.Diagnostics.Warnings()) != tt.warnings {
+				t.Errorf("expected %d warnings, got %d", tt.warnings, len(resp.Diagnostics.Warnings()))
+			}
+
+			diff := cmp.Diff(tt.planModel, tt.expectedPlan)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetFlavor(t *testing.T) {
+	tests := []struct {
+		description     string
+		flavorId        string
+		mockedResp      *sqlserverflex.ListFlavorsResponse
+		expected        *sqlserverflex.ListFlavors
+		getFlavorsFails bool
+		isValid         bool
+	}{
+		{
+			description: "ok_flavor_found",
+			flavorId:    "fid-1",
+			mockedResp: &sqlserverflex.ListFlavorsResponse{
+				Flavors: []sqlserverflex.ListFlavors{
+					{
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description-1",
+						Memory:      8,
+					},
+					{
+						Id:          "fid-2",
+						Cpu:         4,
+						Description: "description-2",
+						Memory:      16,
+					},
+				},
+			},
+			expected: &sqlserverflex.ListFlavors{
+				Id:          "fid-1",
+				Cpu:         2,
+				Description: "description-1",
+				Memory:      8,
+			},
+			getFlavorsFails: false,
+			isValid:         true,
+		},
+		{
+			description: "flavor_not_found",
+			flavorId:    "fid-3",
+			mockedResp: &sqlserverflex.ListFlavorsResponse{
+				Flavors: []sqlserverflex.ListFlavors{
+					{
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description-1",
+						Memory:      8,
+					},
+				},
+			},
+			expected:        nil,
+			getFlavorsFails: false,
+			isValid:         false,
+		},
+		{
+			description:     "error_response",
+			flavorId:        "fid-1",
+			mockedResp:      nil,
+			expected:        nil,
+			getFlavorsFails: true,
+			isValid:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			client := &sqlserverflexClientMocked{
+				returnError:     tt.getFlavorsFails,
+				listFlavorsResp: tt.mockedResp,
+			}
+			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

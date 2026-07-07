@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
@@ -27,7 +28,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3beta2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -47,7 +48,7 @@ type Model struct {
 	Roles      types.Set    `tfsdk:"roles"`
 	Password   types.String `tfsdk:"password"`
 	Host       types.String `tfsdk:"host"`
-	Port       types.Int64  `tfsdk:"port"`
+	Port       types.Int32  `tfsdk:"port"`
 	Region     types.String `tfsdk:"region"`
 	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
 	// recreation of the resource when they change, enabling resource rotation based on
@@ -199,7 +200,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"host": schema.StringAttribute{
 				Computed: true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				Computed: true,
 			},
 			"region": schema.StringAttribute{
@@ -262,7 +263,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, instanceId, region).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -270,11 +271,11 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	if userResp == nil || userResp.Item == nil || userResp.Item.Id == nil || *userResp.Item.Id == "" {
+	if userResp == nil || userResp.Id == 0 {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
 		return
 	}
-	userId := *userResp.Item.Id
+	userId := strconv.FormatInt(userResp.Id, 10)
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"region":      region,
@@ -309,8 +310,8 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
-	if userId == "" {
+	userIdStr := model.UserId.ValueString()
+	if userIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
@@ -318,13 +319,17 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
-
-	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
+
+	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -335,7 +340,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model, region)
+	err = mapFields(userResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -370,18 +375,23 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userIdStr := model.UserId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Delete existing record set
-	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, instanceId, userId, region).Execute()
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
+
+	// Delete existing record set
+	err = r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
@@ -419,30 +429,26 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 }
 
 func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, region string) error {
-	if userResp == nil || userResp.Item == nil {
+	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
 
-	if user.Id == nil {
+	if userResp.Id == 0 {
 		return fmt.Errorf("user id not present")
 	}
-	userId := *user.Id
+	userId := strconv.FormatInt(userResp.Id, 10)
 	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId)
 	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Username = types.StringValue(userResp.Username)
 
-	if user.Password == nil {
-		return fmt.Errorf("user password not present")
-	}
-	model.Password = types.StringValue(*user.Password)
+	model.Password = types.StringValue(userResp.Password)
 
-	if user.Roles != nil {
+	if userResp.Roles != nil {
 		roles := []attr.Value{}
-		for _, role := range user.Roles {
+		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -456,26 +462,25 @@ func mapFieldsCreate(userResp *sqlserverflex.CreateUserResponse, model *Model, r
 		model.Roles = types.SetNull(types.StringType)
 	}
 
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
+	model.Host = types.StringValue(userResp.Host)
+	model.Port = types.Int32Value(userResp.Port)
 	model.Region = types.StringValue(region)
 	return nil
 }
 
 func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region string) error {
-	if userResp == nil || userResp.Item == nil {
+	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
 
 	var userId string
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
-	} else if user.Id != nil {
-		userId = *user.Id
+	} else if userResp.Id != 0 {
+		userId = strconv.FormatInt(userResp.Id, 10)
 	} else {
 		return fmt.Errorf("user id not present")
 	}
@@ -486,11 +491,11 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 		userId,
 	)
 	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Username = types.StringValue(userResp.Username)
 
-	if user.Roles != nil {
+	if userResp.Roles != nil {
 		roles := []attr.Value{}
-		for _, role := range user.Roles {
+		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -504,8 +509,8 @@ func mapFields(userResp *sqlserverflex.GetUserResponse, model *Model, region str
 		model.Roles = types.SetNull(types.StringType)
 	}
 
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
+	model.Host = types.StringValue(userResp.Host)
+	model.Port = types.Int32Value(userResp.Port)
 	model.Region = types.StringValue(region)
 	return nil
 }

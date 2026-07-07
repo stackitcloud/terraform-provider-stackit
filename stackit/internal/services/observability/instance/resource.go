@@ -540,7 +540,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknownIf(int32planmodifier.Int32Changed, "metrics_retention_days", "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
+					int32planmodifier.UseStateForUnknownIf(int32planmodifier.Int32Changed(path.Root("metrics_retention_days")), "sets `UseStateForUnknown` only if `metrics_retention_days` has not changed"),
 				},
 			},
 			"metrics_retention_days_5m_downsampling": schema.Int32Attribute{
@@ -548,7 +548,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknownIf(int32planmodifier.Int32Changed, "metrics_retention_days_5m_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
+					int32planmodifier.UseStateForUnknownIf(int32planmodifier.Int32Changed(path.Root("metrics_retention_days_5m_downsampling")), "sets `UseStateForUnknown` only if `metrics_retention_days_5m_downsampling` has not changed"),
 				},
 			},
 			"metrics_retention_days_1h_downsampling": schema.Int32Attribute{
@@ -556,7 +556,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknownIf(int32planmodifier.Int32Changed, "metrics_retention_days_1h_downsampling", "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
+					int32planmodifier.UseStateForUnknownIf(int32planmodifier.Int32Changed(path.Root("metrics_retention_days_1h_downsampling")), "sets `UseStateForUnknown` only if `metrics_retention_days_1h_downsampling` has not changed"),
 				},
 			},
 			"metrics_url": schema.StringAttribute{
