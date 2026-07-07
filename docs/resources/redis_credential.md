@@ -48,6 +48,7 @@ import {
 
 ### Optional
 
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
@@ -55,7 +56,7 @@ import {
 - `credential_id` (String) The credential's ID.
 - `host` (String)
 - `hosts` (List of String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`credential_id`".
 - `load_balanced_host` (String)
 - `password` (String, Sensitive)
 - `port` (Number)

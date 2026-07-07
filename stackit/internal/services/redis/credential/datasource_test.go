@@ -2,15 +2,17 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
+	const testRegion = "eu01"
 	tests := []struct {
 		description string
 		state       DataSourceModel
@@ -29,10 +31,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				Raw: &redis.RawCredentials{},
 			},
 			DataSourceModel{
-				Id:               types.StringValue("pid,iid,cid"),
+				Id:               types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId:     types.StringValue("cid"),
 				InstanceId:       types.StringValue("iid"),
 				ProjectId:        types.StringValue("pid"),
+				Region:           types.StringValue(testRegion),
 				Host:             types.StringValue(""),
 				Hosts:            types.ListNull(types.StringType),
 				LoadBalancedHost: types.StringNull(),
@@ -67,10 +70,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue("host"),
 				Hosts: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("host_1"),
@@ -114,10 +118,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue("host"),
 				Hosts: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("host_2"),
@@ -153,10 +158,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:               types.StringValue("pid,iid,cid"),
+				Id:               types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId:     types.StringValue("cid"),
 				InstanceId:       types.StringValue("iid"),
 				ProjectId:        types.StringValue("pid"),
+				Region:           types.StringValue(testRegion),
 				Host:             types.StringValue(""),
 				Hosts:            types.ListValueMust(types.StringType, []attr.Value{}),
 				LoadBalancedHost: types.StringNull(),
@@ -202,7 +208,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, &tt.state)
+			err := mapDataSourceFields(context.Background(), tt.input, &tt.state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
