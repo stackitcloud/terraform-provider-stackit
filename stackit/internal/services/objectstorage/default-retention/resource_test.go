@@ -11,7 +11,7 @@ import (
 
 func TestMapFields(t *testing.T) {
 	const testRegion = "eu01"
-	const testProjectId = "97bed312-5705-4246-9621-03e3a06af0af"
+	const testProjectId = "pid"
 	const testBucketName = "bucket1"
 	id := fmt.Sprintf("%s,%s,%s", testProjectId, testRegion, testBucketName)
 	tests := []struct {

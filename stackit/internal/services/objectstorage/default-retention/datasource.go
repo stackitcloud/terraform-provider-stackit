@@ -34,7 +34,6 @@ type defaultRetentionDataSource struct {
 	providerData core.ProviderData
 }
 
-// Configure implements [datasource.DataSourceWithConfigure].
 func (r *defaultRetentionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
@@ -47,21 +46,10 @@ func (r *defaultRetentionDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 	r.client = apiClient
-	tflog.Info(ctx, "Application Load Balancer client configured")
+	tflog.Info(ctx, "Bucket Default Retention configured")
 }
 
-// Schema implements [datasource.DataSource].
 func (d *defaultRetentionDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) { // nolint:gocritic
-	descriptions := map[string]string{
-		"main":        "ObjectStorage default-retention resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`bucket_name`\".",
-		"bucket_name": "The associated bucket's name. It must be DNS conform.",
-		"project_id":  "STACKIT Project ID to which the default-retention is associated.",
-		"region":      "The resource region. If not defined, the provider region is used.",
-		"days":        "The number retention period in days.",
-		"mode":        "The retention mode for default retention on a bucket.",
-	}
-
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -84,12 +72,6 @@ func (d *defaultRetentionDataSource) Schema(_ context.Context, _ datasource.Sche
 					validate.NoSeparator(),
 				},
 			},
-			"region": schema.StringAttribute{
-				Optional: true,
-				// must be computed to allow for storing the override value from the provider
-				Computed:    true,
-				Description: descriptions["region"],
-			},
 			"days": schema.Int32Attribute{
 				Required:    true,
 				Description: descriptions["days"],
@@ -102,16 +84,20 @@ func (d *defaultRetentionDataSource) Schema(_ context.Context, _ datasource.Sche
 					validate.NoSeparator(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
 
-// Metadata implements [datasource.DataSource].
 func (d *defaultRetentionDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_objectstorage_default_retention"
 }
 
-// Read implements [datasource.DataSource].
 func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic
 	var model model
 	diags := req.Config.Get(ctx, &model)

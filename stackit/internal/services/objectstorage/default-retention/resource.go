@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -54,7 +53,16 @@ type defaultRetentionResource struct {
 	providerData core.ProviderData
 }
 
-// ModifyPlan implements [resource.ResourceWithModifyPlan].
+var descriptions = map[string]string{
+	"main":        "ObjectStorage default-retention resource schema. Must have a `region` specified in the provider configuration.",
+	"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`bucket_name`\".",
+	"bucket_name": "The associated bucket's name. It must be DNS conform.",
+	"project_id":  "STACKIT Project ID to which the default-retention is associated.",
+	"region":      "The resource region. If not defined, the provider region is used.",
+	"days":        "The number retention period in days.",
+	"mode":        "The retention mode for default retention on a bucket.",
+}
+
 func (r *defaultRetentionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic
 	var configModel model
 	// skip initial empty configuration to avoid follow-up errors
@@ -83,7 +91,6 @@ func (r *defaultRetentionResource) ModifyPlan(ctx context.Context, req resource.
 	}
 }
 
-// ImportState implements [resource.ResourceWithImportState].
 func (r *defaultRetentionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
@@ -102,7 +109,6 @@ func (r *defaultRetentionResource) ImportState(ctx context.Context, req resource
 	tflog.Info(ctx, "ObjectStorage default-retention state imported")
 }
 
-// Configure implements [resource.ResourceWithConfigure].
 func (r *defaultRetentionResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
 	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
@@ -118,18 +124,7 @@ func (r *defaultRetentionResource) Configure(ctx context.Context, req resource.C
 	tflog.Info(ctx, "ObjectStorage bucket client configured")
 }
 
-// Schema implements [resource.Resource].
 func (r *defaultRetentionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	descriptions := map[string]string{
-		"main":        "ObjectStorage default-retention resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`bucket_name`\".",
-		"bucket_name": "The associated bucket's name. It must be DNS conform.",
-		"project_id":  "STACKIT Project ID to which the default-retention is associated.",
-		"region":      "The resource region. If not defined, the provider region is used.",
-		"days":        "The number retention period in days.",
-		"mode":        "The retention mode for default retention on a bucket.",
-	}
-
 	resp.Schema = schema.Schema{
 		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
@@ -145,7 +140,6 @@ func (r *defaultRetentionResource) Schema(_ context.Context, _ resource.SchemaRe
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					validate.NoSeparator(),
@@ -156,10 +150,21 @@ func (r *defaultRetentionResource) Schema(_ context.Context, _ resource.SchemaRe
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"days": schema.Int32Attribute{
+				Required:    true,
+				Description: descriptions["days"],
+			},
+			"mode": schema.StringAttribute{
+				Required:    true,
+				Description: descriptions["mode"],
+				Validators: []validator.String{
+					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(objectstorage.AllowedRetentionModeEnumValues)...),
 					validate.NoSeparator(),
 				},
 			},
@@ -172,31 +177,14 @@ func (r *defaultRetentionResource) Schema(_ context.Context, _ resource.SchemaRe
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"days": schema.Int32Attribute{
-				Required:    true,
-				Description: descriptions["days"],
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
-				},
-			},
-			"mode": schema.StringAttribute{
-				Required:    true,
-				Description: descriptions["mode"],
-				Validators: []validator.String{
-					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(objectstorage.AllowedRetentionModeEnumValues)...),
-					validate.NoSeparator(),
-				},
-			},
 		},
 	}
 }
 
-// Metadata implements [resource.Resource].
 func (r *defaultRetentionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_objectstorage_default_retention"
 }
 
-// Create implements [resource.Resource].
 func (r *defaultRetentionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic
 	var model model
 	diags := req.Plan.Get(ctx, &model)
@@ -242,7 +230,6 @@ func (r *defaultRetentionResource) Create(ctx context.Context, req resource.Crea
 	tflog.Info(ctx, "ObjectStorage default-retention created")
 }
 
-// Delete implements [resource.Resource].
 func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic
 	var model model
 	diags := req.State.Get(ctx, &model)
@@ -282,7 +269,6 @@ func (r *defaultRetentionResource) Delete(ctx context.Context, req resource.Dele
 	tflog.Info(ctx, "ObjectStorage default-retention deleted")
 }
 
-// Read implements [resource.Resource].
 func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic
 	var model model
 	diags := req.State.Get(ctx, &model)
@@ -329,7 +315,6 @@ func (r *defaultRetentionResource) Read(ctx context.Context, req resource.ReadRe
 	tflog.Info(ctx, "ObjectStorage default-retention read")
 }
 
-// Update implements [resource.Resource].
 func (r *defaultRetentionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic
 	var model model
 	diags := req.Plan.Get(ctx, &model)
