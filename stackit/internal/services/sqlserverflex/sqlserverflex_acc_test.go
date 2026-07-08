@@ -15,8 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3beta2api"
-	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3beta2api/wait"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
