@@ -43,7 +43,7 @@ data "stackit_sqlserverflex_instance" "example" {
 - `name` (String) Instance name.
 - `options` (Attributes) Custom parameters for the SQLServer Flex instance. (see [below for nested schema](#nestedatt--options))
 - `replicas` (Number)
-- `retention_days` (Number) The days (30 to 90) for how long the backup files should be stored before cleaned up. 30 to 90
+- `retention_days` (Number) The days (30 to 90) for how long the backup files should be stored before cleaned up.
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 

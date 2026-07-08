@@ -74,7 +74,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"network":              "The network configuration of the instance.",
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr.",
-		"retention_days":       "The days (30 to 90) for how long the backup files should be stored before cleaned up. 30 to 90",
+		"retention_days":       "The days (30 to 90) for how long the backup files should be stored before cleaned up.",
 		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
 	}
