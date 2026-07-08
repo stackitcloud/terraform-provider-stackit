@@ -3,10 +3,7 @@ resource "stackit_sqlserverflex_instance" "example" {
   name            = "example-instance"
   acl             = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
   backup_schedule = "00 00 * * *"
-  flavor = {
-    cpu = 4
-    ram = 16
-  }
+  flavor_id       = "4.16-Single"
   storage = {
     class = "premium-perf2-stackit"
     size  = 5

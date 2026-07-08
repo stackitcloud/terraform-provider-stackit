@@ -29,19 +29,35 @@ data "stackit_sqlserverflex_instance" "example" {
 
 ### Optional
 
+- `network` (Attributes) The network configuration of the instance. (see [below for nested schema](#nestedatt--network))
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
 
 - `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
+- `edition` (String) Edition of the MSSQL server instance.
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String) The flavor ID of the SQLServer Flex instance.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `name` (String) Instance name.
 - `options` (Attributes) Custom parameters for the SQLServer Flex instance. (see [below for nested schema](#nestedatt--options))
 - `replicas` (Number)
+- `retention_days` (Number) The days (30 to 90) for how long the backup files should be stored before cleaned up.
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
+
+<a id="nestedatt--network"></a>
+### Nested Schema for `network`
+
+Optional:
+
+- `access_scope` (String) The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.
+
+Read-Only:
+
+- `acl` (List of String) List of IPV4 cidr.
+
 
 <a id="nestedatt--flavor"></a>
 ### Nested Schema for `flavor`

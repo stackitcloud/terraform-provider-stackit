@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -20,19 +20,17 @@ func TestMapDataSourceFields(t *testing.T) {
 	}{
 		{
 			"default_values",
-			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.UserResponseUser{},
-			},
+			&sqlserverflex.GetUserResponse{},
 			testRegion,
 			DataSourceModel{
 				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
-				Username:   types.StringNull(),
+				Username:   types.StringValue(""),
 				Roles:      types.SetNull(types.StringType),
-				Host:       types.StringNull(),
-				Port:       types.Int64Null(),
+				Host:       types.StringValue(""),
+				Port:       types.Int32Value(0),
 				Region:     types.StringValue(testRegion),
 			},
 			true,
@@ -40,16 +38,14 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"simple_values",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.UserResponseUser{
-					Roles: []string{
-						"role_1",
-						"role_2",
-						"",
-					},
-					Username: new("username"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
+				Roles: []string{
+					"role_1",
+					"role_2",
+					"",
 				},
+				Username: "username",
+				Host:     "host",
+				Port:     int32(1234),
 			},
 			testRegion,
 			DataSourceModel{
@@ -64,7 +60,7 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue(""),
 				}),
 				Host:   types.StringValue("host"),
-				Port:   types.Int64Value(1234),
+				Port:   types.Int32Value(1234),
 				Region: types.StringValue(testRegion),
 			},
 			true,
@@ -72,24 +68,20 @@ func TestMapDataSourceFields(t *testing.T) {
 		{
 			"null_fields_and_int_conversions",
 			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.UserResponseUser{
-					Id:       new("uid"),
-					Roles:    []string{},
-					Username: nil,
-					Host:     nil,
-					Port:     new(int64(2123456789)),
-				},
+				Id:    1,
+				Roles: []string{},
+				Port:  2123456789,
 			},
 			testRegion,
 			DataSourceModel{
-				Id:         types.StringValue("pid,region,iid,uid"),
-				UserId:     types.StringValue("uid"),
+				Id:         types.StringValue("pid,region,iid,1"),
+				UserId:     types.StringValue("1"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
-				Username:   types.StringNull(),
+				Username:   types.StringValue(""),
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
-				Host:       types.StringNull(),
-				Port:       types.Int64Value(2123456789),
+				Host:       types.StringValue(""),
+				Port:       types.Int32Value(2123456789),
 				Region:     types.StringValue(testRegion),
 			},
 			true,
@@ -110,9 +102,7 @@ func TestMapDataSourceFields(t *testing.T) {
 		},
 		{
 			"no_resource_id",
-			&sqlserverflex.GetUserResponse{
-				Item: &sqlserverflex.UserResponseUser{},
-			},
+			&sqlserverflex.GetUserResponse{},
 			testRegion,
 			DataSourceModel{},
 			false,

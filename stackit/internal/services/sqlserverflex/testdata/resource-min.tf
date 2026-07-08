@@ -1,17 +1,13 @@
 variable "project_id" {}
 variable "name" {}
-variable "flavor_cpu" {}
-variable "flavor_ram" {}
+variable "flavor_id" {}
 variable "username" {}
 variable "role" {}
 
 resource "stackit_sqlserverflex_instance" "instance" {
   project_id = var.project_id
   name       = var.name
-  flavor = {
-    cpu = var.flavor_cpu
-    ram = var.flavor_ram
-  }
+  flavor_id  = var.flavor_id
 }
 
 resource "stackit_sqlserverflex_user" "user" {

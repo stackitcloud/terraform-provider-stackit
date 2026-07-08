@@ -1,4 +1,4 @@
-package int32planmodifier
+package objectplanmodifier
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type UseStateForUnknownFuncResponse struct {
 }
 
 // UseStateForUnknownIfFunc is a conditional function used in UseStateForUnknownIf
-type UseStateForUnknownIfFunc func(context.Context, planmodifier.Int32Request, *UseStateForUnknownFuncResponse)
+type UseStateForUnknownIfFunc func(context.Context, planmodifier.ObjectRequest, *UseStateForUnknownFuncResponse)
 
 type useStateForUnknownIf struct {
 	ifFunc      UseStateForUnknownIfFunc
@@ -23,7 +23,7 @@ type useStateForUnknownIf struct {
 }
 
 // UseStateForUnknownIf returns a plan modifier similar to UseStateForUnknown with a conditional
-func UseStateForUnknownIf(f UseStateForUnknownIfFunc, description string) planmodifier.Int32 {
+func UseStateForUnknownIf(f UseStateForUnknownIfFunc, description string) planmodifier.Object {
 	return useStateForUnknownIf{
 		ifFunc:      f,
 		description: description,
@@ -38,7 +38,7 @@ func (m useStateForUnknownIf) MarkdownDescription(ctx context.Context) string {
 	return m.Description(ctx)
 }
 
-func (m useStateForUnknownIf) PlanModifyInt32(ctx context.Context, req planmodifier.Int32Request, resp *planmodifier.Int32Response) { // nolint:gocritic // function signature required by Terraform
+func (m useStateForUnknownIf) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) { // nolint:gocritic // function signature required by Terraform
 	// Do nothing if there is no state value.
 	if req.StateValue.IsNull() {
 		return
@@ -72,7 +72,7 @@ func (m useStateForUnknownIf) PlanModifyInt32(ctx context.Context, req planmodif
 
 // Int32Changed sets UseStateForUnkown to true if the attribute's planned value matches the current state
 func Int32Changed(attributePath path.Path) UseStateForUnknownIfFunc {
-	return func(ctx context.Context, request planmodifier.Int32Request, response *UseStateForUnknownFuncResponse) {
+	return func(ctx context.Context, request planmodifier.ObjectRequest, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.Int32
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
 		response.Diagnostics.Append(diags...)
@@ -87,7 +87,31 @@ func Int32Changed(attributePath path.Path) UseStateForUnknownIfFunc {
 			return
 		}
 
-		if attributeState == attributePlan {
+		if attributeState.Equal(attributePlan) {
+			response.UseStateForUnknown = true
+			return
+		}
+	}
+}
+
+// ListChanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func ListChanged(attributePath path.Path) UseStateForUnknownIfFunc {
+	return func(ctx context.Context, request planmodifier.ObjectRequest, response *UseStateForUnknownFuncResponse) {
+		var attributePlan types.List
+		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
+		response.Diagnostics.Append(diags...)
+		if response.Diagnostics.HasError() {
+			return
+		}
+
+		var attributeState types.List
+		diags = request.State.GetAttribute(ctx, attributePath, &attributeState)
+		response.Diagnostics.Append(diags...)
+		if response.Diagnostics.HasError() {
+			return
+		}
+
+		if attributeState.Equal(attributePlan) {
 			response.UseStateForUnknown = true
 			return
 		}

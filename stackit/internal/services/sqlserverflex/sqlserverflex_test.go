@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -45,12 +45,12 @@ resource "stackit_sqlserverflex_instance" "instance" {
 `, region, s.Server.URL, projectId, name, flavorCpu, flavorRam)
 	flavor := testutil.MockResponse{
 		ToJsonBody: &sqlserverflex.ListFlavorsResponse{
-			Flavors: []sqlserverflex.InstanceFlavorEntry{
+			Flavors: []sqlserverflex.ListFlavors{
 				{
-					Cpu:         new(int32(flavorCpu)),
-					Memory:      new(int32(flavorRam)),
-					Id:          new(flavorId),
-					Description: new("test-flavor-id"),
+					Cpu:         flavorCpu,
+					Memory:      flavorRam,
+					Id:          flavorId,
+					Description: "test-flavor-id",
 				},
 			},
 		},
@@ -66,7 +66,7 @@ resource "stackit_sqlserverflex_instance" "instance" {
 						testutil.MockResponse{
 							Description: "create",
 							ToJsonBody: sqlserverflex.CreateInstanceResponse{
-								Id: new(instanceId),
+								Id: instanceId,
 							},
 						},
 						testutil.MockResponse{
@@ -84,7 +84,7 @@ resource "stackit_sqlserverflex_instance" "instance" {
 						testutil.MockResponse{
 							Description: "refresh",
 							Handler: func(w http.ResponseWriter, req *http.Request) {
-								expected := fmt.Sprintf("/v2/projects/%s/regions/%s/instances/%s", projectId, region, instanceId)
+								expected := fmt.Sprintf("/v3/projects/%s/regions/%s/instances/%s", projectId, region, instanceId)
 								if req.URL.Path != expected {
 									t.Errorf("expected request to %s, got %s", expected, req.URL.Path)
 								}

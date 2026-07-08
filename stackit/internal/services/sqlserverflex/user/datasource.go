@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
@@ -19,7 +20,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -35,7 +36,7 @@ type DataSourceModel struct {
 	Username   types.String `tfsdk:"username"`
 	Roles      types.Set    `tfsdk:"roles"`
 	Host       types.String `tfsdk:"host"`
-	Port       types.Int64  `tfsdk:"port"`
+	Port       types.Int32  `tfsdk:"port"`
 	Region     types.String `tfsdk:"region"`
 }
 
@@ -127,7 +128,7 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			"host": schema.StringAttribute{
 				Computed: true,
 			},
-			"port": schema.Int64Attribute{
+			"port": schema.Int32Attribute{
 				Computed: true,
 			},
 			"region": schema.StringAttribute{
@@ -152,21 +153,27 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userIdStr := model.UserId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
+
+	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading user",
-			fmt.Sprintf("User with ID %q or instance with ID %q does not exist in project %q.", userId, instanceId, projectId),
+			fmt.Sprintf("User with ID %d or instance with ID %q does not exist in project %q.", userId, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -194,19 +201,18 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 }
 
 func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSourceModel, region string) error {
-	if userResp == nil || userResp.Item == nil {
+	if userResp == nil {
 		return fmt.Errorf("response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
 
 	var userId string
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
-	} else if user.Id != nil {
-		userId = *user.Id
+	} else if userResp.Id != 0 {
+		userId = strconv.FormatInt(userResp.Id, 10)
 	} else {
 		return fmt.Errorf("user id not present")
 	}
@@ -214,13 +220,13 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Username = types.StringValue(userResp.Username)
 
-	if user.Roles == nil {
+	if userResp.Roles == nil {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range user.Roles {
+		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -229,8 +235,8 @@ func mapDataSourceFields(userResp *sqlserverflex.GetUserResponse, model *DataSou
 		}
 		model.Roles = rolesSet
 	}
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
+	model.Host = types.StringValue(userResp.Host)
+	model.Port = types.Int32Value(userResp.Port)
 	model.Region = types.StringValue(region)
 	return nil
 }
