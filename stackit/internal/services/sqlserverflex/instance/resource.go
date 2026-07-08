@@ -305,8 +305,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"network":              "The network configuration of the instance." + willBeRequired,
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr." + willBeRequired,
-		"retention_days":       "The days for how long the backup files should be stored before cleaned up." + willBeRequired,
-		"edition":              "Edition of the MSSQL server instance",
+		"retention_days":       "The days (30 to 90) for how long the backup files should be stored before cleaned up." + willBeRequired,
+		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
 		"storage":              "The object containing information about the storage size and class." + willBeRequired,
 		"storage.class":        "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```" + willBeRequired,
@@ -1043,7 +1043,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		}
 		networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
 	} else {
-		// Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
+		// TODO: Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
 		networkPayload.Acl = []string{}
 	}
 
@@ -1103,7 +1103,7 @@ func toUpdatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 			return nil, err
 		}
 	} else {
-		// Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
+		// TODO: Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
 		networkPayload.Acl = []string{}
 	}
 

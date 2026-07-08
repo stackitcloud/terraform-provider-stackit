@@ -388,7 +388,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	// Delete existing record set
+	// Delete existing user
 	err = r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -404,7 +404,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,zone_id,record_set_id
+// The expected format of the resource import identifier is: project_id,region,instance_id,user_id
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
