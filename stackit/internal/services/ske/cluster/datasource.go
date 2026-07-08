@@ -96,6 +96,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"service_account_issuer": schema.StringAttribute{
+				Description: "Service Account Issuer of the cluster.",
+				Computed:    true,
+			},
 			"node_pools": schema.ListNestedAttribute{
 				Description: "One or more `node_pool` block as defined below.",
 				Computed:    true,
