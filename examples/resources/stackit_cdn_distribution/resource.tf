@@ -57,6 +57,13 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
       ]
     }
 
+    tls = {
+      enable_tls_10 = true
+      enable_tls_11 = true
+    }
+    strip_response_cookies = true
+    forward_host_header    = true
+
     # WAF Configuration
     # 
     # Precedence Hierarchy: Specific Rules > Groups > Collections

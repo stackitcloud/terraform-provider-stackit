@@ -4,11 +4,14 @@ page_title: "stackit_network_area_region Data Source - stackit"
 subcategory: ""
 description: |-
   Network area region data source schema.
+  This datasource is for SNA, not VPC, based networks.
 ---
 
 # stackit_network_area_region (Data Source)
 
 Network area region data source schema.
+
+This datasource is for SNA, not VPC, based networks.
 
 ## Example Usage
 

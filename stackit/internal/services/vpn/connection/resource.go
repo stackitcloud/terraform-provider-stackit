@@ -1,0 +1,1129 @@
+package connection
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
+
+	listplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
+
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
+	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+)
+
+var (
+	_ resource.Resource                = &vpnConnectionResource{}
+	_ resource.ResourceWithConfigure   = &vpnConnectionResource{}
+	_ resource.ResourceWithImportState = &vpnConnectionResource{}
+	_ resource.ResourceWithModifyPlan  = &vpnConnectionResource{}
+)
+
+type BasePhaseModel struct {
+	DhGroups             types.List  `tfsdk:"dh_groups"`
+	EncryptionAlgorithms types.List  `tfsdk:"encryption_algorithms"`
+	IntegrityAlgorithms  types.List  `tfsdk:"integrity_algorithms"`
+	RekeyTime            types.Int32 `tfsdk:"rekey_time"`
+}
+
+type Phase1Model struct {
+	BasePhaseModel
+}
+
+type Phase2Model struct {
+	StartAction types.String `tfsdk:"start_action"`
+	DpdAction   types.String `tfsdk:"dpd_action"`
+	BasePhaseModel
+}
+
+type PeeringConfigModel struct {
+	LocalAddress  types.String `tfsdk:"local_address"`
+	RemoteAddress types.String `tfsdk:"remote_address"`
+}
+
+type BGPTunnelConfigModel struct {
+	RemoteAsn types.Int64 `tfsdk:"remote_asn"`
+}
+
+type TunnelModel struct {
+	DataSourceTunnelModel
+	PreSharedKey          types.String `tfsdk:"pre_shared_key"`
+	PreSharedKeyWo        types.String `tfsdk:"pre_shared_key_wo"`
+	PreSharedKeyWoVersion types.Int64  `tfsdk:"pre_shared_key_wo_version"`
+}
+
+// CommonModel is used in the resource and the datasource implementation to share most of the mapping logic
+type CommonModel struct {
+	ID            types.String `tfsdk:"id"`
+	ConnectionID  types.String `tfsdk:"connection_id"`
+	ProjectID     types.String `tfsdk:"project_id"`
+	Region        types.String `tfsdk:"region"`
+	GatewayID     types.String `tfsdk:"gateway_id"`
+	DisplayName   types.String `tfsdk:"display_name"`
+	Enabled       types.Bool   `tfsdk:"enabled"`
+	RemoteSubnets types.List   `tfsdk:"remote_subnets"`
+	LocalSubnets  types.List   `tfsdk:"local_subnets"`
+	StaticRoutes  types.List   `tfsdk:"static_routes"`
+	Labels        types.Map    `tfsdk:"labels"`
+}
+
+// Model is used for the resource implementation
+type Model struct {
+	CommonModel
+	Tunnel1 *TunnelModel `tfsdk:"tunnel1"`
+	Tunnel2 *TunnelModel `tfsdk:"tunnel2"`
+}
+
+type BasePhasePayload interface {
+	GetDhGroupsOk() ([]vpn.PhaseDhGroupsInner, bool)
+	GetEncryptionAlgorithmsOk() ([]vpn.PhaseEncryptionAlgorithmsInner, bool)
+	GetIntegrityAlgorithmsOk() ([]vpn.PhaseIntegrityAlgorithmsInner, bool)
+	GetRekeyTimeOk() (*int32, bool)
+
+	SetDhGroups([]vpn.PhaseDhGroupsInner)
+	SetEncryptionAlgorithms([]vpn.PhaseEncryptionAlgorithmsInner)
+	SetIntegrityAlgorithms([]vpn.PhaseIntegrityAlgorithmsInner)
+	SetRekeyTime(int32)
+}
+
+type connectionPayload interface {
+	SetDisplayName(string)
+	SetTunnel1(vpn.TunnelConfiguration)
+	SetTunnel2(vpn.TunnelConfiguration)
+	SetEnabled(bool)
+	SetRemoteSubnets([]string)
+	SetLocalSubnets([]string)
+	SetStaticRoutes([]string)
+	SetLabels(map[string]string)
+}
+
+type connectionResponse interface {
+	GetIdOk() (*string, bool)
+	GetDisplayName() string
+	GetTunnel1() vpn.TunnelConfiguration
+	GetTunnel2() vpn.TunnelConfiguration
+	GetEnabledOk() (*bool, bool)
+	GetRemoteSubnetsOk() ([]string, bool)
+	GetLocalSubnetsOk() ([]string, bool)
+	GetStaticRoutesOk() ([]string, bool)
+	GetLabelsOk() (*map[string]string, bool)
+}
+
+var (
+	dhGroupValues             = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseDhGroupsInnerEnumValues)
+	encryptionAlgorithmValues = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseEncryptionAlgorithmsInnerEnumValues)
+	integrityAlgorithmValues  = sdkUtils.EnumSliceToStringSlice(vpn.AllowedPhaseIntegrityAlgorithmsInnerEnumValues)
+	startActionValues         = sdkUtils.EnumSliceToStringSlice(vpn.AllowedTunnelConfigurationPhase2AllOfStartActionEnumValues)
+	dpdActionValues           = sdkUtils.EnumSliceToStringSlice(vpn.AllowedTunnelConfigurationPhase2AllOfDpdActionEnumValues)
+)
+
+type vpnConnectionResource struct {
+	client       *vpn.APIClient
+	providerData core.ProviderData
+}
+
+func NewVpnConnectionResource() resource.Resource {
+	return &vpnConnectionResource{}
+}
+
+func (r *vpnConnectionResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.client = apiClient
+	r.providerData = providerData
+	tflog.Info(ctx, "VPN client configured")
+}
+
+func (r *vpnConnectionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_vpn_connection"
+}
+
+func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	tunnelSchema := func(rootAttribute string) schema.SingleNestedAttribute {
+		return schema.SingleNestedAttribute{
+			Description:         fmt.Sprintf("Configuration for the IPsec %s.", rootAttribute),
+			MarkdownDescription: fmt.Sprintf("Configuration for the IPsec %s \n\n~> Write-Only argument `pre_shared_key_wo` is available to use in place of `pre_shared_key`. Write-Only arguments are supported in HashiCorp Terraform 1.11.0 and later. [Learn more](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments).", rootAttribute),
+			Required:            true,
+			Attributes: map[string]schema.Attribute{
+				"pre_shared_key": schema.StringAttribute{
+					Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only argument `pre_shared_key_wo` should be preferred.",
+					Optional:    true,
+					Sensitive:   true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtLeast(20),
+						stringvalidator.ConflictsWith(
+							path.MatchRelative().AtParent().AtName("pre_shared_key_wo"),
+							path.MatchRelative().AtParent().AtName("pre_shared_key_wo_version"),
+						),
+						stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot(rootAttribute).AtName("pre_shared_key_wo")),
+					},
+				},
+				"pre_shared_key_wo": schema.StringAttribute{
+					Description: "Pre-shared key for the IPsec tunnel. Minimum 20 characters. Write-only - never stored in state and never returned by the API. To rotate the key, update this value AND increment pre_shared_key_wo_version. Changing this field alone will NOT trigger an update.",
+					Optional:    true,
+					WriteOnly:   true,
+					Sensitive:   true,
+					Validators: []validator.String{
+						stringvalidator.LengthAtLeast(20),
+						stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
+						stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo_version")),
+					},
+				},
+				"pre_shared_key_wo_version": schema.Int64Attribute{
+					Description: "User-managed rotation counter for the pre-shared key. Must be incremented every time pre_shared_key_wo is changed. Terraform diffs this field to detect key rotations - changing pre_shared_key_wo alone will NOT trigger an update because it is write-only and never stored in state.",
+					Optional:    true,
+					Validators: []validator.Int64{
+						int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName("pre_shared_key_wo")),
+						int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName("pre_shared_key")),
+					},
+				},
+				"remote_address": schema.StringAttribute{
+					Description: "Remote IPv4 address for the tunnel endpoint.",
+					Required:    true,
+					Validators: []validator.String{
+						validate.IP(true),
+					},
+				},
+				"phase1": schema.SingleNestedAttribute{
+					Required: true,
+					Attributes: map[string]schema.Attribute{
+						"dh_groups": schema.ListAttribute{
+							Description: fmt.Sprintf("Diffie-Hellman groups for key exchange. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
+							Optional:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(dhGroupValues...),
+								),
+							},
+						},
+						"encryption_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Encryption algorithms for Phase 1. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(encryptionAlgorithmValues...),
+								),
+							},
+						},
+						"integrity_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(integrityAlgorithmValues...),
+								),
+							},
+						},
+						"rekey_time": schema.Int32Attribute{
+							Description: "Time to schedule an IKE re-keying in seconds. Range: 900-28800. Default: 14400.",
+							Optional:    true,
+							Computed:    true,
+							Default:     int32default.StaticInt32(14400),
+							Validators: []validator.Int32{
+								int32validator.Between(900, 28800),
+							},
+						},
+					},
+				},
+				"phase2": schema.SingleNestedAttribute{
+					Required: true,
+					Attributes: map[string]schema.Attribute{
+						"dh_groups": schema.ListAttribute{
+							Description: fmt.Sprintf("Diffie-Hellman groups for Phase 2. %s", tfutils.FormatPossibleValues(dhGroupValues...)),
+							Optional:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(dhGroupValues...),
+								),
+							},
+						},
+						"encryption_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Encryption algorithms for Phase 2. %s", tfutils.FormatPossibleValues(encryptionAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(encryptionAlgorithmValues...),
+								),
+							},
+						},
+						"integrity_algorithms": schema.ListAttribute{
+							Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Required:    true,
+							ElementType: types.StringType,
+							Validators: []validator.List{
+								listvalidator.ValueStringsAre(
+									stringvalidator.OneOf(integrityAlgorithmValues...),
+								),
+							},
+						},
+						"rekey_time": schema.Int32Attribute{
+							Description: "Time to schedule a Child SA re-keying in seconds. Range: 900-3600. Default: 3600.",
+							Optional:    true,
+							Computed:    true,
+							Default:     int32default.StaticInt32(3600),
+							Validators: []validator.Int32{
+								int32validator.Between(900, 3600),
+							},
+						},
+						"start_action": schema.StringAttribute{
+							Description: fmt.Sprintf("Action to perform after loading the connection configuration. Default: '%s'. %s", vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START, tfutils.FormatPossibleValues(startActionValues...)),
+							Optional:    true,
+							Computed:    true,
+							Default:     stringdefault.StaticString(string(vpn.TUNNELCONFIGURATIONPHASE2ALLOFSTARTACTION_START)),
+							Validators: []validator.String{
+								stringvalidator.OneOf(startActionValues...),
+							},
+						},
+						"dpd_action": schema.StringAttribute{
+							Description: fmt.Sprintf("Action to perform on DPD timeout. Default: '%s'. %s", vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART, tfutils.FormatPossibleValues(dpdActionValues...)),
+							Optional:    true,
+							Computed:    true,
+							Default:     stringdefault.StaticString(string(vpn.TUNNELCONFIGURATIONPHASE2ALLOFDPDACTION_RESTART)),
+							Validators: []validator.String{
+								stringvalidator.OneOf(dpdActionValues...),
+							},
+						},
+					},
+				},
+				"peering": schema.SingleNestedAttribute{
+					Optional: true,
+					Attributes: map[string]schema.Attribute{
+						"local_address": schema.StringAttribute{
+							Description: "Local tunnel interface IPv4 address.",
+							Required:    true,
+							Validators: []validator.String{
+								validate.IP(true),
+							},
+						},
+						"remote_address": schema.StringAttribute{
+							Description: "Remote tunnel interface IPv4 address.",
+							Required:    true,
+							Validators: []validator.String{
+								validate.IP(true),
+							},
+						},
+					},
+				},
+				"bgp": schema.SingleNestedAttribute{
+					Optional: true,
+					Attributes: map[string]schema.Attribute{
+						"remote_asn": schema.Int64Attribute{
+							Description: "Remote ASN for BGP peering (private ASN range, 64512-4294967294).",
+							Required:    true,
+							Validators: []validator.Int64{
+								int64validator.Between(64512, 4294967294),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	resp.Schema = schema.Schema{
+		Description: fmt.Sprintf("VPN Connection resource schema. %s", core.ResourceRegionFallbackDocstring),
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`gateway_id`,`connection_id`\".",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"connection_id": schema.StringAttribute{
+				Description: "The server-generated UUID of the VPN connection.",
+				Computed:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Description: "STACKIT project ID.",
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Description: "STACKIT region.",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"gateway_id": schema.StringAttribute{
+				Description: "The UUID of the parent VPN gateway.",
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"display_name": schema.StringAttribute{
+				Description: "A user-friendly name for the connection. Must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long.",
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`),
+						"must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long",
+					),
+				},
+			},
+			"enabled": schema.BoolAttribute{
+				Description: "Whether this connection is enabled. Defaults to true.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+			},
+			"remote_subnets": schema.ListAttribute{
+				Description: "List of remote IPv4 CIDRs accessible via this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
+				Optional:    true,
+				Computed:    true, // API sets default 0.0.0.0/0, must be computed to prevent state drift errors
+				ElementType: types.StringType,
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 100),
+					listvalidator.ValueStringsAre(validate.CIDR()),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"local_subnets": schema.ListAttribute{
+				Description: "List of local IPv4 CIDRs to route through this connection. Optional for route-based and BGP configurations (defaults to 0.0.0.0/0). Mandatory for policy-based.",
+				Optional:    true,
+				Computed:    true, // API sets default 0.0.0.0/0, must be computed to prevent state drift errors
+				ElementType: types.StringType,
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 100),
+					listvalidator.ValueStringsAre(validate.CIDR()),
+				},
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"static_routes": schema.ListAttribute{
+				Description: "List of static routes (IPv4 CIDRs) for route-based VPN. Mandatory for ROUTE_BASED gateways.",
+				Optional:    true,
+				Computed:    true, // Needed because of suppress-null-empty-list plan modifier
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					// When sending nil to the API, the API returns an empty slice. We suppress this using the plan modifier to not cause state drifts.
+					listplanmodifierCustom.SuppressNullEmptyList(),
+				},
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(validate.CIDR()),
+				},
+			},
+			"tunnel1": tunnelSchema("tunnel1"),
+			"tunnel2": tunnelSchema("tunnel2"),
+			"labels": schema.MapAttribute{
+				Description: "Map of custom labels.",
+				Optional:    true,
+				ElementType: types.StringType,
+				Validators:  validate.LabelValidators(),
+			},
+		},
+	}
+}
+
+func (r *vpnConnectionResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+	var configModel Model
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tfutils.AdaptRegion(ctx, configModel.Region, &planModel.Region, r.providerData.GetRegion(), resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (r *vpnConnectionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
+
+	if len(idParts) != 4 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" || idParts[3] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing VPN connection",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[gateway_id],[connection_id]  Got: %q", req.ID),
+		)
+		return
+	}
+
+	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":    idParts[0],
+		"region":        idParts[1],
+		"gateway_id":    idParts[2],
+		"connection_id": idParts[3],
+	})
+	tflog.Info(ctx, "VPN connection state imported")
+}
+
+func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	// the regular plan model one always uses in the create implementation
+	var planModel Model
+	diags := req.Plan.Get(ctx, &planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// The config model - this has to be used because Terraform doesn't include write-only field values in the
+	// plan and state models - for security measures. Write-only values should be only kept in the config model
+	// so that they never end up in the state (or plan).
+	var configModel Model
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := planModel.ProjectID.ValueString()
+	region := r.providerData.GetRegionWithOverride(planModel.Region)
+	gatewayId := planModel.GatewayID.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
+
+	payload, err := toCreatePayload(ctx, &planModel, &configModel)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+
+	createResp, err := r.client.DefaultAPI.CreateGatewayConnection(ctx, projectId, region, gatewayId).CreateGatewayConnectionPayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	err = mapResourceFields(ctx, createResp, &planModel, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "VPN connection created")
+}
+
+func (r *vpnConnectionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectID.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	gatewayId := model.GatewayID.ValueString()
+	connectionId := model.ConnectionID.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
+	ctx = tflog.SetField(ctx, "connection_id", connectionId)
+
+	connResp, err := r.client.DefaultAPI.GetGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", err.Error())
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	err = mapResourceFields(ctx, connResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading VPN connection", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "VPN connection read")
+}
+
+func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// the regular plan model one always uses in the update implementation
+	var planModel Model
+	diags := req.Plan.Get(ctx, &planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// the state model - contains the "previous" values and is needed to compare the old write-only version field
+	// values to the new ones
+	var stateModel Model
+	diags = req.State.Get(ctx, &stateModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// The config model - this has to be used because Terraform doesn't include write-only field values in the
+	// plan and state models - for security measures. Write-only values should be only kept in the config model
+	// so that they never end up in the state (or plan).
+	var configModel Model
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := planModel.ProjectID.ValueString()
+	region := r.providerData.GetRegionWithOverride(planModel.Region)
+	gatewayId := planModel.GatewayID.ValueString()
+	connectionId := planModel.ConnectionID.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
+	ctx = tflog.SetField(ctx, "connection_id", connectionId)
+
+	payload, err := toUpdatePayload(ctx, &planModel, &stateModel, &configModel)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+
+	connResp, err := r.client.DefaultAPI.UpdateGatewayConnection(ctx, projectId, region, gatewayId, connectionId).UpdateGatewayConnectionPayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", err.Error())
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	err = mapResourceFields(ctx, connResp, &planModel, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN connection", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, planModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "VPN connection updated")
+}
+
+func (r *vpnConnectionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectID.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	gatewayId := model.GatewayID.ValueString()
+	connectionId := model.ConnectionID.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
+	ctx = tflog.SetField(ctx, "connection_id", connectionId)
+
+	err := r.client.DefaultAPI.DeleteGatewayConnection(ctx, projectId, region, gatewayId, connectionId).Execute()
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN connection", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+	tflog.Info(ctx, "VPN connection deleted")
+}
+
+func toCreatePayload(ctx context.Context, planModel, configModel *Model) (*vpn.CreateGatewayConnectionPayload, error) {
+	if planModel == nil {
+		return nil, fmt.Errorf("nil plan model")
+	}
+	if configModel == nil {
+		return nil, fmt.Errorf("nil config model")
+	}
+
+	payload := &vpn.CreateGatewayConnectionPayload{}
+	err := toConnectionPayload(ctx, planModel, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	// Terraform keeps the write-only field values in the config model - and they shouldn't leave this config model
+	// to make sure they don't end up being stored in the state. In the plan model the write-only field values are just
+	// empty. That's why we read everything from the plan model. Except for the field values which are marked as
+	// write-only in the schema. They are read from the config model.
+
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing
+	getPresharedKey := func(planTunnelModel, configTunnelModel *TunnelModel) *string {
+		if !planTunnelModel.PreSharedKey.IsNull() && !planTunnelModel.PreSharedKey.IsUnknown() {
+			// handle the legacy fallback logic
+			return planTunnelModel.PreSharedKey.ValueStringPointer()
+		} else if (!configTunnelModel.PreSharedKeyWo.IsNull() && !configTunnelModel.PreSharedKeyWo.IsUnknown()) &&
+			(!planTunnelModel.PreSharedKeyWoVersion.IsNull() && !planTunnelModel.PreSharedKeyWoVersion.IsUnknown()) {
+			// the user is using the write-only field
+			return configTunnelModel.PreSharedKeyWo.ValueStringPointer()
+		}
+
+		return nil
+	}
+
+	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, configModel.Tunnel1)
+	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, configModel.Tunnel2)
+
+	return payload, nil
+}
+
+func toUpdatePayload(ctx context.Context, planModel, stateModel, configModel *Model) (*vpn.UpdateGatewayConnectionPayload, error) {
+	if planModel == nil {
+		return nil, fmt.Errorf("nil plan model")
+	}
+	if stateModel == nil {
+		return nil, fmt.Errorf("nil state model")
+	}
+	if configModel == nil {
+		return nil, fmt.Errorf("nil config model")
+	}
+
+	payload := &vpn.UpdateGatewayConnectionPayload{}
+	err := toConnectionPayload(ctx, planModel, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	// Terraform keeps the write-only field values in the config model - and they shouldn't leave this config model
+	// to make sure they don't end up being stored in the state. In the plan model the write-only field values are just
+	// empty. That's why we read everything from the plan model. Except for the field values which are marked as
+	// write-only in the schema. They are read from the config model.
+
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing
+	getPresharedKey := func(planTunnelModel, stateTunnelModel, configTunnelModel *TunnelModel) *string {
+		if !planTunnelModel.PreSharedKey.IsNull() {
+			// handle the legacy fallback logic
+			return planTunnelModel.PreSharedKey.ValueStringPointer()
+		} else if !configTunnelModel.PreSharedKeyWo.IsNull() {
+			// write-only field is set, handle the write-only and version logic
+
+			// check if the version changed between state (old) and plan (new)
+			if !planTunnelModel.PreSharedKeyWoVersion.Equal(stateTunnelModel.PreSharedKeyWoVersion) {
+				// the user bumped the version meaning we need to send the write-only field value to the API
+				return configTunnelModel.PreSharedKeyWo.ValueStringPointer()
+			}
+		}
+
+		return nil
+	}
+
+	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, stateModel.Tunnel1, configModel.Tunnel1)
+	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, stateModel.Tunnel2, configModel.Tunnel2)
+
+	return payload, nil
+}
+
+// toConnectionPayload builds the API payloads for create and update. It does NOT set presharedkey payload since it's
+// logic differs for create and update implementations
+func toConnectionPayload(ctx context.Context, model *Model, payload connectionPayload) error {
+	tunnel1, err := toTunnelPayload(model.Tunnel1)
+	if err != nil {
+		return fmt.Errorf("converting tunnel1: %w", err)
+	}
+
+	payload.SetTunnel1(*tunnel1)
+
+	tunnel2, err := toTunnelPayload(model.Tunnel2)
+	if err != nil {
+		return fmt.Errorf("converting tunnel2: %w", err)
+	}
+
+	payload.SetTunnel2(*tunnel2)
+
+	payload.SetDisplayName(model.DisplayName.ValueString())
+
+	if !tfutils.IsUndefined(model.Enabled) {
+		payload.SetEnabled(model.Enabled.ValueBool())
+	}
+
+	if !tfutils.IsUndefined(model.RemoteSubnets) {
+		remoteSubnets, err := tfutils.ListValueToStringSlice(model.RemoteSubnets)
+		if err != nil {
+			return fmt.Errorf("converting remote_subnets: %w", err)
+		}
+		payload.SetRemoteSubnets(remoteSubnets)
+	}
+
+	if !tfutils.IsUndefined(model.LocalSubnets) {
+		localSubnets, err := tfutils.ListValueToStringSlice(model.LocalSubnets)
+		if err != nil {
+			return fmt.Errorf("converting local_subnets: %w", err)
+		}
+		payload.SetLocalSubnets(localSubnets)
+	}
+
+	if !tfutils.IsUndefined(model.StaticRoutes) {
+		staticRoutes, err := tfutils.ListValueToStringSlice(model.StaticRoutes)
+		if err != nil {
+			return fmt.Errorf("converting static_routes: %w", err)
+		}
+		payload.SetStaticRoutes(staticRoutes)
+	}
+
+	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
+	if err != nil {
+		return err
+	}
+	payload.SetLabels(labels)
+
+	return nil
+}
+
+func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
+	if tunnel == nil {
+		return nil, fmt.Errorf("nil tunnel model")
+	}
+
+	config := &vpn.TunnelConfiguration{
+		RemoteAddress: tunnel.RemoteAddress.ValueString(),
+	}
+
+	if tunnel.Phase1 != nil {
+		phase1 := vpn.TunnelConfigurationPhase1{}
+		err := toBasePhasePayload(&tunnel.Phase1.BasePhaseModel, &phase1)
+		if err != nil {
+			return nil, err
+		}
+		config.Phase1 = phase1
+	}
+
+	if tunnel.Phase2 != nil {
+		phase2 := vpn.TunnelConfigurationPhase2{
+			StartAction: conversion.StringValueToEnumPointer[vpn.TunnelConfigurationPhase2AllOfStartAction](tunnel.Phase2.StartAction),
+			DpdAction:   conversion.StringValueToEnumPointer[vpn.TunnelConfigurationPhase2AllOfDpdAction](tunnel.Phase2.DpdAction),
+		}
+
+		err := toBasePhasePayload(&tunnel.Phase2.BasePhaseModel, &phase2)
+		if err != nil {
+			return nil, err
+		}
+
+		config.Phase2 = phase2
+	}
+
+	if tunnel.Peering != nil {
+		config.Peering = &vpn.PeeringConfig{
+			LocalAddress:  new(tunnel.Peering.LocalAddress.ValueString()),
+			RemoteAddress: new(tunnel.Peering.RemoteAddress.ValueString()),
+		}
+	}
+
+	if tunnel.Bgp != nil {
+		config.Bgp = &vpn.BGPTunnelConfig{
+			RemoteAsn: tunnel.Bgp.RemoteAsn.ValueInt64(),
+		}
+	}
+
+	return config, nil
+}
+
+func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayload) error {
+	if phaseModel == nil {
+		return nil
+	}
+
+	if !tfutils.IsUndefined(phaseModel.DhGroups) {
+		dhGroups, err := tfutils.ListValueToStringSlice(phaseModel.DhGroups)
+		if err != nil {
+			return fmt.Errorf("converting phase dh_groups: %w", err)
+		}
+		phasePayload.SetDhGroups(tfutils.Map(dhGroups, func(t string) vpn.PhaseDhGroupsInner {
+			return vpn.PhaseDhGroupsInner(t)
+		}))
+	}
+
+	encAlgs, err := tfutils.ListValueToStringSlice(phaseModel.EncryptionAlgorithms)
+	if err != nil {
+		return fmt.Errorf("converting phase encryption_algorithms: %w", err)
+	}
+	phasePayload.SetEncryptionAlgorithms(tfutils.Map(encAlgs, func(t string) vpn.PhaseEncryptionAlgorithmsInner {
+		return vpn.PhaseEncryptionAlgorithmsInner(t)
+	}))
+
+	intAlgs, err := tfutils.ListValueToStringSlice(phaseModel.IntegrityAlgorithms)
+	if err != nil {
+		return fmt.Errorf("converting phase integrity_algorithms: %w", err)
+	}
+	phasePayload.SetIntegrityAlgorithms(tfutils.Map(intAlgs, func(t string) vpn.PhaseIntegrityAlgorithmsInner {
+		return vpn.PhaseIntegrityAlgorithmsInner(t)
+	}))
+
+	if !tfutils.IsUndefined(phaseModel.RekeyTime) {
+		rekeyTime := phaseModel.RekeyTime.ValueInt32()
+		phasePayload.SetRekeyTime(rekeyTime)
+	}
+
+	return nil
+}
+
+func mapCommonFields(ctx context.Context, conn connectionResponse, model *CommonModel, region string) error {
+	if conn == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var connectionId string
+	if respConnectionId, _ := conn.GetIdOk(); respConnectionId != nil {
+		connectionId = *respConnectionId
+	} else if model.ConnectionID.ValueString() != "" {
+		connectionId = model.ConnectionID.ValueString()
+	} else {
+		return fmt.Errorf("connection id not present")
+	}
+
+	model.ID = tfutils.BuildInternalTerraformId(model.ProjectID.ValueString(), region, model.GatewayID.ValueString(), connectionId)
+	model.ConnectionID = types.StringValue(connectionId)
+	model.DisplayName = types.StringValue(conn.GetDisplayName())
+	model.Region = types.StringValue(region)
+
+	enabled, _ := conn.GetEnabledOk()
+	model.Enabled = types.BoolPointerValue(enabled)
+
+	model.RemoteSubnets = types.ListNull(types.StringType)
+	if remoteSubnets, _ := conn.GetRemoteSubnetsOk(); remoteSubnets != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, remoteSubnets)
+		if diags.HasError() {
+			return fmt.Errorf("mapping remote_subnets: %w", core.DiagsToError(diags))
+		}
+		model.RemoteSubnets = list
+	}
+
+	model.LocalSubnets = types.ListNull(types.StringType)
+	if localSubnets, _ := conn.GetLocalSubnetsOk(); localSubnets != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, localSubnets)
+		if diags.HasError() {
+			return fmt.Errorf("mapping local_subnets: %w", core.DiagsToError(diags))
+		}
+		model.LocalSubnets = list
+	}
+
+	model.StaticRoutes = types.ListNull(types.StringType)
+	if staticRoutes, _ := conn.GetStaticRoutesOk(); staticRoutes != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, staticRoutes)
+		if diags.HasError() {
+			return fmt.Errorf("mapping static_routes: %w", core.DiagsToError(diags))
+		}
+		model.StaticRoutes = list
+	}
+
+	respLabels, _ := conn.GetLabelsOk()
+	labels, err := tfutils.MapLabels(ctx, respLabels, model.Labels)
+	if err != nil {
+		return fmt.Errorf("mapping labels: %w", err)
+	}
+	model.Labels = labels
+
+	return nil
+}
+
+func mapResourceFields(ctx context.Context, conn connectionResponse, model *Model, region string) error {
+	err := mapCommonFields(ctx, conn, &model.CommonModel, region)
+	if err != nil {
+		return err
+	}
+
+	tunnel1 := conn.GetTunnel1()
+	if model.Tunnel1 == nil {
+		model.Tunnel1 = &TunnelModel{}
+	}
+	err = mapTunnel(ctx, &tunnel1, &model.Tunnel1.DataSourceTunnelModel)
+	if err != nil {
+		return fmt.Errorf("mapping tunnel1: %w", err)
+	}
+
+	tunnel2 := conn.GetTunnel2()
+	if model.Tunnel2 == nil {
+		model.Tunnel2 = &TunnelModel{}
+	}
+	err = mapTunnel(ctx, &tunnel2, &model.Tunnel2.DataSourceTunnelModel)
+	if err != nil {
+		return fmt.Errorf("mapping tunnel2: %w", err)
+	}
+
+	return nil
+}
+
+func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel *DataSourceTunnelModel) error {
+	if apiTunnel == nil {
+		return fmt.Errorf("apiTunnel can not be nil")
+	}
+	if tfTunnel == nil {
+		return fmt.Errorf("tfTunnel can not be nil")
+	}
+
+	tfTunnel.RemoteAddress = types.StringValue(apiTunnel.RemoteAddress)
+
+	basePhase1, err := mapBasePhase(ctx, &apiTunnel.Phase1)
+	if err != nil {
+		return err
+	}
+
+	tfTunnel.Phase1 = &Phase1Model{
+		BasePhaseModel: basePhase1,
+	}
+
+	basePhase2, err := mapBasePhase(ctx, &apiTunnel.Phase2)
+	if err != nil {
+		return err
+	}
+
+	tfTunnel.Phase2 = &Phase2Model{
+		BasePhaseModel: basePhase2,
+		StartAction:    types.StringPointerValue((*string)(apiTunnel.Phase2.StartAction)),
+		DpdAction:      types.StringPointerValue((*string)(apiTunnel.Phase2.DpdAction)),
+	}
+
+	tfTunnel.Peering = nil
+	if apiTunnel.Peering != nil {
+		tfTunnel.Peering = &PeeringConfigModel{
+			LocalAddress:  types.StringPointerValue(apiTunnel.Peering.LocalAddress),
+			RemoteAddress: types.StringPointerValue(apiTunnel.Peering.RemoteAddress),
+		}
+	}
+
+	tfTunnel.Bgp = nil
+	if apiTunnel.Bgp != nil {
+		tfTunnel.Bgp = &BGPTunnelConfigModel{
+			RemoteAsn: types.Int64Value(apiTunnel.Bgp.RemoteAsn),
+		}
+	}
+
+	return nil
+}
+
+func mapBasePhase(ctx context.Context, apiPhase BasePhasePayload) (phase BasePhaseModel, err error) {
+	if apiPhase == nil {
+		return phase, fmt.Errorf("api phase can not be nil")
+	}
+
+	phase.DhGroups = types.ListNull(types.StringType)
+	if dhGroups, _ := apiPhase.GetDhGroupsOk(); dhGroups != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, dhGroups)
+		if diags.HasError() {
+			return phase, fmt.Errorf("mapping base phase dh_groups: %w", core.DiagsToError(diags))
+		}
+		phase.DhGroups = list
+	}
+
+	phase.EncryptionAlgorithms = types.ListNull(types.StringType)
+	if encryptionAlgorithms, _ := apiPhase.GetEncryptionAlgorithmsOk(); encryptionAlgorithms != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, encryptionAlgorithms)
+		if diags.HasError() {
+			return phase, fmt.Errorf("mapping base phase encryption_algorithms: %w", core.DiagsToError(diags))
+		}
+		phase.EncryptionAlgorithms = list
+	}
+
+	phase.IntegrityAlgorithms = types.ListNull(types.StringType)
+	if integrityAlgorithms, _ := apiPhase.GetIntegrityAlgorithmsOk(); integrityAlgorithms != nil {
+		list, diags := types.ListValueFrom(ctx, types.StringType, integrityAlgorithms)
+		if diags.HasError() {
+			return phase, fmt.Errorf("mapping base phase integrity_algorithms: %w", core.DiagsToError(diags))
+		}
+		phase.IntegrityAlgorithms = list
+	}
+
+	rekeyTime, _ := apiPhase.GetRekeyTimeOk()
+	phase.RekeyTime = types.Int32PointerValue(rekeyTime)
+
+	return phase, nil
+}

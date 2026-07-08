@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -19,8 +19,6 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 	}
 	if providerData.RedisCustomEndpoint != "" {
 		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.RedisCustomEndpoint))
-	} else {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithRegion(providerData.GetRegion()))
 	}
 	apiClient, err := redis.NewAPIClient(apiClientConfigOptions...)
 	if err != nil {

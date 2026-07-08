@@ -2,15 +2,17 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v1api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
+	const testRegion = "eu01"
 	tests := []struct {
 		description string
 		state       DataSourceModel
@@ -29,10 +31,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				Raw: &rabbitmq.RawCredentials{},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue(""),
 				Hosts:        types.ListNull(types.StringType),
 				HttpAPIURI:   types.StringNull(),
@@ -79,10 +82,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue("host"),
 				Hosts: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("host_1"),
@@ -156,10 +160,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue("host"),
 				Hosts: types.ListValueMust(types.StringType, []attr.Value{
 					types.StringValue("host_2"),
@@ -209,10 +214,11 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
+				Region:       types.StringValue(testRegion),
 				Host:         types.StringValue(""),
 				Hosts:        types.ListValueMust(types.StringType, []attr.Value{}),
 				HttpAPIURI:   types.StringNull(),
@@ -261,7 +267,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, &tt.state)
+			err := mapDataSourceFields(context.Background(), tt.input, &tt.state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

@@ -4,11 +4,15 @@ page_title: "stackit_network_area Resource - stackit"
 subcategory: ""
 description: |-
   Network area resource schema.
+
+This resource is for SNA, not VPC, networks.
 ---
 
 # stackit_network_area (Resource)
 
 Network area resource schema.
+
+This resource is for SNA, not VPC, networks.
 
 ## Example Usage
 

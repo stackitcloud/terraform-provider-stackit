@@ -239,7 +239,7 @@ func (d *imageDataV2Source) Schema(_ context.Context, _ datasource.SchemaRequest
 					},
 					"distro": schema.StringAttribute{
 						Optional:    true,
-						Description: "Filter images by operating system distribution. For example: `ubuntu`, `ubuntu-arm64`, `debian`, `rhel`, etc.",
+						Description: "Filter images by operating system distribution. For example: `ubuntu`, `debian`, `rhel`, etc.",
 					},
 					"version": schema.StringAttribute{
 						Optional:    true,

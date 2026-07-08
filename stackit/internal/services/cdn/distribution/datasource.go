@@ -46,6 +46,11 @@ var dataSourceConfigTypes = map[string]attr.Type{
 	"waf": types.ObjectType{
 		AttrTypes: wafTypes, // Shared from resource.go
 	},
+	"tls": types.ObjectType{
+		AttrTypes: tlsTypes, // Shared from resource.go
+	},
+	"strip_response_cookies": types.BoolType,
+	"forward_host_header":    types.BoolType,
 }
 
 type distributionDataSource struct {
@@ -204,6 +209,28 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Computed: true,
+							},
+						},
+					},
+					"strip_response_cookies": schema.BoolAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_strip_response_cookies"],
+					},
+					"forward_host_header": schema.BoolAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_forward_host_header"],
+					},
+					"tls": schema.SingleNestedAttribute{
+						Description: schemaDescriptions["config_tls_config"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enable_tls_11": schema.BoolAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["config_tls_enable_tls_10"],
+							},
+							"enable_tls_10": schema.BoolAttribute{
+								Computed:    true,
+								Description: schemaDescriptions["config_tls_enable_tls_11"],
 							},
 						},
 					},
@@ -641,14 +668,27 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		}
 	}
 
+	tlsObjAttrs := map[string]attr.Value{
+		"enable_tls_10": types.BoolValue(distribution.Config.Tls.EnableTls10),
+		"enable_tls_11": types.BoolValue(distribution.Config.Tls.EnableTls11),
+	}
+
+	tlsVal, diagTls := types.ObjectValue(tlsTypes, tlsObjAttrs)
+	if diagTls.HasError() {
+		return core.DiagsToError(diagWaf)
+	}
+
 	// Use dataSourceConfigTypes
 	cfg, diags := types.ObjectValue(dataSourceConfigTypes, map[string]attr.Value{
-		"backend":           backend,
-		"regions":           modelRegions,
-		"blocked_countries": modelBlockedCountries,
-		"optimizer":         optimizerVal,
-		"redirects":         redirectsVal,
-		"waf":               wafVal,
+		"backend":                backend,
+		"regions":                modelRegions,
+		"blocked_countries":      modelBlockedCountries,
+		"optimizer":              optimizerVal,
+		"redirects":              redirectsVal,
+		"waf":                    wafVal,
+		"tls":                    tlsVal,
+		"strip_response_cookies": types.BoolValue(distribution.Config.StripResponseCookies),
+		"forward_host_header":    types.BoolValue(distribution.Config.ForwardHostHeader),
 	})
 	if diags.HasError() {
 		return core.DiagsToError(diags)

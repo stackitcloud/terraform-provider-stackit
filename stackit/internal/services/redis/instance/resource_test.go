@@ -2,13 +2,14 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
 )
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
@@ -68,6 +69,7 @@ var fixtureInstanceParameters = redis.InstanceParameters{
 }
 
 func TestMapFields(t *testing.T) {
+	const testRegion = "eu01"
 	tests := []struct {
 		description string
 		input       *redis.Instance
@@ -78,9 +80,10 @@ func TestMapFields(t *testing.T) {
 			"default_values",
 			&redis.Instance{},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
+				Region:             types.StringValue(testRegion),
 				PlanId:             types.StringValue(""),
 				Name:               types.StringValue(""),
 				CfGuid:             types.StringValue(""),
@@ -129,9 +132,10 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
+				Region:             types.StringValue(testRegion),
 				PlanId:             types.StringValue("plan"),
 				Name:               types.StringValue("name"),
 				CfGuid:             types.StringValue("cf"),
@@ -182,7 +186,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

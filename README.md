@@ -232,7 +232,7 @@ Additionally:
 |---------------------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------|--------------------------------------------------------------|
 | `TF_ACC_ORGANIZATION_ID`                    | ID of the STACKIT test organization                                                                     | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `authorization`, `iaas`                                      |
 | `TF_ACC_TEST_PROJECT_SERVICE_ACCOUNT_EMAIL` | Email of the STACKIT service account                                                                    | `abc-serviceaccount@sa.stackit.cloud`  | `authorization`, `iaas`, `resourcemanager`, `secretsmanager` |
-| `TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID`   | Container ID of the project parent container (folder within an organization or the organization itself) | `organization-d2b7087`                 | `resourcemanager`                                            |
+| `TF_ACC_TEST_PROJECT_PARENT_CONTAINER_ID`   | Container ID of the project parent container (folder within an organization or the organization itself) | `organization-d2b7087`                 | `resourcemanager`, `iaas`                                         |
 | `TF_ACC_TEST_PROJECT_PARENT_UUID`           | UUID ID of the project parent container (folder within an organization or the organization itself)      | `5353ccfa-a984-4b96-a71d-b863dd2b7087` | `resourcemanager`                                            |
 
 ### Run Acceptance Tests of a single service
