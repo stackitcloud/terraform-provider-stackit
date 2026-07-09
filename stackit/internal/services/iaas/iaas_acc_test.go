@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
+	iaasAlpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -71,6 +72,9 @@ var (
 
 	//go:embed testdata/resource-network-max.tf
 	resourceNetworkMaxConfig string
+
+	//go:embed testdata/resource-network-vpc.tf
+	resourceNetworkVpcConfig string
 
 	//go:embed testdata/resource-network-interface-min.tf
 	resourceNetworkInterfaceMinConfig string
@@ -308,6 +312,22 @@ var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 	updatedConfig["ipv4_nameserver_0"] = config.StringVariable("10.2.2.10")
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["dhcp"] = config.BoolVariable(false)
+	return updatedConfig
+}()
+
+// NETWORK - VPC
+
+var testConfigNetworkVarsVpc = config.Variables{
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"organization_id": config.StringVariable(testutil.OrganizationId),
+	"owner_email":     config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"update":          config.BoolVariable(false),
+}
+
+var testConfigNetworkVarsVpcUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigNetworkVarsVpc)
+	updatedConfig["update"] = config.BoolVariable(true)
 	return updatedConfig
 }()
 
@@ -806,6 +826,9 @@ func TestAccNetworkMax(t *testing.T) {
 						"stackit_routing_table.routing_table", "routing_table_id",
 					),
 
+					// Vpc Network
+					resource.TestCheckNoResourceAttr("stackit_network.network_vpc_id", "vpc_id"),
+
 					// Routing table
 					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkVarsMax["organization_id"])),
 					resource.TestCheckResourceAttrPair(
@@ -999,6 +1022,11 @@ func TestAccNetworkMax(t *testing.T) {
 			{
 				ConfigVariables: testConfigNetworkVarsMaxUpdated,
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentRoutingTables, testutil.ExperimentNetwork).BuildProviderConfig(), resourceNetworkMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network.network_vpc_id", plancheck.ResourceActionReplace),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_network.network_prefix", "network_id"),
 					resource.TestCheckResourceAttrPair(
@@ -1044,6 +1072,12 @@ func TestAccNetworkMax(t *testing.T) {
 						"stackit_routing_table.routing_table", "routing_table_id",
 					),
 
+					// vpc network
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc.vpc", "vpc_id",
+						"stackit_network.network_vpc_id", "vpc_id",
+					),
+
 					// Routing table
 					resource.TestCheckResourceAttr("stackit_routing_table.routing_table", "organization_id", testutil.ConvertConfigVariable(testConfigNetworkVarsMaxUpdated["organization_id"])),
 					resource.TestCheckResourceAttrPair(
@@ -1062,6 +1096,111 @@ func TestAccNetworkMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccNetworkVpc(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_network" "network_vpc" {
+						project_id  = stackit_network.network_vpc.project_id
+						network_id  = stackit_network.network_vpc.network_id
+					}
+					`,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				ResourceName:    "stackit_network.network_vpc",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					projectResource, ok := s.RootModule().Resources["stackit_resourcemanager_project.project"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find stackit_resourcemanager_project.project")
+					}
+					projectId, ok := projectResource.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+
+					r, ok := s.RootModule().Resources["stackit_network.network_vpc"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network.network_vpc")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", projectId, testutil.Region, networkId), nil
+				},
+				ImportState: true,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Update
+			{
+				ConfigVariables: testConfigNetworkVarsVpcUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network.network_vpc", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc.vpc-update", "vpc_id",
+						"stackit_network.network_vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc_network_range.network_range-update", "network_range_id",
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+					),
+				),
+			},
 		},
 	})
 }
@@ -5749,6 +5888,9 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckIaaSImageDestroy,
 		testAccCheckNetworkInterfaceDestroy,
 		testAccCheckNetworkDestroy,
+		testVpcNetworkRangeDestroy,
+		testVpcRegionDestroy,
+		testVpcCheckDestroy,
 		testAccCheckNetworkAreaRegionDestroy,
 		testAccCheckNetworkAreaDestroy,
 		testAccCheckRoutingTableRouteDestroy,
@@ -5779,8 +5921,12 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network" {
 			continue
 		}
-		region := strings.Split(rs.Primary.ID, core.Separator)[1]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		split := strings.Split(rs.Primary.ID, core.Separator)
+		if len(split) != 2 {
+			continue
+		}
+		region := split[1]
+		networkId := split[2]
 		err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -5979,8 +6125,12 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			continue
 		}
 		// network terraform ID: "[project_id],[region],[network_id]"
-		projectId = strings.Split(rs.Primary.ID, core.Separator)[0]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		split := strings.Split(rs.Primary.ID, core.Separator)
+		if len(split) != 2 {
+			continue
+		}
+		projectId = split[0]
+		networkId := split[2]
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 
@@ -6373,4 +6523,184 @@ func validateImportedNameservers(expectedIPs []string) func(states []*terraform.
 
 		return nil
 	}
+}
+
+func testVpcNetworkRangeDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := iaasAlpha.NewAPIClient(testutil.NewConfigBuilder().Experiments(testutil.ExperimentVPC).BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	type networkRangeIds struct {
+		projectId      string
+		vpcId          string
+		region         string
+		networkRangeId string
+	}
+
+	networkRangesToDestroy := []networkRangeIds{}
+	var errs []error
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_vpc_network_range" {
+			continue
+		}
+		projectId, ok := rs.Primary.Attributes["project_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no project_id found in %s", rs.Primary))
+			continue
+		}
+		vpcId, ok := rs.Primary.Attributes["vpc_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no vpc_id found in %s", rs.Primary))
+			continue
+		}
+		region, ok := rs.Primary.Attributes["region"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no region found in %s", rs.Primary))
+			continue
+		}
+		networkRangeId, ok := rs.Primary.Attributes["network_range_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no network_range_id found in %s", rs.Primary))
+			continue
+		}
+		networkRangesToDestroy = append(networkRangesToDestroy, networkRangeIds{
+			projectId:      projectId,
+			vpcId:          vpcId,
+			region:         region,
+			networkRangeId: networkRangeId,
+		})
+	}
+
+	for _, networkRange := range networkRangesToDestroy {
+		_, err := client.DefaultAPI.GetVPCNetworkRange(ctx, networkRange.projectId, networkRange.vpcId, networkRange.region, networkRange.networkRangeId).Execute()
+		if err == nil {
+			err := client.DefaultAPI.DeleteVPCNetworkRange(ctx, networkRange.projectId, networkRange.vpcId, networkRange.region, networkRange.networkRangeId).Execute()
+			if err != nil {
+				errs = append(errs, fmt.Errorf("deleting network range with ID %q in project %q, vpc %q, region %q : %w", networkRange.networkRangeId, networkRange.projectId, networkRange.vpcId, networkRange.region, err))
+			}
+			continue
+		}
+
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
+			if oapiErr.StatusCode == 404 || oapiErr.StatusCode == 403 {
+				continue
+			}
+		}
+		errs = append(errs, fmt.Errorf("deleting static route: %w", err))
+	}
+
+	return errors.Join(errs...)
+}
+
+func testVpcRegionDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := iaasAlpha.NewAPIClient(testutil.NewConfigBuilder().Experiments(testutil.ExperimentVPC).BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+	type regionIds struct {
+		projectId, vpcId, region string
+	}
+
+	var toDestroy []regionIds
+	var errs []error
+	for _, r := range s.RootModule().Resources {
+		if r.Type != "stackit_vpc_region" {
+			continue
+		}
+		projectId, ok := r.Primary.Attributes["project_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no project_id found in %s", r.Primary))
+			continue
+		}
+		vpcId, ok := r.Primary.Attributes["vpc_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no vpc_id found in %s", r.Primary))
+			continue
+		}
+		region, ok := r.Primary.Attributes["region"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no region found in %s", r.Primary))
+			continue
+		}
+		toDestroy = append(toDestroy, regionIds{
+			projectId: projectId,
+			vpcId:     vpcId,
+			region:    region,
+		})
+	}
+	for _, id := range toDestroy {
+		_, err := client.DefaultAPI.GetVPCRegion(ctx, id.projectId, id.vpcId, id.region).Execute()
+		if err == nil {
+			err := client.DefaultAPI.DeleteVPCRegion(ctx, id.projectId, id.vpcId, id.region).Execute()
+			if err != nil {
+				errs = append(errs, fmt.Errorf("deleting region with ID %q in project %q, vpc %q: %w", id.region, id.projectId, id.vpcId, err))
+			}
+			continue
+		}
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
+			if oapiErr.StatusCode == 404 || oapiErr.StatusCode == 403 {
+				continue
+			}
+		}
+		errs = append(errs, fmt.Errorf("deleting region: %w", err))
+	}
+	return errors.Join(errs...)
+}
+
+func testVpcCheckDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := iaasAlpha.NewAPIClient(testutil.NewConfigBuilder().Experiments(testutil.ExperimentVPC).BuildClientOptions(testutil.IaaSCustomEndpoint, false)...)
+	if err != nil {
+		return fmt.Errorf("creating client: %w", err)
+	}
+
+	type vpcIds struct {
+		projectID string
+		vpcID     string
+	}
+
+	vpcsToDestroy := []vpcIds{}
+	var errs []error
+	// vpc
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_vpc" {
+			continue
+		}
+		projectId, ok := rs.Primary.Attributes["project_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no project_id found in %s", rs.Primary))
+			continue
+		}
+		vpcId, ok := rs.Primary.Attributes["vpc_id"]
+		if !ok {
+			errs = append(errs, fmt.Errorf("no vpc_id found in %s", rs.Primary))
+			continue
+		}
+		vpcsToDestroy = append(vpcsToDestroy, vpcIds{
+			projectID: projectId,
+			vpcID:     vpcId,
+		})
+	}
+
+	for _, vpc := range vpcsToDestroy {
+		_, err := client.DefaultAPI.GetVPC(ctx, vpc.projectID, vpc.vpcID).Execute()
+		if err == nil {
+			err := client.DefaultAPI.DeleteVPC(ctx, vpc.projectID, vpc.vpcID).Execute()
+			if err != nil {
+				errs = append(errs, fmt.Errorf("deleting vpc with ID %q: %w", vpc.vpcID, err))
+			}
+			continue
+		}
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
+			if oapiErr.StatusCode == 404 || oapiErr.StatusCode == 403 {
+				continue
+			}
+		}
+		errs = append(errs, fmt.Errorf("deleting vpc: %w", err))
+	}
+
+	return errors.Join(errs...)
 }
