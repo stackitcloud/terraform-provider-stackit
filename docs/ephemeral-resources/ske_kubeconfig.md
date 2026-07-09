@@ -43,7 +43,7 @@ provider "kubernetes" {
 
 ### Optional
 
-- `expiration` (Number) Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `14400` (4h). Defaults to `1800` (30m) for optimal security during Terraform operations, which is more restrictive than the API default of `3600` (1h).
+- `expiration` (Number) Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `14400` (4h). API defaults to `3600` (1h).
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
