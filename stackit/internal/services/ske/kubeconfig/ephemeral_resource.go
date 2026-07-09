@@ -20,10 +20,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-const (
-	defaultKubeconfigExpiration = 1800
-)
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
 	_ ephemeral.EphemeralResource              = &kubeconfigEphemeralResource{}
@@ -94,7 +90,7 @@ func (e *kubeconfigEphemeralResource) Schema(_ context.Context, _ ephemeral.Sche
 			},
 			"expiration": schema.Int64Attribute{
 				Description: "Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `14400` (4h). " +
-					"Defaults to `1800` (30m) for optimal security during Terraform operations, which is more restrictive than the API default of `3600` (1h).",
+					"API defaults to `3600` (1h).",
 				Optional: true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(600),
@@ -135,15 +131,7 @@ func (e *kubeconfigEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 	clusterName := model.ClusterName.ValueString()
 	region := e.providerData.GetRegionWithOverride(model.Region)
 
-	// Kubeconfig only needs to be valid for the duration of the Terraform operation.
-	// Defaulted to 1800s (30m) for better security than the API default (3600s).
-	expiration := conversion.Int64ValueToPointer(model.Expiration)
-	if expiration == nil {
-		expiration = new(int64)
-		*expiration = defaultKubeconfigExpiration
-	}
-
-	kubeconfigResp, err := getKubeconfig(ctx, e.client, projectId, region, clusterName, expiration)
+	kubeconfigResp, err := getKubeconfig(ctx, e.client.DefaultAPI, projectId, region, clusterName, conversion.Int64ValueToPointer(model.Expiration))
 
 	ctx = core.LogResponse(ctx)
 
@@ -166,16 +154,12 @@ func (e *kubeconfigEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 }
 
 // getKubeconfig initializes the API call to generate a new kubeconfig
-func getKubeconfig(ctx context.Context, client *ske.APIClient, projectId, region, clusterName string, expiration *int64) (*ske.Kubeconfig, error) {
-	var expirationStringPtr *string
+func getKubeconfig(ctx context.Context, client ske.DefaultAPI, projectId, region, clusterName string, expiration *int64) (*ske.Kubeconfig, error) {
+	payload := ske.CreateKubeconfigPayload{}
 	if expiration != nil {
-		expirationStringPtr = new(string)
-		*expirationStringPtr = strconv.FormatInt(*expiration, 10)
+		expirationStr := strconv.FormatInt(*expiration, 10)
+		payload.ExpirationSeconds = &expirationStr
 	}
 
-	payload := ske.CreateKubeconfigPayload{
-		ExpirationSeconds: expirationStringPtr,
-	}
-
-	return client.DefaultAPI.CreateKubeconfig(ctx, projectId, region, clusterName).CreateKubeconfigPayload(payload).Execute()
+	return client.CreateKubeconfig(ctx, projectId, region, clusterName).CreateKubeconfigPayload(payload).Execute()
 }
