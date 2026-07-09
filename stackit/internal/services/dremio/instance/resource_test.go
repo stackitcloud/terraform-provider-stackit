@@ -36,13 +36,11 @@ func TestMapFields(t *testing.T) {
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
 						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
-						ClientSecret: "oauth-secret",
 						JwtClaims: dremioSdk.OauthJwtClaims{
 							UserName: "oauth-username",
 						},
@@ -77,13 +75,13 @@ func TestMapFields(t *testing.T) {
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
 						ClientId:     types.StringValue("azure-client"),
-						ClientSecret: types.StringValue("azure-secret"),
+						ClientSecret: types.StringNull(),
 						RedirectUrl:  types.StringValue("azure-redirect"),
 					},
 					OAuth: &OAuthModel{
 						AuthorityUrl: types.StringValue("oauth-authority"),
 						ClientId:     types.StringValue("oauth-client"),
-						ClientSecret: types.StringValue("oauth-secret"),
+						ClientSecret: types.StringNull(),
 						JwtClaims: &JwtClaimsModel{
 							UserName: types.StringValue("oauth-username"),
 						},
@@ -207,7 +205,7 @@ func TestToCreatePayload(t *testing.T) {
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
-						ClientSecret: "oauth-secret",
+						ClientSecret: utils.Ptr("oauth-secret"),
 						JwtClaims: dremioSdk.OauthJwtClaims{
 							UserName: "oauth-username",
 						},
@@ -247,7 +245,7 @@ func TestToCreatePayload(t *testing.T) {
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
 						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
+						ClientSecret: utils.Ptr("azure-secret"),
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
 					Type: dremioSdk.AUTHENTICATIONTYPE_AZUREAD,
@@ -424,7 +422,7 @@ func TestToUpdatePayload(t *testing.T) {
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
-						ClientSecret: "oauth-secret",
+						ClientSecret: utils.Ptr("oauth-secret"),
 						JwtClaims: dremioSdk.OauthJwtClaims{
 							UserName: "oauth-username",
 						},
@@ -464,7 +462,7 @@ func TestToUpdatePayload(t *testing.T) {
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
 						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
+						ClientSecret: utils.Ptr("azure-secret"),
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
 					Type: dremioSdk.AUTHENTICATIONTYPE_AZUREAD,

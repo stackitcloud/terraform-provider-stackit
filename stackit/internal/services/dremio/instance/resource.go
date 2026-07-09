@@ -717,7 +717,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) err
 		authModel.AzureAD = &AzureADModel{
 			AuthorityUrl: types.StringValue(azureADResp.AuthorityUrl),
 			ClientId:     types.StringValue(azureADResp.ClientId),
-			ClientSecret: types.StringValue(azureADResp.ClientSecret),
+			ClientSecret: types.StringNull(),
 			RedirectUrl:  types.StringPointerValue(azureADResp.RedirectUrl),
 		}
 	}
@@ -727,7 +727,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) err
 		oauthModel := &OAuthModel{
 			AuthorityUrl: types.StringValue(oauthResp.AuthorityUrl),
 			ClientId:     types.StringValue(oauthResp.ClientId),
-			ClientSecret: types.StringValue(oauthResp.ClientSecret),
+			ClientSecret: types.StringNull(),
 			Scope:        types.StringPointerValue(oauthResp.Scope),
 			RedirectUrl:  types.StringPointerValue(oauthResp.RedirectUrl),
 			JwtClaims: &JwtClaimsModel{
@@ -827,7 +827,7 @@ func parseAuthentication(model *Model) (*dremioSdk.Authentication, error) {
 		oAuthPayload := &dremioSdk.Oauth{
 			AuthorityUrl: model.Authentication.OAuth.AuthorityUrl.ValueString(),
 			ClientId:     model.Authentication.OAuth.ClientId.ValueString(),
-			ClientSecret: model.Authentication.OAuth.ClientSecret.ValueString(),
+			ClientSecret: model.Authentication.OAuth.ClientSecret.ValueStringPointer(),
 			JwtClaims: dremioSdk.OauthJwtClaims{
 				UserName: model.Authentication.OAuth.JwtClaims.UserName.ValueString(),
 			},
@@ -852,7 +852,7 @@ func parseAuthentication(model *Model) (*dremioSdk.Authentication, error) {
 		azureAdPayload := &dremioSdk.Azuread{
 			AuthorityUrl: model.Authentication.AzureAD.AuthorityUrl.ValueString(),
 			ClientId:     model.Authentication.AzureAD.ClientId.ValueString(),
-			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueString(),
+			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueStringPointer(),
 			RedirectUrl:  model.Authentication.AzureAD.RedirectUrl.ValueStringPointer(),
 		}
 		return &dremioSdk.Authentication{
