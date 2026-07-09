@@ -48,6 +48,7 @@ type DataSourceModel struct {
 	Region           types.String `tfsdk:"region"`
 	RoutingTableID   types.String `tfsdk:"routing_table_id"`
 	DHCP             types.Bool   `tfsdk:"dhcp"`
+	VPCID            types.String `tfsdk:"vpc_id"`
 }
 
 // NewNetworkDataSource is a helper function to simplify the provider implementation.
@@ -189,6 +190,14 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"dhcp": schema.BoolAttribute{
 				Description: "Shows if DHCP is enabled for the network.",
 				Computed:    true,
+			},
+			"vpc_id": schema.StringAttribute{
+				Description: "The ID of the VPC the network is associated with.",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 			},
 		},
 	}
