@@ -1996,7 +1996,11 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 }
 
 func mapAudit(ctx context.Context, cl *ske.Cluster, m *Model) error {
+	// The API may omit the audit block entirely (e.g. when audit logging is not
+	// enabled or not available for the account). In that case we must decide what
+	// to keep in the Terraform state without producing a spurious plan diff:
 	if cl.Audit == nil {
+		// No audit configured on either side (or the value is still unknown): normalize to null.
 		if m.Audit.IsNull() || m.Audit.IsUnknown() || m.Audit.Attributes() == nil {
 			m.Audit = types.ObjectNull(auditTypes)
 			return nil
@@ -2008,10 +2012,15 @@ func mapAudit(ctx context.Context, cl *ske.Cluster, m *Model) error {
 			return fmt.Errorf("converting audit object: %v", diags.Errors())
 		}
 
+		// The user explicitly configured `audit = { enabled = false }`. The API does
+		// not echo a disabled audit config back, so we keep the configured value to
+		// avoid a permanent diff between config and state.
 		if !auditModel.Enabled.IsUnknown() && !auditModel.Enabled.ValueBool() {
 			return nil
 		}
 
+		// Otherwise (configured enabled=true, but API returned nothing) fall back to
+		// null so the next plan reflects the actual API state.
 		m.Audit = types.ObjectNull(auditTypes)
 		return nil
 	}
