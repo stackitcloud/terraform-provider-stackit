@@ -708,32 +708,38 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) err
 		return fmt.Errorf("model input is nil")
 	}
 
-	authModel := AuthenticationModel{
-		Type: types.StringValue(string(instanceResp.Authentication.Type)),
+	if model.Authentication == nil {
+		model.Authentication = new(AuthenticationModel)
 	}
 
+	model.Authentication.Type = types.StringValue(string(instanceResp.Authentication.Type))
+
 	if instanceResp.Authentication.Azuread != nil {
-		azureADResp := instanceResp.Authentication.Azuread
-		authModel.AzureAD = &AzureADModel{
-			AuthorityUrl: types.StringValue(azureADResp.AuthorityUrl),
-			ClientId:     types.StringValue(azureADResp.ClientId),
-			ClientSecret: types.StringNull(),
-			RedirectUrl:  types.StringPointerValue(azureADResp.RedirectUrl),
+		if model.Authentication.AzureAD == nil {
+			model.Authentication.AzureAD = new(AzureADModel)
 		}
+
+		azureADResp := instanceResp.Authentication.Azuread
+		azureADModel := model.Authentication.AzureAD
+
+		azureADModel.AuthorityUrl = types.StringValue(azureADResp.AuthorityUrl)
+		azureADModel.ClientId = types.StringValue(azureADResp.ClientId)
+		azureADModel.RedirectUrl = types.StringValue(*azureADResp.RedirectUrl)
 	}
 
 	if instanceResp.Authentication.Oauth != nil {
-		oauthResp := instanceResp.Authentication.Oauth
-		oauthModel := &OAuthModel{
-			AuthorityUrl: types.StringValue(oauthResp.AuthorityUrl),
-			ClientId:     types.StringValue(oauthResp.ClientId),
-			ClientSecret: types.StringNull(),
-			Scope:        types.StringPointerValue(oauthResp.Scope),
-			RedirectUrl:  types.StringPointerValue(oauthResp.RedirectUrl),
-			JwtClaims: &JwtClaimsModel{
-				UserName: types.StringValue(oauthResp.JwtClaims.UserName),
-			},
+		if model.Authentication.OAuth == nil {
+			model.Authentication.OAuth = new(OAuthModel)
 		}
+
+		oauthResp := instanceResp.Authentication.Oauth
+		oauthModel := model.Authentication.OAuth
+
+		oauthModel.AuthorityUrl = types.StringValue(oauthResp.AuthorityUrl)
+		oauthModel.ClientId = types.StringValue(oauthResp.ClientId)
+		oauthModel.Scope = types.StringPointerValue(oauthResp.Scope)
+		oauthModel.RedirectUrl = types.StringPointerValue(oauthResp.RedirectUrl)
+		oauthModel.JwtClaims = &JwtClaimsModel{UserName: types.StringValue(oauthResp.JwtClaims.UserName)}
 
 		if len(oauthResp.Parameters) > 0 {
 			var params []AuthParameterModel
@@ -746,10 +752,7 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) err
 			oauthModel.Parameters = params
 		}
 
-		authModel.OAuth = oauthModel
 	}
-
-	model.Authentication = &authModel
 
 	return nil
 }
