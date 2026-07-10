@@ -72,7 +72,6 @@ Read-Only:
 - `enabled` (Boolean) Enable cluster audit log forwarding to a Telemetry Router.
 
 
-
 <a id="nestedatt--extensions"></a>
 ### Nested Schema for `extensions`
 
