@@ -38,6 +38,11 @@ resource "stackit_ske_cluster" "example" {
       access_scope = "PUBLIC"
     }
   }
+  # Cluster audit log forwarding to a Telemetry Router.
+  # Private preview: only configurable for enabled accounts.
+  audit = {
+    enabled = true
+  }
 }
 ```
 
@@ -136,7 +141,6 @@ Optional:
 Required:
 
 - `enabled` (Boolean) Enable cluster audit log forwarding to a Telemetry Router.
-
 
 
 <a id="nestedatt--extensions"></a>
