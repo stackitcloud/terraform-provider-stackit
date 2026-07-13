@@ -2841,14 +2841,22 @@ func TestMapAudit(t *testing.T) {
 			}),
 		},
 		{
-			name:  "disabled audit kept when API omits audit",
+			name: "audit disabled echoed by API",
+			input: &ske.Audit{
+				Enabled: false,
+			},
+			stateAudit: types.ObjectNull(auditTypes),
+			want: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+		},
+		{
+			name:  "null when API omits audit despite state value",
 			input: nil,
 			stateAudit: types.ObjectValueMust(auditTypes, map[string]attr.Value{
 				"enabled": types.BoolValue(false),
 			}),
-			want: types.ObjectValueMust(auditTypes, map[string]attr.Value{
-				"enabled": types.BoolValue(false),
-			}),
+			want: types.ObjectNull(auditTypes),
 		},
 	}
 
@@ -2862,7 +2870,7 @@ func TestMapAudit(t *testing.T) {
 				Audit: tt.input,
 			}
 
-			err := mapAudit(t.Context(), cluster, m)
+			err := mapAudit(cluster, m)
 			if !tt.wantErr && err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
