@@ -714,8 +714,8 @@ github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.10.0 h1:Ia8FWqG1
 github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.10.0/go.mod h1:yzlakB+f8ur4yAHR6lyCABO+HcEtZG3G2Faj6m5/uW8=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.1.0 h1:HRJwodJX4aOn/487zaqJIKw13yIj4T6dn7/kEHLxeTg=
 github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.1.0/go.mod h1:TwfVVynB/+AKbccSOLk2qZpPL1tdK43BBAiACP6EtSg=
-github.com/stackitcloud/stackit-sdk-go/services/redis v1.0.0 h1:JsHchCTVpCVUB0KQyjzlFEwJEdorql6pBpXtqQDjtqU=
-github.com/stackitcloud/stackit-sdk-go/services/redis v1.0.0/go.mod h1:yjej6QfYoYdRIyKXlmbVz8fZYxbuUdl+QBkvLDPgA4k=
+github.com/stackitcloud/stackit-sdk-go/services/redis v1.1.0 h1:ckYMRXAGE2/vaxPeNGEuun9AGcFn/8xuu0ytfsiqfWU=
+github.com/stackitcloud/stackit-sdk-go/services/redis v1.1.0/go.mod h1:yjej6QfYoYdRIyKXlmbVz8fZYxbuUdl+QBkvLDPgA4k=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0 h1:JPP6a0ME1tZXr4iB69d/LtJsCAr58ENBadFaK9f48/c=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0/go.mod h1:NEz3f+GV5G++BE9/MmZCsXJyCih7jtg0pZuSyG2sLEs=
 github.com/stackitcloud/stackit-sdk-go/services/scf v0.9.0 h1:pwcGFeU2b6DLOGQGNbbw91zN0qIlBan4d7DGtGGZEEY=
@@ -734,8 +734,8 @@ github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.0 h1:YhQ2GF+AyHVUps1iE
 github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.0/go.mod h1:jMlBoXqrPNX5nXbo6oT7exalqilw1jiLPoIp4Cn0CdI=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.18.0 h1:6Umom7V12bVa7D3dnMJAKj/GWg7wqR9FpqmZ8TjsO1Q=
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.18.0/go.mod h1:TbqmZhLMofmfl+HhVl6oHYcI3zvXTm1vRjN3A/fOkM4=
-github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.13.0 h1:w7l3Z7lkDKnJ+3rudGjZ8GMKxGmpIS5dT6pO9MMNWqQ=
-github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.13.0/go.mod h1:AiUoMAqQcOlMgDtkVJlqI7P/VGD5xjN3dYjERGnwN/M=
+github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.0 h1:A6zN5JUz5DOTigTxAyAC+4p5VpJzaYDftx2yIH0mgn8=
+github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.0/go.mod h1:AiUoMAqQcOlMgDtkVJlqI7P/VGD5xjN3dYjERGnwN/M=
 github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0 h1:U1mQoCk0TXc8NsSc/Sl9PKMdEyJpWNU2zLnsqmx6wEc=
 github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0/go.mod h1:hgw8janWmDfP2bnuZensxqcAePr49BX5ug8Rq85o+h8=
 github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.3.0 h1:MEvzGItcbig+9A4JvK2E5W6/mqXDPafiGkDZ1BprBAI=
@@ -856,8 +856,8 @@ golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPh
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliYc=
 golang.org/x/crypto v0.14.0/go.mod h1:MVFd36DqK4CsrnJYDkBA3VC4m2GkXAM0PvzMCn4JQf4=
-golang.org/x/crypto v0.51.0 h1:IBPXwPfKxY7cWQZ38ZCIRPI50YLeevDLlLnyC5wRGTI=
-golang.org/x/crypto v0.51.0/go.mod h1:8AdwkbraGNABw2kOX6YFPs3WM22XqI4EXEd8g+x7Oc8=
+golang.org/x/crypto v0.52.0 h1:RMs7fP2rXdep0CftQlK8Uf+kibLm7qkCcradZWYz988=
+golang.org/x/crypto v0.52.0/go.mod h1:1QgfPxDqh0T2M/elOJtp9RvuR95kVjir0e6/BvEmGbc=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522/go.mod h1:ZjyILWgesfNpC6sMxTJOJm9Kp84zZh5NQWvqDGG3Qr8=

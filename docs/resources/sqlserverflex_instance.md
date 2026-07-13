@@ -18,21 +18,12 @@ resource "stackit_sqlserverflex_instance" "example" {
   name            = "example-instance"
   acl             = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
   backup_schedule = "00 00 * * *"
-  flavor = {
-    cpu = 4
-    ram = 16
-  }
+  flavor_id       = "4.16-Single"
   storage = {
     class = "premium-perf2-stackit"
     size  = 5
   }
   version = 2022
-}
-
-# Only use the import statement, if you want to import an existing sqlserverflex instance
-import {
-  to = stackit_sqlserverflex_instance.import-example
-  id = "${var.project_id},${var.region},${var.sql_instance_id}"
 }
 ```
 
@@ -41,21 +32,25 @@ import {
 
 ### Required
 
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `name` (String) Instance name.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
 
 ### Optional
 
-- `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
-- `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")
-- `options` (Attributes) (see [below for nested schema](#nestedatt--options))
+- `acl` (List of String, Deprecated) The Access Control List (ACL) for the SQLServer Flex instance.
+- `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *") Will be required in the future. Set a value to prevent breaking changes.
+- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String) The flavor ID of the SQLServer Flex instance.
+- `network` (Attributes) The network configuration of the instance. Will be required in the future. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--network))
+- `options` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--options))
 - `region` (String) The resource region. If not defined, the provider region is used.
-- `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
-- `version` (String)
+- `retention_days` (Number) The days (30 to 90) for how long the backup files should be stored before cleaned up. Will be required in the future. Set a value to prevent breaking changes.
+- `storage` (Attributes) The object containing information about the storage size and class. Will be required in the future. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--storage))
+- `version` (String) The sqlserver version used for the instance. Possible values are: `2022`. Will be required in the future. Set a value to prevent breaking changes.
 
 ### Read-Only
 
+- `edition` (String) Edition of the MSSQL server instance.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `replicas` (Number)
@@ -74,16 +69,25 @@ Read-Only:
 - `id` (String)
 
 
+<a id="nestedatt--network"></a>
+### Nested Schema for `network`
+
+Optional:
+
+- `access_scope` (String) The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. Possible values are: `PUBLIC`, `SNA`.
+- `acl` (List of String) List of IPV4 cidr.
+
+
 <a id="nestedatt--options"></a>
 ### Nested Schema for `options`
 
 Optional:
 
-- `retention_days` (Number)
+- `retention_days` (Number, Deprecated)
 
 Read-Only:
 
-- `edition` (String)
+- `edition` (String, Deprecated)
 
 
 <a id="nestedatt--storage"></a>
@@ -94,5 +98,19 @@ Optional:
 - `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
 ```bash
 stackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID
+``` Will be required in the future. Set a value to prevent breaking changes.
+- `size` (Number) The storage size in Gigabytes. Will be required in the future. Set a value to prevent breaking changes.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://developer.hashicorp.com/terraform/language/import) can be used with the ` + "`" + `id` + "`" + ` attribute, for example:
+
+```terraform
+# Only use the import statement, if you want to import an existing sqlserverflex instance
+import {
+  to = stackit_sqlserverflex_instance.import-example
+  id = "${var.project_id},${var.region},${var.sql_instance_id}"
+}
 ```
-- `size` (Number)

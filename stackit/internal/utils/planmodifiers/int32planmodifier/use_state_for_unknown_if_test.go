@@ -25,7 +25,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 			stateValue:  types.Int32Null(),
 			planValue:   types.Int32Unknown(),
 			configValue: types.Int32Value(10),
-			ifFunc: func(_ context.Context, _ string, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
 				// This should not be reached because the state is null
 				resp.UseStateForUnknown = true
 			},
@@ -36,7 +36,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 			stateValue:  types.Int32Value(5),
 			planValue:   types.Int32Value(10),
 			configValue: types.Int32Value(10),
-			ifFunc: func(_ context.Context, _ string, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
 				// This should not be reached because the plan is known
 				resp.UseStateForUnknown = true
 			},
@@ -47,7 +47,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 			stateValue:  types.Int32Value(5),
 			planValue:   types.Int32Unknown(),
 			configValue: types.Int32Unknown(),
-			ifFunc: func(_ context.Context, _ string, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
 				// This should not be reached
 				resp.UseStateForUnknown = true
 			},
@@ -58,7 +58,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 			stateValue:  types.Int32Value(5),
 			planValue:   types.Int32Unknown(),
 			configValue: types.Int32Null(), // Simulating computed only
-			ifFunc: func(_ context.Context, _ string, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
 				resp.UseStateForUnknown = false
 			},
 			expectedPlanValue: types.Int32Unknown(),
@@ -68,7 +68,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 			stateValue:  types.Int32Value(5),
 			planValue:   types.Int32Unknown(),
 			configValue: types.Int32Null(),
-			ifFunc: func(_ context.Context, _ string, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
 				resp.UseStateForUnknown = true
 			},
 			expectedPlanValue: types.Int32Value(5),
@@ -78,7 +78,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 			stateValue:  types.Int32Value(5),
 			planValue:   types.Int32Unknown(),
 			configValue: types.Int32Null(),
-			ifFunc: func(_ context.Context, _ string, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
+			ifFunc: func(_ context.Context, _ planmodifier.Int32Request, resp *UseStateForUnknownFuncResponse) {
 				resp.Diagnostics.AddError("Test Error", "Something went wrong")
 			},
 			expectedPlanValue: types.Int32Unknown(),
@@ -89,7 +89,7 @@ func TestUseStateForUnknownIf_PlanModifyInt32(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize the modifier
-			modifier := UseStateForUnknownIf(tt.ifFunc, "", "test description")
+			modifier := UseStateForUnknownIf(tt.ifFunc, "test description")
 
 			// Construct request
 			req := planmodifier.Int32Request{

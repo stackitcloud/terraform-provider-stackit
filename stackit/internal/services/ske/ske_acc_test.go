@@ -325,6 +325,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "egress_address_ranges.0"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "service_account_issuer"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
@@ -405,6 +406,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMax["network_control_plane_access_scope"])),
+					resource.TestCheckResourceAttrSet("data.stackit_ske_cluster.cluster", "service_account_issuer"),
 					// Access
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
@@ -495,6 +497,7 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "pod_address_ranges.#", "1"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "pod_address_ranges.0"),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
+					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "service_account_issuer"),
 					// Access
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),

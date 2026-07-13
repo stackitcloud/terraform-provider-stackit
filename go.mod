@@ -34,7 +34,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.0.0
 	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.1.0
-	github.com/stackitcloud/stackit-sdk-go/services/redis v1.0.0
+	github.com/stackitcloud/stackit-sdk-go/services/redis v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.1
@@ -44,7 +44,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.18.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.13.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.3.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0
@@ -290,7 +290,7 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect
-	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect

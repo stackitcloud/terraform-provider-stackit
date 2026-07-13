@@ -7,9 +7,3 @@ resource "stackit_cdn_custom_domain" "example" {
     private_key = "-----BEGIN RSA PRIVATE KEY-----\nY2VydGlmaWNhdGVfZGF0YQ==\n-----END RSA PRIVATE KEY---"
   }
 }
-
-# Only use the import statement, if you want to import an existing cdn custom domain
-import {
-  to = stackit_cdn_custom_domain.import-example
-  id = "${var.project_id},${var.distribution_id},${var.custom_domain_name}"
-}

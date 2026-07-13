@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -14,20 +15,18 @@ type UseStateForUnknownFuncResponse struct {
 }
 
 // UseStateForUnknownIfFunc is a conditional function used in UseStateForUnknownIf
-type UseStateForUnknownIfFunc func(context.Context, string, planmodifier.Int32Request, *UseStateForUnknownFuncResponse)
+type UseStateForUnknownIfFunc func(context.Context, planmodifier.Int32Request, *UseStateForUnknownFuncResponse)
 
 type useStateForUnknownIf struct {
-	ifFunc        UseStateForUnknownIfFunc
-	attributeName string
-	description   string
+	ifFunc      UseStateForUnknownIfFunc
+	description string
 }
 
 // UseStateForUnknownIf returns a plan modifier similar to UseStateForUnknown with a conditional
-func UseStateForUnknownIf(f UseStateForUnknownIfFunc, attributeName, description string) planmodifier.Int32 {
+func UseStateForUnknownIf(f UseStateForUnknownIfFunc, description string) planmodifier.Int32 {
 	return useStateForUnknownIf{
-		ifFunc:        f,
-		attributeName: attributeName,
-		description:   description,
+		ifFunc:      f,
+		description: description,
 	}
 }
 
@@ -59,7 +58,7 @@ func (m useStateForUnknownIf) PlanModifyInt32(ctx context.Context, req planmodif
 	// (https://github.com/hashicorp/terraform-plugin-framework/blob/44348af3923c82a93c64ae7dca906d9850ba956b/resource/schema/stringplanmodifier/use_state_for_unknown.go#L38)
 
 	funcResponse := &UseStateForUnknownFuncResponse{}
-	m.ifFunc(ctx, m.attributeName, req, funcResponse)
+	m.ifFunc(ctx, req, funcResponse)
 
 	resp.Diagnostics.Append(funcResponse.Diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -72,25 +71,25 @@ func (m useStateForUnknownIf) PlanModifyInt32(ctx context.Context, req planmodif
 }
 
 // Int32Changed sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func Int32Changed(ctx context.Context, attributeName string, request planmodifier.Int32Request, response *UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
-	dependencyPath := request.Path.ParentPath().AtName(attributeName)
+func Int32Changed(attributePath path.Path) UseStateForUnknownIfFunc {
+	return func(ctx context.Context, request planmodifier.Int32Request, response *UseStateForUnknownFuncResponse) {
+		var attributePlan types.Int32
+		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
+		response.Diagnostics.Append(diags...)
+		if response.Diagnostics.HasError() {
+			return
+		}
 
-	var attributePlan types.Int32
-	diags := request.Plan.GetAttribute(ctx, dependencyPath, &attributePlan)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+		var attributeState types.Int32
+		diags = request.State.GetAttribute(ctx, attributePath, &attributeState)
+		response.Diagnostics.Append(diags...)
+		if response.Diagnostics.HasError() {
+			return
+		}
 
-	var attributeState types.Int32
-	diags = request.State.GetAttribute(ctx, dependencyPath, &attributeState)
-	response.Diagnostics.Append(diags...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	if attributeState == attributePlan {
-		response.UseStateForUnknown = true
-		return
+		if attributeState == attributePlan {
+			response.UseStateForUnknown = true
+			return
+		}
 	}
 }

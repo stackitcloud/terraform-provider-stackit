@@ -28,8 +28,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/redis/v1api/wait"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/redis/v2api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -43,6 +43,7 @@ type Model struct {
 	Id                 types.String `tfsdk:"id"` // needed by TF
 	InstanceId         types.String `tfsdk:"instance_id"`
 	ProjectId          types.String `tfsdk:"project_id"`
+	Region             types.String `tfsdk:"region"`
 	CfGuid             types.String `tfsdk:"cf_guid"`
 	CfSpaceGuid        types.String `tfsdk:"cf_space_guid"`
 	DashboardUrl       types.String `tfsdk:"dashboard_url"`
@@ -114,7 +115,8 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client *redis.APIClient
+	client       *redis.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the resource type name.
@@ -124,12 +126,13 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := redisUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := redisUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -141,7 +144,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	descriptions := map[string]string{
 		"main":        "Redis instance resource schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`instance_id`\".",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
 		"instance_id": "ID of the Redis instance.",
 		"project_id":  "STACKIT project ID to which the instance is associated.",
 		"name":        "Instance name.",
@@ -149,6 +152,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"plan_name":   "The selected plan name.",
 		"plan_id":     "The selected plan ID.",
 		"parameters":  "Configuration parameters. Please note that removing a previously configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, explicitly set a new value for it.",
+		"region":      "The resource region. If not defined, the provider region is used.",
 	}
 
 	parametersDescriptions := map[string]string{
@@ -385,6 +389,15 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 		},
 	}
 }
@@ -401,7 +414,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
@@ -426,7 +441,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -443,18 +458,19 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  projectId,
 		"instance_id": instanceId,
+		"region":      region,
 	})
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -487,10 +503,13 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
+
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
@@ -504,14 +523,14 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(instanceResp, &model)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
 	// Compute and store values not present in the API response
-	err = loadPlanNameAndVersion(ctx, r.client, &model)
+	err = loadPlanNameAndVersion(ctx, r.client, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
 		return
@@ -539,8 +558,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	var parameters *parametersModel
 	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
@@ -565,7 +586,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId).PartialUpdateInstancePayload(*payload).Execute()
+	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -573,14 +594,14 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
 	}
 
 	// Map response body to schema
-	err = mapFields(waitResp, &model)
+	err = mapFields(waitResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -608,11 +629,13 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId).Execute()
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -625,7 +648,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -634,26 +657,27 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 // ImportState imports a resource into the Terraform state on success.
-// The expected format of the resource import identifier is: project_id,instance_id
+// The expected format of the resource import identifier is: project_id,region,instance_id
 func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, core.Separator)
 
-	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics,
 			"Error importing instance",
-			fmt.Sprintf("Expected import identifier with format: [project_id],[instance_id]  Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
 		)
 		return
 	}
 
 	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id":  idParts[0],
-		"instance_id": idParts[1],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
 	})
 	tflog.Info(ctx, "Redis instance state imported")
 }
 
-func mapFields(instance *redis.Instance, model *Model) error {
+func mapFields(instance *redis.Instance, model *Model, region string) error {
 	if instance == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -670,7 +694,8 @@ func mapFields(instance *redis.Instance, model *Model) error {
 		return fmt.Errorf("instance id not present")
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), instanceId)
+	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
 	model.InstanceId = types.StringValue(instanceId)
 	model.PlanId = types.StringValue(instance.PlanId)
 	model.CfGuid = types.StringValue(instance.CfGuid)
@@ -883,7 +908,8 @@ func toInstanceParams(parameters *parametersModel) (*redis.InstanceParameters, e
 
 func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	projectId := model.ProjectId.ValueString()
-	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
 	}
@@ -918,10 +944,10 @@ func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
 	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
 }
 
-func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model *Model) error {
+func loadPlanNameAndVersion(ctx context.Context, client *redis.APIClient, model *Model, region string) error {
 	projectId := model.ProjectId.ValueString()
 	planId := model.PlanId.ValueString()
-	res, err := client.DefaultAPI.ListOfferings(ctx, projectId).Execute()
+	res, err := client.DefaultAPI.ListOfferings(ctx, projectId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting Redis offerings: %w", err)
 	}

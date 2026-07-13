@@ -1,11 +1,11 @@
 variable "project_id" {}
 variable "name" {}
 variable "acl1" {}
-variable "flavor_cpu" {}
-variable "flavor_ram" {}
+variable "flavor_id" {}
 variable "storage_class" {}
 variable "storage_size" {}
-variable "options_retention_days" {}
+variable "access_scope" {}
+variable "retention_days" {}
 variable "backup_schedule" {}
 variable "username" {}
 variable "role" {}
@@ -15,19 +15,17 @@ variable "region" {}
 resource "stackit_sqlserverflex_instance" "instance" {
   project_id = var.project_id
   name       = var.name
-  acl        = [var.acl1]
-  flavor = {
-    cpu = var.flavor_cpu
-    ram = var.flavor_ram
-  }
+  flavor_id  = var.flavor_id
   storage = {
     class = var.storage_class
     size  = var.storage_size
   }
-  version = var.server_version
-  options = {
-    retention_days = var.options_retention_days
+  network = {
+    acl          = [var.acl1]
+    access_scope = var.access_scope
   }
+  retention_days  = var.retention_days
+  version         = var.server_version
   backup_schedule = var.backup_schedule
   region          = var.region
 }
