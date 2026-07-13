@@ -34,7 +34,7 @@ data "stackit_ske_cluster" "example" {
 ### Read-Only
 
 - `access` (Attributes) Configure access to the cluster (see [below for nested schema](#nestedatt--access))
-- `audit` (Attributes) Cluster audit log forwarding configuration. This feature is in private preview. Enabling audit logging is only possible for enabled accounts. (see [below for nested schema](#nestedatt--audit))
+- `audit` (Attributes) Cluster audit log forwarding configuration. (see [below for nested schema](#nestedatt--audit))
 - `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
