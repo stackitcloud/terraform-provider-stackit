@@ -289,6 +289,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.oauth.authority_url", testutil.ConvertConfigVariable(testDremioConfigVarsMax["authentication_oauth_authority_url"])),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.oauth.client_id", testutil.ConvertConfigVariable(testDremioConfigVarsMax["authentication_oauth_client_id"])),
+					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.oauth.client_secret", testutil.ConvertConfigVariable(testDremioConfigVarsMax["authentication_oauth_client_secret"])),
 					resource.TestCheckResourceAttrSet(dremioInstanceResource, "authentication.oauth.redirect_url"),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.oauth.jwt_claims.user_name", testutil.ConvertConfigVariable(testDremioConfigVarsMax["authentication_oauth_client_jwt_claims_user_name"])),
 					resource.TestCheckResourceAttr(dremioInstanceResource, "authentication.oauth.scope", testutil.ConvertConfigVariable(testDremioConfigVarsMax["authentication_oauth_scope"])),
