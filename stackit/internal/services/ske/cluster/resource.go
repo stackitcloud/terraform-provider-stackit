@@ -423,7 +423,7 @@ var descriptions = map[string]string{
 	"access_idp":          "Configure IDP",
 	"access_idp_enabled":  "Enable IDP integration for the cluster.",
 	"access_idp_type":     "The IDP type. Possible values: 'stackit'.",
-	"audit":               "Cluster audit log forwarding configuration. This feature is in private preview. Enabling audit logging is only possible for enabled accounts.",
+	"audit":               "Cluster audit log forwarding configuration.",
 	"audit_enabled":       "Enable cluster audit log forwarding to a Telemetry Router.",
 }
 
