@@ -47,12 +47,13 @@ func TestDelete_Success(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	state := token.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(name),
-		TokenId:    types.StringValue(tokenId.String()),
-		Labels:     types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Region:            types.StringValue(region),
+		Name:              types.StringValue(name),
+		TokenId:           types.StringValue(tokenId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.DeleteTokenRequest(tc.Ctx, schemaResp, state)
@@ -90,12 +91,13 @@ func TestDelete_DeleteTokenFailed(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	state := token.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(name),
-		TokenId:    types.StringValue(tokenId.String()),
-		Labels:     types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Region:            types.StringValue(region),
+		Name:              types.StringValue(name),
+		TokenId:           types.StringValue(tokenId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.DeleteTokenRequest(tc.Ctx, schemaResp, state)
@@ -144,12 +146,13 @@ func TestDelete_TokenNotFound(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	state := token.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(name),
-		TokenId:    types.StringValue(tokenId.String()),
-		Labels:     types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Region:            types.StringValue(region),
+		Name:              types.StringValue(name),
+		TokenId:           types.StringValue(tokenId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.DeleteTokenRequest(tc.Ctx, schemaResp, state)
@@ -202,12 +205,13 @@ func TestDelete_GetTokenFailed(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	state := token.Model{
-		ProjectId:  types.StringValue(projectId.String()),
-		InstanceId: types.StringValue(instanceId.String()),
-		Region:     types.StringValue(region),
-		Name:       types.StringValue(name),
-		TokenId:    types.StringValue(tokenId.String()),
-		Labels:     types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Region:            types.StringValue(region),
+		Name:              types.StringValue(name),
+		TokenId:           types.StringValue(tokenId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.DeleteTokenRequest(tc.Ctx, schemaResp, state)
