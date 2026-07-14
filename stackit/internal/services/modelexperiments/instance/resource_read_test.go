@@ -65,7 +65,6 @@ func TestRead_Success(t *testing.T) {
 		Labels:                     types.MapNull(types.StringType),
 		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
 		BucketName:                 types.StringValue(bucketName),
-		State:                      types.StringValue("active"),
 		Url:                        types.StringValue(url),
 	}
 
@@ -99,9 +98,6 @@ func TestRead_Success(t *testing.T) {
 	}
 	if description != refreshedState.Description.ValueString() {
 		t.Fatalf("expected %v, got %v", description, refreshedState.Description.ValueString())
-	}
-	if refreshedState.State.ValueString() != "active" {
-		t.Fatalf("expected %v, got %v", "active", refreshedState.State.ValueString())
 	}
 	if url != refreshedState.Url.ValueString() {
 		t.Fatalf("expected %v, got %v", url, refreshedState.Url.ValueString())
@@ -248,7 +244,6 @@ func TestRead_GetRequestFailed(t *testing.T) {
 		Labels:                     types.MapNull(types.StringType),
 		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
 		BucketName:                 types.StringValue(bucketName),
-		State:                      types.StringValue("active"),
 		Url:                        types.StringValue(url),
 	}
 

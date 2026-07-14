@@ -68,7 +68,6 @@ func TestUpdate_Success(t *testing.T) {
 		Labels:                     types.MapNull(types.StringType),
 		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
 		BucketName:                 types.StringValue(bucketName),
-		State:                      types.StringValue("active"),
 		Url:                        types.StringValue(url),
 	}
 
@@ -111,9 +110,6 @@ func TestUpdate_Success(t *testing.T) {
 	}
 	if descriptionUpdated != finalState.Description.ValueString() {
 		t.Fatalf("expected %v, got %v", descriptionUpdated, finalState.Description.ValueString())
-	}
-	if finalState.State.ValueString() != "active" {
-		t.Fatalf("expected %v, got %v", "active", finalState.State.ValueString())
 	}
 	if url != finalState.Url.ValueString() {
 		t.Fatalf("expected %v, got %v", url, finalState.Url.ValueString())
@@ -170,7 +166,6 @@ func TestUpdate_InstanceNotFound(t *testing.T) {
 		Labels:                     types.MapNull(types.StringType),
 		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
 		BucketName:                 types.StringValue(bucketName),
-		State:                      types.StringValue("active"),
 		Url:                        types.StringValue(url),
 	}
 
@@ -241,7 +236,6 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 		Labels:                     types.MapNull(types.StringType),
 		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
 		BucketName:                 types.StringValue(bucketName),
-		State:                      types.StringValue("active"),
 		Url:                        types.StringValue(url),
 	}
 
@@ -283,9 +277,6 @@ func TestUpdate_InstanceUpdateError(t *testing.T) {
 	}
 	if description != finalState.Description.ValueString() {
 		t.Fatalf("expected %v, got %v", description, finalState.Description.ValueString())
-	}
-	if finalState.State.ValueString() != "active" {
-		t.Fatalf("expected %v, got %v", "active", finalState.State.ValueString())
 	}
 	if url != finalState.Url.ValueString() {
 		t.Fatalf("expected %v, got %v", url, finalState.Url.ValueString())
