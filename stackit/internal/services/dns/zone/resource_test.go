@@ -308,9 +308,10 @@ func TestToCreatePayload(t *testing.T) {
 				DnsName: types.StringValue("DnsName"),
 			},
 			&dns.CreateZonePayload{
-				Name:      "Name",
-				DnsName:   "DnsName",
-				Primaries: []string{},
+				Name:       "Name",
+				DnsName:    "DnsName",
+				Primaries:  []string{},
+				Extensions: &dns.ZoneExtensions{},
 			},
 			true,
 		},
@@ -400,7 +401,8 @@ func TestToPayloadUpdate(t *testing.T) {
 				Name: types.StringValue("Name"),
 			},
 			&dns.PartialUpdateZonePayload{
-				Name: new("Name"),
+				Name:       new("Name"),
+				Extensions: &dns.ZoneExtensions{},
 			},
 			true,
 		},
@@ -424,6 +426,12 @@ func TestToPayloadUpdate(t *testing.T) {
 				DefaultTTL:    types.Int32Value(4534534),
 				NegativeCache: types.Int32Value(-4534534),
 				IsReverseZone: types.BoolValue(true),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"observability": types.ObjectValueMust(observabilityTypes, map[string]attr.Value{
+						"observability_instance_id": types.StringValue("some UUID"),
+						"state":                     types.StringNull(),
+					}),
+				}),
 			},
 			&dns.PartialUpdateZonePayload{
 				Name:          new("Name"),
@@ -435,6 +443,11 @@ func TestToPayloadUpdate(t *testing.T) {
 				ExpireTime:    new(int32(5)),
 				DefaultTTL:    new(int32(4534534)),
 				NegativeCache: new(int32(-4534534)),
+				Extensions: &dns.ZoneExtensions{
+					ObservabilityExtension: &dns.ZoneObservabilityExtension{
+						ObservabilityInstanceId: "some UUID",
+					},
+				},
 			},
 			true,
 		},

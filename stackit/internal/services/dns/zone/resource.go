@@ -720,7 +720,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*dns.CreateZonePayload,
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
 
-	ext, err := getExtensionsPayload(ctx, model)
+	ext, err := toExtensionsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("could not map extensions to create payload: %w", err)
 	}
@@ -747,7 +747,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*dns.PartialUpdateZoneP
 		return nil, fmt.Errorf("nil model")
 	}
 
-	ext, err := getExtensionsPayload(ctx, model)
+	ext, err := toExtensionsPayload(ctx, model)
 	if err != nil {
 		return nil, fmt.Errorf("could not map extensions to update payload: %w", err)
 	}
@@ -766,27 +766,28 @@ func toUpdatePayload(ctx context.Context, model *Model) (*dns.PartialUpdateZoneP
 	}, nil
 }
 
-// getExtensionsPayload reads the extensions from the model and maps it to [dns.ZoneExtensions].
+// toExtensionsPayload reads the extensions from the model and maps it to [dns.ZoneExtensions].
 // Returns nil if the model does not provide any extensions.
-func getExtensionsPayload(ctx context.Context, model *Model) (*dns.ZoneExtensions, error) {
+func toExtensionsPayload(ctx context.Context, model *Model) (*dns.ZoneExtensions, error) {
 	if !utils.IsUndefined(model.Extensions) {
 		ex := extensions{}
 		diags := model.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return nil, fmt.Errorf("failed to map extensions to domain type: %v", diags.Errors())
+			return nil, fmt.Errorf("failed to map extensions to domain type: %w", core.DiagsToError(diags))
 		}
 		if !utils.IsUndefined(ex.Observability) {
 			obs := observability{}
 			diags = ex.Observability.As(ctx, &obs, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return nil, fmt.Errorf("failed to map extensions to domain type: %v", diags.Errors())
+				return nil, fmt.Errorf("failed to map extensions to domain type: %w", core.DiagsToError(diags))
 			}
-			observabilityExtension := dns.NewZoneObservabilityExtension(obs.InstanceId.ValueString())
 			return &dns.ZoneExtensions{
-				ObservabilityExtension: observabilityExtension,
+				ObservabilityExtension: &dns.ZoneObservabilityExtension{
+					ObservabilityInstanceId: obs.InstanceId.ValueString(),
+				},
 			}, nil
 		}
 		return &dns.ZoneExtensions{}, nil
 	}
-	return nil, nil
+	return &dns.ZoneExtensions{}, nil
 }

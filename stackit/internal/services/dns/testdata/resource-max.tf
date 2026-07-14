@@ -7,7 +7,6 @@ variable "contact_email" {}
 variable "default_ttl" {}
 variable "description" {}
 variable "expire_time" {}
-variable "ext_observability_instance_id" {}
 variable "is_reverse_zone" {}
 # variable "negative_cache" {}
 variable "primaries" {}
