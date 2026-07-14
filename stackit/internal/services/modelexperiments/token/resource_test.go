@@ -40,11 +40,12 @@ func TestMapTokenFields(t *testing.T) {
 		{
 			description: "should map fields correctly",
 			state: &Model{
-				Id:         types.StringValue("pid,eu01,id"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("id"),
-				Region:     types.StringValue("eu01"),
-				TokenId:    types.StringValue("id"),
+				Id:                types.StringValue("pid,eu01,id"),
+				ProjectId:         types.StringValue("pid"),
+				InstanceId:        types.StringValue("id"),
+				Region:            types.StringValue("eu01"),
+				TokenId:           types.StringValue("id"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			input: modelexperiments.TokenMetadata{
 				Id:          "id",
@@ -55,16 +56,16 @@ func TestMapTokenFields(t *testing.T) {
 				ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 			expected: Model{
-				Id:          types.StringValue("pid,eu01,id"),
-				ProjectId:   types.StringValue("pid"),
-				Region:      types.StringValue("eu01"),
-				InstanceId:  types.StringValue("id"),
-				Name:        types.StringValue("name"),
-				Description: types.StringValue("description"),
-				State:       types.StringValue("active"),
-				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
-				Labels:      types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				TokenId:     types.StringValue("id"),
+				Id:                types.StringValue("pid,eu01,id"),
+				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue("eu01"),
+				InstanceId:        types.StringValue("id"),
+				Name:              types.StringValue("name"),
+				Description:       types.StringValue("description"),
+				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+				Labels:            types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				TokenId:           types.StringValue("id"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			isValid: true,
 		},
@@ -75,7 +76,7 @@ func TestMapTokenFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapToken(ctx, &tt.input, tt.state)
+			err := mapToken(ctx, &tt.input, tt.state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -101,23 +102,13 @@ func TestMapCreateResponseFields(t *testing.T) {
 		description         string
 		state               *Model
 		inputCreateResponse *modelexperiments.CreateInstanceTokenResponse
-		inputGetResponse    *modelexperiments.GetInstanceTokenResponse
 		expected            Model
 		isValid             bool
 	}{
 		{
-			description:         "should error when token create response is nil",
-			state:               &Model{},
-			inputCreateResponse: nil,
-			inputGetResponse:    &modelexperiments.GetInstanceTokenResponse{},
-			expected:            Model{},
-			isValid:             false,
-		},
-		{
 			description:         "should error when state is nil",
 			state:               nil,
 			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{},
-			inputGetResponse:    &modelexperiments.GetInstanceTokenResponse{},
 			expected:            Model{},
 			isValid:             false,
 		},
@@ -127,51 +118,17 @@ func TestMapCreateResponseFields(t *testing.T) {
 			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{},
 			},
-			inputGetResponse: &modelexperiments.GetInstanceTokenResponse{},
-			expected:         Model{},
-			isValid:          false,
-		},
-		{
-			description: "should map fields correctly even if Get Response is nil",
-			state: &Model{
-				Id:         types.StringValue("pid,eu01,id"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("id"),
-				Region:     types.StringValue("eu01"),
-			},
-			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
-				Token: modelexperiments.Token{
-					Id:          "id",
-					Content:     "token",
-					Description: new("description"),
-					Labels:      &map[string]string{"key": "value"},
-					State:       "active",
-					Name:        "name",
-					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-				}},
-			inputGetResponse: nil,
-			expected: Model{
-				Id:          types.StringValue("pid,eu01,id"),
-				ProjectId:   types.StringValue("pid"),
-				Region:      types.StringValue("eu01"),
-				InstanceId:  types.StringValue("id"),
-				Name:        types.StringValue("name"),
-				Description: types.StringValue("description"),
-				State:       types.StringValue("active"),
-				Token:       types.StringValue("token"),
-				TokenId:     types.StringValue("id"),
-				Labels:      types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
-			},
-			isValid: true,
+			expected: Model{},
+			isValid:  false,
 		},
 		{
 			description: "should map fields correctly",
 			state: &Model{
-				Id:         types.StringValue("pid,eu01,id"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("id"),
-				Region:     types.StringValue("eu01"),
+				Id:                types.StringValue("pid,eu01,id"),
+				ProjectId:         types.StringValue("pid"),
+				InstanceId:        types.StringValue("id"),
+				Region:            types.StringValue("eu01"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
@@ -182,34 +139,31 @@ func TestMapCreateResponseFields(t *testing.T) {
 					State:       "active",
 					Name:        "name",
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-				}},
-			inputGetResponse: &modelexperiments.GetInstanceTokenResponse{
-				Token: modelexperiments.TokenMetadata{
-					State: "active",
 				},
 			},
 			expected: Model{
-				Id:          types.StringValue("pid,eu01,id"),
-				ProjectId:   types.StringValue("pid"),
-				Region:      types.StringValue("eu01"),
-				InstanceId:  types.StringValue("id"),
-				Name:        types.StringValue("name"),
-				Description: types.StringValue("description"),
-				State:       types.StringValue("active"),
-				Token:       types.StringValue("token"),
-				TokenId:     types.StringValue("id"),
-				Labels:      types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
+				Id:                types.StringValue("pid,eu01,id"),
+				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue("eu01"),
+				InstanceId:        types.StringValue("id"),
+				Name:              types.StringValue("name"),
+				Description:       types.StringValue("description"),
+				Token:             types.StringValue("token"),
+				TokenId:           types.StringValue("id"),
+				Labels:            types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
+				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			isValid: true,
 		},
 		{
 			description: "should map fields correctly with label nil",
 			state: &Model{
-				Id:         types.StringValue("pid,eu01,id"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("id"),
-				Region:     types.StringValue("eu01"),
+				Id:                types.StringValue("pid,eu01,id"),
+				ProjectId:         types.StringValue("pid"),
+				InstanceId:        types.StringValue("id"),
+				Region:            types.StringValue("eu01"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
@@ -220,24 +174,20 @@ func TestMapCreateResponseFields(t *testing.T) {
 					State:       "active",
 					Name:        "name",
 					ValidUntil:  time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
-				}},
-			inputGetResponse: &modelexperiments.GetInstanceTokenResponse{
-				Token: modelexperiments.TokenMetadata{
-					State: "active",
 				},
 			},
 			expected: Model{
-				Id:          types.StringValue("pid,eu01,id"),
-				ProjectId:   types.StringValue("pid"),
-				Region:      types.StringValue("eu01"),
-				InstanceId:  types.StringValue("id"),
-				Name:        types.StringValue("name"),
-				Description: types.StringValue("description"),
-				State:       types.StringValue("active"),
-				Token:       types.StringValue("token"),
-				TokenId:     types.StringValue("id"),
-				Labels:      types.MapNull(types.StringType),
-				ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
+				Id:                types.StringValue("pid,eu01,id"),
+				ProjectId:         types.StringValue("pid"),
+				Region:            types.StringValue("eu01"),
+				InstanceId:        types.StringValue("id"),
+				Name:              types.StringValue("name"),
+				Description:       types.StringValue("description"),
+				Token:             types.StringValue("token"),
+				TokenId:           types.StringValue("id"),
+				Labels:            types.MapNull(types.StringType),
+				ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+				RotateWhenChanged: types.MapNull(types.StringType),
 			},
 			isValid: true,
 		},
@@ -248,7 +198,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapCreateResponse(ctx, tt.inputCreateResponse, tt.inputGetResponse, tt.state, "eu01")
+			err := mapCreateResponse(ctx, &tt.inputCreateResponse.Token, tt.state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

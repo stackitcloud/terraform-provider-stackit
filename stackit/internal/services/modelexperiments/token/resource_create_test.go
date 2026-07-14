@@ -70,12 +70,13 @@ func TestCreate_Success(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.CreateInstanceTokenRequest(tc.Ctx, schemaResp, model)
@@ -112,9 +113,6 @@ func TestCreate_Success(t *testing.T) {
 	}
 	if createdState.Id != tfId {
 		t.Fatalf("Id mismatch: got %v, want %v", createdState.Id.ValueString(), tfId)
-	}
-	if createdState.State.ValueString() != "active" {
-		t.Fatalf("State mismatch: got %v, want active", createdState.State.ValueString())
 	}
 	if createdState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
 		t.Fatalf("ValidUntil mismatch: got %v, want 2099-01-01T00:00:00Z", createdState.ValidUntil.ValueString())
@@ -163,12 +161,13 @@ func TestCreate_TokenIdEmpty(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.CreateInstanceTokenRequest(tc.Ctx, schemaResp, model)
@@ -216,12 +215,13 @@ func TestCreate_CreateTokenFailure(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.CreateInstanceTokenRequest(tc.Ctx, schemaResp, model)
@@ -254,7 +254,6 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	tokenId := uuid.New()
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	content := "token"
-	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
 		Token: modelexperiments.Token{
@@ -289,12 +288,13 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.CreateInstanceTokenRequest(tc.Ctx, schemaResp, model)
@@ -318,11 +318,11 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	if createdState.Region.ValueString() != region {
 		t.Fatalf("Region mismatch: got %v, want %v", createdState.Region.ValueString(), region)
 	}
-	if createdState.Name.ValueString() != name {
-		t.Fatalf("Name mismatch: got %v, want %v", createdState.Name.ValueString(), name)
+	if createdState.Name.ValueString() != "" {
+		t.Fatalf("Name mismatch: got %v, want %v", createdState.Name.ValueString(), "")
 	}
-	if createdState.Description.ValueString() != description {
-		t.Fatalf("Description mismatch: got %v, want %v", createdState.Description.ValueString(), description)
+	if createdState.Description.ValueString() != "" {
+		t.Fatalf("Description mismatch: got %v, want %v", createdState.Description.ValueString(), "")
 	}
 	if createdState.InstanceId.ValueString() != instanceId.String() {
 		t.Fatalf("InstanceId mismatch: got %v, want %v", createdState.InstanceId.ValueString(), instanceId.String())
@@ -330,19 +330,16 @@ func TestCreate_GetTokenFailure(t *testing.T) {
 	if createdState.TokenId.ValueString() != tokenId.String() {
 		t.Fatalf("TokenId mismatch: got %v, want %v", createdState.TokenId.ValueString(), tokenId.String())
 	}
-	if createdState.Id != tfId {
-		t.Fatalf("Id mismatch: got %v, want %v", createdState.Id.ValueString(), tfId)
+	if createdState.Id.ValueString() != "" {
+		t.Fatalf("Id mismatch: got %v, want %v", createdState.Id.ValueString(), "")
 	}
-	if createdState.State.ValueString() != "creating" {
-		t.Fatalf("State mismatch: got %v, want creating", createdState.State.ValueString())
-	}
-	if createdState.ValidUntil.ValueString() != "2099-01-01T00:00:00Z" {
-		t.Fatalf("ValidUntil mismatch: got %v, want 2099-01-01T00:00:00Z", createdState.ValidUntil.ValueString())
+	if createdState.ValidUntil.ValueString() != "" {
+		t.Fatalf("ValidUntil mismatch: got %v, want %v", createdState.ValidUntil.ValueString(), "")
 	}
 	if !createdState.Labels.IsNull() {
 		t.Fatalf("Labels should be null")
 	}
-	if createdState.Token.ValueString() != content {
-		t.Fatalf("Token mismatch: got %v, want %v", createdState.Token.ValueString(), content)
+	if createdState.Token.ValueString() != "" {
+		t.Fatalf("Token mismatch: got %v, want %v", createdState.Token.ValueString(), "")
 	}
 }

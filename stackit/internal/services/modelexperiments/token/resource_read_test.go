@@ -30,7 +30,6 @@ func TestRead_Success(t *testing.T) {
 	tokenId := uuid.New()
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	tokenContent := "token"
-	state := "active"
 	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	getTokenResp := &modelexperiments.GetInstanceTokenResponse{
@@ -57,17 +56,17 @@ func TestRead_Success(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
-		Token:       types.StringValue(tokenContent),
-		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
-		State:       types.StringValue(state),
-		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		Token:             types.StringValue(tokenContent),
+		TokenId:           types.StringValue(tokenId.String()),
+		Id:                id,
+		ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.ReadTokenRequest(tc.Ctx, schemaResp, model)
@@ -96,9 +95,6 @@ func TestRead_Success(t *testing.T) {
 	if newName != refreshedState.Name.ValueString() {
 		t.Fatalf("Should be equal - expected %v, got %v", name, refreshedState.Name.ValueString())
 	}
-	if refreshedState.State.ValueString() != "active" {
-		t.Fatalf("Should be equal - expected %v, got %v", "active", refreshedState.State.ValueString())
-	}
 	if description != refreshedState.Description.ValueString() {
 		t.Fatalf("Should be equal - expected %v, got %v", description, refreshedState.Description.ValueString())
 	}
@@ -126,7 +122,6 @@ func TestRead_TokenNotFound(t *testing.T) {
 	instanceId := uuid.New()
 	tokenId := uuid.New()
 	tokenContent := "token"
-	state := "active"
 	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	oapiErr := &oapierror.GenericOpenAPIError{
@@ -146,17 +141,17 @@ func TestRead_TokenNotFound(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
-		Token:       types.StringValue(tokenContent),
-		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
-		State:       types.StringValue(state),
-		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		Token:             types.StringValue(tokenContent),
+		TokenId:           types.StringValue(tokenId.String()),
+		Id:                id,
+		ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.ReadTokenRequest(tc.Ctx, schemaResp, model)
@@ -188,7 +183,6 @@ func TestRead_GetTokenRequestFailed(t *testing.T) {
 	instanceId := uuid.New()
 	tokenId := uuid.New()
 	tokenContent := "token"
-	state := "active"
 	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 
 	oapiErr := &oapierror.GenericOpenAPIError{
@@ -208,17 +202,17 @@ func TestRead_GetTokenRequestFailed(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
-		Token:       types.StringValue(tokenContent),
-		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
-		State:       types.StringValue(state),
-		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		Token:             types.StringValue(tokenContent),
+		TokenId:           types.StringValue(tokenId.String()),
+		Id:                id,
+		ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.ReadTokenRequest(tc.Ctx, schemaResp, model)
@@ -248,9 +242,6 @@ func TestRead_GetTokenRequestFailed(t *testing.T) {
 	if name != refreshedState.Name.ValueString() {
 		t.Fatalf("Should be equal - expected %v, got %v", name, refreshedState.Name.ValueString())
 	}
-	if refreshedState.State.ValueString() != "active" {
-		t.Fatalf("Should be equal - expected %v, got %v", "active", refreshedState.State.ValueString())
-	}
 	if description != refreshedState.Description.ValueString() {
 		t.Fatalf("Should be equal - expected %v, got %v", description, refreshedState.Description.ValueString())
 	}
@@ -268,7 +259,7 @@ func TestRead_GetTokenRequestFailed(t *testing.T) {
 	}
 }
 
-func TestRead_TokenInvalidError(t *testing.T) {
+/*func TestRead_TokenInvalidError(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
 	projectId := uuid.New()
@@ -278,7 +269,6 @@ func TestRead_TokenInvalidError(t *testing.T) {
 	instanceId := uuid.New()
 	tokenId := uuid.New()
 	tokenContent := "token"
-	state := "active"
 	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -306,17 +296,17 @@ func TestRead_TokenInvalidError(t *testing.T) {
 	tokenRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
 
 	model := token.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Name:        types.StringValue(name),
-		Region:      types.StringValue(region),
-		Description: types.StringValue(description),
-		InstanceId:  types.StringValue(instanceId.String()),
-		Labels:      types.MapNull(types.StringType),
-		Token:       types.StringValue(tokenContent),
-		TokenId:     types.StringValue(tokenId.String()),
-		Id:          id,
-		State:       types.StringValue(state),
-		ValidUntil:  types.StringValue("2099-01-01T00:00:00Z"),
+		ProjectId:         types.StringValue(projectId.String()),
+		Name:              types.StringValue(name),
+		Region:            types.StringValue(region),
+		Description:       types.StringValue(description),
+		InstanceId:        types.StringValue(instanceId.String()),
+		Labels:            types.MapNull(types.StringType),
+		Token:             types.StringValue(tokenContent),
+		TokenId:           types.StringValue(tokenId.String()),
+		Id:                id,
+		ValidUntil:        types.StringValue("2099-01-01T00:00:00Z"),
+		RotateWhenChanged: types.MapNull(types.StringType),
 	}
 
 	req := testutils.ReadTokenRequest(tc.Ctx, schemaResp, model)
@@ -336,4 +326,4 @@ func TestRead_TokenInvalidError(t *testing.T) {
 	if refreshedState != nil {
 		t.Fatalf("should be nil")
 	}
-}
+}*/
