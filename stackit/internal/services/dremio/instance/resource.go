@@ -47,8 +47,7 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 
 	// Required Fields
-	DisplayName    types.String         `tfsdk:"display_name"`
-	Authentication *AuthenticationModel `tfsdk:"authentication"`
+	DisplayName types.String `tfsdk:"display_name"`
 
 	// Optional Fields
 	Description types.String `tfsdk:"description"`
@@ -61,7 +60,8 @@ type Model struct {
 type InstanceModel struct {
 	Model
 
-	Timeouts timeouts.Value `tfsdk:"timeouts"`
+	Authentication *AuthenticationModel `tfsdk:"authentication"`
+	Timeouts       timeouts.Value       `tfsdk:"timeouts"`
 }
 
 // AuthenticationModel maps the nested authentication block.
@@ -413,7 +413,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// prepare the payload struct for the create instance request
-	payload, err := toCreatePayload(&model.Model)
+	payload, err := toCreatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -447,7 +447,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	err = mapFields(instanceResp, &model.Model, region)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -500,7 +500,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(instanceResp, &model.Model, region)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -537,7 +537,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(&model.Model)
+	payload, err := toUpdatePayload(&model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -571,7 +571,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	err = mapFields(instanceResp, &model.Model, region)
+	err = mapFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -649,7 +649,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Dremio instance state imported")
 }
 
-func mapFields(instanceResp *dremioSdk.DremioResponse, model *Model, region string) error {
+func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel, region string) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -657,11 +657,15 @@ func mapFields(instanceResp *dremioSdk.DremioResponse, model *Model, region stri
 		return fmt.Errorf("model input is nil")
 	}
 
-	err := mapModelFields(instanceResp, model, region)
+	err := mapModelFields(instanceResp, &model.Model, region)
 	if err != nil {
 		return fmt.Errorf("failed to map Model fields")
 	}
-	err = mapAuthentication(instanceResp, model)
+
+	if model.Authentication == nil {
+		model.Authentication = new(AuthenticationModel)
+	}
+	err = mapAuthentication(instanceResp, model.Authentication)
 	if err != nil {
 		return fmt.Errorf("failed to map Authentication fields")
 	}
@@ -703,37 +707,41 @@ func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model, region
 	return nil
 }
 
-func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) error {
-	if model == nil {
-		return fmt.Errorf("model input is nil")
+func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *AuthenticationModel) error {
+	if instanceResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if auth == nil {
+		return fmt.Errorf("auth input is nil")
 	}
 
-	authModel := AuthenticationModel{
-		Type: types.StringValue(string(instanceResp.Authentication.Type)),
-	}
+	auth.Type = types.StringValue(string(instanceResp.Authentication.Type))
 
 	if instanceResp.Authentication.Azuread != nil {
-		azureADResp := instanceResp.Authentication.Azuread
-		authModel.AzureAD = &AzureADModel{
-			AuthorityUrl: types.StringValue(azureADResp.AuthorityUrl),
-			ClientId:     types.StringValue(azureADResp.ClientId),
-			ClientSecret: types.StringValue(azureADResp.ClientSecret),
-			RedirectUrl:  types.StringPointerValue(azureADResp.RedirectUrl),
+		if auth.AzureAD == nil {
+			auth.AzureAD = new(AzureADModel)
 		}
+
+		azureADResp := instanceResp.Authentication.Azuread
+		azureADModel := auth.AzureAD
+
+		azureADModel.AuthorityUrl = types.StringValue(azureADResp.AuthorityUrl)
+		azureADModel.ClientId = types.StringValue(azureADResp.ClientId)
+		azureADModel.RedirectUrl = types.StringPointerValue(azureADResp.RedirectUrl)
 	}
 
 	if instanceResp.Authentication.Oauth != nil {
-		oauthResp := instanceResp.Authentication.Oauth
-		oauthModel := &OAuthModel{
-			AuthorityUrl: types.StringValue(oauthResp.AuthorityUrl),
-			ClientId:     types.StringValue(oauthResp.ClientId),
-			ClientSecret: types.StringValue(oauthResp.ClientSecret),
-			Scope:        types.StringPointerValue(oauthResp.Scope),
-			RedirectUrl:  types.StringPointerValue(oauthResp.RedirectUrl),
-			JwtClaims: &JwtClaimsModel{
-				UserName: types.StringValue(oauthResp.JwtClaims.UserName),
-			},
+		if auth.OAuth == nil {
+			auth.OAuth = new(OAuthModel)
 		}
+		oauthResp := instanceResp.Authentication.Oauth
+		oauthModel := auth.OAuth
+
+		oauthModel.AuthorityUrl = types.StringValue(oauthResp.AuthorityUrl)
+		oauthModel.ClientId = types.StringValue(oauthResp.ClientId)
+		oauthModel.Scope = types.StringPointerValue(oauthResp.Scope)
+		oauthModel.RedirectUrl = types.StringPointerValue(oauthResp.RedirectUrl)
+		oauthModel.JwtClaims = &JwtClaimsModel{UserName: types.StringValue(oauthResp.JwtClaims.UserName)}
 
 		if len(oauthResp.Parameters) > 0 {
 			var params []AuthParameterModel
@@ -745,17 +753,13 @@ func mapAuthentication(instanceResp *dremioSdk.DremioResponse, model *Model) err
 			}
 			oauthModel.Parameters = params
 		}
-
-		authModel.OAuth = oauthModel
 	}
-
-	model.Authentication = &authModel
 
 	return nil
 }
 
 // Build UpdateDremioInstancePayload from provider's model
-func toUpdatePayload(model *Model) (*dremioSdk.UpdateDremioInstancePayload, error) {
+func toUpdatePayload(model *InstanceModel) (*dremioSdk.UpdateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -773,7 +777,7 @@ func toUpdatePayload(model *Model) (*dremioSdk.UpdateDremioInstancePayload, erro
 }
 
 // Build CreateDremioInstancePayload from provider's model
-func toCreatePayload(model *Model) (*dremioSdk.CreateDremioInstancePayload, error) {
+func toCreatePayload(model *InstanceModel) (*dremioSdk.CreateDremioInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -790,7 +794,7 @@ func toCreatePayload(model *Model) (*dremioSdk.CreateDremioInstancePayload, erro
 	}, nil
 }
 
-func parseAuthentication(model *Model) (*dremioSdk.Authentication, error) {
+func parseAuthentication(model *InstanceModel) (*dremioSdk.Authentication, error) {
 	// API only saves the block of the stated type. The other one is omitted.
 	// Keeping the block in TF leads to inconsistent state. Therefore we have
 	// make sure the type matches the existing block.
@@ -827,7 +831,7 @@ func parseAuthentication(model *Model) (*dremioSdk.Authentication, error) {
 		oAuthPayload := &dremioSdk.Oauth{
 			AuthorityUrl: model.Authentication.OAuth.AuthorityUrl.ValueString(),
 			ClientId:     model.Authentication.OAuth.ClientId.ValueString(),
-			ClientSecret: model.Authentication.OAuth.ClientSecret.ValueString(),
+			ClientSecret: model.Authentication.OAuth.ClientSecret.ValueStringPointer(),
 			JwtClaims: dremioSdk.OauthJwtClaims{
 				UserName: model.Authentication.OAuth.JwtClaims.UserName.ValueString(),
 			},
@@ -852,7 +856,7 @@ func parseAuthentication(model *Model) (*dremioSdk.Authentication, error) {
 		azureAdPayload := &dremioSdk.Azuread{
 			AuthorityUrl: model.Authentication.AzureAD.AuthorityUrl.ValueString(),
 			ClientId:     model.Authentication.AzureAD.ClientId.ValueString(),
-			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueString(),
+			ClientSecret: model.Authentication.AzureAD.ClientSecret.ValueStringPointer(),
 			RedirectUrl:  model.Authentication.AzureAD.RedirectUrl.ValueStringPointer(),
 		}
 		return &dremioSdk.Authentication{

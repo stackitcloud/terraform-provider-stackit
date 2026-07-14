@@ -16,16 +16,18 @@ func TestMapFields(t *testing.T) {
 	instanceId := uuid.New().String()
 	tests := []struct {
 		description string
-		state       *Model
+		state       *InstanceModel
 		input       *dremioSdk.DremioResponse
-		expected    *Model
+		expected    *InstanceModel
 		wantErr     bool
 	}{
 		{
 			"all_fields_filled",
-			&Model{
-				Region:    types.StringValue("rid"),
-				ProjectId: types.StringValue("pid"),
+			&InstanceModel{
+				Model: Model{
+					Region:    types.StringValue("rid"),
+					ProjectId: types.StringValue("pid"),
+				},
 			},
 			&dremioSdk.DremioResponse{
 				Id:          instanceId,
@@ -36,13 +38,11 @@ func TestMapFields(t *testing.T) {
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
 						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
-						ClientSecret: "oauth-secret",
 						JwtClaims: dremioSdk.OauthJwtClaims{
 							UserName: "oauth-username",
 						},
@@ -63,27 +63,42 @@ func TestMapFields(t *testing.T) {
 					Ui:          "ui",
 				},
 			},
-			&Model{
-				Id: types.StringValue("pid,rid," + instanceId),
+			&InstanceModel{
+				Model: Model{
+					Id: types.StringValue("pid,rid," + instanceId),
 
-				ProjectId:  types.StringValue("pid"),
-				Region:     types.StringValue("rid"),
-				InstanceId: types.StringValue(instanceId),
+					ProjectId:  types.StringValue("pid"),
+					Region:     types.StringValue("rid"),
+					InstanceId: types.StringValue(instanceId),
 
-				DisplayName: types.StringValue("greatName"),
-				Description: types.StringValue("minimal-required-values"),
+					DisplayName: types.StringValue("greatName"),
+					Description: types.StringValue("minimal-required-values"),
+
+					Endpoints: types.ObjectValueMust(
+						map[string]attr.Type{
+							"arrow_flight": types.StringType,
+							"catalog":      types.StringType,
+							"ui":           types.StringType,
+						},
+						map[string]attr.Value{
+							"arrow_flight": types.StringValue("flight"),
+							"catalog":      types.StringValue("catalog"),
+							"ui":           types.StringValue("ui"),
+						},
+					),
+				},
 
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
 						ClientId:     types.StringValue("azure-client"),
-						ClientSecret: types.StringValue("azure-secret"),
+						ClientSecret: types.StringNull(),
 						RedirectUrl:  types.StringValue("azure-redirect"),
 					},
 					OAuth: &OAuthModel{
 						AuthorityUrl: types.StringValue("oauth-authority"),
 						ClientId:     types.StringValue("oauth-client"),
-						ClientSecret: types.StringValue("oauth-secret"),
+						ClientSecret: types.StringNull(),
 						JwtClaims: &JwtClaimsModel{
 							UserName: types.StringValue("oauth-username"),
 						},
@@ -98,33 +113,24 @@ func TestMapFields(t *testing.T) {
 					},
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
-
-				Endpoints: types.ObjectValueMust(
-					map[string]attr.Type{
-						"arrow_flight": types.StringType,
-						"catalog":      types.StringType,
-						"ui":           types.StringType,
-					},
-					map[string]attr.Value{
-						"arrow_flight": types.StringValue("flight"),
-						"catalog":      types.StringValue("catalog"),
-						"ui":           types.StringValue("ui"),
-					},
-				),
 			},
 			false,
 		},
 		{
 			"nil response",
-			&Model{
-				Region:    types.StringValue("rid"),
-				ProjectId: types.StringValue("pid"),
+			&InstanceModel{
+				Model: Model{
+					Region:    types.StringValue("rid"),
+					ProjectId: types.StringValue("pid"),
+				},
 			},
 			nil,
-			&Model{
-				Id:        types.StringValue("pid,rid,"),
-				ProjectId: types.StringValue("pid"),
-				Region:    types.StringValue("rid"),
+			&InstanceModel{
+				Model: Model{
+					Id:        types.StringValue("pid,rid,"),
+					ProjectId: types.StringValue("pid"),
+					Region:    types.StringValue("rid"),
+				},
 			},
 			true,
 		},
@@ -155,15 +161,17 @@ func TestMapFields(t *testing.T) {
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		state       *Model
+		state       *InstanceModel
 		expected    *dremioSdk.CreateDremioInstancePayload
 		wantErr     bool
 	}{
 		{
 			"success-local",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
@@ -179,9 +187,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"success-oauth",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					OAuth: &OAuthModel{
 						AuthorityUrl: types.StringValue("oauth-authority"),
@@ -207,7 +217,7 @@ func TestToCreatePayload(t *testing.T) {
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
-						ClientSecret: "oauth-secret",
+						ClientSecret: utils.Ptr("oauth-secret"),
 						JwtClaims: dremioSdk.OauthJwtClaims{
 							UserName: "oauth-username",
 						},
@@ -229,9 +239,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"success-azuread",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -247,7 +259,7 @@ func TestToCreatePayload(t *testing.T) {
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
 						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
+						ClientSecret: utils.Ptr("azure-secret"),
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
 					Type: dremioSdk.AUTHENTICATIONTYPE_AZUREAD,
@@ -259,9 +271,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"idp-config-mismatch-local",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -277,9 +291,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"idp-config-mismatch-oauth",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -295,9 +311,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"idp-config-mismatch-azuread",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 					OAuth: &OAuthModel{
@@ -323,9 +341,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"missing-idp-config-oauth",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 				},
@@ -335,9 +355,11 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			"missing-idp-config-azuread",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 				},
@@ -372,15 +394,17 @@ func TestToCreatePayload(t *testing.T) {
 func TestToUpdatePayload(t *testing.T) {
 	tests := []struct {
 		description string
-		state       *Model
+		state       *InstanceModel
 		expected    *dremioSdk.UpdateDremioInstancePayload
 		wantErr     bool
 	}{
 		{
 			"success",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_LOCAL_ONLY)),
 				},
@@ -396,9 +420,11 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"success-oauth",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					OAuth: &OAuthModel{
 						AuthorityUrl: types.StringValue("oauth-authority"),
@@ -424,7 +450,7 @@ func TestToUpdatePayload(t *testing.T) {
 					Oauth: &dremioSdk.Oauth{
 						AuthorityUrl: "oauth-authority",
 						ClientId:     "oauth-client",
-						ClientSecret: "oauth-secret",
+						ClientSecret: utils.Ptr("oauth-secret"),
 						JwtClaims: dremioSdk.OauthJwtClaims{
 							UserName: "oauth-username",
 						},
@@ -446,9 +472,11 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"success-azuread",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -464,7 +492,7 @@ func TestToUpdatePayload(t *testing.T) {
 					Azuread: &dremioSdk.Azuread{
 						AuthorityUrl: "azure-authority",
 						ClientId:     "azure-client",
-						ClientSecret: "azure-secret",
+						ClientSecret: utils.Ptr("azure-secret"),
 						RedirectUrl:  utils.Ptr("azure-redirect"),
 					},
 					Type: dremioSdk.AUTHENTICATIONTYPE_AZUREAD,
@@ -476,9 +504,11 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"idp-config-mismatch-local",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -494,9 +524,11 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"idp-config-mismatch-oauth",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					AzureAD: &AzureADModel{
 						AuthorityUrl: types.StringValue("azure-authority"),
@@ -512,9 +544,11 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"idp-config-mismatch-azuread",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
 					OAuth: &OAuthModel{
@@ -540,9 +574,11 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"missing-idp-config-oauth",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
+				},
 				Authentication: &AuthenticationModel{
 					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_OAUTH)),
 				},
@@ -552,12 +588,12 @@ func TestToUpdatePayload(t *testing.T) {
 		},
 		{
 			"missing-idp-config-azuread",
-			&Model{
-				Description: types.StringValue("test description"),
-				DisplayName: types.StringValue("displayName"),
-				Authentication: &AuthenticationModel{
-					Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD)),
+			&InstanceModel{
+				Model: Model{
+					Description: types.StringValue("test description"),
+					DisplayName: types.StringValue("displayName"),
 				},
+				Authentication: &AuthenticationModel{Type: types.StringValue(string(dremioSdk.AUTHENTICATIONTYPE_AZUREAD))},
 			},
 			nil,
 			true,

@@ -26,11 +26,15 @@ var resourceDremioInstanceMin string
 //go:embed testdata/resource-max.tf
 var resourceDremioInstanceMax string
 
-const dremioInstanceResource = "stackit_dremio_instance.example"
-const dremioInstanceDataResource = "data.stackit_dremio_instance.example"
+const (
+	dremioInstanceResource     = "stackit_dremio_instance.example"
+	dremioInstanceDataResource = "data.stackit_dremio_instance.example"
+)
 
-const dremioUserResource = "stackit_dremio_user.example"
-const dremioUserDataResource = "data.stackit_dremio_user.example"
+const (
+	dremioUserResource     = "stackit_dremio_user.example"
+	dremioUserDataResource = "data.stackit_dremio_user.example"
+)
 
 var testDremioConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -432,6 +436,7 @@ func TestAccDremioInstanceMax(t *testing.T) {
 
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
+				ImportStateVerifyIgnore: []string{"authentication.oauth.client_secret"},
 			},
 			{
 				ConfigVariables:   testDremioConfigVarsMax,

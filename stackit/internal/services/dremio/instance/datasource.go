@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -26,6 +27,40 @@ var (
 
 type InstanceDataSourceModel struct {
 	Model
+
+	Authentication *AuthenticationDatasourceModel `tfsdk:"authentication"`
+}
+
+// AuthenticationModel maps the nested authentication block.
+type AuthenticationDatasourceModel struct {
+	// Required Fields
+	Type types.String `tfsdk:"type"`
+
+	// Optional Fields
+	AzureAD *AzureADDatasourceModel `tfsdk:"azuread"`
+	OAuth   *OAuthDatasourceModel   `tfsdk:"oauth"`
+}
+
+type AzureADDatasourceModel struct {
+	// Required Fields
+	AuthorityUrl types.String `tfsdk:"authority_url"`
+	ClientId     types.String `tfsdk:"client_id"`
+
+	RedirectUrl types.String `tfsdk:"redirect_url"`
+}
+
+type OAuthDatasourceModel struct {
+	// Required Fields
+	AuthorityUrl types.String    `tfsdk:"authority_url"`
+	ClientId     types.String    `tfsdk:"client_id"`
+	JwtClaims    *JwtClaimsModel `tfsdk:"jwt_claims"`
+
+	// Optional Fields
+	Scope      types.String         `tfsdk:"scope"`
+	Parameters []AuthParameterModel `tfsdk:"parameters"`
+
+	// Read-only Fields
+	RedirectUrl types.String `tfsdk:"redirect_url"`
 }
 
 type instanceDataSource struct {
@@ -62,6 +97,81 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	}
 	d.client = apiClient
 	tflog.Info(ctx, "Dremio instance client configured for data source")
+}
+
+func mapDatasourceFields(instanceResp *dremioSdk.DremioResponse, model *InstanceDataSourceModel, region string) error {
+	if instanceResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	err := mapModelFields(instanceResp, &model.Model, region)
+	if err != nil {
+		return fmt.Errorf("failed to map Model fields")
+	}
+
+	if model.Authentication == nil {
+		model.Authentication = new(AuthenticationDatasourceModel)
+	}
+	err = mapDatasourceAuthentication(instanceResp, model.Authentication)
+	if err != nil {
+		return fmt.Errorf("failed to map Authentication fields")
+	}
+
+	return nil
+}
+
+func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *AuthenticationDatasourceModel) error {
+	if instanceResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if auth == nil {
+		return fmt.Errorf("auth input is nil")
+	}
+
+	auth.Type = types.StringValue(string(instanceResp.Authentication.Type))
+
+	if instanceResp.Authentication.Azuread != nil {
+		if auth.AzureAD == nil {
+			auth.AzureAD = new(AzureADDatasourceModel)
+		}
+
+		azureADResp := instanceResp.Authentication.Azuread
+		azureADModel := auth.AzureAD
+
+		azureADModel.AuthorityUrl = types.StringValue(azureADResp.AuthorityUrl)
+		azureADModel.ClientId = types.StringValue(azureADResp.ClientId)
+		azureADModel.RedirectUrl = types.StringPointerValue(azureADResp.RedirectUrl)
+	}
+
+	if instanceResp.Authentication.Oauth != nil {
+		if auth.OAuth == nil {
+			auth.OAuth = new(OAuthDatasourceModel)
+		}
+		oauthResp := instanceResp.Authentication.Oauth
+		oauthModel := auth.OAuth
+
+		oauthModel.AuthorityUrl = types.StringValue(oauthResp.AuthorityUrl)
+		oauthModel.ClientId = types.StringValue(oauthResp.ClientId)
+		oauthModel.Scope = types.StringPointerValue(oauthResp.Scope)
+		oauthModel.RedirectUrl = types.StringPointerValue(oauthResp.RedirectUrl)
+		oauthModel.JwtClaims = &JwtClaimsModel{UserName: types.StringValue(oauthResp.JwtClaims.UserName)}
+
+		if len(oauthResp.Parameters) > 0 {
+			var params []AuthParameterModel
+			for _, p := range oauthResp.Parameters {
+				params = append(params, AuthParameterModel{
+					Name:  types.StringValue(p.Name),
+					Value: types.StringValue(p.Value),
+				})
+			}
+			oauthModel.Parameters = params
+		}
+	}
+
+	return nil
 }
 
 // Schema should return the schema for this data source.
@@ -133,11 +243,6 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 								Description: descriptions["azuread_client_id"],
 								Computed:    true,
 							},
-							"client_secret": schema.StringAttribute{
-								Description: descriptions["azuread_client_secret"],
-								Computed:    true,
-								Sensitive:   true,
-							},
 							"redirect_url": schema.StringAttribute{
 								Description: descriptions["azuread_redirect_url"],
 								Computed:    true,
@@ -156,11 +261,6 @@ func (d *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							"client_id": schema.StringAttribute{
 								Description: descriptions["oauth_client_id"],
 								Computed:    true,
-							},
-							"client_secret": schema.StringAttribute{
-								Description: descriptions["oauth_client_secret"],
-								Computed:    true,
-								Sensitive:   true,
 							},
 							"scope": schema.StringAttribute{
 								Description: descriptions["oauth_scope"],
@@ -244,7 +344,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(instanceResp, &model.Model, region)
+	err = mapDatasourceFields(instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
