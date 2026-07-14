@@ -739,6 +739,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		machineType.NewMachineTypeDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
+		modelExperimentsInstance.NewInstanceDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
 		mongoDBFlexUser.NewUserDataSource,
 		objectStorageBucket.NewBucketDataSource,

@@ -62,11 +62,9 @@ func TestMapInstanceFields(t *testing.T) {
 				InstanceId:                 types.StringValue("id"),
 				Name:                       types.StringValue("name"),
 				Description:                types.StringValue("description"),
-				State:                      types.StringValue("active"),
 				BucketName:                 types.StringValue("bucketName"),
 				DeletedExperimentRetention: types.StringValue("30d"),
 				Url:                        types.StringValue("url"),
-				ErrorMessage:               types.StringNull(),
 				Labels:                     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
 			},
 			isValid: true,
@@ -78,146 +76,7 @@ func TestMapInstanceFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapInstance(ctx, &tt.input, tt.state)
-			if !tt.isValid && err == nil {
-				t.Fatalf("Should have failed")
-			}
-
-			if tt.isValid && err != nil {
-				t.Fatalf("Should not have failed: %v", err)
-			}
-
-			if tt.isValid {
-				diff := cmp.Diff(tt.state, &tt.expected)
-				if diff != "" {
-					t.Fatalf("Data does not match: %s", diff)
-				}
-			}
-		})
-	}
-}
-
-func TestMapCreateResponseFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		description         string
-		state               *Model
-		inputCreateResponse *modelexperiments.CreateInstanceResponse
-		inputGetResponse    *modelexperiments.GetInstanceResponse
-		expected            Model
-		isValid             bool
-	}{
-		{
-			description:         "should error when instance create response is nil",
-			state:               &Model{},
-			inputCreateResponse: nil,
-			inputGetResponse:    &modelexperiments.GetInstanceResponse{},
-			expected:            Model{},
-			isValid:             false,
-		},
-		{
-			description:         "should error when state is nil",
-			state:               nil,
-			inputCreateResponse: &modelexperiments.CreateInstanceResponse{},
-			inputGetResponse:    &modelexperiments.GetInstanceResponse{},
-			expected:            Model{},
-			isValid:             false,
-		},
-		{
-			description: "should error when instance id is not present",
-			state:       &Model{},
-			inputCreateResponse: &modelexperiments.CreateInstanceResponse{
-				Instance: modelexperiments.Instance{},
-			},
-			inputGetResponse: &modelexperiments.GetInstanceResponse{},
-			expected:         Model{},
-			isValid:          false,
-		},
-		{
-			description: "should map fields correctly even if Get Response is nil",
-			state: &Model{
-				Id:         types.StringValue("pid,eu01,id"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("id"),
-				Region:     types.StringValue("eu01"),
-			},
-			inputCreateResponse: &modelexperiments.CreateInstanceResponse{
-				Instance: modelexperiments.Instance{
-					Id:                         "id",
-					Description:                new("description"),
-					DeletedExperimentRetention: new("30d"),
-					ErrorMessage:               nil,
-					Labels:                     &map[string]string{"key": "value"},
-					State:                      "pending",
-					Url:                        "url",
-					Name:                       "name",
-				}},
-			inputGetResponse: nil,
-			expected: Model{
-				Id:                         types.StringValue("pid,eu01,id"),
-				ProjectId:                  types.StringValue("pid"),
-				Region:                     types.StringValue("eu01"),
-				InstanceId:                 types.StringValue("id"),
-				Name:                       types.StringValue("name"),
-				Description:                types.StringValue("description"),
-				State:                      types.StringValue("pending"),
-				DeletedExperimentRetention: types.StringValue("30d"),
-				Url:                        types.StringValue("url"),
-				ErrorMessage:               types.StringNull(),
-				Labels:                     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-			},
-			isValid: true,
-		},
-		{
-			description: "should map fields correctly",
-			state: &Model{
-				Id:         types.StringValue("pid,eu01,id"),
-				ProjectId:  types.StringValue("pid"),
-				InstanceId: types.StringValue("id"),
-				Region:     types.StringValue("eu01"),
-			},
-			inputCreateResponse: &modelexperiments.CreateInstanceResponse{
-				Instance: modelexperiments.Instance{
-					Id:                         "id",
-					Description:                new("description"),
-					DeletedExperimentRetention: new("30d"),
-					ErrorMessage:               nil,
-					Labels:                     &map[string]string{"key": "value"},
-					State:                      "pending",
-					Url:                        "url",
-					Name:                       "name",
-				}},
-			inputGetResponse: &modelexperiments.GetInstanceResponse{
-				Instance: modelexperiments.Instance{
-					State:      "active",
-					BucketName: new("bucketName"),
-				},
-			},
-			expected: Model{
-				Id:                         types.StringValue("pid,eu01,id"),
-				ProjectId:                  types.StringValue("pid"),
-				Region:                     types.StringValue("eu01"),
-				InstanceId:                 types.StringValue("id"),
-				Name:                       types.StringValue("name"),
-				Description:                types.StringValue("description"),
-				State:                      types.StringValue("active"),
-				BucketName:                 types.StringValue("bucketName"),
-				DeletedExperimentRetention: types.StringValue("30d"),
-				Url:                        types.StringValue("url"),
-				ErrorMessage:               types.StringNull(),
-				Labels:                     types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
-			},
-			isValid: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.description, func(t *testing.T) {
-			t.Parallel()
-
-			ctx := context.Background()
-			err := mapCreateResponse(ctx, tt.inputCreateResponse, tt.inputGetResponse, tt.state, "eu01")
+			err := mapInstance(ctx, &tt.input, tt.state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
