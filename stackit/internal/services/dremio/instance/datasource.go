@@ -124,6 +124,13 @@ func mapDatasourceFields(instanceResp *dremioSdk.DremioResponse, model *Instance
 }
 
 func mapDatasourceAuthentication(instanceResp *dremioSdk.DremioResponse, auth *AuthenticationDatasourceModel) error {
+	if instanceResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if auth == nil {
+		return fmt.Errorf("auth input is nil")
+	}
+
 	auth.Type = types.StringValue(string(instanceResp.Authentication.Type))
 
 	if instanceResp.Authentication.Azuread != nil {

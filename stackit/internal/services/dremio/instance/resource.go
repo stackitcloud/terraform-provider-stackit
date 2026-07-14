@@ -708,6 +708,13 @@ func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model, region
 }
 
 func mapAuthentication(instanceResp *dremioSdk.DremioResponse, auth *AuthenticationModel) error {
+	if instanceResp == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if auth == nil {
+		return fmt.Errorf("auth input is nil")
+	}
+
 	auth.Type = types.StringValue(string(instanceResp.Authentication.Type))
 
 	if instanceResp.Authentication.Azuread != nil {
