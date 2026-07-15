@@ -173,7 +173,7 @@ Note: AWS specific checks must be skipped as they do not work on STACKIT. For de
 - `dremio_custom_endpoint` (String) Custom endpoint for the Dremio service
 - `edgecloud_custom_endpoint` (String) Custom endpoint for the Edge Cloud service
 - `enable_beta_resources` (Boolean) Enable beta resources. Default is false.
-- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, routing-tables, network
+- `experiments` (List of String) Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: dremio, iam, network, routing-tables, vpc
 - `git_custom_endpoint` (String) Custom endpoint for the Git service
 - `iaas_custom_endpoint` (String) Custom endpoint for the IaaS service
 - `intake_custom_endpoint` (String) Custom endpoint for the Intake service

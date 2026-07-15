@@ -4,14 +4,14 @@ page_title: "stackit_dremio_instance Resource - stackit"
 subcategory: ""
 description: |-
   Manages a STACKIT Dremio instance.
-  ~> This resource is part of the dremio experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This resource is part of the experimental feature dremio and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_dremio_instance (Resource)
 
 Manages a STACKIT Dremio instance.
 
-~> This resource is part of the dremio experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This resource is part of the experimental feature dremio and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 

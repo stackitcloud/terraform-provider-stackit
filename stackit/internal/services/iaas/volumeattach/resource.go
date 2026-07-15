@@ -209,7 +209,12 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err = wait.AddVolumeToServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId, volumeId).WaitWithContext(ctx)
+	requestId, err := iaasUtils.ReadXRequestId(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
+		return
+	}
+	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(context.Background())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
 		return
@@ -312,7 +317,12 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.RemoveVolumeFromServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId, volumeId).WaitWithContext(ctx)
+	requestId, err := iaasUtils.ReadXRequestId(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
+		return
+	}
+	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(context.Background())
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
 		return

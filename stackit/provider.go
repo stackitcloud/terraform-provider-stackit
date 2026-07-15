@@ -63,6 +63,11 @@ import (
 	iaasServiceAccountAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/serviceaccountattach"
 	iaasVolume "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volume"
 	iaasVolumeAttach "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/volumeattach"
+	iaasAlphaVpc "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpc"
+	iaasAlphaVpcNetworkRange "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcnetworkrange"
+	iaasAlphaVpcRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcregion"
+	iaasAlphaVpcRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcroutingtable"
+	iaasAlphaVpcStaticRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcroutingtable/staticroute"
 	iamRoleBindingsV1 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1"
 	intakeRunner "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/runner"
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
@@ -678,6 +683,11 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		edgeCloudInstances.NewInstancesDataSource,
 		edgeCloudPlans.NewPlansDataSource,
 		gitInstance.NewGitDataSource,
+		iaasAlphaVpc.NewVPCDatasource,
+		iaasAlphaVpcRoutingTable.NewVpcRoutingTableDatasource,
+		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeDatasource,
+		iaasAlphaVpcRegion.NewVPCRegionDatasource,
+		iaasAlphaVpcStaticRoute.NewStaticRouteDatasource,
 		iaasAffinityGroup.NewAffinityGroupDatasource,
 		iaasImage.NewImageDataSource,
 		iaasImageV2.NewImageV2DataSource,
@@ -786,6 +796,11 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		edgeCloudKubeconfig.NewKubeconfigResource,
 		edgeCloudToken.NewTokenResource,
 		gitInstance.NewGitResource,
+		iaasAlphaVpc.NewVPCResource,
+		iaasAlphaVpcRoutingTable.NewVpcRoutingTableResource,
+		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeResource,
+		iaasAlphaVpcRegion.NewVPCRegion,
+		iaasAlphaVpcStaticRoute.NewStaticRouteResource,
 		iaasAffinityGroup.NewAffinityGroupResource,
 		iaasImage.NewImageResource,
 		iaasNetwork.NewNetworkResource,

@@ -4,14 +4,14 @@ page_title: "stackit_secretsmanager_instance_role_binding_v1 Resource - stackit"
 subcategory: ""
 description: |-
   IAM role binding resource schema.
-  ~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This resource is part of the experimental feature iam and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_secretsmanager_instance_role_binding_v1 (Resource)
 
 IAM role binding resource schema.
 
-~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This resource is part of the experimental feature iam and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 
