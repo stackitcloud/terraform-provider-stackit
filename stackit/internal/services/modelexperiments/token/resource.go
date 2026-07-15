@@ -39,7 +39,7 @@ type Model struct {
 	Id          types.String `tfsdk:"id"` // needed by TF
 	ProjectId   types.String `tfsdk:"project_id"`
 	Region      types.String `tfsdk:"region"`
-	Name        types.String `tfsdk:"display_name"`
+	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
 	InstanceId  types.String `tfsdk:"instance_id"`
 	TokenId     types.String `tfsdk:"token_id"`
@@ -81,7 +81,7 @@ var descriptions = map[string]string{ //nolint:gosec // no hardcoded credentials
 	"region":          "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
 	"labels":          "A map of arbitrary key/value pairs that can be attached to the resource",
 	"description":     "The description is a longer text chosen by the user to provide more context for the resource.",
-	"display_name":    "The display name is a short name chosen by the user to identify the resource.",
+	"name":            "The display name is a short name chosen by the user to identify the resource.",
 	"token_id":        "The AI Model Experiments instance token ID.",
 	"token":           "The content of the AI Model Experiments instance token.",
 	"state":           "The state of the AI Model Experiments instance token.",
@@ -170,8 +170,8 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					validate.NoSeparator(),
 				},
 			},
-			"display_name": schema.StringAttribute{
-				Description: descriptions["display_name"],
+			"name": schema.StringAttribute{
+				Description: descriptions["name"],
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 64),

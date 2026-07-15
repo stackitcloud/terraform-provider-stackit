@@ -3,33 +3,12 @@
 page_title: "stackit_modelexperiments_instance Resource - stackit"
 subcategory: ""
 description: |-
-  AI Model Experiment Instance Resource schema.
-  Example Usage
-  
-  
-  resource "stackit_modelexperiments_instance" "example" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name        = "Example instance"
-    region      = "eu01"
-    description = "Example description"
-  }
+  Manages a STACKIT AI Model Experiments instance.
 ---
 
 # stackit_modelexperiments_instance (Resource)
 
-AI Model Experiment Instance Resource schema.
-
-## Example Usage
-
-```terraform
-
-resource "stackit_modelexperiments_instance" "example" {
-  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name        = "Example instance"
-  region      = "eu01"
-  description = "Example description"
-}
-```
+Manages a STACKIT AI Model Experiments instance.
 
 ## Example Usage
 
@@ -37,11 +16,11 @@ resource "stackit_modelexperiments_instance" "example" {
 resource "stackit_modelexperiments_instance" "example" {
   project_id                   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region                       = "eu01"
-  display_name                 = "example name"
+  name                         = "Example name"
   description                  = "Example description"
   deleted_experiment_retention = "30d"
   labels = {
-    label = "example label"
+    label = "Example label"
   }
 }
 ```
@@ -51,21 +30,32 @@ resource "stackit_modelexperiments_instance" "example" {
 
 ### Required
 
-- `name` (String) Name of the AI model experiments instance.
-- `project_id` (String) STACKIT project ID to which the AI model experiments instance is associated.
+- `name` (String) The display name is a short name chosen by the user to identify the resource.
+- `project_id` (String) STACKIT Project ID to which the resource is associated.
 
 ### Optional
 
-- `deleted_experiment_retention` (String) The deleted experiment retention of the AI model experiments instance.
-- `description` (String) The description of the AI model experiments instance.
-- `labels` (Map of String) A map of arbitrary key/value pairs that can be attached to the AI model experiments instance
-- `region` (String) Region to which the AI model experiments instance is associated. If not defined, the provider region is used
+- `deleted_experiment_retention` (String) The deleted experiment retention time of the AI Model Experiments instance.
+- `description` (String) The description is a longer text chosen by the user to provide more context for the resource.
+- `labels` (Map of String) A map of arbitrary key/value pairs that can be attached to the resource
+- `region` (String) The STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
 
-- `bucket_name` (String) The object storage bucket name of the AI model experiments instance.
-- `error_message` (String) Error messages of the AI model experiments instance.
-- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
-- `instance_id` (String) The AI model experiments instance ID.
-- `state` (String) State of the AI model experiments instance.
-- `url` (String) URL of the AI model experiments instance.
+- `bucket_name` (String) The object storage bucket name of the AI Model Experiments instance.
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
+- `instance_id` (String) The AI Model Experiments instance ID.
+- `url` (String) The Dashboard URL of the AI Model Experiments instance.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://developer.hashicorp.com/terraform/language/import) can be used with the ` + "`" + `id` + "`" + ` attribute, for example:
+
+```terraform
+import {
+  to = stackit_modelexperiments_instance.import_example
+  id = "${var.project_id},${var.region},${var.instance_id}"
+}
+```

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
@@ -76,8 +77,8 @@ func (i *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["region"],
 				Optional:    true,
 			},
-			"display_name": schema.StringAttribute{
-				Description: descriptions["display_name"],
+			"name": schema.StringAttribute{
+				Description: descriptions["name"],
 				Computed:    true,
 			},
 			"labels": schema.MapAttribute{

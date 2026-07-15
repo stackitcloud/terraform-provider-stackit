@@ -1,3 +1,4 @@
+
 variable "project_id" {}
 variable "region" {}
 
@@ -15,10 +16,10 @@ variable "token_label_value" {}
 
 // Instance Resources
 resource "stackit_modelexperiments_instance" "example" {
-  project_id   = var.project_id
-  region       = var.region
-  display_name = var.name
-  description  = var.description
+  project_id                   = var.project_id
+  region                       = var.region
+  name                         = var.name
+  description                  = var.description
   deleted_experiment_retention = var.deleted_experiment_retention
   labels = {
     label = var.label_value
@@ -36,7 +37,7 @@ resource "stackit_modelexperiments_token" "example" {
   project_id   = var.project_id
   region       = var.region
   instance_id  = stackit_modelexperiments_instance.example.instance_id
-  display_name = var.token_name
+  name         = var.token_name
   description  = var.token_description
   ttl_duration = var.ttl_duration
   labels = {

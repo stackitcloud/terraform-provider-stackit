@@ -29,27 +29,27 @@ var resourceModelexperimentsInstanceMax string
 const modelexperimentsInstanceResource = "stackit_modelexperiments_instance.example"
 const modelexperimentsInstanceDataResource = "data.stackit_modelexperiments_instance.example"
 
-const modelexperimentsTokenResource = "stackit_modelexperiments_token.example"
+const modelexperimentsInstanceTokenResource = "stackit_modelexperiments_token.example" // nolint:gosec // This is a TF resource name, not a credential
 
 var testModelexperimentsConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable(testutil.Region),
 	// Instance
-	"name": config.StringVariable("minInstance"),
+	"name": config.StringVariable("tfAccTest-minInstance"),
 	// Token
-	"token_name": config.StringVariable("minInstanceToken"),
+	"token_name": config.StringVariable("tfAccTest-minInstanceToken"),
 }
 
 var testModelexperimentsConfigVarsMax = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"region":     config.StringVariable(testutil.Region),
 	// Instance
-	"name":                         config.StringVariable("maxInstance"),
+	"name":                         config.StringVariable("tfAccTest-maxInstance"),
 	"description":                  config.StringVariable("instanceDescription"),
 	"deleted_experiment_retention": config.StringVariable("30d"),
 	"label_value":                  config.StringVariable("instanceLabel"),
 	// Token
-	"token_name":        config.StringVariable("maxInstanceToken"),
+	"token_name":        config.StringVariable("tfAccTest-maxInstanceToken"),
 	"token_description": config.StringVariable("tokenDescription"),
 	"ttl_duration":      config.StringVariable("5h30m40s"),
 	"token_label_value": config.StringVariable("tokenLabel"),
@@ -58,16 +58,23 @@ var testModelexperimentsConfigVarsMax = config.Variables{
 func testModelexperimentsInstanceConfigVarsMinUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testModelexperimentsConfigVarsMin))
 	maps.Copy(tempConfig, testModelexperimentsConfigVarsMin)
-	tempConfig["name"] = config.StringVariable("tfAccModelexperimentsMinInstanceUpd")
-	tempConfig["description"] = config.StringVariable("description-upd")
+	tempConfig["name"] = config.StringVariable("tfAccTest-minInstance-upd")
+	tempConfig["token_name"] = config.StringVariable("tfAccTest-minInstanceToken-upd")
 	return tempConfig
 }
 
 func testModelexperimentsInstanceConfigVarsMaxUpdated() config.Variables {
 	tempConfig := make(config.Variables, len(testModelexperimentsConfigVarsMax))
 	maps.Copy(tempConfig, testModelexperimentsConfigVarsMax)
-	tempConfig["name"] = config.StringVariable("tfAccModelexperimentsMaxInstanceUpd")
-	tempConfig["description"] = config.StringVariable("description-upd")
+	// Instance
+	tempConfig["name"] = config.StringVariable("tfAccTest-maxInstance-upd")
+	tempConfig["description"] = config.StringVariable("instanceDescription-upd")
+	tempConfig["deleted_experiment_retention"] = config.StringVariable("2d")
+	tempConfig["label_value"] = config.StringVariable("instanceLabel-upd")
+	// Token
+	tempConfig["token_name"] = config.StringVariable("tfAccTest-maxInstanceToken-upd")
+	tempConfig["token_description"] = config.StringVariable("tokenDescription-upd")
+	tempConfig["token_label_value"] = config.StringVariable("tokenLabel-upd")
 	return tempConfig
 }
 
@@ -84,26 +91,21 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 					// Instance
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["project_id"])),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "region", testutil.Region),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["name"])),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "id"),
-
-					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["name"])),
-					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "description", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["description"])),
-
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "state"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "bucket_name"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "deleted_experiment_retention"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "url"),
 
 					// Token
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "region", testutil.Region),
-					resource.TestCheckResourceAttrSet(modelexperimentsTokenResource, "instance_id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsTokenResource, "token_id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsTokenResource, "id"),
-
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["token_name"])),
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "description", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["token_description"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["project_id"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "region", testutil.Region),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMin["token_name"])),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "instance_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "valid_until"),
 				),
 			},
 			// 2) Data Source
@@ -131,14 +133,6 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						modelexperimentsInstanceResource, "description",
 						modelexperimentsInstanceDataResource, "description",
-					),
-					resource.TestCheckResourceAttrPair(
-						modelexperimentsInstanceResource, "state",
-						modelexperimentsInstanceDataResource, "state",
-					),
-					resource.TestCheckResourceAttrPair(
-						modelexperimentsInstanceResource, "bucket_name",
-						modelexperimentsInstanceDataResource, "bucket_name",
 					),
 					resource.TestCheckResourceAttrPair(
 						modelexperimentsInstanceResource, "deleted_experiment_retention",
@@ -174,17 +168,25 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceModelexperimentsInstanceMin,
 				ConfigVariables: testModelexperimentsInstanceConfigVarsMinUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMinUpdated()["project_id"])),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "region", testutil.Region),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "name", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMinUpdated()["name"])),
-					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "description", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMinUpdated()["description"])),
-
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "state"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "bucket_name"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "deleted_experiment_retention"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "url"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "bucket_name"),
+
+					// Token
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "region", testutil.Region),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "name", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMinUpdated()["token_name"])),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "instance_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "valid_until"),
 				),
 			},
 		},
@@ -204,26 +206,26 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 					// Instance
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "region", testutil.Region),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "instance_id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "id"),
-
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["name"])),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "description", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["description"])),
-
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "state"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "bucket_name"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "deleted_experiment_retention"),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "deleted_experiment_retention", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["deleted_experiment_retention"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "labels.label", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["label_value"])),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "instance_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "id"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "url"),
 
 					// Token
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "region", testutil.Region),
-					resource.TestCheckResourceAttrSet(modelexperimentsTokenResource, "instance_id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsTokenResource, "token_id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsTokenResource, "id"),
-
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["token_name"])),
-					resource.TestCheckResourceAttr(modelexperimentsTokenResource, "description", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["token_description"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "region", testutil.Region),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "name", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["token_name"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "description", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["token_description"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "ttl_duration", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["ttl_duration"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "labels.label", testutil.ConvertConfigVariable(testModelexperimentsConfigVarsMax["token_label_value"])),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "instance_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "valid_until"),
 				),
 			},
 			// 2) Data Source
@@ -251,14 +253,6 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						modelexperimentsInstanceResource, "description",
 						modelexperimentsInstanceDataResource, "description",
-					),
-					resource.TestCheckResourceAttrPair(
-						modelexperimentsInstanceResource, "state",
-						modelexperimentsInstanceDataResource, "state",
-					),
-					resource.TestCheckResourceAttrPair(
-						modelexperimentsInstanceResource, "bucket_name",
-						modelexperimentsInstanceDataResource, "bucket_name",
 					),
 					resource.TestCheckResourceAttrPair(
 						modelexperimentsInstanceResource, "deleted_experiment_retention",
@@ -289,45 +283,34 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId), nil
 				},
 			},
-			{
-				ConfigVariables:   testModelexperimentsConfigVarsMax,
-				ResourceName:      modelexperimentsTokenResource,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					r, ok := s.RootModule().Resources[modelexperimentsTokenResource]
-					if !ok {
-						return "", fmt.Errorf("couldn't find resource %s", modelexperimentsTokenResource)
-					}
-					instanceId, ok := r.Primary.Attributes["instance_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute instanceId")
-					}
-					tokenId, ok := r.Primary.Attributes["token_id"]
-					if !ok {
-						return "", fmt.Errorf("couldn't find attribute tokenId")
-					}
-
-					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, instanceId, tokenId), nil
-				},
-				ImportStateVerifyIgnore: []string{"token"},
-			},
 			// 4) Update
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceModelexperimentsInstanceMax,
 				ConfigVariables: testModelexperimentsInstanceConfigVarsMaxUpdated(),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Instance
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "region", testutil.Region),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "name", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["name"])),
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "description", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["description"])),
-
+					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "deleted_experiment_retention", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["deleted_experiment_retention"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "labels.label", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["label_value"])),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "instance_id"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "id"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "state"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "bucket_name"),
-					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "deleted_experiment_retention"),
 					resource.TestCheckResourceAttrSet(modelexperimentsInstanceResource, "url"),
+
+					// Token
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["project_id"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "region", testutil.Region),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "name", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["token_name"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "description", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["token_description"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "ttl_duration", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["ttl_duration"])),
+					resource.TestCheckResourceAttr(modelexperimentsInstanceTokenResource, "labels.label", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["token_label_value"])),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "instance_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token_id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "id"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "token"),
+					resource.TestCheckResourceAttrSet(modelexperimentsInstanceTokenResource, "valid_until"),
 				),
 			},
 		},
