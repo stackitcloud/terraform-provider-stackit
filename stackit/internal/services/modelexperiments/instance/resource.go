@@ -420,13 +420,6 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	updateInstanceResp, err := i.client.PartialUpdateInstance(ctx, projectId, region, instanceId).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
-			if oapiErr.StatusCode == http.StatusNotFound {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
@@ -435,7 +428,14 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	err = mapInstance(ctx, &updateInstanceResp.Instance, &plan, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance",
+			fmt.Sprintf(
+				"Calling API: %v, instanceId: %s, region: %s, projectId: %s",
+				err,
+				instanceId,
+				region,
+				projectId,
+			))
 		return
 	}
 

@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
 	"go.uber.org/mock/gomock"
 
@@ -122,79 +121,6 @@ func TestUpdate_Success(t *testing.T) {
 	}
 	if deletetExpRetention != finalState.DeletedExperimentRetention.ValueString() {
 		t.Fatalf("expected %v, got %v", deletetExpRetention, finalState.DeletedExperimentRetention.ValueString())
-	}
-}
-
-func TestUpdate_InstanceNotFound(t *testing.T) {
-	tc := testutils.NewTestContext(t)
-
-	projectId := uuid.New()
-	instanceName := "test"
-	instanceNameUpdated := "update name"
-	description := "description"
-	descriptionUpdated := "description updated"
-	region := "eu01"
-	instanceId := uuid.New()
-	url := "url"
-	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String())
-	bucketName := "bucket"
-	deletetExpRetention := "1m"
-
-	oapiErr := &oapierror.GenericOpenAPIError{
-		StatusCode: 404,
-	}
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstance(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiPartialUpdateInstanceRequest{
-		ApiService: tc.MockInstanceCLient,
-	})
-	tc.MockInstanceCLient.EXPECT().PartialUpdateInstanceExecute(gomock.Any()).Return(nil, oapiErr)
-
-	providerData := core.ProviderData{
-		DefaultRegion: region,
-	}
-	instanceRes := instance.NewInstanceResource(tc.MockInstanceCLient, nil, providerData)
-
-	schemaResp := resource.SchemaResponse{}
-	instanceRes.Schema(tc.Ctx, resource.SchemaRequest{}, &schemaResp)
-
-	currentState := instance.Model{
-		Id:                         tfId,
-		ProjectId:                  types.StringValue(projectId.String()),
-		InstanceId:                 types.StringValue(instanceId.String()),
-		Name:                       types.StringValue(instanceName),
-		Region:                     types.StringValue(region),
-		Description:                types.StringValue(description),
-		Labels:                     types.MapNull(types.StringType),
-		DeletedExperimentRetention: types.StringValue(deletetExpRetention),
-		BucketName:                 types.StringValue(bucketName),
-		Url:                        types.StringValue(url),
-	}
-
-	plannedState := instance.Model{
-		ProjectId:   types.StringValue(projectId.String()),
-		Region:      types.StringValue(region),
-		Name:        types.StringValue(instanceNameUpdated),
-		Description: types.StringValue(descriptionUpdated),
-		Labels:      types.MapNull(types.StringType),
-	}
-
-	req := testutils.UpdateInstanceRequest(tc.Ctx, schemaResp, currentState, plannedState)
-	resp := testutils.UpdateInstanceResponse(tc.Ctx, schemaResp, &currentState)
-
-	// Execute Update
-	instanceRes.Update(tc.Ctx, req, resp)
-
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("Update should succeed, but got errors: %v", resp.Diagnostics.Errors())
-	}
-
-	// state should be deleted
-	var finalState *instance.Model
-	diags := resp.State.Get(tc.Ctx, &finalState)
-	if diags.HasError() {
-		t.Fatalf("Failed to get state: %v", diags.Errors())
-	}
-	if finalState != nil {
-		t.Fatalf("State should not be written")
 	}
 }
 
