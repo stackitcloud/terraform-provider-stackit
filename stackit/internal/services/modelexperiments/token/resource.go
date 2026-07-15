@@ -427,19 +427,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) {
-			if oapiErr.StatusCode == http.StatusNotFound {
-				// Remove the resource from the state so Terraform will recreate it
-				resp.State.RemoveResource(ctx)
-				return
-			}
-		}
-
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error updating AI Model Experiments instance token",
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token",
 			fmt.Sprintf(
 				"Calling API: %v, tokenId: %s, instanceId: %s, region: %s, projectId: %s",
 				err,
