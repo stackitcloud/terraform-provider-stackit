@@ -75,7 +75,7 @@ type tokenResource struct {
 var descriptions = map[string]string{ //nolint:gosec // no hardcoded credentials in here
 	"main":            "Manages a STACKIT AI Model Experiments instance tokens.",
 	"main_datasource": "Datasource scheme for a STACKIT AI Model Experiments instance tokens.",
-	"id":              "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`instance_id`\".",
+	"id":              "Terraform's internal resource identifier. It is structured as \"`project_id`,`region`,`token_id`\".",
 	"project_id":      "STACKIT Project ID to which the resource is associated.",
 	"instance_id":     "The AI Model Experiments instance ID.",
 	"region":          "The STACKIT region name the resource is located in. If not defined, the provider region is used.",
