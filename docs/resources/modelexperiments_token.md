@@ -3,49 +3,12 @@
 page_title: "stackit_modelexperiments_token Resource - stackit"
 subcategory: ""
 description: |-
-  AI Model Experiment Instance Token Resource schema.
-  Example Usage
-  
-  
-  resource "stackit_modelexperiments_instance" "example" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name        = "Example instance"
-    region      = "eu01"
-    description = "Example description"
-  }
-  
-  resource "stackit_modelexperiments_token" "token" {
-    project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    name        = "Example token"
-    region      = "eu01"
-    instance_id = stackit_modelexperiments_instance.example.instance_id
-    description = "Example description"
-  }
+  Manages a STACKIT AI Model Experiments instance tokens.
 ---
 
 # stackit_modelexperiments_token (Resource)
 
-AI Model Experiment Instance Token Resource schema.
-
-## Example Usage
-
-```terraform
-
-resource "stackit_modelexperiments_instance" "example" {
-  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name        = "Example instance"
-  region      = "eu01"
-  description = "Example description"
-}
-
-resource "stackit_modelexperiments_token" "token" {
-  project_id  = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name        = "Example token"
-  region      = "eu01"
-  instance_id = stackit_modelexperiments_instance.example.instance_id
-  description = "Example description"
-}
-```
+Manages a STACKIT AI Model Experiments instance tokens.
 
 ## Example Usage
 
@@ -53,12 +16,16 @@ resource "stackit_modelexperiments_token" "token" {
 resource "stackit_modelexperiments_instance" "example" {
   project_id                   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   region                       = "eu01"
-  display_name                 = "Example name"
+  name                         = "Example name"
   description                  = "Example description"
   deleted_experiment_retention = "30d"
   labels = {
     label = "Example label"
   }
+}
+
+resource "time_rotating" "rotate" {
+    rotation_days = 80
 }
 
 resource "stackit_modelexperiments_token" "token" {
@@ -71,6 +38,9 @@ resource "stackit_modelexperiments_token" "token" {
   labels = {
     label = "Example label"
   }
+  rotate_when_changed = {
+        rotation = time_rotating.rotate.id
+  }
 }
 ```
 
@@ -79,21 +49,21 @@ resource "stackit_modelexperiments_token" "token" {
 
 ### Required
 
-- `instance_id` (String) The AI model experiments instance ID.
-- `name` (String) Name of the AI model experiments instance token.
-- `project_id` (String) STACKIT project ID to which the AI model experiments instance token is associated.
+- `instance_id` (String) The AI Model Experiments instance ID.
+- `name` (String) The display name is a short name chosen by the user to identify the resource.
+- `project_id` (String) STACKIT Project ID to which the resource is associated.
 
 ### Optional
 
-- `description` (String) The description of the AI model experiments instance token.
-- `labels` (Map of String) A map of arbitrary key/value pairs for the AI model experiments instance token.
-- `region` (String) Region to which the AI model experiments instance token is associated. If not defined, the provider region is used
-- `ttl_duration` (String) The TTL duration of the AI model experiments instance token. E.g. 5h30m40s,5h,5h30m,30m,30s
+- `description` (String) The description is a longer text chosen by the user to provide more context for the resource.
+- `labels` (Map of String) A map of arbitrary key/value pairs that can be attached to the resource
+- `region` (String) The STACKIT region name the resource is located in. If not defined, the provider region is used.
+- `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
+- `ttl_duration` (String) The TTL duration of the AI Model Experiments instance token. E.g. 5h30m40s,5h,5h30m,30m,30s
 
 ### Read-Only
 
-- `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`token_id`".
-- `state` (String) State of the AI model experiments instance token.
-- `token` (String, Sensitive) Content of the AI model experiments instance token.
-- `token_id` (String) The AI model experiments instance token ID.
-- `valid_until` (String) The time until the AI model experiments instance token is valid.
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
+- `token` (String, Sensitive) The content of the AI Model Experiments instance token.
+- `token_id` (String) The AI Model Experiments instance token ID.
+- `valid_until` (String) The time until the AI Model Experiments instance token is valid.
