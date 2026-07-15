@@ -25,7 +25,7 @@ resource "stackit_modelexperiments_instance" "example" {
 }
 
 resource "time_rotating" "rotate" {
-    rotation_days = 80
+  rotation_days = 80
 }
 
 resource "stackit_modelexperiments_token" "token" {
@@ -39,7 +39,7 @@ resource "stackit_modelexperiments_token" "token" {
     label = "Example label"
   }
   rotate_when_changed = {
-        rotation = time_rotating.rotate.id
+    rotation = time_rotating.rotate.id
   }
 }
 ```
@@ -63,7 +63,7 @@ resource "stackit_modelexperiments_token" "token" {
 
 ### Read-Only
 
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`token_id`".
 - `token` (String, Sensitive) The content of the AI Model Experiments instance token.
 - `token_id` (String) The AI Model Experiments instance token ID.
 - `valid_until` (String) The time until the AI Model Experiments instance token is valid.
