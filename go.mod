@@ -20,7 +20,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0
-	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.12.3-0.20260715073150-25cf5e15c410
+	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/kms v1.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.14.0
