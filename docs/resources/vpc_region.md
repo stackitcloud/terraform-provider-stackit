@@ -4,14 +4,14 @@ page_title: "stackit_vpc_region Resource - stackit"
 subcategory: ""
 description: |-
   VPC region resource schema
-  ~> This resource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This resource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_vpc_region (Resource)
 
 VPC region resource schema
 
-~> This resource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This resource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 

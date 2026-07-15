@@ -4,14 +4,14 @@ page_title: "stackit_vpc_routing_table_static_route Resource - stackit"
 subcategory: ""
 description: |-
   VPC Routing table static route resource schema. Must have a region specified in the provider configuration.
-  ~> This resource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This resource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_vpc_routing_table_static_route (Resource)
 
 VPC Routing table static route resource schema. Must have a `region` specified in the provider configuration.
 
-~> This resource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This resource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 

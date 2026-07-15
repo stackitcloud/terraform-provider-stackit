@@ -4,14 +4,14 @@ page_title: "stackit_vpc Data Source - stackit"
 subcategory: ""
 description: |-
   VPC datasource schema.
-  ~> This datasource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This datasource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_vpc (Data Source)
 
 VPC datasource schema.
 
-~> This datasource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This datasource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 

@@ -4,14 +4,14 @@ page_title: "stackit_vpc_routing_table Data Source - stackit"
 subcategory: ""
 description: |-
   VPC Regional routing table datasource schema. Must have a region specified in the provider configuration.
-  ~> This datasource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This datasource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_vpc_routing_table (Data Source)
 
 VPC Regional routing table datasource schema. Must have a `region` specified in the provider configuration.
 
-~> This datasource is part of the vpc experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This datasource is part of the experimental feature vpc and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 
