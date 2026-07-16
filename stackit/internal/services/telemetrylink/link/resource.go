@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -172,10 +173,22 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-\ ]*$`),
+						"The display name must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-\ ]*$`),
+						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
