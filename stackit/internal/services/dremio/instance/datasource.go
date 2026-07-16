@@ -99,7 +99,7 @@ func (d *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 	tflog.Info(ctx, "Dremio instance client configured for data source")
 }
 
-func mapDatasourceFields(instanceResp *dremioSdk.DremioResponse, model *InstanceDataSourceModel, region string) error {
+func mapDatasourceFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, model *InstanceDataSourceModel, region string) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -107,7 +107,7 @@ func mapDatasourceFields(instanceResp *dremioSdk.DremioResponse, model *Instance
 		return fmt.Errorf("model input is nil")
 	}
 
-	err := mapModelFields(instanceResp, &model.Model, region)
+	err := mapModelFields(ctx, instanceResp, &model.Model, region)
 	if err != nil {
 		return fmt.Errorf("failed to map Model fields")
 	}
@@ -344,7 +344,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapDatasourceFields(instanceResp, &model, region)
+	err = mapDatasourceFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

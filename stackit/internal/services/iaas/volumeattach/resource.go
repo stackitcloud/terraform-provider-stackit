@@ -214,7 +214,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
 		return
 	}
-	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(context.Background())
+	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
 		return
@@ -322,7 +322,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
 		return
 	}
-	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(context.Background())
+	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
 		return
