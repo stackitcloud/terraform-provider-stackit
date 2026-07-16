@@ -24,6 +24,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	alb "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/applicationloadbalancer"
 	cert "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/certificate"
+	albWafManagedRuleSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/managed_rule_set"
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
@@ -186,6 +187,7 @@ type providerModel struct {
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	ALBCertificatesCustomEndpoint   types.String `tfsdk:"alb_certificates_custom_endpoint"`
+	ALBWAFCustomEndpoint            types.String `tfsdk:"alb_waf_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	DremioCustomEndpoint            types.String `tfsdk:"dremio_custom_endpoint"`
 	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
@@ -244,6 +246,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"alb_certificates_custom_endpoint":     "Custom endpoint for the Application Load Balancer TLS Certificate service",
+		"alb_waf_custom_endpoint":              "Custom endpoint for the Application Load Balancer Web Application Firewall service",
 		"alb_custom_endpoint":                  "Custom endpoint for the Application Load Balancer service",
 		"cdn_custom_endpoint":                  "Custom endpoint for the CDN service",
 		"dns_custom_endpoint":                  "Custom endpoint for the DNS service",
@@ -373,6 +376,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 			"alb_certificates_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["alb_certificates_custom_endpoint"],
+			},
+			"alb_waf_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["alb_waf_custom_endpoint"],
 			},
 			"dns_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -563,6 +570,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { providerData.ALBCertificatesCustomEndpoint = v })
 	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
+	setStringField(providerConfig.ALBWAFCustomEndpoint, func(v string) { providerData.ALBWAFCustomEndpoint = v })
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
@@ -784,6 +792,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alb.NewApplicationLoadBalancerResource,
+		albWafManagedRuleSet.NewManagedRuleSetResource,
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,
 		cert.NewCertificatesResource,
