@@ -42,6 +42,6 @@ data "stackit_kms_wrapping_key" "example" {
 - `display_name` (String) The display name to distinguish multiple wrapping keys.
 - `expires_at` (String) The date and time the wrapping key will expire.
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id`,`wrapping_key_id`".
-- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`.
+- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`, `hsm`.
 - `public_key` (String) The public key of the wrapping key.
 - `purpose` (String) The purpose for which the key will be used. Possible values are: `wrap_symmetric_key`, `wrap_asymmetric_key`.
