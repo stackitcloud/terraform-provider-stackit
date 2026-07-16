@@ -447,7 +447,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	err = mapFields(instanceResp, &model, region)
+	err = mapFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -500,7 +500,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(instanceResp, &model, region)
+	err = mapFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -571,7 +571,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	err = mapFields(instanceResp, &model, region)
+	err = mapFields(ctx, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -649,7 +649,7 @@ func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Dremio instance state imported")
 }
 
-func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel, region string) error {
+func mapFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, model *InstanceModel, region string) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -657,7 +657,7 @@ func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel, reg
 		return fmt.Errorf("model input is nil")
 	}
 
-	err := mapModelFields(instanceResp, &model.Model, region)
+	err := mapModelFields(ctx, instanceResp, &model.Model, region)
 	if err != nil {
 		return fmt.Errorf("failed to map Model fields")
 	}
@@ -674,7 +674,7 @@ func mapFields(instanceResp *dremioSdk.DremioResponse, model *InstanceModel, reg
 }
 
 // Maps instance fields to the provider's internal model
-func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model, region string) error {
+func mapModelFields(ctx context.Context, instanceResp *dremioSdk.DremioResponse, model *Model, region string) error {
 	if instanceResp == nil {
 		return fmt.Errorf("response input is nil")
 	}
@@ -698,7 +698,7 @@ func mapModelFields(instanceResp *dremioSdk.DremioResponse, model *Model, region
 		Catalog:     types.StringValue(instanceResp.Endpoints.Catalog),
 		Ui:          types.StringValue(instanceResp.Endpoints.Ui),
 	}
-	endpointsObj, diags := types.ObjectValueFrom(context.Background(), endpointsAttrTypes, endpoints)
+	endpointsObj, diags := types.ObjectValueFrom(ctx, endpointsAttrTypes, endpoints)
 	if diags.HasError() {
 		return fmt.Errorf("failed to parse endpoints")
 	}
