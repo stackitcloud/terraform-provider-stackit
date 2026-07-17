@@ -17,8 +17,8 @@ func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags
 		config.WithCustomAuth(providerData.RoundTripper),
 		utils.UserAgentConfigOption(providerData.Version),
 	}
-	if providerData.ALBWAFCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.ALBWAFCustomEndpoint))
+	if providerData.AlbWafCustomEndpoint != "" {
+		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.AlbWafCustomEndpoint))
 	}
 
 	apiClient, err := albwaf.NewAPIClient(apiClientConfigOptions...)

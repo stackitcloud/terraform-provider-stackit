@@ -60,7 +60,7 @@ func TestConfigureClient(t *testing.T) {
 			args: args{
 				providerData: &core.ProviderData{
 					Version:              testVersion,
-					ALBWAFCustomEndpoint: testCustomEndpoint,
+					AlbWafCustomEndpoint: testCustomEndpoint,
 				},
 			},
 			expected: func() *albwaf.APIClient {

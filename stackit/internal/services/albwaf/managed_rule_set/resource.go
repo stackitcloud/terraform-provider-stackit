@@ -111,7 +111,7 @@ func (r *managedRuleSetResource) Configure(ctx context.Context, req resource.Con
 }
 
 func (r *managedRuleSetResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_albwaf_managed_rule_set"
+	resp.TypeName = req.ProviderTypeName + "_alb_waf_managed_rule_set"
 }
 
 func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

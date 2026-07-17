@@ -187,7 +187,7 @@ type providerModel struct {
 	AuthorizationCustomEndpoint     types.String `tfsdk:"authorization_custom_endpoint"`
 	CdnCustomEndpoint               types.String `tfsdk:"cdn_custom_endpoint"`
 	ALBCertificatesCustomEndpoint   types.String `tfsdk:"alb_certificates_custom_endpoint"`
-	ALBWAFCustomEndpoint            types.String `tfsdk:"alb_waf_custom_endpoint"`
+	AlbWafCustomEndpoint            types.String `tfsdk:"alb_waf_custom_endpoint"`
 	DnsCustomEndpoint               types.String `tfsdk:"dns_custom_endpoint"`
 	DremioCustomEndpoint            types.String `tfsdk:"dremio_custom_endpoint"`
 	EdgeCloudCustomEndpoint         types.String `tfsdk:"edgecloud_custom_endpoint"`
@@ -570,7 +570,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { providerData.ALBCertificatesCustomEndpoint = v })
 	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
-	setStringField(providerConfig.ALBWAFCustomEndpoint, func(v string) { providerData.ALBWAFCustomEndpoint = v })
+	setStringField(providerConfig.AlbWafCustomEndpoint, func(v string) { providerData.AlbWafCustomEndpoint = v })
 	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
 	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
 	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
@@ -680,6 +680,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
 		alb.NewApplicationLoadBalancerDataSource,
+		albWafManagedRuleSet.NewManagedRuleSetDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
 		cert.NewCertificatesDataSource,
