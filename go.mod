@@ -44,7 +44,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.0
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.19.0
-	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.0
+	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.1
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0
