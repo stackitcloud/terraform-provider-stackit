@@ -330,7 +330,7 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 	tflog.Info(ctx, "ALB WAF Managed Rule Set created")
 }
 
-func (r *managedRuleSetResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *managedRuleSetResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
 	core.LogAndAddError(ctx, &resp.Diagnostics, "Ressource not updatable", "alb Managed Rule Set is not updatable")
 }
 
@@ -406,7 +406,7 @@ func (r *managedRuleSetResource) Delete(ctx context.Context, req resource.Delete
 	tflog.Info(ctx, "ALB WAF Managed Rule Set deleted")
 }
 
-func toCreatePayload(ctx context.Context, model *Model) (*albwaf.CreateManagedRuleSetPayload, error) {
+func toCreatePayload(_ context.Context, model *Model) (*albwaf.CreateManagedRuleSetPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -439,7 +439,6 @@ func mapFields(ctx context.Context, managedRuleSet *albwaf.GetManagedRuleSetResp
 	groupsMap := map[string]attr.Value{}
 	if groups, ok := managedRuleSet.GetGroupsOk(); ok {
 		for groupKey, group := range *groups {
-
 			groupTF := RuleGroupModel{
 				Description: types.StringPointerValue(group.Description),
 				GroupName:   types.StringPointerValue(group.GroupName),
@@ -448,7 +447,6 @@ func mapFields(ctx context.Context, managedRuleSet *albwaf.GetManagedRuleSetResp
 			ruleMap := map[string]attr.Value{}
 			if rules, ok := group.GetRulesOk(); ok {
 				for ruleKey, rule := range *rules {
-
 					ruleTF := RuleModel{
 						Description: types.StringPointerValue(rule.Description),
 						Mode:        types.StringPointerValue((*string)(rule.Mode)),
