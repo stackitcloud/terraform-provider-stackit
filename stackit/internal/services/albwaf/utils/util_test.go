@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	albwaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -35,7 +35,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *albwaf.APIClient
+		expected *albWaf.APIClient
 	}{
 		{
 			name: "default endpoint",
@@ -44,8 +44,8 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *albwaf.APIClient {
-				apiClient, err := albwaf.NewAPIClient(
+			expected: func() *albWaf.APIClient {
+				apiClient, err := albWaf.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
@@ -63,8 +63,8 @@ func TestConfigureClient(t *testing.T) {
 					AlbWafCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *albwaf.APIClient {
-				apiClient, err := albwaf.NewAPIClient(
+			expected: func() *albWaf.APIClient {
+				apiClient, err := albWaf.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
 				)

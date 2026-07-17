@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	albwaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
 )
 
 var (
@@ -23,7 +23,7 @@ func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		name     string
 		model    *Model
-		expected *albwaf.CreateManagedRuleSetPayload
+		expected *albWaf.CreateManagedRuleSetPayload
 		isValid  bool
 	}{
 		{
@@ -33,11 +33,11 @@ func TestToCreatePayload(t *testing.T) {
 				Id:        testId,
 				ProjectId: testProjectId,
 				Region:    testRegion,
-				Type:      types.StringValue(string(albwaf.MRSTYPE_TYPE_OWASP_CRS)),
+				Type:      types.StringValue(string(albWaf.MRSTYPE_TYPE_OWASP_CRS)),
 			},
-			expected: &albwaf.CreateManagedRuleSetPayload{
+			expected: &albWaf.CreateManagedRuleSetPayload{
 				Name: testName.ValueStringPointer(),
-				Type: new(albwaf.MRSTYPE_TYPE_OWASP_CRS),
+				Type: new(albWaf.MRSTYPE_TYPE_OWASP_CRS),
 			},
 			isValid: true,
 		},
@@ -64,7 +64,7 @@ func TestMapFields(t *testing.T) {
 		name     string
 		state    *Model
 		region   string
-		input    *albwaf.GetManagedRuleSetResponse
+		input    *albWaf.GetManagedRuleSetResponse
 		expected *Model
 		isValid  bool
 	}{
@@ -74,21 +74,21 @@ func TestMapFields(t *testing.T) {
 				ProjectId: testProjectId,
 				Region:    testRegion,
 				Name:      testName,
-				Type:      types.StringValue(string(albwaf.MRSTYPE_TYPE_OWASP_CRS)),
+				Type:      types.StringValue(string(albWaf.MRSTYPE_TYPE_OWASP_CRS)),
 				Id:        testId,
 				Groups:    types.MapValueMust(types.ObjectType{AttrTypes: ruleGroupType}, map[string]attr.Value{}),
 			},
 			region: testRegion.ValueString(),
-			input: &albwaf.GetManagedRuleSetResponse{
-				Groups: &map[string]albwaf.MRSRuleGroup{},
+			input: &albWaf.GetManagedRuleSetResponse{
+				Groups: &map[string]albWaf.MRSRuleGroup{},
 				Name:   testName.ValueStringPointer(),
-				Type:   new(albwaf.MRSTYPE2_TYPE_OWASP_CRS),
+				Type:   new(albWaf.MRSTYPE2_TYPE_OWASP_CRS),
 			},
 			expected: &Model{
 				ProjectId: testProjectId,
 				Region:    testRegion,
 				Name:      testName,
-				Type:      types.StringValue(string(albwaf.MRSTYPE_TYPE_OWASP_CRS)),
+				Type:      types.StringValue(string(albWaf.MRSTYPE_TYPE_OWASP_CRS)),
 				Id:        testId,
 				Groups:    types.MapValueMust(types.ObjectType{AttrTypes: ruleGroupType}, map[string]attr.Value{}),
 			},

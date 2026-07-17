@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	albwaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
@@ -36,7 +36,7 @@ var (
 	_ resource.ResourceWithImportState = &managedRuleSetResource{}
 	_ resource.ResourceWithModifyPlan  = &managedRuleSetResource{}
 
-	mrsTypeOptions = sdkUtils.EnumSliceToStringSlice(albwaf.AllowedMRSTypeEnumValues)
+	mrsTypeOptions = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedMRSTypeEnumValues)
 )
 
 type Model struct {
@@ -87,7 +87,7 @@ var usageType = map[string]attr.Type{
 }
 
 type managedRuleSetResource struct {
-	client       *albwaf.APIClient
+	client       *albWaf.APIClient
 	providerData core.ProviderData
 }
 
@@ -406,20 +406,20 @@ func (r *managedRuleSetResource) Delete(ctx context.Context, req resource.Delete
 	tflog.Info(ctx, "ALB WAF Managed Rule Set deleted")
 }
 
-func toCreatePayload(_ context.Context, model *Model) (*albwaf.CreateManagedRuleSetPayload, error) {
+func toCreatePayload(_ context.Context, model *Model) (*albWaf.CreateManagedRuleSetPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
-	payload := &albwaf.CreateManagedRuleSetPayload{
+	payload := &albWaf.CreateManagedRuleSetPayload{
 		Name: model.Name.ValueStringPointer(),
-		Type: new(albwaf.MRSType(model.Type.ValueString())),
+		Type: new(albWaf.MRSType(model.Type.ValueString())),
 	}
 
 	return payload, nil
 }
 
-func mapFields(ctx context.Context, managedRuleSet *albwaf.GetManagedRuleSetResponse, model *Model, region string) error {
+func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResponse, model *Model, region string) error {
 	if managedRuleSet == nil {
 		return fmt.Errorf("response input is nil")
 	}
