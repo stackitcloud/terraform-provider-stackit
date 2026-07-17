@@ -1042,7 +1042,7 @@ func testAccExportPolicyDestroy(s *terraform.State) error {
 			continue
 		}
 		// export policy transform id: "[projectId],[region],[policyId]"
-		policyId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		policyId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		policyToDestroy = append(policyToDestroy, policyId)
 	}
 
@@ -1077,8 +1077,8 @@ func testAccResourcePoolDestroyed(s *terraform.State) error {
 		if rs.Type != "stackit_sfs_resource_pool" {
 			continue
 		}
-		// export policy transform id: "[projectId],[resource_pool_id]"
-		resourcePoolId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// export policy transform id: "[project_id],[region],[resource_pool_id]"
+		resourcePoolId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		resourcePoolsToDestroy = append(resourcePoolsToDestroy, resourcePoolId)
 	}
 
