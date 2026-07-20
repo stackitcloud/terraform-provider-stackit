@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -55,14 +57,14 @@ func (d *managedRuleSetDataSource) Metadata(_ context.Context, req datasource.Me
 
 func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: fmt.Sprintf("ALB WAF Managed Rule Set resource schema. %s", core.ResourceRegionFallbackDocstring),
+		Description: fmt.Sprintf("ALB WAF Managed Rule Set DataSource schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`name`\".",
+				Description: descriptions["id"],
 				Computed:    true,
 			},
 			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID associated with the ALB WAF Managed Rule Set.",
+				Description: descriptions["project_id"],
 				Required:    true,
 				Validators: []validator.String{
 					validate.UUID(),
@@ -70,65 +72,71 @@ func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.Schema
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: "STACKIT region name the resource is located in. If not defined, the provider region is used.",
-				Computed:    true,
+				Description: descriptions["region"],
 				Optional:    true,
+				Computed:    true,
 			},
 			"name": schema.StringAttribute{
-				Description: "Managed Rule Set configuration name.",
+				Description: descriptions["name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[0-9a-z](?:(?:[0-9a-z]|-){0,61}[0-9a-z])?$`),
+						"must start and end with an alphanumeric character, may contain hyphens, and be 1-63 characters long",
+					),
+				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Set the Managed Rule Set type.",
+				Description: descriptions["type"],
 				Computed:    true,
 			},
 			"version": schema.StringAttribute{
-				Description: "Managed Rule Set version.",
+				Description: descriptions["version"],
 				Computed:    true,
 			},
 			"usage": schema.SingleNestedAttribute{
-				Description: "Managed Rule Set usage",
+				Description: descriptions["usage"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"count": schema.Int32Attribute{
-						Description: "Number of WAFs using this Managed Rule Set.",
+						Description: descriptions["usage_count"],
 						Computed:    true,
 					},
 					"items": schema.ListAttribute{
-						Description: "List of WAFs that use this Managed Rule Set.",
+						Description: descriptions["usage_items"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 				},
 			},
 			"groups": schema.MapNestedAttribute{
-				Description: "Inventory of all available Managed Rule Set groups and their current configuration.",
+				Description: descriptions["groups"],
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"description": schema.StringAttribute{
-							Description: "A description of what this group covers.",
+							Description: descriptions["group_description"],
 							Computed:    true,
 						},
 						"group_name": schema.StringAttribute{
-							Description: "The name for the rule group.",
+							Description: descriptions["group_name"],
 							Computed:    true,
 						},
 						"rules": schema.MapNestedAttribute{
-							Description: "Rules of the rule group.",
+							Description: descriptions["group_rules"],
 							Computed:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"description": schema.StringAttribute{
-										Description: "A description of what this rule does.",
+										Description: descriptions["rule_description"],
 										Computed:    true,
 									},
 									"mode": schema.StringAttribute{
-										Description: "The current mode of the rule.",
+										Description: descriptions["rule_mode"],
 										Computed:    true,
 									},
 									"severity": schema.StringAttribute{
-										Description: "Impact level.",
+										Description: descriptions["rule_severity"],
 										Computed:    true,
 									},
 								},
@@ -155,8 +163,8 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 	name := model.Name.ValueString()
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "name", name)
 
 	managedRuleSetResp, err := d.client.DefaultAPI.GetManagedRuleSet(ctx, projectId, region, name).Execute()
 	if err != nil {

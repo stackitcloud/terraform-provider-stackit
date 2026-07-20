@@ -3,12 +3,12 @@
 page_title: "stackit_alb_waf_managed_rule_set Data Source - stackit"
 subcategory: ""
 description: |-
-  ALB WAF Managed Rule Set resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
+  ALB WAF Managed Rule Set DataSource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on datasource level.
 ---
 
 # stackit_alb_waf_managed_rule_set (Data Source)
 
-ALB WAF Managed Rule Set resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
+ALB WAF Managed Rule Set DataSource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on datasource level.
 
 ## Example Usage
 

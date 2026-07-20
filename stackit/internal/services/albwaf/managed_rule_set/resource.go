@@ -114,19 +114,39 @@ func (r *managedRuleSetResource) Metadata(_ context.Context, req resource.Metada
 	resp.TypeName = req.ProviderTypeName + "_alb_waf_managed_rule_set"
 }
 
+// descriptions for the attributes in the Schema.
+var descriptions = map[string]string{
+	"id":                "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`name`\".",
+	"project_id":        "STACKIT project ID associated with the ALB WAF Managed Rule Set.",
+	"region":            "STACKIT region name the resource is located in. If not defined, the provider region is used.",
+	"name":              "Managed Rule Set configuration name.",
+	"type":              "Type of the Managed Rule Set.",
+	"version":           "Managed Rule Set version.",
+	"usage":             "Managed Rule Set usage",
+	"usage_count":       "Number of WAFs using this Managed Rule Set.",
+	"usage_items":       "List of WAFs that use this Managed Rule Set.",
+	"groups":            "Inventory of all available Managed Rule Set groups and their current configuration.",
+	"group_description": "A description of what this group covers.",
+	"group_name":        "The name for the rule group.",
+	"group_rules":       "Rules of the rule group.",
+	"rule_description":  "A description of what this rule does.",
+	"rule_mode":         "The current mode of the rule.",
+	"rule_severity":     "Impact level.",
+}
+
 func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("ALB WAF Managed Rule Set resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`name`\".",
+				Description: descriptions["id"],
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Description: "STACKIT project ID associated with the ALB WAF Managed Rule Set.",
+				Description: descriptions["project_id"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -137,7 +157,7 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"region": schema.StringAttribute{
-				Description: "STACKIT region name the resource is located in. If not defined, the provider region is used.",
+				Description: descriptions["region"],
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -145,7 +165,7 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "Managed Rule Set configuration name.",
+				Description: descriptions["name"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -158,62 +178,59 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "Set the Managed Rule Set type.",
+				Description: descriptions["type"],
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					stringvalidator.OneOf(mrsTypeOptions...),
-				},
 			},
 			"version": schema.StringAttribute{
-				Description: "Managed Rule Set version.",
+				Description: descriptions["version"],
 				Computed:    true,
 			},
 			"usage": schema.SingleNestedAttribute{
-				Description: "Managed Rule Set usage",
+				Description: descriptions["usage"],
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"count": schema.Int32Attribute{
-						Description: "Number of WAFs using this Managed Rule Set.",
+						Description: descriptions["usage_count"],
 						Computed:    true,
 					},
 					"items": schema.ListAttribute{
-						Description: "List of WAFs that use this Managed Rule Set.",
+						Description: descriptions["usage_items"],
 						Computed:    true,
 						ElementType: types.StringType,
 					},
 				},
 			},
 			"groups": schema.MapNestedAttribute{
-				Description: "Inventory of all available Managed Rule Set groups and their current configuration.",
+				Description: descriptions["groups"],
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"description": schema.StringAttribute{
-							Description: "A description of what this group covers.",
+							Description: descriptions["group_description"],
 							Computed:    true,
 						},
 						"group_name": schema.StringAttribute{
-							Description: "The name for the rule group.",
+							Description: descriptions["group_name"],
 							Computed:    true,
 						},
 						"rules": schema.MapNestedAttribute{
-							Description: "Rules of the rule group.",
+							Description: descriptions["group_rules"],
 							Computed:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"description": schema.StringAttribute{
-										Description: "A description of what this rule does.",
+										Description: descriptions["rule_description"],
 										Computed:    true,
 									},
 									"mode": schema.StringAttribute{
-										Description: "The current mode of the rule.",
+										Description: descriptions["rule_mode"],
 										Computed:    true,
 									},
 									"severity": schema.StringAttribute{
-										Description: "Impact level.",
+										Description: descriptions["rule_severity"],
 										Computed:    true,
 									},
 								},
@@ -286,6 +303,7 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "name", model.Name)
 
 	payload, err := toCreatePayload(ctx, &model)
 	if err != nil {
@@ -348,8 +366,8 @@ func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequ
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "name", name)
 
 	managedRuleSetResp, err := r.client.DefaultAPI.GetManagedRuleSet(ctx, projectId, region, name).Execute()
 	if err != nil {
@@ -392,8 +410,8 @@ func (r *managedRuleSetResource) Delete(ctx context.Context, req resource.Delete
 	name := model.Name.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
-	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "name", name)
 
 	_, err := r.client.DefaultAPI.DeleteManagedRuleSet(ctx, projectId, region, name).Execute()
 	if err != nil {
