@@ -12,6 +12,30 @@ variable "role" {}
 variable "server_version" {}
 variable "region" {}
 
+variable "kek_key_version" {}
+variable "service_account_email" {}
+
+variable "keyring_display_name" {}
+variable "display_name" {}
+variable "protection" {}
+variable "algorithm" {}
+variable "purpose" {}
+
+
+resource "stackit_kms_keyring" "keyring" {
+  project_id   = var.project_id
+  display_name = var.keyring_display_name
+}
+
+resource "stackit_kms_key" "key" {
+  project_id   = var.project_id
+  keyring_id   = stackit_kms_keyring.keyring.keyring_id
+  protection   = var.protection
+  algorithm    = var.algorithm
+  display_name = var.display_name
+  purpose      = var.purpose
+}
+
 resource "stackit_sqlserverflex_instance" "instance" {
   project_id = var.project_id
   name       = var.name
@@ -24,8 +48,14 @@ resource "stackit_sqlserverflex_instance" "instance" {
     acl          = [var.acl1]
     access_scope = var.access_scope
   }
-  retention_days  = var.retention_days
-  version         = var.server_version
+  retention_days = var.retention_days
+  version        = var.server_version
+  encryption = {
+    kek_key_id      = stackit_kms_key.key.key_id
+    kek_keyring_id  = stackit_kms_keyring.keyring.keyring_id
+    kek_key_version = var.kek_key_version
+    service_account = var.service_account_email
+  }
   backup_schedule = var.backup_schedule
   region          = var.region
 }

@@ -69,6 +69,11 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"name":                 "Instance name.",
 		"acl":                  "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule":      `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
+		"encryption":           "Parameter to define which key to use for storage encryption.",
+		"kek_key_id":           "UUID of the key within the STACKIT-KMS to use for the encryption.",
+		"kek_keyring_id":       "UUID of the keyring where the key is located within the STACKTI-KMS.",
+		"kek_key_version":      "Version of the key within the STACKIT-KMS to use for the encryption.",
+		"service_account":      "Service-Account linked to the Key within the STACKIT-KMS.",
 		"options":              "Custom parameters for the SQLServer Flex instance.",
 		"flavor_id":            "The flavor ID of the SQLServer Flex instance.",
 		"network":              "The network configuration of the instance.",
@@ -114,6 +119,29 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
 				Computed:    true,
+			},
+			"encryption": schema.SingleNestedAttribute{
+				Description: descriptions["encryption"],
+				Optional:    true,
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"kek_key_id": schema.StringAttribute{
+						Description: descriptions["kek_key_id"],
+						Computed:    true,
+					},
+					"kek_keyring_id": schema.StringAttribute{
+						Description: descriptions["kek_keyring_id"],
+						Computed:    true,
+					},
+					"kek_key_version": schema.StringAttribute{
+						Description: descriptions["kek_key_version"],
+						Computed:    true,
+					},
+					"service_account": schema.StringAttribute{
+						Description: descriptions["service_account"],
+						Computed:    true,
+					},
+				},
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Computed: true,

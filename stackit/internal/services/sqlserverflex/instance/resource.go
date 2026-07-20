@@ -62,6 +62,7 @@ type Model struct {
 	// Deprecated: ACL is deprecated and will be removed after January 2027
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
+	Encryption     types.Object `tfsdk:"encryption"`
 	Flavor         types.Object `tfsdk:"flavor"`
 	FlavorId       types.String `tfsdk:"flavor_id"`
 	Storage        types.Object `tfsdk:"storage"`
@@ -73,6 +74,22 @@ type Model struct {
 	RetentionDays types.Int32  `tfsdk:"retention_days"`
 	Network       types.Object `tfsdk:"network"`
 	Region        types.String `tfsdk:"region"`
+}
+
+// Struct corresponding to Model.Encryption
+type encryptionModel struct {
+	KekKeyId       types.String `tfsdk:"kek_key_id"`
+	KekKeyRingId   types.String `tfsdk:"kek_keyring_id"`
+	KekKeyVersion  types.String `tfsdk:"kek_key_version"`
+	ServiceAccount types.String `tfsdk:"service_account"`
+}
+
+// types corresponding to encryptionModel
+var encryptionTypes = map[string]attr.Type{
+	"kek_key_id":      basetypes.StringType{},
+	"kek_keyring_id":  basetypes.StringType{},
+	"kek_key_version": basetypes.StringType{},
+	"service_account": basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Network
@@ -300,6 +317,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"name":                 "Instance name.",
 		"acl":                  "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule":      `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *")` + willBeRequired,
+		"encryption":           "Parameter to define which key to use for storage encryption.",
+		"kek_key_id":           "UUID of the key within the STACKIT-KMS to use for the encryption.",
+		"kek_keyring_id":       "UUID of the keyring where the key is located within the STACKTI-KMS.",
+		"kek_key_version":      "Version of the key within the STACKIT-KMS to use for the encryption.",
+		"service_account":      "Service-Account linked to the Key within the STACKIT-KMS.",
 		"options":              "Custom parameters for the SQLServer Flex instance.",
 		"flavor_id":            "The flavor ID of the SQLServer Flex instance.",
 		"network":              "The network configuration of the instance." + willBeRequired,
@@ -379,6 +401,52 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifierCustom.CronNormalizationModifier{},
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"encryption": schema.SingleNestedAttribute{
+				Description: descriptions["encryption"],
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"kek_key_id": schema.StringAttribute{
+						Description: descriptions["kek_key_id"],
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"kek_keyring_id": schema.StringAttribute{
+						Description: descriptions["kek_keyring_id"],
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"kek_key_version": schema.StringAttribute{
+						Description: descriptions["kek_key_version"],
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"service_account": schema.StringAttribute{
+						Description: descriptions["service_account"],
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
@@ -587,6 +655,17 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			return
 		}
 	}
+
+	var encryption *encryptionModel
+	if !(model.Encryption.IsNull() || model.Encryption.IsUnknown()) {
+		encryption = &encryptionModel{}
+		diags = model.Encryption.As(ctx, encryption, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	var flavor = &flavorModel{}
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
@@ -628,7 +707,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model, acl, flavor, storage, options, network)
+	payload, err := toCreatePayload(&model, acl, encryption, flavor, storage, options, network)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -1001,6 +1080,23 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		return fmt.Errorf("creating options: %w", core.DiagsToError(diags))
 	}
 
+	var encryptionValues map[string]attr.Value
+	var encryptionObject types.Object
+	if resp.Encryption != nil {
+		encryptionValues = map[string]attr.Value{
+			"kek_key_id":      types.StringValue(resp.Encryption.KekKeyId),
+			"kek_keyring_id":  types.StringValue(resp.Encryption.KekKeyRingId),
+			"kek_key_version": types.StringValue(resp.Encryption.KekKeyVersion),
+			"service_account": types.StringValue(resp.Encryption.ServiceAccount),
+		}
+		encryptionObject, diags = types.ObjectValue(encryptionTypes, encryptionValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating encryption: %w", core.DiagsToError(diags))
+		}
+	} else {
+		encryptionObject = types.ObjectNull(encryptionTypes)
+	}
+
 	// If the API returned "0 0 * * *" but user defined "00 00 * * *" in its config,
 	// we keep the user's "00 00 * * *" in the state to satisfy Terraform.
 	backupScheduleApiResp := types.StringValue(resp.BackupSchedule)
@@ -1023,12 +1119,31 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	model.RetentionDays = types.Int32Value(resp.RetentionDays)
 	model.Edition = types.StringValue(string(resp.Edition))
 	model.Network = networkObject
+	model.Encryption = encryptionObject
 	return nil
 }
 
-func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *storageModel, options *optionsModel, network *networkModel) (*sqlserverflex.CreateInstancePayload, error) {
+func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, flavor *flavorModel, storage *storageModel, options *optionsModel, network *networkModel) (*sqlserverflex.CreateInstancePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
+	}
+
+	// Encryption
+	var encryptionPayload *sqlserverflex.InstanceEncryption
+	if encryption != nil {
+		encryptionPayload = &sqlserverflex.InstanceEncryption{}
+		if !encryption.KekKeyId.IsNull() || !encryption.KekKeyId.IsUnknown() {
+			encryptionPayload.KekKeyId = encryption.KekKeyId.ValueString()
+		}
+		if !encryption.KekKeyRingId.IsNull() || !encryption.KekKeyRingId.IsUnknown() {
+			encryptionPayload.KekKeyRingId = encryption.KekKeyRingId.ValueString()
+		}
+		if !encryption.KekKeyVersion.IsNull() || !encryption.KekKeyVersion.IsUnknown() {
+			encryptionPayload.KekKeyVersion = encryption.KekKeyVersion.ValueString()
+		}
+		if !encryption.ServiceAccount.IsNull() || !encryption.ServiceAccount.IsUnknown() {
+			encryptionPayload.ServiceAccount = encryption.ServiceAccount.ValueString()
+		}
 	}
 
 	// Network
@@ -1077,7 +1192,7 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 
 	return &sqlserverflex.CreateInstancePayload{
 		BackupSchedule:       model.BackupSchedule.ValueString(),
-		Encryption:           nil,
+		Encryption:           encryptionPayload,
 		FlavorId:             flavorId,
 		Labels:               nil,
 		Name:                 model.Name.ValueString(),

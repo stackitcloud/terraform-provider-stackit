@@ -344,15 +344,16 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description  string
-		input        *Model
-		inputAcl     []string
-		inputFlavor  *flavorModel
-		inputStorage *storageModel
-		inputOptions *optionsModel
-		inputNetwork *networkModel
-		expected     *sqlserverflex.CreateInstancePayload
-		isValid      bool
+		description     string
+		input           *Model
+		inputAcl        []string
+		inputEncryption *encryptionModel
+		inputFlavor     *flavorModel
+		inputStorage    *storageModel
+		inputOptions    *optionsModel
+		inputNetwork    *networkModel
+		expected        *sqlserverflex.CreateInstancePayload
+		isValid         bool
 	}{
 		{
 			description: "default_values",
@@ -360,11 +361,12 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:      types.StringValue("fid"),
 				RetentionDays: types.Int32Value(1),
 			},
-			inputAcl:     []string{},
-			inputFlavor:  &flavorModel{},
-			inputStorage: &storageModel{},
-			inputOptions: &optionsModel{},
-			inputNetwork: &networkModel{},
+			inputAcl:        []string{},
+			inputEncryption: &encryptionModel{},
+			inputFlavor:     &flavorModel{},
+			inputStorage:    &storageModel{},
+			inputOptions:    &optionsModel{},
+			inputNetwork:    &networkModel{},
 			expected: &sqlserverflex.CreateInstancePayload{
 				FlavorId:      "fid",
 				RetentionDays: 1,
@@ -375,6 +377,7 @@ func TestToCreatePayload(t *testing.T) {
 					Class: "",
 					Size:  0,
 				},
+				Encryption: &sqlserverflex.InstanceEncryption{},
 			},
 			isValid: true,
 		},
@@ -401,6 +404,12 @@ func TestToCreatePayload(t *testing.T) {
 				RetentionDays: types.Int32Value(1),
 			},
 			inputNetwork: &networkModel{},
+			inputEncryption: &encryptionModel{
+				KekKeyId:       types.StringValue("id"),
+				KekKeyRingId:   types.StringValue("keyRingId"),
+				KekKeyVersion:  types.StringValue("keyVersion"),
+				ServiceAccount: types.StringValue("some_service_account"),
+			},
 			expected: &sqlserverflex.CreateInstancePayload{
 				Network: sqlserverflex.CreateInstancePayloadNetwork{
 					Acl: []string{"ip_1", "ip_2"},
@@ -414,6 +423,12 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				RetentionDays: 1,
 				Version:       "version",
+				Encryption: &sqlserverflex.InstanceEncryption{
+					KekKeyId:       "id",
+					KekKeyRingId:   "keyRingId",
+					KekKeyVersion:  "keyVersion",
+					ServiceAccount: "some_service_account",
+				},
 			},
 			isValid: true,
 		},
@@ -522,7 +537,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions, tt.inputNetwork)
+			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputEncryption, tt.inputFlavor, tt.inputStorage, tt.inputOptions, tt.inputNetwork)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
