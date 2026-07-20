@@ -170,6 +170,7 @@ func (d *managedRuleSetDataSource) Read(ctx context.Context, req datasource.Read
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("ALB WAF Managed Rule Set with name %q not found in project %q and region %q", name, projectId, region), err.Error())
 			resp.State.RemoveResource(ctx)
 			return
 		}
