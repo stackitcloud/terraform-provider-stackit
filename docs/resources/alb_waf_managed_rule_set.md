@@ -27,7 +27,7 @@ resource "stackit_alb_waf_managed_rule_set" "example" {
 
 - `name` (String) Managed Rule Set configuration name.
 - `project_id` (String) STACKIT project ID associated with the ALB WAF Managed Rule Set.
-- `type` (String) Set the Managed Rule Set type.
+- `type` (String) Type of the Managed Rule Set.
 
 ### Optional
 
