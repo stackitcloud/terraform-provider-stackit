@@ -536,9 +536,9 @@ func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model
 		return fmt.Errorf("token id not present")
 	}
 
-	mapValue, diags := types.MapValueFrom(ctx, types.StringType, token.Labels)
-	if diags.HasError() {
-		return fmt.Errorf("failure in mapping labels")
+	mapValue, err := utils.MapLabels(ctx, token.Labels, model.Labels)
+	if err != nil {
+		return err
 	}
 
 	validUntil := types.StringNull()
