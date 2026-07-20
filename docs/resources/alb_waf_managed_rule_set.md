@@ -4,11 +4,14 @@ page_title: "stackit_alb_waf_managed_rule_set Resource - stackit"
 subcategory: ""
 description: |-
   ALB WAF Managed Rule Set resource schema. Uses the default_region specified in the provider configuration as a fallback in case no region is defined on resource level.
+  ~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our guide https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources for how to opt-in to use beta resources.
 ---
 
 # stackit_alb_waf_managed_rule_set (Resource)
 
 ALB WAF Managed Rule Set resource schema. Uses the `default_region` specified in the provider configuration as a fallback in case no `region` is defined on resource level.
+
+~> This resource is in beta and may be subject to breaking changes in the future. Use with caution. See our [guide](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs/guides/opting_into_beta_resources) for how to opt-in to use beta resources.
 
 ## Example Usage
 

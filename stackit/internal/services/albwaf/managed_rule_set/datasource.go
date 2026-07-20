@@ -18,6 +18,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -43,6 +44,11 @@ func (d *managedRuleSetDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_alb_waf_managed_rule_set", core.Datasource)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	apiClient := utils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -57,7 +63,7 @@ func (d *managedRuleSetDataSource) Metadata(_ context.Context, req datasource.Me
 
 func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: fmt.Sprintf("ALB WAF Managed Rule Set DataSource schema. %s", core.DatasourceRegionFallbackDocstring),
+		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Managed Rule Set DataSource schema. %s", core.DatasourceRegionFallbackDocstring), core.Datasource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
