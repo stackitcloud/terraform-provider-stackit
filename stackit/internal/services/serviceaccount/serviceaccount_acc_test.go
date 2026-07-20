@@ -323,6 +323,7 @@ func testAccCheckServiceAccountDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_service_account" {
 			continue
 		}
+		// terraform ID: "[project_id],[email]"
 		serviceAccountEmail := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, serviceAccountEmail)
 	}

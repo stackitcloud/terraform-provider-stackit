@@ -5846,6 +5846,7 @@ func testAccCheckNetworkAreaRegionDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network_area_region" {
 			continue
 		}
+		// terraform ID: "[organization_id],[network_area_id]"
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
@@ -5883,6 +5884,7 @@ func testAccCheckNetworkAreaDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network_area" {
 			continue
 		}
+		// terraform ID: "[organization_id],[network_area_id]"
 		networkAreaId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		networkAreasToDestroy = append(networkAreasToDestroy, networkAreaId)
 	}
@@ -5919,8 +5921,8 @@ func testAccCheckIaaSVolumeDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_volume" {
 			continue
 		}
-		// volume terraform ID: "[project_id],[volume_id]"
-		volumeId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// volume terraform ID: "[project_id],[region],[volume_id]"
+		volumeId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		volumesToDestroy = append(volumesToDestroy, volumeId)
 	}
 
@@ -5976,9 +5978,9 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network" {
 			continue
 		}
-		// network terraform ID: "[project_id],[network_id]"
+		// network terraform ID: "[project_id],[region],[network_id]"
 		projectId = strings.Split(rs.Primary.ID, core.Separator)[0]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 
