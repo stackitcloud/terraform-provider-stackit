@@ -4,21 +4,28 @@ page_title: "stackit_ske_kubeconfig Ephemeral Resource - stackit"
 subcategory: ""
 description: |-
   Ephemeral resource that generates a short-lived SKE kubeconfig. A new kubeconfig is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation.
+  ~> This ephemeral-resource is part of the experimental feature ske and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_ske_kubeconfig (Ephemeral Resource)
 
 Ephemeral resource that generates a short-lived SKE kubeconfig. A new kubeconfig is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation.
 
+~> This ephemeral-resource is part of the experimental feature ske and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+
 ## Example Usage
 
 ```terraform
+provider "stackit" {
+  experiments = ["ske"]
+}
+
 resource "stackit_ske_cluster" "example" {
   # ... cluster configuration ...
 }
 
 # We use the cluster ID ternary to force evaluation during the Apply phase.
-# Unlike managed resources, ephemeral resources evaluate during the Plan phase 
+# Unlike managed resources, ephemeral resources evaluate during the Plan phase
 # if inputs are known, which would trigger a 404 before the cluster exists.
 ephemeral "stackit_ske_kubeconfig" "example" {
   project_id   = stackit_ske_cluster.example.project_id

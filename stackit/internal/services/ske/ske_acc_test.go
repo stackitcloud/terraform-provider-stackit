@@ -131,7 +131,7 @@ func TestAccSKEMin(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -179,7 +179,7 @@ func TestAccSKEMin(t *testing.T) {
 			},
 			// 2) Data source
 			{
-				Config:          resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 
@@ -232,7 +232,7 @@ func TestAccSKEMin(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
 			{
-				Config:          resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMinUpdated(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -287,7 +287,7 @@ func TestAccSKEMax(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -372,7 +372,7 @@ func TestAccSKEMax(t *testing.T) {
 			},
 			// 2) Data source
 			{
-				Config:          resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 
@@ -460,7 +460,7 @@ func TestAccSKEMax(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version, set access.idp.enabled to false
 			{
-				Config:          resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMaxUpdated(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
