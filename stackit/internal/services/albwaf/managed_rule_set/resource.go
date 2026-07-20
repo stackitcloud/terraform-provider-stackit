@@ -21,8 +21,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
 
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
@@ -35,8 +33,6 @@ var (
 	_ resource.ResourceWithConfigure   = &managedRuleSetResource{}
 	_ resource.ResourceWithImportState = &managedRuleSetResource{}
 	_ resource.ResourceWithModifyPlan  = &managedRuleSetResource{}
-
-	mrsTypeOptions = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedMRSTypeEnumValues)
 )
 
 type Model struct {
