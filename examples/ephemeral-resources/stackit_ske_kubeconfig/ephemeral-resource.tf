@@ -1,9 +1,13 @@
+provider "stackit" {
+  experiments = ["ske"]
+}
+
 resource "stackit_ske_cluster" "example" {
   # ... cluster configuration ...
 }
 
 # We use the cluster ID ternary to force evaluation during the Apply phase.
-# Unlike managed resources, ephemeral resources evaluate during the Plan phase 
+# Unlike managed resources, ephemeral resources evaluate during the Plan phase
 # if inputs are known, which would trigger a 404 before the cluster exists.
 ephemeral "stackit_ske_kubeconfig" "example" {
   project_id   = stackit_ske_cluster.example.project_id

@@ -16,6 +16,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -50,6 +51,12 @@ func (e *kubeconfigEphemeralResource) Configure(ctx context.Context, req ephemer
 	}
 
 	e.providerData = ephemeralProviderData.ProviderData
+
+	features.CheckExperimentEnabled(ctx, &e.providerData, features.SkeExperiment, "stackit_ske_kubeconfig", core.EphemeralResource, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	e.client = skeUtils.ConfigureClient(ctx, &e.providerData, &resp.Diagnostics)
 
 	tflog.Info(ctx, "SKE kubeconfig client configured")
@@ -67,8 +74,12 @@ type ephemeralModel struct {
 
 // Schema defines the schema for the ephemeral resource.
 func (e *kubeconfigEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
-	description := "Ephemeral resource that generates a short-lived SKE kubeconfig. " +
-		"A new kubeconfig is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation."
+	description := features.AddExperimentDescription(
+		"Ephemeral resource that generates a short-lived SKE kubeconfig. "+
+			"A new kubeconfig is generated each time the resource is evaluated, and it remains consistent for the duration of a Terraform operation.",
+		features.SkeExperiment,
+		core.EphemeralResource,
+	)
 
 	resp.Schema = schema.Schema{
 		Description: description,

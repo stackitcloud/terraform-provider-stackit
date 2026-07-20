@@ -95,11 +95,11 @@ func TestConfigBuilderProviderConfig(t *testing.T) {
 		{
 			name: "experiments",
 			builder: NewConfigBuilder().
-				Experiments(ExperimentIAM, ExperimentNetwork),
+				Experiments(ExperimentIAM, ExperimentNetwork, ExperimentSKE),
 			want: `provider "stackit" {
     default_region = "eu01"
     enable_beta_resources = false
-    experiments = ["iam", "network"]
+    experiments = ["iam", "network", "ske"]
 }`,
 		},
 		{
