@@ -34,9 +34,12 @@ var dataSourceBackendTypes = map[string]attr.Type{
 }
 
 var dataSourceConfigTypes = map[string]attr.Type{
-	"backend":           types.ObjectType{AttrTypes: dataSourceBackendTypes},
-	"regions":           types.ListType{ElemType: types.StringType},
-	"blocked_countries": types.ListType{ElemType: types.StringType},
+	"backend":                types.ObjectType{AttrTypes: dataSourceBackendTypes},
+	"regions":                types.ListType{ElemType: types.StringType},
+	"blocked_countries":      types.ListType{ElemType: types.StringType},
+	"blocked_ips":            types.ListType{ElemType: types.StringType},
+	"default_cache_duration": types.StringType,
+	"monthly_limit_bytes":    types.Int64Type,
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes, // Shared from resource.go
 	},
@@ -202,6 +205,19 @@ func (r *distributionDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 						Optional:    true,
 						Description: schemaDescriptions["config_blocked_countries"],
 						ElementType: types.StringType,
+					},
+					"blocked_ips": schema.ListAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_blocked_ips"],
+						ElementType: types.StringType,
+					},
+					"default_cache_duration": schema.StringAttribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_default_cache_duration"],
+					},
+					"monthly_limit_bytes": schema.Int64Attribute{
+						Computed:    true,
+						Description: schemaDescriptions["config_monthly_limit_bytes"],
 					},
 					"optimizer": schema.SingleNestedAttribute{
 						Description: schemaDescriptions["config_optimizer"],
@@ -678,11 +694,41 @@ func mapDataSourceFields(ctx context.Context, distribution *cdnSdk.Distribution,
 		return core.DiagsToError(diagWaf)
 	}
 
+	// blockedIps
+	var blockedIps []attr.Value
+	if distribution.Config.BlockedIps != nil {
+		for _, ip := range distribution.Config.BlockedIps {
+			blockedIps = append(blockedIps, types.StringValue(ip))
+		}
+	}
+
+	modelBlockedIps, diags := types.ListValue(types.StringType, blockedIps)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	var defaultCacheDuration types.String
+	if distribution.Config.DefaultCacheDuration.IsSet() {
+		defaultCacheDuration = types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
+	} else {
+		defaultCacheDuration = types.StringNull()
+	}
+
+	var monthlyLimitBytes types.Int64
+	if distribution.Config.MonthlyLimitBytes.IsSet() {
+		monthlyLimitBytes = types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
+	} else {
+		monthlyLimitBytes = types.Int64Null()
+	}
+
 	// Use dataSourceConfigTypes
 	cfg, diags := types.ObjectValue(dataSourceConfigTypes, map[string]attr.Value{
 		"backend":                backend,
 		"regions":                modelRegions,
 		"blocked_countries":      modelBlockedCountries,
+		"blocked_ips":            modelBlockedIps,
+		"default_cache_duration": defaultCacheDuration,
+		"monthly_limit_bytes":    monthlyLimitBytes,
 		"optimizer":              optimizerVal,
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
