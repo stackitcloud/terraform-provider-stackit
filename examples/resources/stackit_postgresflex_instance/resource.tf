@@ -1,16 +1,14 @@
 resource "stackit_postgresflex_instance" "example" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name            = "example-instance"
-  acl             = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
-  backup_schedule = "00 00 * * *"
-  flavor = {
-    cpu = 2
-    ram = 4
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-instance"
+  network = {
+    acl = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
   }
-  replicas = 3
+  backup_schedule = "0 0 * * *"
+  flavor_id       = "4.8-replica"
   storage = {
     class = "premium-perf2-stackit"
     size  = 5
   }
-  version = 14
+  version = "14"
 }

@@ -364,7 +364,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListChanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
+					listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListUnchanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
 				},
 				Validators: []validator.List{
 					listvalidator.ConflictsWith(
@@ -427,7 +427,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:    true,
 				Optional:    true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.ListChanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.ListUnchanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
 				},
 				Attributes: map[string]schema.Attribute{
 					"access_scope": schema.StringAttribute{
@@ -445,7 +445,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.List{
-							listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListChanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+							listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListUnchanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
 						},
 						Validators: []validator.List{
 							listvalidator.ConflictsWith(
@@ -511,7 +511,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.Int32Changed(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
+					objectplanmodifier2.UseStateForUnknownIf(objectplanmodifier2.Int32Unchanged(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
 				},
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
@@ -526,7 +526,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:           true,
 						Computed:           true,
 						PlanModifiers: []planmodifier.Int32{
-							int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Changed(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
+							int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Unchanged(path.Root("retention_days")), "sets `UseStateForUnknown` only if `retention_days` has not changed"),
 						},
 						Validators: []validator.Int32{
 							int32validator.ConflictsWith(
@@ -541,7 +541,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Changed(path.Root("options").AtName("retention_days")), "sets `UseStateForUnknown` only if `options.retention_days` has not changed"),
+					int32planmodifier2.UseStateForUnknownIf(int32planmodifier2.Int32Unchanged(path.Root("options").AtName("retention_days")), "sets `UseStateForUnknown` only if `options.retention_days` has not changed"),
 				},
 				Validators: []validator.Int32{
 					int32validator.ConflictsWith(
