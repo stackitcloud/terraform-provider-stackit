@@ -14,20 +14,18 @@ Postgres Flex instance resource schema. Must have a `region` specified in the pr
 
 ```terraform
 resource "stackit_postgresflex_instance" "example" {
-  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name            = "example-instance"
-  acl             = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
-  backup_schedule = "00 00 * * *"
-  flavor = {
-    cpu = 2
-    ram = 4
+  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name       = "example-instance"
+  network = {
+    acl = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
   }
-  replicas = 3
+  backup_schedule = "0 0 * * *"
+  flavor_id       = "4.8-replica"
   storage = {
     class = "premium-perf2-stackit"
     size  = 5
   }
-  version = 14
+  version = "14"
 }
 ```
 
@@ -36,23 +34,51 @@ resource "stackit_postgresflex_instance" "example" {
 
 ### Required
 
-- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
 - `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `name` (String) Instance name.
 - `project_id` (String) STACKIT project ID to which the instance is associated.
-- `replicas` (Number) How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 
 ### Optional
 
+- `acl` (List of String, Deprecated) The Access Control List (ACL) for the PostgresFlex instance.
+- `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
+- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String) The flavor ID of the PostgreSQL Flex instance.
+- `network` (Attributes) The network configuration of the instance. Will be required in the future. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--network))
 - `region` (String) The resource region. If not defined, the provider region is used.
+- `replicas` (Number) How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.
+- `retention_days` (Number)
 
 ### Read-Only
 
+- `connection_info` (Attributes) The connection info for the PostgresFlex instance. (see [below for nested schema](#nestedatt--connection_info))
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) ID of the PostgresFlex instance.
+
+<a id="nestedatt--storage"></a>
+### Nested Schema for `storage`
+
+Required:
+
+- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+```bash
+stackit postgresflex options --storages --flavor-id FLAVOR_ID
+```
+- `size` (Number)
+
+
+<a id="nestedatt--encryption"></a>
+### Nested Schema for `encryption`
+
+Required:
+
+- `kek_key_id` (String) The ID of the Key within the STACKIT-KMS to use for the encryption.
+- `kek_key_ring_id` (String) The ID of the keyring where the key is located within the STACKTI-KMS.
+- `kek_key_version` (String) Version of the key within the STACKIT-KMS to use for the encryption.
+- `service_account` (String) Service-Account linked to the Key within the STACKIT-KMS.
+
 
 <a id="nestedatt--flavor"></a>
 ### Nested Schema for `flavor`
@@ -66,18 +92,37 @@ Read-Only:
 
 - `description` (String)
 - `id` (String)
+- `node_type` (String)
 
 
-<a id="nestedatt--storage"></a>
-### Nested Schema for `storage`
+<a id="nestedatt--network"></a>
+### Nested Schema for `network`
 
-Required:
+Optional:
 
-- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
-```bash
-stackit postgresflex options --storages --flavor-id FLAVOR_ID
-```
-- `size` (Number)
+- `access_scope` (String) The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. Possible values are: `PUBLIC`, `SNA`.
+- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
+
+Read-Only:
+
+- `instance_address` (String)
+- `router_address` (String)
+
+
+<a id="nestedatt--connection_info"></a>
+### Nested Schema for `connection_info`
+
+Read-Only:
+
+- `write` (Attributes) The DNS name and port in the instance overview. (see [below for nested schema](#nestedatt--connection_info--write))
+
+<a id="nestedatt--connection_info--write"></a>
+### Nested Schema for `connection_info.write`
+
+Read-Only:
+
+- `host` (String) The host of the instance.
+- `port` (Number) The port of the instance.
 
 ## Import
 

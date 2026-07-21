@@ -6,53 +6,57 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
-		description string
-		input       *postgresflex.GetUserResponse
-		region      string
-		expected    DataSourceModel
-		isValid     bool
+		description  string
+		userResp     *postgresflex.GetUserResponse
+		instanceResp *postgresflex.GetInstanceResponse
+		region       string
+		expected     DataSourceModel
+		isValid      bool
 	}{
 		{
-			"default_values",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{},
-			},
-			testRegion,
-			DataSourceModel{
+			description:  "default_values",
+			userResp:     &postgresflex.GetUserResponse{},
+			instanceResp: &postgresflex.GetInstanceResponse{},
+			region:       testRegion,
+			expected: DataSourceModel{
 				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
-				Username:   types.StringNull(),
+				Username:   types.StringValue(""),
 				Roles:      types.SetNull(types.StringType),
-				Host:       types.StringNull(),
-				Port:       types.Int64Null(),
+				Host:       types.StringValue(""),
+				Port:       types.Int32Value(0),
 				Region:     types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{
-					Roles: []string{
-						"role_1",
-						"role_2",
-						"",
+			description: "simple_values",
+			userResp: &postgresflex.GetUserResponse{
+				Roles: []string{
+					"role_1",
+					"role_2",
+					"",
+				},
+				Name: "username",
+			},
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "host",
+						Port: 1234,
 					},
-					Username: new("username"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
 				},
 			},
-			testRegion,
-			DataSourceModel{
+			region: testRegion,
+			expected: DataSourceModel{
 				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
@@ -64,58 +68,55 @@ func TestMapDataSourceFields(t *testing.T) {
 					types.StringValue(""),
 				}),
 				Host:   types.StringValue("host"),
-				Port:   types.Int64Value(1234),
+				Port:   types.Int32Value(1234),
 				Region: types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{
-					Id:       new("uid"),
-					Roles:    []string{},
-					Username: nil,
-					Host:     nil,
-					Port:     new(int64(2123456789)),
+			description: "null_fields_and_int_conversions",
+			userResp: &postgresflex.GetUserResponse{
+				Id:    123,
+				Roles: []string{},
+				Name:  "",
+			},
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "",
+						Port: 2123456789,
+					},
 				},
 			},
-			testRegion,
-			DataSourceModel{
-				Id:         types.StringValue("pid,region,iid,uid"),
-				UserId:     types.StringValue("uid"),
+			region: testRegion,
+			expected: DataSourceModel{
+				Id:         types.StringValue("pid,region,iid,123"),
+				UserId:     types.StringValue("123"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
-				Username:   types.StringNull(),
+				Username:   types.StringValue(""),
 				Roles:      types.SetValueMust(types.StringType, []attr.Value{}),
-				Host:       types.StringNull(),
-				Port:       types.Int64Value(2123456789),
+				Host:       types.StringValue(""),
+				Port:       types.Int32Value(2123456789),
 				Region:     types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			nil,
-			testRegion,
-			DataSourceModel{},
-			false,
+			description:  "nil_response",
+			userResp:     nil,
+			instanceResp: &postgresflex.GetInstanceResponse{},
+			region:       testRegion,
+			expected:     DataSourceModel{},
+			isValid:      false,
 		},
 		{
-			"nil_response_2",
-			&postgresflex.GetUserResponse{},
-			testRegion,
-			DataSourceModel{},
-			false,
-		},
-		{
-			"no_resource_id",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{},
-			},
-			testRegion,
-			DataSourceModel{},
-			false,
+			description:  "nil_response_2",
+			userResp:     &postgresflex.GetUserResponse{},
+			instanceResp: nil,
+			region:       testRegion,
+			expected:     DataSourceModel{},
+			isValid:      false,
 		},
 	}
 	for _, tt := range tests {
@@ -125,7 +126,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				InstanceId: tt.expected.InstanceId,
 				UserId:     tt.expected.UserId,
 			}
-			err := mapDataSourceFields(tt.input, state, tt.region)
+			err := mapDataSourceFields(tt.userResp, tt.instanceResp, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

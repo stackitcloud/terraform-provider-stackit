@@ -33,14 +33,47 @@ data "stackit_postgresflex_instance" "example" {
 
 ### Read-Only
 
-- `acl` (List of String) The Access Control List (ACL) for the PostgresFlex instance.
-- `backup_schedule` (String)
+- `acl` (List of String, Deprecated) The Access Control List (ACL) for the PostgresFlex instance.
+- `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.
+- `connection_info` (Attributes) The connection info for the PostgresFlex instance. (see [below for nested schema](#nestedatt--connection_info))
+- `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String)
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `name` (String) Instance name.
+- `network` (Attributes) (see [below for nested schema](#nestedatt--network))
 - `replicas` (Number)
+- `retention_days` (Number)
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
+
+<a id="nestedatt--connection_info"></a>
+### Nested Schema for `connection_info`
+
+Read-Only:
+
+- `write` (Attributes) The DNS name and port in the instance overview. (see [below for nested schema](#nestedatt--connection_info--write))
+
+<a id="nestedatt--connection_info--write"></a>
+### Nested Schema for `connection_info.write`
+
+Read-Only:
+
+- `host` (String) The host of the instance.
+- `port` (Number) The port of the instance.
+
+
+
+<a id="nestedatt--encryption"></a>
+### Nested Schema for `encryption`
+
+Read-Only:
+
+- `kek_key_id` (String)
+- `kek_key_ring_id` (String)
+- `kek_key_version` (String)
+- `service_account` (String)
+
 
 <a id="nestedatt--flavor"></a>
 ### Nested Schema for `flavor`
@@ -50,7 +83,19 @@ Read-Only:
 - `cpu` (Number)
 - `description` (String)
 - `id` (String)
+- `node_type` (String)
 - `ram` (Number)
+
+
+<a id="nestedatt--network"></a>
+### Nested Schema for `network`
+
+Read-Only:
+
+- `access_scope` (String) The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. Possible values are: `PUBLIC`, `SNA`.
+- `acl` (List of String) List of IPV4 cidr.
+- `instance_address` (String)
+- `router_address` (String)
 
 
 <a id="nestedatt--storage"></a>

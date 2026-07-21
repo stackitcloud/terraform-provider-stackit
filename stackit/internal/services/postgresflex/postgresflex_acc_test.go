@@ -2,17 +2,20 @@ package postgresflex_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api/wait"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -24,23 +27,23 @@ var instanceResource = map[string]string{
 	"project_id":              testutil.ProjectId,
 	"name":                    fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)),
 	"acl":                     "192.168.0.0/16",
-	"backup_schedule":         "00 16 * * *", // ensure it works properly with leading zeros
-	"backup_schedule_updated": "00 12 * * *",
-	"flavor_cpu":              "2",
-	"flavor_ram":              "4",
-	"flavor_description":      "Small, Compute optimized",
+	"backup_schedule":         "0 16 * * *",
+	"backup_schedule_updated": "0 12 * * *",
+	"flavor_cpu":              "4",
+	"flavor_ram":              "8",
 	"replicas":                "1",
 	"storage_class":           "premium-perf12-stackit",
 	"storage_size":            "5",
 	"storage_size_updated":    "10",
 	"version":                 "14",
-	"flavor_id":               "2.4",
+	"retention_days":          "32",
+	"flavor_id":               "4.8",
 }
 
 // User resource data
 var userResource = map[string]string{
 	"username":   fmt.Sprintf("tfaccuser%s", acctest.RandStringFromCharSet(4, acctest.CharSetAlpha)),
-	"role":       "createdb",
+	"role":       "login",
 	"project_id": instanceResource["project_id"],
 }
 
@@ -72,6 +75,7 @@ func configResources(backupSchedule, storageSize string, region *string) string 
 						size = %s
 					}
 					version = "%s"
+					retention_days = "%s"
 					%s
 				}
 
@@ -100,6 +104,7 @@ func configResources(backupSchedule, storageSize string, region *string) string 
 		instanceResource["storage_class"],
 		storageSize,
 		instanceResource["version"],
+		instanceResource["retention_days"],
 		regionConfig,
 		userResource["username"],
 		userResource["role"],
@@ -206,7 +211,7 @@ func TestAccPostgresFlexFlexResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "acl.0", instanceResource["acl"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "backup_schedule", instanceResource["backup_schedule"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.id", instanceResource["flavor_id"]),
-					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.description", instanceResource["flavor_description"]),
+					resource.TestCheckResourceAttrSet("data.stackit_postgresflex_instance.instance", "flavor.description"),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.cpu", instanceResource["flavor_cpu"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "flavor.ram", instanceResource["flavor_ram"]),
 					resource.TestCheckResourceAttr("data.stackit_postgresflex_instance.instance", "replicas", instanceResource["replicas"]),
@@ -354,21 +359,34 @@ func testAccCheckPostgresFlexDestroy(s *terraform.State) error {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
 
-	items := instancesResp.Items
+	var errs []error
+	items := instancesResp.Instances
 	for i := range items {
-		if items[i].Id == nil {
+		if items[i].Id == "" {
 			continue
 		}
-		if sdkUtils.Contains(instancesToDestroy, *items[i].Id) {
-			err := client.DefaultAPI.ForceDeleteInstance(ctx, testutil.ProjectId, testutil.Region, *items[i].Id).Execute()
-			if err != nil {
-				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", *items[i].Id, err)
+		if sdkUtils.Contains(instancesToDestroy, items[i].Id) {
+			config := utils.RetryConfig{
+				Attempts: 5,
+				Backoff: func(attempt int) time.Duration {
+					// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+					return time.Duration(attempt*5) * time.Second
+				},
+				RetryStatusCodes: []int{http.StatusLocked},
 			}
-			_, err = wait.ForceDeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *items[i].Id).WaitWithContext(ctx)
+			err = utils.RetryRequestWithoutResponse(
+				ctx,
+				client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, items[i].Id).Execute,
+				config,
+			)
 			if err != nil {
-				return fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", *items[i].Id, err)
+				return fmt.Errorf("deleting instance %s during CheckDestroy: %w", items[i].Id, err)
+			}
+			_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, items[i].Id).WaitWithContext(ctx)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("deleting instance %s during CheckDestroy: waiting for deletion %w", items[i].Id, err))
 			}
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }

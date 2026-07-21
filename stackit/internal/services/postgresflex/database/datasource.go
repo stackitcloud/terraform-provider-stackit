@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
@@ -17,7 +18,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -130,21 +131,27 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	databaseId := model.DatabaseId.ValueString()
+	databaseIdStr := model.DatabaseId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))
+		return
+	}
+
+	databaseResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
 			&resp.Diagnostics,
 			err,
 			"Reading database",
-			fmt.Sprintf("Database with ID %q or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
+			fmt.Sprintf("Database with ID %d or instance with ID %q does not exist in project %q.", databaseId, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},

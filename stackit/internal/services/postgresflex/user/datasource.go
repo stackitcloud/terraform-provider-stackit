@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
@@ -19,7 +20,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -35,7 +36,7 @@ type DataSourceModel struct {
 	Username   types.String `tfsdk:"username"`
 	Roles      types.Set    `tfsdk:"roles"`
 	Host       types.String `tfsdk:"host"`
-	Port       types.Int64  `tfsdk:"port"`
+	Port       types.Int32  `tfsdk:"port"`
 	Region     types.String `tfsdk:"region"`
 }
 
@@ -120,10 +121,12 @@ func (r *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:    true,
 			},
 			"host": schema.StringAttribute{
-				Computed: true,
+				DeprecationMessage: "host is deprecated and will be removed after February 2027. The host can be retrieved from the instance `connection_info.write.host`.",
+				Computed:           true,
 			},
-			"port": schema.Int64Attribute{
-				Computed: true,
+			"port": schema.Int32Attribute{
+				DeprecationMessage: "port is deprecated and will be removed after February 2027. The port can be retrieved from the instance `connection_info.write.port`.",
+				Computed:           true,
 			},
 			"region": schema.StringAttribute{
 				// the region cannot be found automatically, so it has to be passed
@@ -147,12 +150,18 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userIdStr := model.UserId.ValueString()
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
+
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
 
 	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
@@ -161,7 +170,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			&resp.Diagnostics,
 			err,
 			"Reading user",
-			fmt.Sprintf("User with ID %q or instance with ID %q does not exist in project %q.", userId, instanceId, projectId),
+			fmt.Sprintf("User with ID %q or instance with ID %q does not exist in project %q.", userIdStr, instanceId, projectId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q not found or forbidden access", projectId),
 			},
@@ -172,8 +181,15 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
+	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
+		return
+	}
+
 	// Map response body to schema and populate Computed attribute values
-	err = mapDataSourceFields(recordSetResp, &model, region)
+	err = mapDataSourceFields(recordSetResp, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -188,34 +204,34 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	tflog.Info(ctx, "Postgres Flex user read")
 }
 
-func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSourceModel, region string) error {
-	if userResp == nil || userResp.Item == nil {
-		return fmt.Errorf("response is nil")
+func mapDataSourceFields(userResp *postgresflex.GetUserResponse, instanceResp *postgresflex.GetInstanceResponse, model *DataSourceModel, region string) error {
+	if userResp == nil {
+		return fmt.Errorf("user response is nil")
+	}
+	if instanceResp == nil {
+		return fmt.Errorf("instance response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
 
 	var userId string
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
-	} else if user.Id != nil {
-		userId = *user.Id
 	} else {
-		return fmt.Errorf("user id not present")
+		userId = strconv.FormatInt(userResp.Id, 10)
 	}
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Username = types.StringValue(userResp.Name)
 
-	if user.Roles == nil {
+	if userResp.Roles == nil {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range user.Roles {
+		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -224,8 +240,8 @@ func mapDataSourceFields(userResp *postgresflex.GetUserResponse, model *DataSour
 		}
 		model.Roles = rolesSet
 	}
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
+	model.Host = types.StringValue(instanceResp.ConnectionInfo.Write.Host)
+	model.Port = types.Int32Value(instanceResp.ConnectionInfo.Write.Port)
 	model.Region = types.StringValue(region)
 	return nil
 }
