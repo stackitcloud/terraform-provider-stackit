@@ -18,6 +18,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
+// NOTE: These tests will be refactored.
+// Please DO NOT use this file as a pattern or reference for writing new tests.
 func TestUpdate_Success(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
@@ -31,7 +33,7 @@ func TestUpdate_Success(t *testing.T) {
 	tokenId := uuid.New()
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	tokenContent := "token"
-	tfId := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
+	tfId := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String(), tokenId.String())
 
 	updateTokenResp := &modelexperiments.PartialUpdateInstanceTokenResponse{
 		Token: modelexperiments.TokenMetadata{
