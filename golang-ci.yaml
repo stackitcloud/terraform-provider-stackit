@@ -9,7 +9,7 @@ run:
 linters:
   # https://golangci-lint.run/usage/linters/
   enable:
-    - pkgstutter # custom local linter
+    - tfacl # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -27,7 +27,7 @@ linters:
     - unparam # false positives
   settings:
     custom:
-      pkgstutter:
+      tfacl:
         type: module
         description: "A custom local linter"
     depguard:

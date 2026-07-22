@@ -1,4 +1,4 @@
-package pkgstutter
+package tfacl
 
 import (
 	"go/ast"
@@ -10,8 +10,7 @@ import (
 )
 
 var Analyzer = &analysis.Analyzer{
-	//Name: "tfacl",
-	Name: "pkgstutter",
+	Name: "tfacl",
 	Doc:  "Prevents the usage of 'acls' in terraform plugin framework field names; 'acl' should be used instead.",
 	Run:  run,
 }
@@ -68,8 +67,7 @@ func run(pass *analysis.Pass) (any, error) {
 }
 
 func init() {
-	//register.Plugin("tfacl", New)
-	register.Plugin("pkgstutter", New)
+	register.Plugin("tfacl", New)
 }
 
 func New(settings any) (register.LinterPlugin, error) {

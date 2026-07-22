@@ -32,7 +32,7 @@ build:
 
 fmt:
 	@gofmt -s -w .
-	@go tool golangci-lint fmt --config=${GOLANG_CI_YAML_PATH}
+	@golangci-lint fmt --config=${GOLANG_CI_YAML_PATH}
 	@terraform fmt -diff -recursive
 
 # TEST
