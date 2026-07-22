@@ -251,24 +251,14 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 			}
 		}
 
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error enabling AI Model Experiments",
-			fmt.Sprintf("Error enabling AI Model Experiments: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI Model Experiments", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	_, err = serviceEnablementWait.EnableServiceWaitHandler(ctx, i.serviceEnablementClient, region, projectId, utils.ModelExperimentsServiceId).
 		WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error enabling AI Model Experiments",
-			fmt.Sprintf("Error enabling AI Model Experiments: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error enabling AI Model Experiments", fmt.Sprintf("Waiting for AI Model Experiments to be enabled: %v", err))
 		return
 	}
 
@@ -280,12 +270,7 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 
 	createInstanceResp, err := i.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating AI Model Experiments instance",
-			fmt.Sprintf("Calling API: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = core.LogResponse(ctx)
