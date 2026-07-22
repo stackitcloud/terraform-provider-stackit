@@ -920,7 +920,7 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	ctx = core.InitProviderContext(ctx)
+	ctx = core.InitProviderContext(ctx) //nolint:tflogresponse // SDK call and response logging is done within r.createOrUpdateCluster()
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
@@ -2452,7 +2452,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	ctx = core.InitProviderContext(ctx)
+	ctx = core.InitProviderContext(ctx) //nolint:tflogresponse // SDK call and response logging is done within r.createOrUpdateCluster()
 
 	projectId := model.ProjectId.ValueString()
 	clName := model.Name.ValueString()

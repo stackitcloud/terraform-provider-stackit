@@ -1084,7 +1084,7 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()

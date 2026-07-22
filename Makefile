@@ -1,7 +1,7 @@
 ROOT_DIR              ?= $(shell git rev-parse --show-toplevel)
 SCRIPTS_BASE          ?= $(ROOT_DIR)/scripts
 GOLANG_CI_YAML_PATH ?= ${ROOT_DIR}/golang-ci.yaml
-GOLANG_CI_ARGS ?= --allow-parallel-runners --config=${GOLANG_CI_YAML_PATH}
+GOLANG_CI_ARGS ?= --allow-parallel-runners --config=${GOLANG_CI_YAML_PATH} --max-issues-per-linter 0 --max-same-issues 0
 
 # SETUP AND TOOL INITIALIZATION TASKS
 project-help:
@@ -13,7 +13,8 @@ project-tools:
 # LINT
 lint-golangci-lint:
 	@echo "Linting with golangci-lint"
-	@go tool golangci-lint run ${GOLANG_CI_ARGS}
+	@golangci-lint custom
+	@${ROOT_DIR}/custom-gcl run ${GOLANG_CI_ARGS}
 
 lint-tf: 
 	@echo "Linting terraform files"
@@ -31,7 +32,7 @@ build:
 
 fmt:
 	@gofmt -s -w .
-	@go tool golangci-lint fmt --config=${GOLANG_CI_YAML_PATH}
+	@golangci-lint fmt --config=${GOLANG_CI_YAML_PATH}
 	@terraform fmt -diff -recursive
 
 # TEST
