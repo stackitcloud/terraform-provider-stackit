@@ -53,7 +53,7 @@ func (i *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 		return
 	}
 	i.client = apiClient.DefaultAPI
-	tflog.Info(ctx, "Dremio instance client configured for data source")
+	tflog.Info(ctx, "Model Experiments instance client configured for data source")
 }
 
 // Schema defines the schema for the resource.
@@ -83,13 +83,11 @@ func (i *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"labels": schema.MapAttribute{
 				Description: descriptions["labels"],
-				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"description": schema.StringAttribute{
 				Description: descriptions["description"],
-				Optional:    true,
 				Computed:    true,
 			},
 			"url": schema.StringAttribute{

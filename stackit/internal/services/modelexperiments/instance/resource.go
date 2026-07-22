@@ -195,7 +195,6 @@ func (i *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"labels": schema.MapAttribute{
 				Description: descriptions["labels"],
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"description": schema.StringAttribute{
@@ -370,7 +369,7 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	err = mapInstance(ctx, &getInstanceResp.Instance, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -428,14 +427,7 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	err = mapInstance(ctx, &updateInstanceResp.Instance, &plan, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance",
-			fmt.Sprintf(
-				"Calling API: %v, instanceId: %s, region: %s, projectId: %s",
-				err,
-				instanceId,
-				region,
-				projectId,
-			))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 

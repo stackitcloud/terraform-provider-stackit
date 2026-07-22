@@ -18,6 +18,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
+// NOTE: These tests will be refactored.
+// Please DO NOT use this file as a pattern or reference for writing new tests.
 func TestRead_Success(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
@@ -30,7 +32,7 @@ func TestRead_Success(t *testing.T) {
 	tokenId := uuid.New()
 	validUntil := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	tokenContent := "token"
-	id := utils.BuildInternalTerraformId(projectId.String(), region, tokenId.String())
+	id := utils.BuildInternalTerraformId(projectId.String(), region, instanceId.String(), tokenId.String())
 
 	getTokenResp := &modelexperiments.GetInstanceTokenResponse{
 		Token: modelexperiments.TokenMetadata{

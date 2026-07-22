@@ -28,3 +28,10 @@ resource "stackit_modelexperiments_token" "example" {
   instance_id = stackit_modelexperiments_instance.example.instance_id
   name        = var.token_name
 }
+
+data "stackit_modelexperiments_token" "example" {
+  project_id  = var.project_id
+  region      = var.region
+  instance_id = stackit_modelexperiments_instance.example.instance_id
+  token_id    = stackit_modelexperiments_token.example.token_id
+}
