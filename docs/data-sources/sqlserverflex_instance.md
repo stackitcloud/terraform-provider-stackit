@@ -29,6 +29,7 @@ data "stackit_sqlserverflex_instance" "example" {
 
 ### Optional
 
+- `encryption` (Attributes) Parameter to define which key to use for storage encryption. (see [below for nested schema](#nestedatt--encryption))
 - `network` (Attributes) The network configuration of the instance. (see [below for nested schema](#nestedatt--network))
 - `region` (String) The resource region. If not defined, the provider region is used.
 
@@ -47,6 +48,17 @@ data "stackit_sqlserverflex_instance" "example" {
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
 
+<a id="nestedatt--encryption"></a>
+### Nested Schema for `encryption`
+
+Read-Only:
+
+- `kek_key_id` (String) UUID of the key within the STACKIT-KMS to use for the encryption.
+- `kek_key_version` (String) Version of the key within the STACKIT-KMS to use for the encryption.
+- `kek_keyring_id` (String) UUID of the keyring where the key is located within the STACKTI-KMS.
+- `service_account` (String) Service-Account linked to the Key within the STACKIT-KMS.
+
+
 <a id="nestedatt--network"></a>
 ### Nested Schema for `network`
 
@@ -57,6 +69,8 @@ Optional:
 Read-Only:
 
 - `acl` (List of String) List of IPV4 cidr.
+- `instance_address` (List of String) Address of this instance.
+- `router_address` (List of String) Address of the router.
 
 
 <a id="nestedatt--flavor"></a>

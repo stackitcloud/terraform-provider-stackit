@@ -94,14 +94,18 @@ var encryptionTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Network
 type networkModel struct {
-	AccessScope types.String `tfsdk:"access_scope"`
-	Acl         types.List   `tfsdk:"acl"`
+	AccessScope     types.String `tfsdk:"access_scope"`
+	Acl             types.List   `tfsdk:"acl"`
+	InstanceAddress types.String `tfsdk:"instance_address"`
+	RouterAddress   types.String `tfsdk:"router_address"`
 }
 
 // types corresponding to Network
 var networkTypes = map[string]attr.Type{
-	"access_scope": basetypes.StringType{},
-	"acl":          basetypes.ListType{ElemType: types.StringType},
+	"access_scope":     basetypes.StringType{},
+	"acl":              basetypes.ListType{ElemType: types.StringType},
+	"instance_address": basetypes.StringType{},
+	"router_address":   basetypes.StringType{},
 }
 
 // Struct corresponding to Model.Flavor
@@ -327,6 +331,8 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"network":              "The network configuration of the instance." + willBeRequired,
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr." + willBeRequired,
+		"instance_address":     "Address of this instance.",
+		"router_address":       "Address of the router.",
 		"retention_days":       "The days (30 to 90) for how long the backup files should be stored before cleaned up." + willBeRequired,
 		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
@@ -521,6 +527,16 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							),
 							listvalidator.SizeAtLeast(1),
 						},
+					},
+					"instance_address": schema.ListAttribute{
+						Description: descriptions["instance_address"],
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"router_address": schema.ListAttribute{
+						Description: descriptions["router_address"],
+						ElementType: types.StringType,
+						Computed:    true,
 					},
 				},
 			},
@@ -1043,8 +1059,10 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	}
 
 	networkValues := map[string]attr.Value{
-		"acl":          aclList,
-		"access_scope": types.StringPointerValue((*string)(resp.Network.AccessScope)),
+		"acl":              aclList,
+		"access_scope":     types.StringPointerValue((*string)(resp.Network.AccessScope)),
+		"instance_address": types.StringPointerValue(resp.Network.InstanceAddress),
+		"router_address":   types.StringPointerValue(resp.Network.RouterAddress),
 	}
 	networkObject, diags := types.ObjectValue(networkTypes, networkValues)
 	if diags.HasError() {
