@@ -10,6 +10,8 @@ linters:
   # https://golangci-lint.run/usage/linters/
   enable:
     - tfacl # custom local linter
+    - tfctxinit # custom local linter
+    - tflogresponse # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -28,6 +30,12 @@ linters:
   settings:
     custom:
       tfacl:
+        type: module
+        description: "A custom local linter"
+      tfctxinit:
+        type: module
+        description: "A custom local linter"
+      tflogresponse:
         type: module
         description: "A custom local linter"
     depguard:
