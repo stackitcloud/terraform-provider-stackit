@@ -44,3 +44,10 @@ resource "stackit_modelexperiments_token" "example" {
     label = var.token_label_value
   }
 }
+
+data "stackit_modelexperiments_token" "example" {
+  project_id  = var.project_id
+  region      = var.region
+  instance_id = stackit_modelexperiments_instance.example.instance_id
+  token_id    = stackit_modelexperiments_token.example.token_id
+}
