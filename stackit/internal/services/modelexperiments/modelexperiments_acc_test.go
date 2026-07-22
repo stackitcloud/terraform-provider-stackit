@@ -29,8 +29,8 @@ var resourceModelexperimentsInstanceMax string
 const modelexperimentsInstanceResource = "stackit_modelexperiments_instance.example"
 const modelexperimentsInstanceDataResource = "data.stackit_modelexperiments_instance.example"
 
-const modelexperimentsInstanceTokenResource = "stackit_modelexperiments_token.example" // nolint:gosec // This is a TF resource name, not a credential
-const modelexperimentsInstanceTokenDataResource = "data.stackit_modelexperiments_token.example"
+const modelexperimentsInstanceTokenResource = "stackit_modelexperiments_token.example"          // nolint:gosec // This is a TF resource name, not a credential
+const modelexperimentsInstanceTokenDataResource = "data.stackit_modelexperiments_token.example" // nolint:gosec // This is a TF resource name, not a credential
 
 var testModelexperimentsConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),

@@ -281,12 +281,7 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	createInstanceTokenResp, err := i.client.CreateInstanceToken(ctx, projectId, region, instanceId).CreateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(
-			ctx,
-			&resp.Diagnostics,
-			"Error creating AI Model Experiments instance token",
-			fmt.Sprintf("Calling API: %v", err),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 	ctx = core.LogResponse(ctx)
@@ -375,7 +370,7 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	err = mapToken(ctx, &getInstanceTokenResp.Token, &model, region, instanceId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -426,16 +421,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	updateInstanceTokenResp, err := i.client.PartialUpdateInstanceToken(ctx, projectId, region, tokenId, instanceId).PartialUpdateInstanceTokenPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token",
-			fmt.Sprintf(
-				"Calling API: %v, tokenId: %s, instanceId: %s, region: %s, projectId: %s",
-				err,
-				tokenId,
-				instanceId,
-				region,
-				projectId,
-			),
-		)
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
@@ -526,7 +512,7 @@ func (r *tokenResource) ImportState(ctx context.Context, req resource.ImportStat
 }
 
 // mapCreateResponse maps the instace creation response and GET instance response to the model
-func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model *Model, region string, instanceId string) error {
+func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model *Model, region, instanceId string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -552,7 +538,7 @@ func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model
 }
 
 // mapToken maps instances to the resource model
-func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model *Model, region string, instanceId string) error {
+func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model *Model, region, instanceId string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}

@@ -67,3 +67,16 @@ resource "stackit_modelexperiments_token" "token" {
 - `token` (String, Sensitive) The content of the AI Model Experiments instance token.
 - `token_id` (String) The AI Model Experiments instance token ID.
 - `valid_until` (String) The time until the AI Model Experiments instance token is valid.
+
+## Import
+
+Import is supported using the following syntax:
+
+In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://developer.hashicorp.com/terraform/language/import) can be used with the ` + "`" + `id` + "`" + ` attribute, for example:
+
+```terraform
+import {
+  to = stackit_modelexperiments_token.import_example
+  id = "${var.project_id},${var.region},${var.instance_id},${var.token_id}"
+}
+```
