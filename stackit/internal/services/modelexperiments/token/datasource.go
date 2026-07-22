@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
@@ -141,7 +142,7 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	err = mapDataSourceFields(ctx, &getInstanceTokenResp.Token, &model, region, instanceId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -153,7 +154,7 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 	tflog.Info(ctx, "AI Model Experiments instance token read")
 }
 
-func mapDataSourceFields(ctx context.Context, token *modelexperiments.TokenMetadata, model *InstanceTokenDataSourceModel, region string, instanceId string) error {
+func mapDataSourceFields(ctx context.Context, token *modelexperiments.TokenMetadata, model *InstanceTokenDataSourceModel, region, instanceId string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
