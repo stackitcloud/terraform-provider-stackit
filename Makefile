@@ -13,7 +13,8 @@ project-tools:
 # LINT
 lint-golangci-lint:
 	@echo "Linting with golangci-lint"
-	@go tool golangci-lint run ${GOLANG_CI_ARGS}
+	@golangci-lint custom
+	@${ROOT_DIR}/custom-gcl run ${GOLANG_CI_ARGS}
 
 lint-tf: 
 	@echo "Linting terraform files"

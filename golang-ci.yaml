@@ -9,6 +9,7 @@ run:
 linters:
   # https://golangci-lint.run/usage/linters/
   enable:
+    - pkgstutter # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -25,6 +26,10 @@ linters:
     - noctx # false positive: finds errors with http.NewRequest that dont make sense
     - unparam # false positives
   settings:
+    custom:
+      pkgstutter:
+        type: module
+        description: "A custom local linter"
     depguard:
       rules:
         main:
