@@ -30,6 +30,7 @@ const modelexperimentsInstanceResource = "stackit_modelexperiments_instance.exam
 const modelexperimentsInstanceDataResource = "data.stackit_modelexperiments_instance.example"
 
 const modelexperimentsInstanceTokenResource = "stackit_modelexperiments_token.example" // nolint:gosec // This is a TF resource name, not a credential
+const modelexperimentsInstanceTokenDataResource = "data.stackit_modelexperiments_token.example"
 
 var testModelexperimentsConfigVarsMin = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
@@ -141,6 +142,31 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(
 						modelexperimentsInstanceResource, "url",
 						modelexperimentsInstanceDataResource, "url",
+					),
+					// Token
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "project_id",
+						modelexperimentsInstanceTokenDataResource, "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "region",
+						modelexperimentsInstanceTokenDataResource, "region",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "instance_id",
+						modelexperimentsInstanceTokenDataResource, "instance_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "token_id",
+						modelexperimentsInstanceTokenDataResource, "token_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "name",
+						modelexperimentsInstanceTokenDataResource, "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "valid_until",
+						modelexperimentsInstanceTokenDataResource, "valid_until",
 					),
 				),
 			},
@@ -262,6 +288,35 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 						modelexperimentsInstanceResource, "url",
 						modelexperimentsInstanceDataResource, "url",
 					),
+					// Token
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "project_id",
+						modelexperimentsInstanceTokenDataResource, "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "region",
+						modelexperimentsInstanceTokenDataResource, "region",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "instance_id",
+						modelexperimentsInstanceTokenDataResource, "instance_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "token_id",
+						modelexperimentsInstanceTokenDataResource, "token_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "name",
+						modelexperimentsInstanceTokenDataResource, "name",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "description",
+						modelexperimentsInstanceTokenDataResource, "description",
+					),
+					resource.TestCheckResourceAttrPair(
+						modelexperimentsInstanceTokenResource, "valid_until",
+						modelexperimentsInstanceTokenDataResource, "valid_until",
+					),
 				),
 			},
 			// 3) Import
@@ -331,7 +386,7 @@ func testAccCheckModelExperimentsInstanceDestroy(s *terraform.State) error {
 			continue
 		}
 
-		// Token terraform ID: "[project_id],[region],[token_id]"
+		// Token terraform ID: "[project_id],[region],[instance_id]"
 		idParts := strings.Split(rs.Primary.ID, core.Separator)
 		if len(idParts) != 3 {
 			return fmt.Errorf("invalid ID: %s", rs.Primary.ID)

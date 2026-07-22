@@ -206,7 +206,6 @@ func (i *tokenResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"labels": schema.MapAttribute{
 				Description: descriptions["labels"],
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"description": schema.StringAttribute{
@@ -315,7 +314,7 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Map response body to schema
-	err = mapCreateResponse(ctx, &createInstanceTokenResp.Token, &model, region)
+	err = mapCreateResponse(ctx, &createInstanceTokenResp.Token, &model, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -374,9 +373,9 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapToken(ctx, &getInstanceTokenResp.Token, &model, region)
+	err = mapToken(ctx, &getInstanceTokenResp.Token, &model, region, instanceId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 
@@ -421,7 +420,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	payload, err := toUpdatePayload(&plan)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
@@ -443,7 +442,7 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	ctx = core.LogResponse(ctx)
 
 	plan.Token = state.Token
-	err = mapToken(ctx, &updateInstanceTokenResp.Token, &plan, region)
+	err = mapToken(ctx, &updateInstanceTokenResp.Token, &plan, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -527,7 +526,7 @@ func (r *tokenResource) ImportState(ctx context.Context, req resource.ImportStat
 }
 
 // mapCreateResponse maps the instace creation response and GET instance response to the model
-func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model *Model, region string) error {
+func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model *Model, region string, instanceId string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -541,16 +540,11 @@ func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model
 		return err
 	}
 
-	validUntil := types.StringNull()
-	if !token.ValidUntil.IsZero() {
-		validUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
-	}
-
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, token.Id)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId, token.Id)
 	model.TokenId = types.StringValue(token.Id)
 	model.Name = types.StringValue(token.Name)
 	model.Description = types.StringPointerValue(token.Description)
-	model.ValidUntil = validUntil
+	model.ValidUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
 	model.Token = types.StringValue(token.Content)
 	model.Labels = mapValue
 
@@ -558,7 +552,7 @@ func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model
 }
 
 // mapToken maps instances to the resource model
-func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model *Model, region string) error {
+func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model *Model, region string, instanceId string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -572,7 +566,7 @@ func mapToken(ctx context.Context, token *modelexperiments.TokenMetadata, model 
 		return err
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, token.Id)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId, token.Id)
 	model.TokenId = types.StringValue(token.Id)
 	model.Name = types.StringValue(token.Name)
 	model.Description = types.StringPointerValue(token.Description)

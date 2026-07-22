@@ -18,6 +18,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
+// NOTE: These tests will be refactored.
+// Please DO NOT use this file as a pattern or reference for writing new tests.
 func TestCreate_Success(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
