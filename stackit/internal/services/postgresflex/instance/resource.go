@@ -27,7 +27,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	listplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -245,7 +245,7 @@ func (r *instanceResource) Configure(ctx context.Context, req resource.Configure
 
 // Schema defines the schema for the resource.
 func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	willBeRequired := " Will be required in the future. Set a value to prevent breaking changes."
+	willBeRequired := " Will be required after February 2027. Set a value to prevent breaking changes."
 	descriptions := map[string]string{
 		"main":                       "Postgres Flex instance resource schema. Must have a `region` specified in the provider configuration.",
 		"id":                         "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
@@ -259,8 +259,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"connection_info.write":      "The DNS name and port in the instance overview.",
 		"connection_info.write.host": "The host of the instance.",
 		"connection_info.write.port": "The port of the instance.",
-		"replicas":                   "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.",
-		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance.",
+		"replicas":                   "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication. Can only be set together with `flavor`",
+		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --flavors\n```",
 		"encryption.kek_key_id":      "The ID of the Key within the STACKIT-KMS to use for the encryption.",
 		"encryption.kek_key_ring_id": "The ID of the keyring where the key is located within the STACKTI-KMS.",
 		"encryption.kek_key_version": "Version of the key within the STACKIT-KMS to use for the encryption.",
@@ -269,6 +269,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"network":                    "The network configuration of the instance." + willBeRequired,
 		"network.access_scope":       "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(postgresflex.AllowedInstanceNetworkAccessScopeEnumValues)...),
 		"network.acl":                "List of IPV4 cidr." + willBeRequired,
+		"retention_days":             "How long backups are retained. The value can only be between 32 and 90 days." + willBeRequired,
 	}
 
 	resp.Schema = schema.Schema{
@@ -322,7 +323,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.List{
-					listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListUnchanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
+					listplanmodifier.UseStateForUnknownIf(listplanmodifier.ListUnchanged(path.Root("network").AtName("acl")), "sets `UseStateForUnknown` only if `network.acl` has not changed"),
 				},
 				Validators: []validator.List{
 					listvalidator.ExactlyOneOf(
@@ -493,7 +494,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 						Optional:    true,
 						Computed:    true,
 						PlanModifiers: []planmodifier.List{
-							listplanmodifier2.UseStateForUnknownIf(listplanmodifier2.ListUnchanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
+							listplanmodifier.UseStateForUnknownIf(listplanmodifier.ListUnchanged(path.Root("acl")), "sets `UseStateForUnknown` only if `acl` has not changed"),
 						},
 						Validators: []validator.List{
 							listvalidator.ExactlyOneOf(
@@ -905,11 +906,9 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 		return fmt.Errorf("instance id not present")
 	}
 
-	var aclList basetypes.ListValue
+	aclList := types.ListNull(types.StringType)
 	var diags diag.Diagnostics
-	if resp.Network.Acl == nil {
-		aclList = types.ListNull(types.StringType)
-	} else {
+	if resp.Network.Acl != nil {
 		modelACL, err := utils.ListValueToStringSlice(model.ACL)
 		if err != nil {
 			return err

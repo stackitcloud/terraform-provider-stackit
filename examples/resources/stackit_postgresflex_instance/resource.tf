@@ -11,4 +11,5 @@ resource "stackit_postgresflex_instance" "example" {
     size  = 5
   }
   version = "14"
+  retention_days = 32
 }
