@@ -64,7 +64,7 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"instance_id":                   "ID of the Secrets Manager instance.",
 		"project_id":                    "STACKIT project ID to which the instance is associated.",
 		"name":                          "Instance name.",
-		"acls":                          "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
+		"acl":                           "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 		"kms_key":                       "The STACKIT-KMS key for secret encryption and decryption.",
 		"kms_key.key_id":                "UUID of the key within the STACKIT-KMS to use for the encryption.",
 		"kms_key.key_ring_id":           "UUID of the keyring where the key is located within the STACKTI-KMS.",
@@ -99,8 +99,14 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: descriptions["name"],
 				Computed:    true,
 			},
-			"acls": schema.SetAttribute{
-				Description: descriptions["acls"],
+			"acls": schema.SetAttribute{ //nolint:tfacl // field is deprecated already
+				Description:        descriptions["acl"] + " This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
+				ElementType:        types.StringType,
+				Computed:           true,
+				DeprecationMessage: "This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
+			},
+			"acl": schema.SetAttribute{
+				Description: descriptions["acl"],
 				ElementType: types.StringType,
 				Computed:    true,
 			},

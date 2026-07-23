@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
@@ -42,8 +44,11 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
-	ACLs       types.Set    `tfsdk:"acls"`
+	ACL        types.Set    `tfsdk:"acl"`
 	KmsKey     *KmsKeyModel `tfsdk:"kms_key"`
+
+	// Deprecated: will be removed. Use the ACL field instead
+	ACLs types.Set `tfsdk:"acls"` //nolint:tfacl // field is deprecated already
 }
 
 type KmsKeyModel struct {
@@ -91,7 +96,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"instance_id":                   "ID of the Secrets Manager instance.",
 		"project_id":                    "STACKIT project ID to which the instance is associated.",
 		"name":                          "Instance name.",
-		"acls":                          "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
+		"acl":                           "The access control list for this instance. Each entry is an IP or IP range that is permitted to access, in CIDR notation",
 		"kms_key":                       "The STACKIT-KMS key for secret encryption and decryption.",
 		"kms_key.key_id":                "UUID of the key within the STACKIT-KMS to use for the encryption.",
 		"kms_key.key_ring_id":           "UUID of the keyring where the key is located within the STACKTI-KMS.",
@@ -139,14 +144,27 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"acls": schema.SetAttribute{
-				Description: descriptions["acls"],
+			"acls": schema.SetAttribute{ //nolint:tfacl // field is deprecated already
+				Description:        descriptions["acl"] + " This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
+				ElementType:        types.StringType,
+				Optional:           true,
+				DeprecationMessage: "This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
+				Validators: []validator.Set{
+					setvalidator.ValueStringsAre(
+						validate.CIDR(),
+					),
+					setvalidator.ConflictsWith(path.MatchRoot("acl")),
+				},
+			},
+			"acl": schema.SetAttribute{
+				Description: descriptions["acl"],
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
 						validate.CIDR(),
 					),
+					setvalidator.ConflictsWith(path.MatchRoot("acls")),
 				},
 			},
 			"kms_key": schema.SingleNestedAttribute{
@@ -189,9 +207,9 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	projectId := model.ProjectId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	var acls []string
+	var acl []string
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
-		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		diags = model.ACLs.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -224,7 +242,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	})
 
 	// Create ACLs
-	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
+	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
 		return
@@ -338,9 +356,9 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	var acls []string
+	var acl []string
 	if !(model.ACLs.IsNull() || model.ACLs.IsUnknown()) {
-		diags = model.ACLs.ElementsAs(ctx, &acls, false)
+		diags = model.ACLs.ElementsAs(ctx, &acl, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -348,7 +366,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	// Update ACLs
-	err = updateACLs(ctx, projectId, instanceId, acls, r.client)
+	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
 		return
@@ -466,7 +484,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 		}
 	}
 
-	err := mapACLs(aclList, model)
+	err := mapACL(aclList, model)
 	if err != nil {
 		return err
 	}
@@ -474,7 +492,7 @@ func mapFields(instance *secretsmanager.Instance, aclList *secretsmanager.ListAC
 	return nil
 }
 
-func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
+func mapACL(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	if aclList == nil {
 		return fmt.Errorf("nil ACL list")
 	}
@@ -483,15 +501,18 @@ func mapACLs(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 		return nil
 	}
 
-	acls := []attr.Value{}
-	for _, acl := range aclList.Acls {
-		acls = append(acls, types.StringValue(acl.Cidr))
+	acl := []attr.Value{}
+	for _, elem := range aclList.Acls {
+		acl = append(acl, types.StringValue(elem.Cidr))
 	}
-	aclsList, diags := types.SetValue(types.StringType, acls)
+	aclListTf, diags := types.SetValue(types.StringType, acl)
 	if diags.HasError() {
-		return fmt.Errorf("mapping ACLs: %w", core.DiagsToError(diags))
+		return fmt.Errorf("mapping ACL: %w", core.DiagsToError(diags))
 	}
-	model.ACLs = aclsList
+
+	model.ACLs = aclListTf
+	model.ACL = aclListTf
+
 	return nil
 }
 
@@ -536,8 +557,8 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error
 	return payload, nil
 }
 
-// updateACLs creates and deletes ACLs so that the instance's ACLs are the ones in the model
-func updateACLs(ctx context.Context, projectId, instanceId string, acls []string, client *secretsmanager.APIClient) error {
+// updateACL creates and deletes ACLs so that the instance's ACL are the ones in the model
+func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *secretsmanager.APIClient) error {
 	// Get ACLs current state
 	currentACLsResp, err := client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
@@ -549,23 +570,23 @@ func updateACLs(ctx context.Context, projectId, instanceId string, acls []string
 		isCreated bool
 		id        string
 	}
-	aclsState := make(map[string]*aclState)
-	for _, cidr := range acls {
-		aclsState[cidr] = &aclState{
+	aclStates := make(map[string]*aclState)
+	for _, cidr := range acl {
+		aclStates[cidr] = &aclState{
 			isInModel: true,
 		}
 	}
 	for _, acl := range currentACLsResp.Acls {
 		cidr := acl.Cidr
-		if _, ok := aclsState[cidr]; !ok {
-			aclsState[cidr] = &aclState{}
+		if _, ok := aclStates[cidr]; !ok {
+			aclStates[cidr] = &aclState{}
 		}
-		aclsState[cidr].isCreated = true
-		aclsState[cidr].id = acl.Id
+		aclStates[cidr].isCreated = true
+		aclStates[cidr].id = acl.Id
 	}
 
 	// Create/delete ACLs
-	for cidr, state := range aclsState {
+	for cidr, state := range aclStates {
 		if state.isInModel && !state.isCreated {
 			payload := secretsmanager.CreateACLPayload{
 				Cidr: cidr,

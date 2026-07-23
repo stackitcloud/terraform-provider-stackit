@@ -300,12 +300,15 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	ctx = tflog.SetField(ctx, "token_id", tokenUUID)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Note: The token itself must not be created via an endpoint. There's only a GET endpoint for the token.
+	// But the instance needs to be ready, that's why wait handlers are used here.
+
 	var tokenResp *edgeCloud.Token
 	var err error
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
+		tokenResp, err = edgeCloudWait.TokenWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return
@@ -314,7 +317,7 @@ func (r *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
+		tokenResp, err = edgeCloudWait.TokenByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating token", fmt.Sprintf("token waiting: %v", err))
 			return

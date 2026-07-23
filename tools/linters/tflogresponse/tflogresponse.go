@@ -6,123 +6,105 @@ import (
 
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
+
+	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/lintutils"
+)
+
+const (
+	analyzerName = "tflogresponse"
 )
 
 var Analyzer = &analysis.Analyzer{
-	Name: "tflogresponse",
-	Doc:  "Ensures that ctx = core.LogResponse(ctx) is called in every resource/datasource CRUD method.",
-	Run:  run,
+	Name:     analyzerName,
+	Doc:      "Ensures that core.LogResponse is called in every resource/datasource CRUD method after ctx.InitProviderContext was called and at least one STACKIT SDK call was made.",
+	Requires: []*analysis.Analyzer{inspect.Analyzer},
+	Run:      run,
 }
 
 func run(pass *analysis.Pass) (any, error) {
-	for _, file := range pass.Files {
-		ast.Inspect(file, func(n ast.Node) bool {
-			// Look for function declarations
-			fn, ok := n.(*ast.FuncDecl)
-			if !ok || fn.Recv == nil {
-				return true // We only care about methods (which have receivers)
-			}
+	const (
+		utilPkg                 = "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+		funcInitProviderContext = "InitProviderContext" // The util function that starts the sequence
+		funcLogResponse         = "LogResponse"         // The util function that must follow
+	)
 
-			// Filter by Terraform CRUD method names
-			name := fn.Name.Name
-			if name != "Create" && name != "Read" && name != "Update" && name != "Delete" {
+	inspectNode := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+
+	// Filter only for function declarations (Terraform CRUD methods)
+	nodeFilter := []ast.Node{
+		(*ast.FuncDecl)(nil),
+	}
+
+	inspectNode.Preorder(nodeFilter, func(n ast.Node) {
+		funcDecl := n.(*ast.FuncDecl)
+
+		if !lintutils.IsTerraformLifecycleMethod(funcDecl) {
+			return
+		}
+
+		// State machine variables
+		type state int
+		const (
+			stateLookingForInitProviderContextCall state = iota
+			stateLookingForSdkOrLogResponseCall
+		)
+
+		currentState := stateLookingForInitProviderContextCall
+		var posInitProviderContextCall ast.Node
+		var foundIntermediateSdkModuleCall bool
+
+		// Traverse the function body
+		ast.Inspect(funcDecl.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
 				return true
 			}
 
-			// Ensure the method has exactly 3 parameters (e.g., ctx, req, resp)
-			if fn.Type.Params == nil || len(fn.Type.Params.List) != 3 {
+			pkgPath, calledFuncName := lintutils.GetCallInfo(call, pass.TypesInfo)
+			if pkgPath == "" {
 				return true
 			}
 
-			// Extract the name of the context variable (usually "ctx")
-			if len(fn.Type.Params.List[0].Names) == 0 {
-				return true
-			}
-			ctxName := fn.Type.Params.List[0].Names[0].Name
+			switch currentState {
+			case stateLookingForInitProviderContextCall:
+				if pkgPath == utilPkg && calledFuncName == funcInitProviderContext {
+					currentState = stateLookingForSdkOrLogResponseCall
+					posInitProviderContextCall = call
+					foundIntermediateSdkModuleCall = false
+				}
 
-			// Verify it's actually a Terraform framework method by checking if 
-			// param 2 ends with "Request" and param 3 ends with "Response"
-			if !hasSuffixType(fn.Type.Params.List[1], "Request") || !hasSuffixType(fn.Type.Params.List[2], "Response") {
-				return true
-			}
-
-			// Scan the body for: ctxName = core.LogResponse(ctxName)
-			found := false
-			if fn.Body != nil {
-				for _, stmt := range fn.Body.List {
-					// We are looking for an assignment statement: A = B
-					assign, ok := stmt.(*ast.AssignStmt)
-					if !ok || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
-						continue
+			case stateLookingForSdkOrLogResponseCall:
+				// Check if this call belongs to STACKIT SDK modules
+				if strings.HasPrefix(pkgPath, lintutils.StackitSdkModulePrefix) {
+					foundIntermediateSdkModuleCall = true
+				} else if pkgPath == utilPkg && calledFuncName == funcLogResponse {
+					if !foundIntermediateSdkModuleCall {
+						pass.Reportf(call.Pos(), "%s: invalid sequence: %s called without an intermediate call to %s after %s", analyzerName, funcLogResponse, lintutils.StackitSdkModulePrefix, funcInitProviderContext)
 					}
 
-					// Left side must be the context variable
-					lhsIdent, ok := assign.Lhs[0].(*ast.Ident)
-					if !ok || lhsIdent.Name != ctxName {
-						continue
-					}
-
-					// Right side must be a function call
-					call, ok := assign.Rhs[0].(*ast.CallExpr)
-					if !ok {
-						continue
-					}
-
-					// The function called must be core.LogResponse
-					sel, ok := call.Fun.(*ast.SelectorExpr)
-					if !ok || sel.Sel.Name != "LogResponse" {
-						continue
-					}
-
-					pkgIdent, ok := sel.X.(*ast.Ident)
-					if !ok || pkgIdent.Name != "core" {
-						continue
-					}
-
-					// The argument passed must be the context variable
-					if len(call.Args) == 1 {
-						if argIdent, ok := call.Args[0].(*ast.Ident); ok && argIdent.Name == ctxName {
-							found = true
-							break
-						}
-					}
+					// reset the state for future findings
+					currentState = stateLookingForInitProviderContextCall
 				}
 			}
-
-			// If the exact assignment wasn't found in the function body, report it
-			if !found {
-				pass.Reportf(
-					fn.Pos(), 
-					"Terraform %s method must call %s = core.LogResponse(%s)", 
-					name, ctxName, ctxName,
-				)
-			}
-
 			return true
 		})
-	}
+
+		// If we reach the end of the function and are still waiting for the LogResponse util func to be called
+		if currentState == stateLookingForSdkOrLogResponseCall {
+			pass.Reportf(posInitProviderContextCall.Pos(), "%s: invalid sequence: %s was called, but %s was never called afterwards", analyzerName, funcInitProviderContext, funcLogResponse)
+		}
+	})
+
 	return nil, nil
 }
 
-// Helper to roughly check if a parameter type ends with a specific string (like "Request" or "Response")
-func hasSuffixType(field *ast.Field, suffix string) bool {
-	var typeName string
-	switch t := field.Type.(type) {
-	case *ast.SelectorExpr:
-		typeName = t.Sel.Name // e.g., resource.CreateRequest
-	case *ast.StarExpr:
-		if sel, ok := t.X.(*ast.SelectorExpr); ok {
-			typeName = sel.Sel.Name // e.g., *resource.CreateResponse
-		}
-	}
-	return strings.HasSuffix(typeName, suffix)
-}
-
 func init() {
-	register.Plugin("tflogresponse", New)
+	register.Plugin(analyzerName, New)
 }
 
-func New(settings any) (register.LinterPlugin, error) {
+func New(_ any) (register.LinterPlugin, error) {
 	return &plugin{}, nil
 }
 

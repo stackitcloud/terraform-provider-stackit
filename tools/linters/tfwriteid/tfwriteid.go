@@ -1,34 +1,32 @@
-package tfctxinit
+package tfwriteid
 
 import (
 	"go/ast"
 	"strings"
 
-	"golang.org/x/tools/go/ast/inspector"
-
-	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/lintutils"
-
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
+
+	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/lintutils"
 )
 
 const (
-	analyzerName = "tfctxinit"
+	analyzerName = "tfwriteid"
 )
 
 var Analyzer = &analysis.Analyzer{
 	Name:     analyzerName,
-	Doc:      "Ensures core.InitProviderContext is called before any SDK call in a Terraform resource lifecycle (CRUD) implementation",
+	Doc:      "Ensures that ID attributes are written to the state using TODO in every resource/datasource CRUD method before a wait handler from the STACKIT SDK is called",
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 	Run:      run,
 }
 
-func run(pass *analysis.Pass) (any, error) {
+func run(pass *analysis.Pass) (interface{}, error) {
 	const (
-		// This specific function must be called first
-		requiredPkg  = "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-		requiredFunc = "InitProviderContext"
+		utilPkg      = "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+		requiredFunc = "SetAndLogStateFields" // The util function which is used to store the ID fields to the state
 	)
 
 	inspectNode := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
@@ -41,7 +39,7 @@ func run(pass *analysis.Pass) (any, error) {
 	inspectNode.Preorder(nodeFilter, func(n ast.Node) {
 		funcDecl := n.(*ast.FuncDecl)
 
-		if !lintutils.IsTerraformLifecycleMethod(funcDecl) {
+		if !lintutils.IsTerraformLifecycleMethodCreateOnlyTODO(funcDecl) {
 			return
 		}
 
@@ -60,16 +58,16 @@ func run(pass *analysis.Pass) (any, error) {
 			}
 
 			// Check if we hit the required utility function
-			if pkgPath == requiredPkg && calledFuncName == requiredFunc {
+			if pkgPath == utilPkg && calledFuncName == requiredFunc {
 				hasCalledUtil = true
 			}
 
-			// Check if we've hit a STACKIT SDK call before the util function
-			if strings.HasPrefix(pkgPath, lintutils.StackitSdkModulePrefix) && !hasCalledUtil {
+			// Check if we've hit a STACKIT SDK wait handler call before the util function
+			if strings.HasPrefix(pkgPath, lintutils.StackitSdkModulePrefix) && strings.Contains(pkgPath, "wait") && !strings.HasPrefix(pkgPath, "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement") && pkgPath != "github.com/stackitcloud/stackit-sdk-go/core/wait" && !hasCalledUtil {
 				pass.Reportf(
 					call.Pos(),
-					"%s: call to %s must happen AFTER %s.%s is called in %s",
-					analyzerName, lintutils.StackitSdkModulePrefix, requiredPkg, requiredFunc, funcDecl.Name.Name,
+					"%s: call to wait handler from %s must happen AFTER %s.%s is called in %s %s",
+					analyzerName, lintutils.StackitSdkModulePrefix, utilPkg, requiredFunc, funcDecl.Name.Name, pkgPath,
 				)
 			}
 

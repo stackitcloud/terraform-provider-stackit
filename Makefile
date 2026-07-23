@@ -1,7 +1,7 @@
 ROOT_DIR              ?= $(shell git rev-parse --show-toplevel)
 SCRIPTS_BASE          ?= $(ROOT_DIR)/scripts
 GOLANG_CI_YAML_PATH ?= ${ROOT_DIR}/golang-ci.yaml
-GOLANG_CI_ARGS ?= --allow-parallel-runners --config=${GOLANG_CI_YAML_PATH}
+GOLANG_CI_ARGS ?= --allow-parallel-runners --config=${GOLANG_CI_YAML_PATH} --max-issues-per-linter 0 --max-same-issues 0
 
 # SETUP AND TOOL INITIALIZATION TASKS
 project-help:

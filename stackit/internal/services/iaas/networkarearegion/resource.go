@@ -451,13 +451,13 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client.DefaultAPI, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return
 	}
-
-	ctx = core.InitProviderContext(ctx)
 
 	// Delete network area region configuration
 	err = r.client.DefaultAPI.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()

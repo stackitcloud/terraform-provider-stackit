@@ -9,3 +9,6 @@ plugins:
   - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
     import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tflogresponse'
     path: ./tools
+  - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
+    import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tfwriteid'
+    path: ./tools
