@@ -90,7 +90,8 @@ func (i *instanceTokenDataSource) Schema(_ context.Context, _ datasource.SchemaR
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
 				Optional:    true,
-				Computed:    true,
+				// the region cannot be found, so it has to be passed
+				Computed: true,
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
