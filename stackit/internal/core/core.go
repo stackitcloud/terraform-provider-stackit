@@ -42,6 +42,7 @@ type ProviderData struct {
 	DefaultRegion                   string
 	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
+	AlbWafCustomEndpoint            string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string

@@ -688,6 +688,7 @@ func testAccCheckCDNDistributionDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_cdn_distribution" {
 			continue
 		}
+		// terraform ID: "[project_id],[distribution_id]"
 		distributionId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		distributionsToDestroy = append(distributionsToDestroy, distributionId)
 	}

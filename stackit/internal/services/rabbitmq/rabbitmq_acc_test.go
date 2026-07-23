@@ -264,8 +264,8 @@ func testAccCheckRabbitMQDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_rabbitmq_instance" {
 			continue
 		}
-		// instance terraform ID: "[project_id],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// instance terraform ID: "[project_id],[region],[instance_id]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 

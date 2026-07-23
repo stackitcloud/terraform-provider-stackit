@@ -1075,7 +1075,7 @@ func testAccCheckObservabilityDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_observability_instance" {
 			continue
 		}
-		// instance terraform ID: = "[project_id],[instance_id],[name]"
+		// instance terraform ID: = "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}

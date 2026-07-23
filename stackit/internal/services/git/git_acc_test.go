@@ -307,6 +307,7 @@ func testAccCheckGitInstanceDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_git" {
 			continue
 		}
+		// terraform ID: "[project_id],[instance_id]"
 		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
