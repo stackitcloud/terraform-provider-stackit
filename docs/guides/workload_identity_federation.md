@@ -40,8 +40,7 @@ execute terraform on the main branch, we will configure the service account "Fed
 Azure DevOps supports OIDC authentication using the public issuer "https://vstoken.azure.com" (for Azure DevOps Server you should check your issuer URL) and setting information like organization, project, and pipeline 
 as part of the OIDC token claims. 
 
-Using a hypothetical pipeline named `terraform-ado-oidc` inside the project 'https://myorg.azure.com/project-abc` as example and assuming that we want to 
-execute terraform on the main branch, we will configure the service account "Federated identity Provider" with the following configuration:
+Using a hypothetical pipeline named `terraform-ado-oidc` inside the project 'https://myorg.azure.com/project-abc` as example, we will configure the service account "Federated identity Provider" with the following configuration:
 - **Provider Name**: AzureDevOps # This is just an example, you can choose any name you want
 - **Issuer URL**: https://vstoken.dev.azure.com/{ORGANIZATION_ID} # This is the public issuer for Azure DevOps OIDC tokens
   - For most organizations, the URL uses `vstoken.dev.azure.com`, but some legacy organizations might use 'vstoken.azure.com'. To be 100% sure, you can inspect the `iss` claim in a decoded OIDC token from your pipeline.
@@ -50,8 +49,7 @@ execute terraform on the main branch, we will configure the service account "Fed
     - Via Pipeline: Add a script step echo $(System.CollectionId) to print it during a run.
 - **Assertions**:
   - **aud**->equals->api://AzureADTokenExchange # Mandatory value
-  - **sub**->equals->p://myorg/project-abc/terraform-ado-oidc # This is the pipeline where the process is running
-  - **rpo_ref**->equals->refs/heads/main # This is the branch where the pipeline will run
+  - **sub**->equals->sc://myorg/project-abc/stackit-service-connection # This is the service connection that is being used to authenticate with STACKIT.
 
 > Note: This is just an example, you can use more or less fine-grained assertions.
 
@@ -150,6 +148,9 @@ jobs:
 
 ### Azure Pipeline
 
+For Azure DevOps, use the STACKIT Azure DevOps extension and authenticate with the [`StackitAuthenticate`](https://marketplace.visualstudio.com/items?itemName=SchwarzDigits.stackit-service-connection) task.
+Create a STACKIT Service Connection using Workload Identity Federation (WIF) in your project and reference it in the task input.
+
 ```yaml
 trigger:
   branches:
@@ -160,14 +161,17 @@ pool:
   vmImage: "ubuntu-latest"
 
 variables:
-  STACKIT_USE_OIDC: "1"
-  STACKIT_SERVICE_ACCOUNT_EMAIL: "terraform-example@sa.stackit.cloud"
 
 jobs:
   - job: demo-job
     displayName: "Workload Identity Federation with STACKIT"
     steps:
       - checkout: self
+
+      - task: StackitAuthenticate@1
+        inputs:
+          serviceConnection: "My STACKIT Connection (WIF)"
+        displayName: "Authenticate with STACKIT (WIF)"
 
       - task: TerraformInstaller@1
         inputs:
@@ -186,6 +190,7 @@ jobs:
 
           provider "stackit" {
             default_region  = "eu01"
+            use_oidc        = true
           }
 
           resource "stackit_service_account" "sa"   {
@@ -199,23 +204,17 @@ jobs:
           terraform init
         displayName: "Terraform Init"
         env:
-          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
-          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
       - script: |
           terraform plan -out=tfplan
         displayName: "Terraform Plan"
         env:
-          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
-          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
       - script: |
           terraform apply -auto-approve tfplan
         displayName: "Terraform Apply"
         env:
-          STACKIT_USE_OIDC: $(STACKIT_USE_OIDC)
-          STACKIT_SERVICE_ACCOUNT_EMAIL: $(STACKIT_SERVICE_ACCOUNT_EMAIL)
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
