@@ -412,7 +412,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"encryption": schema.SingleNestedAttribute{
 				Description: descriptions["encryption"],
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),
 				},
@@ -528,14 +527,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 							listvalidator.SizeAtLeast(1),
 						},
 					},
-					"instance_address": schema.ListAttribute{
+					"instance_address": schema.StringAttribute{
 						Description: descriptions["instance_address"],
-						ElementType: types.StringType,
 						Computed:    true,
 					},
-					"router_address": schema.ListAttribute{
+					"router_address": schema.StringAttribute{
 						Description: descriptions["router_address"],
-						ElementType: types.StringType,
 						Computed:    true,
 					},
 				},
@@ -1099,7 +1096,7 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 	}
 
 	var encryptionValues map[string]attr.Value
-	var encryptionObject types.Object
+	encryptionObject := types.ObjectNull(encryptionTypes)
 	if resp.Encryption != nil {
 		encryptionValues = map[string]attr.Value{
 			"kek_key_id":      types.StringValue(resp.Encryption.KekKeyId),
@@ -1111,8 +1108,6 @@ func mapFields(ctx context.Context, resp *sqlserverflex.GetInstanceResponse, mod
 		if diags.HasError() {
 			return fmt.Errorf("creating encryption: %w", core.DiagsToError(diags))
 		}
-	} else {
-		encryptionObject = types.ObjectNull(encryptionTypes)
 	}
 
 	// If the API returned "0 0 * * *" but user defined "00 00 * * *" in its config,
@@ -1149,18 +1144,11 @@ func toCreatePayload(model *Model, acl []string, encryption *encryptionModel, fl
 	// Encryption
 	var encryptionPayload *sqlserverflex.InstanceEncryption
 	if encryption != nil {
-		encryptionPayload = &sqlserverflex.InstanceEncryption{}
-		if !encryption.KekKeyId.IsNull() || !encryption.KekKeyId.IsUnknown() {
-			encryptionPayload.KekKeyId = encryption.KekKeyId.ValueString()
-		}
-		if !encryption.KekKeyRingId.IsNull() || !encryption.KekKeyRingId.IsUnknown() {
-			encryptionPayload.KekKeyRingId = encryption.KekKeyRingId.ValueString()
-		}
-		if !encryption.KekKeyVersion.IsNull() || !encryption.KekKeyVersion.IsUnknown() {
-			encryptionPayload.KekKeyVersion = encryption.KekKeyVersion.ValueString()
-		}
-		if !encryption.ServiceAccount.IsNull() || !encryption.ServiceAccount.IsUnknown() {
-			encryptionPayload.ServiceAccount = encryption.ServiceAccount.ValueString()
+		encryptionPayload = &sqlserverflex.InstanceEncryption{
+			KekKeyId:       encryption.KekKeyId.ValueString(),
+			KekKeyRingId:   encryption.KekKeyRingId.ValueString(),
+			KekKeyVersion:  encryption.KekKeyVersion.ValueString(),
+			ServiceAccount: encryption.ServiceAccount.ValueString(),
 		}
 	}
 

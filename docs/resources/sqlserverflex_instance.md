@@ -91,8 +91,8 @@ Optional:
 
 Read-Only:
 
-- `instance_address` (List of String) Address of this instance.
-- `router_address` (List of String) Address of the router.
+- `instance_address` (String) Address of this instance.
+- `router_address` (String) Address of the router.
 
 
 <a id="nestedatt--options"></a>

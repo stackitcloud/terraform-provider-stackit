@@ -337,10 +337,10 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["retention_days"])),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule"])),
 
-					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "encryption.kek_key_id"),
-					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "encryption.kek_keyring_id"),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "encryption.kek_key_version", testutil.ConvertConfigVariable(testConfigVarsMax["kek_key_version"])),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "encryption.service_account", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_email"])),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_instance.instance", "encryption.kek_key_id"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_instance.instance", "encryption.kek_keyring_id"),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "encryption.kek_key_version", testutil.ConvertConfigVariable(testConfigVarsMax["kek_key_version"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "encryption.service_account", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_email"])),
 
 					// User data
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),

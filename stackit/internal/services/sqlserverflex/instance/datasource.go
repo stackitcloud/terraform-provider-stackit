@@ -124,7 +124,6 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 			"encryption": schema.SingleNestedAttribute{
 				Description: descriptions["encryption"],
-				Optional:    true,
 				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"kek_key_id": schema.StringAttribute{
@@ -179,14 +178,12 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						ElementType: types.StringType,
 						Computed:    true,
 					},
-					"instance_address": schema.ListAttribute{
+					"instance_address": schema.StringAttribute{
 						Description: descriptions["instance_address"],
-						ElementType: types.StringType,
 						Computed:    true,
 					},
-					"router_address": schema.ListAttribute{
+					"router_address": schema.StringAttribute{
 						Description: descriptions["router_address"],
-						ElementType: types.StringType,
 						Computed:    true,
 					},
 				},
