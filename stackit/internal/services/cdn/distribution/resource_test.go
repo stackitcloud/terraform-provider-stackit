@@ -13,6 +13,19 @@ import (
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
+func createTestConfig(vals map[string]attr.Value) types.Object {
+	if _, ok := vals["blocked_ips"]; !ok {
+		vals["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+	if _, ok := vals["default_cache_duration"]; !ok {
+		vals["default_cache_duration"] = types.StringNull()
+	}
+	if _, ok := vals["monthly_limit_bytes"]; !ok {
+		vals["monthly_limit_bytes"] = types.Int64Null()
+	}
+	return types.ObjectValueMust(configTypes, vals)
+}
+
 func TestToCreatePayload(t *testing.T) {
 	headers := map[string]attr.Value{
 		"testHeader0": types.StringValue("testHeaderValue0"),
@@ -84,7 +97,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
@@ -194,7 +207,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              optimizer,
@@ -224,7 +237,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_redirects": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -283,7 +296,7 @@ func TestToCreatePayload(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture, // reusing the existing one
 					"blocked_countries":      blockedCountriesFixture,
@@ -315,7 +328,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_waf": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -344,7 +357,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_strip_response_and_cookies_forward": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -375,7 +388,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_tls": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
@@ -435,7 +448,7 @@ func TestToCreatePayload(t *testing.T) {
 				// set generated ID before diffing
 				tc.Expected.IntentId = res.IntentId
 
-				diff := cmp.Diff(res, tc.Expected)
+				diff := cmp.Diff(res, tc.Expected, cmpopts.EquateEmpty())
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
@@ -472,7 +485,7 @@ func TestConvertConfig(t *testing.T) {
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"optimizer":              types.ObjectNull(optimizerTypes),
@@ -587,7 +600,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              optimizer,
@@ -621,7 +634,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_tls": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
@@ -661,7 +674,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_waf": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -695,7 +708,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_redirects": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -758,7 +771,7 @@ func TestConvertConfig(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
@@ -816,7 +829,9 @@ func TestConvertConfig(t *testing.T) {
 					cmpopts.IgnoreUnexported(
 						cdnSdk.NullableString{},
 						cdnSdk.NullableInt64{},
-					))
+					),
+					cmpopts.EquateEmpty(),
+				)
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
@@ -922,7 +937,7 @@ func TestMapFields(t *testing.T) {
 		"enable_tls_10": types.BoolValue(false),
 		"enable_tls_11": types.BoolValue(false),
 	})
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
@@ -1057,7 +1072,7 @@ func TestMapFields(t *testing.T) {
 		"origin_request_headers": types.MapNull(types.StringType),
 		"geofencing":             types.MapNull(geofencingTypes.ElemType),
 	})
-	configOld := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	configOld := createTestConfig(map[string]attr.Value{
 		"backend":                bucketBackendOld,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
@@ -1081,7 +1096,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              optimizer,
@@ -1111,7 +1126,7 @@ func TestMapFields(t *testing.T) {
 					"region":                 types.StringNull(),
 					"credentials":            types.ObjectNull(backendCredentialsTypes),
 				})
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -1130,7 +1145,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_redirects": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -1158,7 +1173,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_waf": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -1177,7 +1192,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_tls_and_strip_response_and_cookies_forward": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
@@ -1249,7 +1264,7 @@ func TestMapFields(t *testing.T) {
 				m.Config = configOld
 			}),
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackendOld,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
