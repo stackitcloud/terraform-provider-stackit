@@ -436,6 +436,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute, config)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))

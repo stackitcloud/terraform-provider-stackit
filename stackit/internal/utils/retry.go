@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -39,11 +40,6 @@ func RetryRequest[T any](ctx context.Context, fn func() (*T, error), config Retr
 		config.Delay = 100 * time.Millisecond
 	}
 
-	retryableSet := make(map[int]bool, len(config.RetryStatusCodes))
-	for _, code := range config.RetryStatusCodes {
-		retryableSet[code] = true
-	}
-
 	var lastErr error
 
 	for attempt := 1; attempt <= config.Attempts; attempt++ {
@@ -60,7 +56,7 @@ func RetryRequest[T any](ctx context.Context, fn func() (*T, error), config Retr
 
 		// Extract status code and verify if it's in the allowed list
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
-			if !retryableSet[oapiErr.StatusCode] {
+			if !slices.Contains(config.RetryStatusCodes, oapiErr.StatusCode) {
 				return nil, err
 			}
 		}

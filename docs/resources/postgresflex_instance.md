@@ -26,6 +26,7 @@ resource "stackit_postgresflex_instance" "example" {
     size  = 5
   }
   version = "14"
+  retention_days = 32
 }
 ```
 
@@ -45,11 +46,14 @@ resource "stackit_postgresflex_instance" "example" {
 - `acl` (List of String, Deprecated) The Access Control List (ACL) for the PostgresFlex instance.
 - `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `flavor_id` (String) The flavor ID of the PostgreSQL Flex instance.
-- `network` (Attributes) The network configuration of the instance. Will be required in the future. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--network))
+- `flavor_id` (String) The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+```bash
+stackit postgresflex options --flavors
+```
+- `network` (Attributes) The network configuration of the instance. Will be required after February 2027. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--network))
 - `region` (String) The resource region. If not defined, the provider region is used.
-- `replicas` (Number) How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication.
-- `retention_days` (Number)
+- `replicas` (Number) How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication. Can only be set together with `flavor`
+- `retention_days` (Number) How long backups are retained. The value can only be between 32 and 90 days. Will be required after February 2027. Set a value to prevent breaking changes.
 
 ### Read-Only
 
