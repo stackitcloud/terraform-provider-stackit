@@ -76,6 +76,7 @@ func (i *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			"region": schema.StringAttribute{
 				Description: descriptions["region"],
 				Optional:    true,
+				Computed:    true,
 			},
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
