@@ -33,6 +33,7 @@ func TestAccEphemeralAccessToken(t *testing.T) {
 				Config:          ephemeralResourceConfig,
 				ConfigVariables: testConfigVars,
 				ConfigStateChecks: []statecheck.StateCheck{
+					// Check that the output is not null
 					statecheck.ExpectKnownValue(
 						"echo.example",
 						tfjsonpath.New("data").AtMapKey("access_token"),
@@ -42,7 +43,7 @@ func TestAccEphemeralAccessToken(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"echo.example",
 						tfjsonpath.New("data").AtMapKey("access_token"),
-						knownvalue.StringRegexp(regexp.MustCompile(`^ey`)),
+						knownvalue.StringRegexp(regexp.MustCompile("^ey")),
 					),
 				},
 			},
