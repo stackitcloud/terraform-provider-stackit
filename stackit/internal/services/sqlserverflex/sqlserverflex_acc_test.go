@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api/wait"
 
@@ -39,28 +38,20 @@ var testConfigVarsMin = config.Variables{
 }
 
 var testConfigVarsMax = config.Variables{
-	"project_id":            config.StringVariable(testutil.ProjectId),
-	"name":                  config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"acl1":                  config.StringVariable("192.168.0.0/16"),
-	"storage_class":         config.StringVariable("premium-perf2-stackit"),
-	"storage_size":          config.IntegerVariable(40),
-	"server_version":        config.StringVariable("2022"),
-	"replicas":              config.IntegerVariable(1),
-	"access_scope":          config.StringVariable(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
-	"retention_days":        config.IntegerVariable(32),
-	"flavor_id":             config.StringVariable("4.16-Single"),
-	"backup_schedule":       config.StringVariable("0 6 * * *"),
-	"username":              config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
-	"role":                  config.StringVariable("##STACKIT_LoginManager##"),
-	"region":                config.StringVariable(testutil.Region),
-	"kek_key_version":       config.StringVariable("1"),
-	"service_account_email": config.StringVariable(testutil.TestProjectServiceAccountEmail),
-
-	"keyring_display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"display_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"algorithm":            config.StringVariable(string(kms.ALGORITHM_AES_256_GCM)),
-	"protection":           config.StringVariable("software"),
-	"purpose":              config.StringVariable(string(kms.PURPOSE_SYMMETRIC_ENCRYPT_DECRYPT)),
+	"project_id":      config.StringVariable(testutil.ProjectId),
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"acl1":            config.StringVariable("192.168.0.0/16"),
+	"storage_class":   config.StringVariable("premium-perf2-stackit"),
+	"storage_size":    config.IntegerVariable(40),
+	"server_version":  config.StringVariable("2022"),
+	"replicas":        config.IntegerVariable(1),
+	"access_scope":    config.StringVariable(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+	"retention_days":  config.IntegerVariable(32),
+	"flavor_id":       config.StringVariable("4.16-Single"),
+	"backup_schedule": config.StringVariable("0 6 * * *"),
+	"username":        config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
+	"role":            config.StringVariable("##STACKIT_LoginManager##"),
+	"region":          config.StringVariable(testutil.Region),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -259,15 +250,6 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 				},
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Key and Keyring
-					resource.ComposeAggregateTestCheckFunc(
-						resource.TestCheckResourceAttr("stackit_kms_keyring.keyring", "project_id", testutil.ProjectId),
-						resource.TestCheckResourceAttr("stackit_kms_keyring.keyring", "region", testutil.Region),
-						resource.TestCheckResourceAttr("stackit_kms_keyring.keyring", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["display_name"])),
-						resource.TestCheckResourceAttrSet("stackit_kms_keyring.keyring", "keyring_id"),
-						resource.TestCheckNoResourceAttr("stackit_kms_keyring.keyring", "description"),
-					),
-
 					// Instance
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "instance_id"),
@@ -286,11 +268,6 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", testutil.ConvertConfigVariable(testConfigVarsMax["server_version"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["retention_days"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule"])),
-
-					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "encryption.kek_key_id"),
-					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "encryption.kek_keyring_id"),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "encryption.kek_key_version", testutil.ConvertConfigVariable(testConfigVarsMax["kek_key_version"])),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "encryption.service_account", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_email"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "region", testutil.Region),
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -336,11 +313,6 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "replicas", testutil.ConvertConfigVariable(testConfigVarsMax["replicas"])),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "retention_days", testutil.ConvertConfigVariable(testConfigVarsMax["retention_days"])),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(testConfigVarsMax["backup_schedule"])),
-
-					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_instance.instance", "encryption.kek_key_id"),
-					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_instance.instance", "encryption.kek_keyring_id"),
-					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "encryption.kek_key_version", testutil.ConvertConfigVariable(testConfigVarsMax["kek_key_version"])),
-					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_instance.instance", "encryption.service_account", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_email"])),
 
 					// User data
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -439,11 +411,6 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", testutil.ConvertConfigVariable(configVarsMaxUpdated()["server_version"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "retention_days", testutil.ConvertConfigVariable(configVarsMaxUpdated()["retention_days"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(configVarsMaxUpdated()["backup_schedule"])),
-
-					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "encryption.kek_key_id"),
-					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_instance.instance", "encryption.kek_keyring_id"),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "encryption.kek_key_version", testutil.ConvertConfigVariable(testConfigVarsMax["kek_key_version"])),
-					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "encryption.service_account", testutil.ConvertConfigVariable(testConfigVarsMax["service_account_email"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
