@@ -20,7 +20,7 @@ resource "stackit_modelexperiments_instance" "example" {
   description                  = "Example description"
   deleted_experiment_retention = "30d"
   labels = {
-    label = "Example label"
+    label = "ExampleLabel"
   }
 }
 ```
