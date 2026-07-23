@@ -174,8 +174,9 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
 				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
 					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-\ ]*$`),
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
 						"The display name must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
 					),
 				},
@@ -184,10 +185,11 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				Description: schemaDescriptions["description"],
 				Optional:    true,
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-\ ]*$`),
-						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
-					),
+					stringvalidator.LengthAtMost(1024),
+                    stringvalidator.RegexMatches(
+                        regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9 \-]*)?$`),
+                        "The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+                    ),
 				},
 			},
 			"region": schema.StringAttribute{
