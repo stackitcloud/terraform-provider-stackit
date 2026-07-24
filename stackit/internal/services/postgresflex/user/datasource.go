@@ -20,7 +20,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -35,9 +35,11 @@ type DataSourceModel struct {
 	ProjectId  types.String `tfsdk:"project_id"`
 	Username   types.String `tfsdk:"username"`
 	Roles      types.Set    `tfsdk:"roles"`
-	Host       types.String `tfsdk:"host"`
-	Port       types.Int32  `tfsdk:"port"`
-	Region     types.String `tfsdk:"region"`
+	// Deprecated: Host is deprecated and will be removed after February 2027
+	Host types.String `tfsdk:"host"`
+	// Deprecated: Port is deprecated and will be removed after February 2027
+	Port   types.Int32  `tfsdk:"port"`
+	Region types.String `tfsdk:"region"`
 }
 
 // NewUserDataSource is a helper function to simplify the provider implementation.
@@ -157,6 +159,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))

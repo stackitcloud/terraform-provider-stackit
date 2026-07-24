@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -284,6 +284,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))
@@ -338,6 +339,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Parsing database ID: %v", err))
@@ -414,6 +416,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Parsing database ID: %v", err))

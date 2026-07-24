@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
+	stringplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -36,8 +37,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -125,7 +126,7 @@ var networkTypes = map[string]attr.Type{
 // Struct corresponding to Model.Encryption
 type encryptionModel struct {
 	KekKeyId       types.String `tfsdk:"kek_key_id"`
-	KekKeyRingId   types.String `tfsdk:"kek_key_ring_id"`
+	KekKeyRingId   types.String `tfsdk:"kek_keyring_id"`
 	KekKeyVersion  types.String `tfsdk:"kek_key_version"`
 	ServiceAccount types.String `tfsdk:"service_account"`
 }
@@ -133,7 +134,7 @@ type encryptionModel struct {
 // Types corresponding to encryptionModel
 var encryptionTypes = map[string]attr.Type{
 	"kek_key_id":      basetypes.StringType{},
-	"kek_key_ring_id": basetypes.StringType{},
+	"kek_keyring_id":  basetypes.StringType{},
 	"kek_key_version": basetypes.StringType{},
 	"service_account": basetypes.StringType{},
 }
@@ -208,7 +209,7 @@ func handleV3Migration(_ context.Context, planModel, configModel *Model, resp *r
 			planModel.RetentionDays = types.Int32Value(32)
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("retention_days"),
-			"retention_days will be required in future", "retention_days will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 32 days during deprecation period.")
+			"retention_days will be required after February 2027", "retention_days will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 32 days during deprecation period.")
 	}
 
 	// backup_schedule
@@ -217,7 +218,7 @@ func handleV3Migration(_ context.Context, planModel, configModel *Model, resp *r
 		backupScheduleSimplified := utils.SimplifyCronString(backupSchedule)
 		if backupSchedule != backupScheduleSimplified {
 			resp.Diagnostics.AddAttributeWarning(path.Root("backup_schedule"),
-				"backup_schedule is not valid defined", fmt.Sprintf("backup_schedule is not correctly defined and will result in an error after February 2027. Set it to the value %q to prevent errors in future releases.", backupScheduleSimplified))
+				"backup_schedule is invalid", fmt.Sprintf("backup_schedule is not correctly defined and will result in an error after February 2027. Set it to the value %q to prevent errors in future releases.", backupScheduleSimplified))
 		}
 	}
 }
@@ -262,7 +263,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"replicas":                   "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication. Can only be set together with `flavor`",
 		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --flavors\n```",
 		"encryption.kek_key_id":      "The ID of the Key within the STACKIT-KMS to use for the encryption.",
-		"encryption.kek_key_ring_id": "The ID of the keyring where the key is located within the STACKTI-KMS.",
+		"encryption.kek_keyring_id":  "The ID of the keyring where the key is located within the STACKTI-KMS.",
 		"encryption.kek_key_version": "Version of the key within the STACKIT-KMS to use for the encryption.",
 		"encryption.service_account": "Service-Account linked to the Key within the STACKIT-KMS.",
 		"storage_class":              "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --storages --flavor-id FLAVOR_ID\n```",
@@ -381,7 +382,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					stringvalidator.All(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseNonNullStateForUnknown(),
+					UseStateForUnknownIfFlavorUnchanged(req),
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
@@ -392,12 +393,14 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							UseStateForUnknownIfFlavorUnchanged(req),
+							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
 						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							UseStateForUnknownIfFlavorUnchanged(req),
+							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
 						},
 					},
 					"cpu": schema.Int64Attribute{
@@ -410,6 +413,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 						Computed: true,
 						PlanModifiers: []planmodifier.String{
 							UseStateForUnknownIfFlavorUnchanged(req),
+							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
 						},
 					},
 				},
@@ -418,6 +422,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 						path.Root("flavor_id").Expression(),
 						path.Root("flavor").Expression(),
 					),
+					objectvalidator.AlsoRequires(path.Root("replicas").Expression()),
 				},
 			},
 			"encryption": schema.SingleNestedAttribute{
@@ -433,8 +438,8 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 							stringplanmodifier.RequiresReplace(),
 						},
 					},
-					"kek_key_ring_id": schema.StringAttribute{
-						Description: descriptions["encryption.kek_key_ring_id"],
+					"kek_keyring_id": schema.StringAttribute{
+						Description: descriptions["encryption.kek_keyring_id"],
 						Required:    true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
@@ -473,6 +478,9 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				Description: descriptions["retention_days"],
 				Optional:    true,
 				Computed:    true,
+				Validators: []validator.Int32{
+					int32validator.Between(32, 90),
+				},
 			},
 			"network": schema.SingleNestedAttribute{
 				Description: descriptions["network"],
@@ -706,7 +714,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			return
 		}
 	} else {
-		// Read the flavor here from the API, because during an import the flavor should be set
 		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
@@ -958,7 +965,7 @@ func mapFields(ctx context.Context, resp *postgresflex.GetInstanceResponse, mode
 	if resp.Encryption != nil {
 		encryptionValues := map[string]attr.Value{
 			"kek_key_id":      types.StringValue(resp.Encryption.KekKeyId),
-			"kek_key_ring_id": types.StringValue(resp.Encryption.KekKeyRingId),
+			"kek_keyring_id":  types.StringValue(resp.Encryption.KekKeyRingId),
 			"kek_key_version": types.StringValue(resp.Encryption.KekKeyVersion),
 			"service_account": types.StringValue(resp.Encryption.ServiceAccount),
 		}
@@ -1028,10 +1035,10 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 	}
 
 	var flavorId string
-	if flavor != nil && !(flavor.Id.IsNull() || flavor.Id.IsUnknown()) {
-		flavorId = flavor.Id.ValueString()
-	} else if !(model.FlavorId.IsNull() || model.FlavorId.IsUnknown()) {
+	if !(model.FlavorId.IsNull() || model.FlavorId.IsUnknown()) {
 		flavorId = model.FlavorId.ValueString()
+	} else if flavor != nil && !(flavor.Id.IsNull() || flavor.Id.IsUnknown()) {
+		flavorId = flavor.Id.ValueString()
 	} else {
 		return nil, fmt.Errorf("flavor id is missing")
 	}

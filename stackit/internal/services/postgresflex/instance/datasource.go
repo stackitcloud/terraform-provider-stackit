@@ -18,7 +18,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -163,8 +163,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: descriptions["encryption.kek_key_id"],
 						Computed:    true,
 					},
-					"kek_key_ring_id": schema.StringAttribute{
-						Description: descriptions["encryption.kek_key_ring_id"],
+					"kek_keyring_id": schema.StringAttribute{
+						Description: descriptions["encryption.kek_keyring_id"],
 						Computed:    true,
 					},
 					"kek_key_version": schema.StringAttribute{
