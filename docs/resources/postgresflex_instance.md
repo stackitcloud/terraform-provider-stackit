@@ -25,7 +25,7 @@ resource "stackit_postgresflex_instance" "example" {
     class = "premium-perf2-stackit"
     size  = 5
   }
-  version        = "14"
+  version        = "17"
   retention_days = 32
 }
 ```
@@ -79,8 +79,8 @@ stackit postgresflex options --storages --flavor-id FLAVOR_ID
 Required:
 
 - `kek_key_id` (String) The ID of the Key within the STACKIT-KMS to use for the encryption.
-- `kek_key_ring_id` (String) The ID of the keyring where the key is located within the STACKTI-KMS.
 - `kek_key_version` (String) Version of the key within the STACKIT-KMS to use for the encryption.
+- `kek_keyring_id` (String) The ID of the keyring where the key is located within the STACKTI-KMS.
 - `service_account` (String) Service-Account linked to the Key within the STACKIT-KMS.
 
 

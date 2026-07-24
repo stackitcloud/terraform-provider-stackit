@@ -29,8 +29,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -355,6 +355,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
@@ -417,6 +418,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Parsing user ID: %v", err))
@@ -518,6 +520,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Parsing user ID: %v", err))

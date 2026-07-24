@@ -1041,7 +1041,9 @@ func toCreatePayload(model *Model, acl []string, flavor *flavorModel, storage *s
 		if err != nil {
 			return nil, err
 		}
-		networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
+		if !(network.AccessScope.IsNull() || network.AccessScope.IsUnknown()) {
+			networkPayload.AccessScope = (*sqlserverflex.InstanceNetworkAccessScope)(network.AccessScope.ValueStringPointer())
+		}
 	} else {
 		// TODO: Return here an error after the deprecation period. During the deprecation period, we set here an empty ACL to catch the breaking change from v2 -> v3 api.
 		networkPayload.Acl = []string{}

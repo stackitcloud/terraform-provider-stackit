@@ -18,7 +18,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -138,6 +138,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// In v2 the ID was a string. This was changed in the v3 API.
 	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))

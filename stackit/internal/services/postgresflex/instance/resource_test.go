@@ -7,14 +7,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3beta1api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 type postgresFlexClientMocked struct {
-	returnError    bool
-	getFlavorsResp *postgresflex.ListFlavorsResponse
-	listFlavorsReq postgresflex.ApiListFlavorsRequest
+	returnError     bool
+	listFlavorsResp *postgresflex.ListFlavorsResponse
+	listFlavorsReq  postgresflex.ApiListFlavorsRequest
 }
 
 func (c *postgresFlexClientMocked) ListFlavors(_ context.Context, _, _ string) postgresflex.ApiListFlavorsRequest {
@@ -26,7 +27,7 @@ func (c *postgresFlexClientMocked) ListFlavorsExecute(_ postgresflex.ApiListFlav
 		return nil, fmt.Errorf("get flavors failed")
 	}
 
-	return c.getFlavorsResp, nil
+	return c.listFlavorsResp, nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -881,8 +882,8 @@ func TestLoadFlavorId(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &postgresFlexClientMocked{
-				returnError:    tt.getFlavorsFails,
-				getFlavorsResp: tt.mockedResp,
+				returnError:     tt.getFlavorsFails,
+				listFlavorsResp: tt.mockedResp,
 			}
 			model := &Model{
 				ProjectId: types.StringValue("pid"),
@@ -901,6 +902,194 @@ func TestLoadFlavorId(t *testing.T) {
 			}
 			if tt.isValid {
 				diff := cmp.Diff(flavorModel, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleV3Migration(t *testing.T) {
+	tests := []struct {
+		name         string
+		configModel  *Model
+		planModel    *Model
+		expectedPlan *Model
+		warnings     int
+	}{
+		{
+			name: "all_values_provided_no_migration",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			warnings: 0,
+		},
+		{
+			name: "migration_triggered_for_all_null_fields",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringNull(),
+				RetentionDays:  types.Int32Null(),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringNull(),
+				RetentionDays:  types.Int32Null(),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringNull(),
+				RetentionDays:  types.Int32Value(32),
+			},
+			warnings: 1, // retention_days fallback
+		},
+		{
+			name: "migration_triggered_for_unknown_retention_days",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Unknown(),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Unknown(),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(32),
+			},
+			warnings: 1,
+		},
+		{
+			name: "backup_schedule_unsimplified_triggers_warning",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("00 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("00 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("00 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			warnings: 1, // backup_schedule simplification warning
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := &resource.ModifyPlanResponse{}
+			handleV3Migration(context.Background(), tt.planModel, tt.configModel, resp)
+
+			if len(resp.Diagnostics.Warnings()) != tt.warnings {
+				t.Errorf("expected %d warnings, got %d", tt.warnings, len(resp.Diagnostics.Warnings()))
+			}
+
+			diff := cmp.Diff(tt.planModel, tt.expectedPlan)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetFlavor(t *testing.T) {
+	tests := []struct {
+		description     string
+		flavorId        string
+		mockedResp      *postgresflex.ListFlavorsResponse
+		expected        *postgresflex.ListFlavors
+		getFlavorsFails bool
+		isValid         bool
+	}{
+		{
+			description: "ok_flavor_found",
+			flavorId:    "fid-1",
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
+					{
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description-1",
+						Memory:      8,
+					},
+					{
+						Id:          "fid-2",
+						Cpu:         4,
+						Description: "description-2",
+						Memory:      16,
+					},
+				},
+			},
+			expected: &postgresflex.ListFlavors{
+				Id:          "fid-1",
+				Cpu:         2,
+				Description: "description-1",
+				Memory:      8,
+			},
+			getFlavorsFails: false,
+			isValid:         true,
+		},
+		{
+			description: "flavor_not_found",
+			flavorId:    "fid-3",
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
+					{
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description-1",
+						Memory:      8,
+					},
+				},
+			},
+			expected:        nil,
+			getFlavorsFails: false,
+			isValid:         false,
+		},
+		{
+			description:     "error_response",
+			flavorId:        "fid-1",
+			mockedResp:      nil,
+			expected:        nil,
+			getFlavorsFails: true,
+			isValid:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			client := &postgresFlexClientMocked{
+				returnError:     tt.getFlavorsFails,
+				listFlavorsResp: tt.mockedResp,
+			}
+			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
