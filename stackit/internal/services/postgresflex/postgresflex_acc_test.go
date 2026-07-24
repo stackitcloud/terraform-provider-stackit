@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api/wait"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -583,7 +584,7 @@ func TestAccPostgresFlexDatabaseMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Region(testutil.Region).BuildProviderConfig(), resourceDatabaseMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						//plancheck.ExpectResourceAction("stackit_postgresflex_instance.instance", plancheck.ResourceActionCreate),
+						plancheck.ExpectResourceAction("stackit_postgresflex_instance.instance", plancheck.ResourceActionCreate),
 						plancheck.ExpectResourceAction("stackit_postgresflex_user.user", plancheck.ResourceActionCreate),
 						plancheck.ExpectResourceAction("stackit_postgresflex_database.database", plancheck.ResourceActionCreate),
 					},
@@ -613,7 +614,7 @@ func TestAccPostgresFlexDatabaseMin(t *testing.T) {
 				ConfigVariables: testConfigDatabaseVarsMin,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						//plancheck.ExpectResourceAction("stackit_postgresflex_instance.instance", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_postgresflex_instance.instance", plancheck.ResourceActionNoop),
 						plancheck.ExpectResourceAction("stackit_postgresflex_user.user", plancheck.ResourceActionNoop),
 						plancheck.ExpectResourceAction("stackit_postgresflex_database.database", plancheck.ResourceActionNoop),
 					},
@@ -690,7 +691,7 @@ func TestAccPostgresFlexDatabaseMin(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Region(testutil.Region).BuildProviderConfig(), resourceDatabaseMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						//plancheck.ExpectResourceAction("stackit_postgresflex_instance.instance", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_postgresflex_instance.instance", plancheck.ResourceActionNoop),
 						plancheck.ExpectResourceAction("stackit_postgresflex_user.user", plancheck.ResourceActionUpdate),
 						plancheck.ExpectResourceAction("stackit_postgresflex_database.database", plancheck.ResourceActionUpdate),
 					},
