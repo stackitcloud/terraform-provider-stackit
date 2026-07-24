@@ -38,6 +38,11 @@ resource "stackit_ske_cluster" "example" {
       access_scope = "PUBLIC"
     }
   }
+  # Cluster audit log forwarding to a Telemetry Router.
+  # Private preview: only configurable for enabled accounts.
+  audit = {
+    enabled = true
+  }
 }
 ```
 
@@ -54,6 +59,7 @@ To keep your Terraform plans clean and readable, always append new node pools to
 ### Optional
 
 - `access` (Attributes) Configure access to the cluster (see [below for nested schema](#nestedatt--access))
+- `audit` (Attributes) Cluster audit log forwarding configuration. (see [below for nested schema](#nestedatt--audit))
 - `extensions` (Attributes) A single extensions block as defined below. (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
 - `kubernetes_version_min` (String) The minimum Kubernetes version. This field will be used to set the minimum kubernetes version on creation/update of the cluster. If unset, the latest supported Kubernetes version will be used. SKE automatically updates the cluster Kubernetes version if you have set `maintenance.enable_kubernetes_version_updates` to true or if there is a mandatory update, as described in [General information for Kubernetes & OS updates](https://docs.stackit.cloud/products/runtime/kubernetes-engine/basics/version-updates/). To get the current kubernetes version being used for your cluster, use the read-only `kubernetes_version_used` field.
@@ -127,6 +133,14 @@ Optional:
 - `enabled` (Boolean) Enable IDP integration for the cluster.
 - `type` (String) The IDP type. Possible values: 'stackit'.
 
+
+
+<a id="nestedatt--audit"></a>
+### Nested Schema for `audit`
+
+Required:
+
+- `enabled` (Boolean) Enable cluster audit log forwarding to a Telemetry Router.
 
 
 <a id="nestedatt--extensions"></a>

@@ -796,6 +796,9 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
+				if tt.expected.Audit.Attributes() == nil {
+					tt.expected.Audit = types.ObjectNull(auditTypes)
+				}
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -2401,6 +2404,64 @@ func TestToNetworkPayload(t *testing.T) {
 	}
 }
 
+func TestToAuditPayload(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   types.Object
+		want    *ske.Audit
+		wantErr bool
+	}{
+		{
+			name:  "null audit",
+			input: types.ObjectNull(auditTypes),
+			want:  nil,
+		},
+		{
+			name:  "unknown audit",
+			input: types.ObjectUnknown(auditTypes),
+			want:  nil,
+		},
+		{
+			name: "audit enabled",
+			input: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(true),
+			}),
+			want: &ske.Audit{
+				Enabled: true,
+			},
+		},
+		{
+			name: "audit disabled",
+			input: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+			want: &ske.Audit{
+				Enabled: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Model{
+				Audit: tt.input,
+			}
+			got, err := toAuditPayload(t.Context(), m)
+			if err != nil && !tt.wantErr {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err == nil && tt.wantErr {
+				t.Fatalf("expected error, but got none")
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestVerifySystemComponentNodepools(t *testing.T) {
 	tests := []struct {
 		description string
@@ -2749,6 +2810,75 @@ func TestValidateConfig(t *testing.T) {
 			validateConfig(ctx, &diags, tt.model)
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMapAudit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		input      *ske.Audit
+		stateAudit types.Object
+		want       types.Object
+		wantErr    bool
+	}{
+		{
+			name:       "nil audit",
+			input:      nil,
+			stateAudit: types.ObjectNull(auditTypes),
+			want:       types.ObjectNull(auditTypes),
+		},
+		{
+			name: "audit enabled",
+			input: &ske.Audit{
+				Enabled: true,
+			},
+			stateAudit: types.ObjectNull(auditTypes),
+			want: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(true),
+			}),
+		},
+		{
+			name: "audit disabled echoed by API",
+			input: &ske.Audit{
+				Enabled: false,
+			},
+			stateAudit: types.ObjectNull(auditTypes),
+			want: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+		},
+		{
+			name:  "null when API omits audit despite state value",
+			input: nil,
+			stateAudit: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+			want: types.ObjectNull(auditTypes),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Model{
+				Audit: tt.stateAudit,
+			}
+			cluster := &ske.Cluster{
+				Audit: tt.input,
+			}
+
+			err := mapAudit(cluster, m)
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected error, but got none")
+			}
+			if diff := cmp.Diff(tt.want, m.Audit); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
