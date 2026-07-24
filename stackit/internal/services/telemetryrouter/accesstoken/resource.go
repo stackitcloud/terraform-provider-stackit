@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -172,6 +174,13 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+                    stringvalidator.LengthBetween(1, 32),
+                    stringvalidator.RegexMatches(
+                        regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
+                        "must start with an alphanumeric character and contain only alphanumeric characters, spaces, and hyphens",
+                    ),
+                },
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
@@ -185,6 +194,9 @@ func (r *telemetryRouterAccessTokenResource) Schema(_ context.Context, _ resourc
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Validators: []validator.String{
+                    stringvalidator.LengthAtMost(1024),
+                },
 			},
 			"ttl": schema.Int32Attribute{
 				Description: schemaDescriptions["ttl"],
