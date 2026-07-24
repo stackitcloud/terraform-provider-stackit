@@ -38,7 +38,7 @@ We make use of the [Terraform Plugin Framework](https://developer.hashicorp.com/
 
 ### Implementing a new resource
 
-Let's suppose you want to want to implement a new resource `bar` of service `foo`:
+Let's suppose you want to implement a new resource `bar` of service `foo`:
 
 1. You would start by creating a new folder `bar/` inside `stackit/internal/services/foo/`
 2. Following with the creation of a file `resource.go` inside your new folder `stackit/internal/services/foo/bar/`
@@ -54,7 +54,7 @@ Let's suppose you want to want to implement a new resource `bar` of service `foo
     }
    ```
 
-Please remember to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
+Please remember to always add unit tests for the helper functions (in this case `mapFields` and `toCreatePayload`), as well as implementing/extending the acceptance (end-to-end) tests. Our acceptance tests are implemented using Hashicorp's [terraform-plugin-testing](https://developer.hashicorp.com/terraform/plugin/testing/acceptance-tests) package.
 
 Additionally, remember to run `make generate-docs` after your changes to keep the commands' documentation in `docs/` updated, which is used as a source for the [Terraform Registry documentation page](https://registry.terraform.io/providers/stackitcloud/stackit/latest/docs).
 
