@@ -70,8 +70,8 @@ Read-Only:
 Read-Only:
 
 - `kek_key_id` (String)
-- `kek_key_ring_id` (String)
 - `kek_key_version` (String)
+- `kek_keyring_id` (String)
 - `service_account` (String)
 
 
