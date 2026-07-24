@@ -40,28 +40,31 @@ var testConfigVarsMin = config.Variables{
 }
 
 var testConfigVarsMax = config.Variables{
-	"project_id":      config.StringVariable(testutil.ProjectId),
-	"name":            config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"dns_name":        config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha) + ".example.home"),
-	"acl":             config.StringVariable("0.0.0.0/0"),
-	"active":          config.BoolVariable(true),
-	"contact_email":   config.StringVariable("contact@example.com"),
-	"default_ttl":     config.IntegerVariable(3600),
-	"description":     config.StringVariable("a test description"),
-	"expire_time":     config.IntegerVariable(1 * 24 * 60 * 60),
-	"is_reverse_zone": config.BoolVariable(false),
+	"project_id":                    config.StringVariable(testutil.ProjectId),
+	"name":                          config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"dns_name":                      config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha) + ".example.home"),
+	"acl":                           config.StringVariable("0.0.0.0/0"),
+	"active":                        config.BoolVariable(true),
+	"contact_email":                 config.StringVariable("contact@example.com"),
+	"default_ttl":                   config.IntegerVariable(3600),
+	"description":                   config.StringVariable("a test description"),
+	"expire_time":                   config.IntegerVariable(1 * 24 * 60 * 60),
+	"ext_observability_instance_id": config.StringVariable("a8f823ad-3abb-47fb-b56a-e3a7e97f65d5"),
+	"is_reverse_zone":               config.BoolVariable(false),
 	// "negative_cache":  config.IntegerVariable(128),
 	"primaries":    config.ListVariable(config.StringVariable("1.1.1.1")),
 	"refresh_time": config.IntegerVariable(3600),
 	"retry_time":   config.IntegerVariable(600),
 	"type":         config.StringVariable("primary"),
 
-	"record_name":    config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"record_record1": config.StringVariable("1.2.3.4"),
-	"record_active":  config.BoolVariable(true),
-	"record_comment": config.StringVariable("a test comment"),
-	"record_ttl":     config.IntegerVariable(3600),
-	"record_type":    config.StringVariable("A"),
+	"record_name":                 config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"record_record1":              config.StringVariable("1.2.3.4"),
+	"record_active":               config.BoolVariable(true),
+	"record_comment":              config.StringVariable("a test comment"),
+	"record_ttl":                  config.IntegerVariable(3600),
+	"record_type":                 config.StringVariable("A"),
+	"observability_instance_name": config.StringVariable(fmt.Sprintf("tf-acc-i%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"observability_plan_name":     config.StringVariable("Observability-Metrics-Endpoint-100k-EU01"),
 }
 
 func configVarsInvalid(vars config.Variables) config.Variables {
@@ -313,6 +316,9 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMax["record_type"])),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "fqdn"),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "state"),
+
+					resource.TestCheckResourceAttr("stackit_observability_instance.observability_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_instance_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.observability_instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_plan_name"])),
 				),
 			},
 			// Data sources
@@ -404,6 +410,9 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "comment", testutil.ConvertConfigVariable(testConfigVarsMax["record_comment"])),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "ttl", testutil.ConvertConfigVariable(testConfigVarsMax["record_ttl"])),
 					resource.TestCheckResourceAttr("data.stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMax["record_type"])),
+
+					resource.TestCheckResourceAttr("stackit_observability_instance.observability_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_instance_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.observability_instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_plan_name"])),
 				),
 			},
 			// Import
@@ -492,7 +501,11 @@ func TestAccDnsMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "ttl", testutil.ConvertConfigVariable(testConfigVarsMax["record_ttl"])),
 					resource.TestCheckResourceAttr("stackit_dns_record_set.record_set", "type", testutil.ConvertConfigVariable(testConfigVarsMax["record_type"])),
 					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "fqdn"),
-					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "state")),
+					resource.TestCheckResourceAttrSet("stackit_dns_record_set.record_set", "state"),
+
+					resource.TestCheckResourceAttr("stackit_observability_instance.observability_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_instance_name"])),
+					resource.TestCheckResourceAttr("stackit_observability_instance.observability_instance", "plan_name", testutil.ConvertConfigVariable(testConfigVarsMax["observability_plan_name"])),
+				),
 			},
 			// Deletion is done by the framework implicitly
 		},

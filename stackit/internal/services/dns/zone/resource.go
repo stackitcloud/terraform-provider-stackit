@@ -16,15 +16,18 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
@@ -58,6 +61,7 @@ type Model struct {
 	ContactEmail      types.String `tfsdk:"contact_email"`
 	DefaultTTL        types.Int32  `tfsdk:"default_ttl"`
 	ExpireTime        types.Int32  `tfsdk:"expire_time"`
+	Extensions        types.Object `tfsdk:"extensions"`
 	IsReverseZone     types.Bool   `tfsdk:"is_reverse_zone"`
 	NegativeCache     types.Int32  `tfsdk:"negative_cache"`
 	PrimaryNameServer types.String `tfsdk:"primary_name_server"`
@@ -84,6 +88,29 @@ func NewZoneResource() resource.Resource {
 // zoneResource is the resource implementation.
 type zoneResource struct {
 	client *dns.APIClient
+}
+
+// Struct corresponding to Model.Extensions
+type extensions struct {
+	Observability types.Object `tfsdk:"observability"`
+}
+
+// Struct corresponding to extensions.Observability
+type observability struct {
+	InstanceId types.String `tfsdk:"observability_instance_id"`
+	// State is response only
+	State types.String `tfsdk:"state"`
+}
+
+// Types corresponding to extensions
+var extensionsTypes = map[string]attr.Type{
+	"observability": basetypes.ObjectType{AttrTypes: observabilityTypes},
+}
+
+// Types corresponding to observability
+var observabilityTypes = map[string]attr.Type{
+	"observability_instance_id": basetypes.StringType{},
+	"state":                     basetypes.StringType{},
 }
 
 // Metadata returns the resource type name.
@@ -210,6 +237,30 @@ func (r *zoneResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 					int32validator.Between(60, 99999999),
 				},
 			},
+
+			"extensions": schema.SingleNestedAttribute{
+				Description: "A single extensions block as defined below.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"observability": schema.SingleNestedAttribute{
+						Description: "A single observability block as defined below.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"observability_instance_id": schema.StringAttribute{
+								Description: "Observability instance ID to choose which Observability instance is used.",
+								Required:    true,
+							},
+							"state": schema.StringAttribute{
+								Description: "State of the extension.",
+								Computed:    true,
+							},
+						},
+					},
+				},
+			},
 			"is_reverse_zone": schema.BoolAttribute{
 				Description: "Specifies, if the zone is a reverse zone or not. Defaults to `false`",
 				Optional:    true,
@@ -319,7 +370,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(&model.Model)
+	payload, err := toCreatePayload(ctx, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating zone", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -452,7 +503,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 
 	// Generate API request body from model
-	payload, err := toUpdatePayload(&model.Model)
+	payload, err := toUpdatePayload(ctx, &model.Model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating zone", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -555,6 +606,37 @@ func (r *zoneResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "DNS zone state imported")
 }
 
+func mapExtensions(z *dns.ZoneResponse, m *Model) error {
+	if z.Zone.Extensions == nil {
+		m.Extensions = types.ObjectNull(extensionsTypes)
+		return nil
+	}
+
+	if z.Zone.Extensions.ObservabilityExtension != nil {
+		state := types.StringValue(*z.Zone.Extensions.ObservabilityExtension.State)
+		observabilityInstanceId := types.StringValue(z.Zone.Extensions.ObservabilityExtension.ObservabilityInstanceId)
+
+		observabilityValues := map[string]attr.Value{
+			"state":                     state,
+			"observability_instance_id": observabilityInstanceId,
+		}
+		observabilityExtension, diags := types.ObjectValue(observabilityTypes, observabilityValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating observability extension: %w", core.DiagsToError(diags))
+		}
+		extensionValue := map[string]attr.Value{
+			"observability": observabilityExtension,
+		}
+
+		extensions, diags := types.ObjectValue(extensionsTypes, extensionValue)
+		if diags.HasError() {
+			return fmt.Errorf("creating extensions: %w", core.DiagsToError(diags))
+		}
+		m.Extensions = extensions
+	}
+	return nil
+}
+
 func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) error {
 	if zoneResp == nil {
 		return fmt.Errorf("response input is nil")
@@ -620,10 +702,11 @@ func mapFields(ctx context.Context, zoneResp *dns.ZoneResponse, model *Model) er
 	model.State = types.StringValue(string(z.State))
 	model.Type = types.StringValue(string(z.Type))
 	model.Visibility = types.StringValue(string(z.Visibility))
-	return nil
+
+	return mapExtensions(zoneResp, model)
 }
 
-func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
+func toCreatePayload(ctx context.Context, model *Model) (*dns.CreateZonePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -636,6 +719,11 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		}
 		modelPrimaries = append(modelPrimaries, primaryString.ValueString())
 	}
+
+	ext, err := toExtensionsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("could not map extensions to create payload: %w", err)
+	}
 	return &dns.CreateZonePayload{
 		Name:          model.Name.ValueString(),
 		DnsName:       model.DnsName.ValueString(),
@@ -645,6 +733,7 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 		Type:          conversion.StringValueToEnumPointer[dns.CreateZonePayloadType](model.Type),
 		DefaultTTL:    conversion.Int32ValueToPointer(model.DefaultTTL),
 		ExpireTime:    conversion.Int32ValueToPointer(model.ExpireTime),
+		Extensions:    ext,
 		RefreshTime:   conversion.Int32ValueToPointer(model.RefreshTime),
 		RetryTime:     conversion.Int32ValueToPointer(model.RetryTime),
 		NegativeCache: conversion.Int32ValueToPointer(model.NegativeCache),
@@ -653,11 +742,15 @@ func toCreatePayload(model *Model) (*dns.CreateZonePayload, error) {
 	}, nil
 }
 
-func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model) (*dns.PartialUpdateZonePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
 
+	ext, err := toExtensionsPayload(ctx, model)
+	if err != nil {
+		return nil, fmt.Errorf("could not map extensions to update payload: %w", err)
+	}
 	return &dns.PartialUpdateZonePayload{
 		Name:          conversion.StringValueToPointer(model.Name),
 		ContactEmail:  conversion.StringValueToPointer(model.ContactEmail),
@@ -665,9 +758,36 @@ func toUpdatePayload(model *Model) (*dns.PartialUpdateZonePayload, error) {
 		Acl:           conversion.StringValueToPointer(model.Acl),
 		DefaultTTL:    conversion.Int32ValueToPointer(model.DefaultTTL),
 		ExpireTime:    conversion.Int32ValueToPointer(model.ExpireTime),
+		Extensions:    ext,
 		RefreshTime:   conversion.Int32ValueToPointer(model.RefreshTime),
 		RetryTime:     conversion.Int32ValueToPointer(model.RetryTime),
 		NegativeCache: conversion.Int32ValueToPointer(model.NegativeCache),
 		Primaries:     nil, // API returns error if this field is set, even if nothing changes
 	}, nil
+}
+
+// toExtensionsPayload reads the extensions from the model and maps it to [dns.ZoneExtensions].
+// Returns nil if the model does not provide any extensions.
+func toExtensionsPayload(ctx context.Context, model *Model) (*dns.ZoneExtensions, error) {
+	if !utils.IsUndefined(model.Extensions) {
+		ex := extensions{}
+		diags := model.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("failed to map extensions to domain type: %w", core.DiagsToError(diags))
+		}
+		if !utils.IsUndefined(ex.Observability) {
+			obs := observability{}
+			diags = ex.Observability.As(ctx, &obs, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("failed to map extensions to domain type: %w", core.DiagsToError(diags))
+			}
+			return &dns.ZoneExtensions{
+				ObservabilityExtension: &dns.ZoneObservabilityExtension{
+					ObservabilityInstanceId: obs.InstanceId.ValueString(),
+				},
+			}, nil
+		}
+		return &dns.ZoneExtensions{}, nil
+	}
+	return &dns.ZoneExtensions{}, nil
 }

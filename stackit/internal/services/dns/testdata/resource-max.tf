@@ -21,19 +21,31 @@ variable "record_comment" {}
 variable "record_ttl" {}
 variable "record_type" {}
 
+variable "observability_instance_name" {}
+variable "observability_plan_name" {}
 
 
+resource "stackit_observability_instance" "observability_instance" {
+  project_id = var.project_id
+  name       = var.observability_instance_name
+  plan_name  = var.observability_plan_name
+}
 
 resource "stackit_dns_zone" "zone" {
-  project_id      = var.project_id
-  name            = var.name
-  dns_name        = var.dns_name
-  acl             = var.acl
-  active          = var.active
-  contact_email   = var.contact_email
-  default_ttl     = var.default_ttl
-  description     = var.description
-  expire_time     = var.expire_time
+  project_id    = var.project_id
+  name          = var.name
+  dns_name      = var.dns_name
+  acl           = var.acl
+  active        = var.active
+  contact_email = var.contact_email
+  default_ttl   = var.default_ttl
+  description   = var.description
+  expire_time   = var.expire_time
+  extensions = {
+    observability = {
+      observability_instance_id = stackit_observability_instance.observability_instance.instance_id
+    }
+  }
   is_reverse_zone = var.is_reverse_zone
   # negative_cache  = var.negative_cache
   primaries    = var.primaries
