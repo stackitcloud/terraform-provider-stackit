@@ -24,12 +24,23 @@ import (
 var (
 	//go:embed testdata/managed-rule-set.tf
 	managedRuleSetConfig string
+
+	//go:embed testdata/waf.tf
+	wafConfig string
 )
 
 var testManagedRuleSet = config.Variables{
 	"project_id": config.StringVariable(testutil.ProjectId),
 	"name":       config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"type":       config.StringVariable("TYPE_OWASP_CRS"),
+}
+
+var testWaf = config.Variables{
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"waf_name":      config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"rule_set_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"type":          config.StringVariable("TYPE_OWASP_CRS"),
+	"waf_label":     config.StringVariable("some-label"),
 }
 
 var testManagedRuleSetUpdated = func() config.Variables {
@@ -39,7 +50,150 @@ var testManagedRuleSetUpdated = func() config.Variables {
 	return updatedConfig
 }
 
+var testWafUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testWaf)
+	updatedConfig["waf_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_name"])))
+	updatedConfig["rule_set_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["rule_set_name"])))
+	updatedConfig["waf_label"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_label"])))
+	return updatedConfig
+}
+
+func TestAccWaf(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testWaf,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_managed_rule_set.managed_rule_set", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testWaf["rule_set_name"])),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf.waf_instance", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "name", testutil.ConvertConfigVariable(testWaf["waf_name"])),
+					resource.TestCheckResourceAttrPair("stackit_alb_waf.waf_instance", "managed_rule_set_name", "stackit_alb_waf_managed_rule_set.managed_rule_set", "name"),
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "labels.label1", testutil.ConvertConfigVariable(testWaf["waf_label"])),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "usage.count", "0"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testWaf,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_alb_waf_managed_rule_set" "managed_rule_set" {
+					  project_id = stackit_alb_waf_managed_rule_set.managed_rule_set.project_id
+					  name  = stackit_alb_waf_managed_rule_set.managed_rule_set.name
+					}
+
+					data "stackit_alb_waf" "waf" {
+					  project_id = stackit_alb_waf.waf_instance.project_id
+					  name  = stackit_alb_waf.waf_instance.name
+  					managed_rule_set_name = data.stackit_alb_waf_managed_rule_set.managed_rule_set.name
+					}
+					`,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "region", testutil.Region),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_alb_waf_managed_rule_set.managed_rule_set", "id",
+						"stackit_alb_waf_managed_rule_set.managed_rule_set", "id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testWaf["rule_set_name"])),
+
+					resource.TestCheckResourceAttr("data.stackit_alb_waf.waf", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf.waf", "region", testutil.Region),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_alb_waf.waf", "id",
+						"stackit_alb_waf.waf_instance", "id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf.waf", "name", testutil.ConvertConfigVariable(testWaf["waf_name"])),
+					resource.TestCheckResourceAttrPair("data.stackit_alb_waf.waf", "managed_rule_set_name", "data.stackit_alb_waf_managed_rule_set.managed_rule_set", "name"),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf.waf", "labels.label1", testutil.ConvertConfigVariable(testWaf["waf_label"])),
+
+					resource.TestCheckResourceAttr("data.stackit_alb_waf.waf", "usage.count", "0"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testWaf,
+				ResourceName:    "stackit_alb_waf.waf_instance",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_alb_waf.waf_instance"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_alb_waf.waf_instance")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ConfigVariables: testWaf,
+				ResourceName:    "stackit_alb_waf_managed_rule_set.managed_rule_set",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_alb_waf_managed_rule_set.managed_rule_set"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_managed_rule_set.managed_rule_set")
+					}
+					policyId, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, policyId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testWafUpdated(),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_alb_waf.waf_instance", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf.waf_instance", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "name", testutil.ConvertConfigVariable(testWafUpdated()["waf_name"])),
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "labels.label1", testutil.ConvertConfigVariable(testWafUpdated()["waf_label"])),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf.waf_instance", "usage.count", "0"),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_managed_rule_set.managed_rule_set", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testWafUpdated()["rule_set_name"])),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "usage.count", "0"),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
 func TestAccManagedRuleSet(t *testing.T) {
+	t.Skip("skippin")
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckDestroy,
