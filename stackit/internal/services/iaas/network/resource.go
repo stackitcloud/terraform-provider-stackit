@@ -74,6 +74,7 @@ type Model struct {
 	Region           types.String `tfsdk:"region"`
 	RoutingTableID   types.String `tfsdk:"routing_table_id"`
 	DHCP             types.Bool   `tfsdk:"dhcp"`
+	VPCID            types.String `tfsdk:"vpc_id"`
 }
 
 // NewNetworkResource is a helper function to simplify the provider implementation.
@@ -402,6 +403,17 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Default:     booldefault.StaticBool(true),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"vpc_id": schema.StringAttribute{
+				Description: "The ID of the VPC the network is associated with.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
 				},
 			},
 		},
