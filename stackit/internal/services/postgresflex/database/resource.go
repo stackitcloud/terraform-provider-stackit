@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
@@ -23,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -166,16 +168,10 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"name": schema.StringAttribute{
 				Description: descriptions["name"],
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"owner": schema.StringAttribute{
 				Description: descriptions["owner"],
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"region": schema.StringAttribute{
 				Optional: true,
@@ -214,8 +210,21 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	// Create new database
-	databaseResp, err := r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute()
+	// Workaround: The database creation will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporary unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+		},
+	}
+	databaseResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -223,14 +232,13 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	if databaseResp == nil || databaseResp.Id == nil || *databaseResp.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", "API didn't return database Id. A database might have been created")
+	if databaseResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", "API didn't return response. A database might have been created")
 		return
 	}
-	databaseId := *databaseResp.Id
-	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "database_id", databaseResp.Id)
 
-	database, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	database, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Getting database details after creation: %v", err))
 		return
@@ -264,8 +272,8 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	databaseId := model.DatabaseId.ValueString()
-	if databaseId == "" {
+	databaseIdStr := model.DatabaseId.ValueString()
+	if databaseIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
@@ -273,13 +281,19 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	databaseResp, err := getDatabase(ctx, r.client, projectId, region, instanceId, databaseId)
+	// In v2 the ID was a string. This was changed in the v3 API.
+	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if (errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound) || errors.Is(err, errDatabaseNotFound) {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Parsing database ID: %v", err))
+		return
+	}
+
+	databaseResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -306,9 +320,79 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
-func (r *databaseResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// Update shouldn't be called
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", "Database can't be updated")
+func (r *databaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	region := model.Region.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	databaseIdStr := model.DatabaseId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
+	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
+
+	// In v2 the ID was a string. This was changed in the v3 API.
+	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Parsing database ID: %v", err))
+		return
+	}
+
+	// Generate API request body from model
+	payload, err := toUpdatePayload(&model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+
+	// Update the database
+	// Workaround: The database update will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the database API is temporary unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+		},
+	}
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.PartialUpdateDatabase(ctx, projectId, region, instanceId, databaseId).PartialUpdateDatabasePayload(*payload).Execute, config)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	database, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Getting database details after update: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(database, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Postgres Flex database updated")
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -325,18 +409,37 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	databaseId := model.DatabaseId.ValueString()
+	databaseIdStr := model.DatabaseId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "database_id", databaseId)
+	ctx = tflog.SetField(ctx, "database_id", databaseIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Delete existing record set
-	err := r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	// In v2 the ID was a string. This was changed in the v3 API.
+	databaseId, err := strconv.ParseInt(databaseIdStr, 10, 64)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Parsing database ID: %v", err))
+		return
+	}
+
+	// Delete existing database
+	// Workaround: The database deletion will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporary unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+		},
+	}
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute, config)
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting database", fmt.Sprintf("Calling API: %v", err))
@@ -373,12 +476,9 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "Postgres Flex database state imported")
 }
 
-func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model, region string) error {
+func mapFields(databaseResp *postgresflex.GetDatabaseResponse, model *Model, region string) error {
 	if databaseResp == nil {
 		return fmt.Errorf("response is nil")
-	}
-	if databaseResp.Id == nil || *databaseResp.Id == "" {
-		return fmt.Errorf("id not present")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
@@ -387,32 +487,16 @@ func mapFields(databaseResp *postgresflex.InstanceDatabase, model *Model, region
 	var databaseId string
 	if model.DatabaseId.ValueString() != "" {
 		databaseId = model.DatabaseId.ValueString()
-	} else if databaseResp.Id != nil {
-		databaseId = *databaseResp.Id
 	} else {
-		return fmt.Errorf("database id not present")
+		databaseId = strconv.FormatInt(databaseResp.Id, 10)
 	}
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), databaseId,
 	)
 	model.DatabaseId = types.StringValue(databaseId)
-	model.Name = types.StringPointerValue(databaseResp.Name)
+	model.Name = types.StringValue(databaseResp.Name)
 	model.Region = types.StringValue(region)
-
-	if databaseResp.Options != nil {
-		owner, ok := (databaseResp.Options)["owner"]
-		if ok {
-			ownerStr, ok := owner.(string)
-			if !ok {
-				return fmt.Errorf("owner is not a string")
-			}
-			// If the field is returned between with quotes, we trim them to prevent an inconsistent result after apply
-			ownerStr = strings.TrimPrefix(ownerStr, `"`)
-			ownerStr = strings.TrimSuffix(ownerStr, `"`)
-			model.Owner = types.StringValue(ownerStr)
-		}
-	}
-
+	model.Owner = types.StringValue(databaseResp.Owner)
 	return nil
 }
 
@@ -422,28 +506,18 @@ func toCreatePayload(model *Model) (*postgresflex.CreateDatabasePayload, error) 
 	}
 
 	return &postgresflex.CreateDatabasePayload{
-		Name: model.Name.ValueStringPointer(),
-		Options: &map[string]string{
-			"owner": model.Owner.ValueString(),
-		},
+		Name:  model.Name.ValueString(),
+		Owner: model.Owner.ValueStringPointer(),
 	}, nil
 }
 
-var errDatabaseNotFound = errors.New("database not found")
+func toUpdatePayload(model *Model) (*postgresflex.PartialUpdateDatabasePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
 
-// The API does not have a GetDatabase endpoint, only ListDatabases
-func getDatabase(ctx context.Context, client *postgresflex.APIClient, projectId, region, instanceId, databaseId string) (*postgresflex.InstanceDatabase, error) {
-	resp, err := client.DefaultAPI.ListDatabases(ctx, projectId, region, instanceId).Execute()
-	if err != nil {
-		return nil, err
-	}
-	if resp == nil || resp.Databases == nil {
-		return nil, fmt.Errorf("response is nil")
-	}
-	for _, database := range resp.Databases {
-		if database.Id != nil && *database.Id == databaseId {
-			return &database, nil
-		}
-	}
-	return nil, errDatabaseNotFound
+	return &postgresflex.PartialUpdateDatabasePayload{
+		Name:  conversion.StringValueToPointer(model.Name),
+		Owner: conversion.StringValueToPointer(model.Owner),
+	}, nil
 }

@@ -1,69 +1,91 @@
 package postgresflex
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 func TestMapFieldsCreate(t *testing.T) {
-	const testRegion = "region"
+	const (
+		projectId  = "pid"
+		instanceId = "iid"
+		testRegion = "region"
+		userId     = 123
+		userIdStr  = "123"
+	)
+	var id = fmt.Sprintf("%s,%s,%s,%s", projectId, testRegion, instanceId, userIdStr)
 	tests := []struct {
-		description string
-		input       *postgresflex.CreateUserResponse
-		region      string
-		expected    Model
-		isValid     bool
+		description    string
+		createUserResp *postgresflex.CreateUserResponse
+		userResp       *postgresflex.GetUserResponse
+		instanceResp   *postgresflex.GetInstanceResponse
+		region         string
+		expected       Model
+		isValid        bool
 	}{
 		{
-			"default_values",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.User{
-					Id:       new("uid"),
-					Password: new(""),
+			description: "default_values",
+			createUserResp: &postgresflex.CreateUserResponse{
+				Id:       userId,
+				Password: "",
+			},
+			userResp: &postgresflex.GetUserResponse{},
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "localhost",
+						Port: 5432,
+					},
 				},
 			},
-			testRegion,
-			Model{
-				Id:                types.StringValue("pid,region,iid,uid"),
-				UserId:            types.StringValue("uid"),
-				InstanceId:        types.StringValue("iid"),
-				ProjectId:         types.StringValue("pid"),
-				Username:          types.StringNull(),
+			region: testRegion,
+			expected: Model{
+				Id:                types.StringValue(id),
+				UserId:            types.StringValue(userIdStr),
+				InstanceId:        types.StringValue(instanceId),
+				ProjectId:         types.StringValue(projectId),
+				Username:          types.StringValue(""),
 				Roles:             types.SetNull(types.StringType),
 				Password:          types.StringValue(""),
-				Host:              types.StringNull(),
-				Port:              types.Int64Null(),
-				Uri:               types.StringNull(),
+				Host:              types.StringValue("localhost"),
+				Port:              types.Int32Value(5432),
+				Uri:               types.StringValue("postgresql://:@localhost:5432/stackit"),
 				Region:            types.StringValue(testRegion),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.User{
-					Id: new("uid"),
-					Roles: []string{
-						"role_1",
-						"role_2",
-						"",
-					},
-					Username: new("username"),
-					Password: new("password"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
-					Uri:      new("uri"),
+			description: "simple_values",
+			createUserResp: &postgresflex.CreateUserResponse{
+				Id:       123,
+				Name:     "username",
+				Password: "password",
+			},
+			userResp: &postgresflex.GetUserResponse{
+				Roles: []string{
+					"role_1",
+					"role_2",
+					"",
 				},
 			},
-			testRegion,
-			Model{
-				Id:         types.StringValue("pid,region,iid,uid"),
-				UserId:     types.StringValue("uid"),
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "host",
+						Port: 1234,
+					},
+				},
+			},
+			region: testRegion,
+			expected: Model{
+				Id:         types.StringValue("pid,region,iid,123"),
+				UserId:     types.StringValue("123"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 				Username:   types.StringValue("username"),
@@ -74,76 +96,65 @@ func TestMapFieldsCreate(t *testing.T) {
 				}),
 				Password:          types.StringValue("password"),
 				Host:              types.StringValue("host"),
-				Port:              types.Int64Value(1234),
-				Uri:               types.StringValue("uri"),
+				Port:              types.Int32Value(1234),
+				Uri:               types.StringValue("postgresql://username:password@host:1234/stackit"),
 				Region:            types.StringValue(testRegion),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.User{
-					Id:       new("uid"),
-					Roles:    []string{},
-					Username: nil,
-					Password: new(""),
-					Host:     nil,
-					Port:     new(int64(2123456789)),
-					Uri:      nil,
+			description: "null_fields_and_int_conversions",
+			createUserResp: &postgresflex.CreateUserResponse{
+				Id:       123,
+				Name:     "",
+				Password: "",
+			},
+			userResp: &postgresflex.GetUserResponse{
+				Roles: []string{},
+			},
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "",
+						Port: 2123456789,
+					},
 				},
 			},
-			testRegion,
-			Model{
-				Id:                types.StringValue("pid,region,iid,uid"),
-				UserId:            types.StringValue("uid"),
+			region: testRegion,
+			expected: Model{
+				Id:                types.StringValue("pid,region,iid,123"),
+				UserId:            types.StringValue("123"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
-				Username:          types.StringNull(),
+				Username:          types.StringValue(""),
 				Roles:             types.SetValueMust(types.StringType, []attr.Value{}),
 				Password:          types.StringValue(""),
-				Host:              types.StringNull(),
-				Port:              types.Int64Value(2123456789),
-				Uri:               types.StringNull(),
+				Host:              types.StringValue(""),
+				Port:              types.Int32Value(2123456789),
+				Uri:               types.StringValue("postgresql://:@:2123456789/stackit"),
 				Region:            types.StringValue(testRegion),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			nil,
-			testRegion,
-			Model{},
-			false,
+			description:    "nil_response",
+			createUserResp: nil,
+			userResp:       &postgresflex.GetUserResponse{},
+			instanceResp:   &postgresflex.GetInstanceResponse{},
+			region:         testRegion,
+			expected:       Model{},
+			isValid:        false,
 		},
 		{
-			"nil_response_2",
-			&postgresflex.CreateUserResponse{},
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"no_resource_id",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.User{},
-			},
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"no_password",
-			&postgresflex.CreateUserResponse{
-				Item: &postgresflex.User{
-					Id: new("uid"),
-				},
-			},
-			testRegion,
-			Model{},
-			false,
+			description:    "nil_response_2",
+			createUserResp: &postgresflex.CreateUserResponse{},
+			userResp:       nil,
+			instanceResp:   &postgresflex.GetInstanceResponse{},
+			region:         testRegion,
+			expected:       Model{},
+			isValid:        false,
 		},
 	}
 	for _, tt := range tests {
@@ -153,7 +164,7 @@ func TestMapFieldsCreate(t *testing.T) {
 				InstanceId:        tt.expected.InstanceId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
-			err := mapFieldsCreate(tt.input, state, tt.region)
+			err := mapFieldsCreate(tt.createUserResp, tt.userResp, tt.instanceResp, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -173,48 +184,52 @@ func TestMapFieldsCreate(t *testing.T) {
 func TestMapFields(t *testing.T) {
 	const testRegion = "region"
 	tests := []struct {
-		description string
-		input       *postgresflex.GetUserResponse
-		region      string
-		expected    Model
-		isValid     bool
+		description  string
+		userResp     *postgresflex.GetUserResponse
+		instanceResp *postgresflex.GetInstanceResponse
+		region       string
+		expected     Model
+		isValid      bool
 	}{
 		{
-			"default_values",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{},
-			},
-			testRegion,
-			Model{
+			description:  "default_values",
+			userResp:     &postgresflex.GetUserResponse{},
+			instanceResp: &postgresflex.GetInstanceResponse{},
+			region:       testRegion,
+			expected: Model{
 				Id:                types.StringValue("pid,region,iid,uid"),
 				UserId:            types.StringValue("uid"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
-				Username:          types.StringNull(),
+				Username:          types.StringValue(""),
 				Roles:             types.SetNull(types.StringType),
-				Host:              types.StringNull(),
-				Port:              types.Int64Null(),
+				Host:              types.StringValue(""),
+				Port:              types.Int32Value(0),
 				Region:            types.StringValue(testRegion),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{
-					Roles: []string{
-						"role_1",
-						"role_2",
-						"",
+			description: "simple_values",
+			userResp: &postgresflex.GetUserResponse{
+				Roles: []string{
+					"role_1",
+					"role_2",
+					"",
+				},
+				Name: "username",
+			},
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "host",
+						Port: 1234,
 					},
-					Username: new("username"),
-					Host:     new("host"),
-					Port:     new(int64(1234)),
 				},
 			},
-			testRegion,
-			Model{
+			region: testRegion,
+			expected: Model{
 				Id:         types.StringValue("pid,region,iid,uid"),
 				UserId:     types.StringValue("uid"),
 				InstanceId: types.StringValue("iid"),
@@ -226,60 +241,57 @@ func TestMapFields(t *testing.T) {
 					types.StringValue(""),
 				}),
 				Host:              types.StringValue("host"),
-				Port:              types.Int64Value(1234),
+				Port:              types.Int32Value(1234),
 				Region:            types.StringValue(testRegion),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{
-					Id:       new("uid"),
-					Roles:    []string{},
-					Username: nil,
-					Host:     nil,
-					Port:     new(int64(2123456789)),
+			description: "null_fields_and_int_conversions",
+			userResp: &postgresflex.GetUserResponse{
+				Id:    123,
+				Roles: []string{},
+				Name:  "",
+			},
+			instanceResp: &postgresflex.GetInstanceResponse{
+				ConnectionInfo: postgresflex.InstanceConnectionInfo{
+					Write: postgresflex.InstanceConnectionInfoWrite{
+						Host: "",
+						Port: 2123456789,
+					},
 				},
 			},
-			testRegion,
-			Model{
+			region: testRegion,
+			expected: Model{
 				Id:                types.StringValue("pid,region,iid,uid"),
 				UserId:            types.StringValue("uid"),
 				InstanceId:        types.StringValue("iid"),
 				ProjectId:         types.StringValue("pid"),
-				Username:          types.StringNull(),
+				Username:          types.StringValue(""),
 				Roles:             types.SetValueMust(types.StringType, []attr.Value{}),
-				Host:              types.StringNull(),
-				Port:              types.Int64Value(2123456789),
+				Host:              types.StringValue(""),
+				Port:              types.Int32Value(2123456789),
 				Region:            types.StringValue(testRegion),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_response",
-			nil,
-			testRegion,
-			Model{},
-			false,
+			description:  "nil_response",
+			userResp:     nil,
+			instanceResp: &postgresflex.GetInstanceResponse{},
+			region:       testRegion,
+			expected:     Model{},
+			isValid:      false,
 		},
 		{
-			"nil_response_2",
-			&postgresflex.GetUserResponse{},
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"no_resource_id",
-			&postgresflex.GetUserResponse{
-				Item: &postgresflex.UserResponse{},
-			},
-			testRegion,
-			Model{},
-			false,
+			description:  "nil_response_2",
+			userResp:     &postgresflex.GetUserResponse{},
+			instanceResp: nil,
+			region:       testRegion,
+			expected:     Model{},
+			isValid:      false,
 		},
 	}
 	for _, tt := range tests {
@@ -290,7 +302,7 @@ func TestMapFields(t *testing.T) {
 				UserId:            tt.expected.UserId,
 				RotateWhenChanged: types.MapNull(types.StringType),
 			}
-			err := mapFields(tt.input, state, tt.region)
+			err := mapFields(tt.userResp, tt.instanceResp, state, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -320,8 +332,8 @@ func TestToCreatePayload(t *testing.T) {
 			&Model{},
 			[]string{},
 			&postgresflex.CreateUserPayload{
-				Roles:    []string{},
-				Username: nil,
+				Roles: []string{},
+				Name:  "",
 			},
 			true,
 		},
@@ -339,7 +351,7 @@ func TestToCreatePayload(t *testing.T) {
 					"role_1",
 					"role_2",
 				},
-				Username: new("username"),
+				Name: "username",
 			},
 			true,
 		},
@@ -355,7 +367,7 @@ func TestToCreatePayload(t *testing.T) {
 				Roles: []string{
 					"",
 				},
-				Username: nil,
+				Name: "",
 			},
 			true,
 		},
@@ -398,14 +410,14 @@ func TestToUpdatePayload(t *testing.T) {
 		description string
 		input       *Model
 		inputRoles  []string
-		expected    *postgresflex.UpdateUserPayload
+		expected    *postgresflex.PartialUpdateUserPayload
 		isValid     bool
 	}{
 		{
 			"default_values",
 			&Model{},
 			[]string{},
-			&postgresflex.UpdateUserPayload{
+			&postgresflex.PartialUpdateUserPayload{
 				Roles: []string{},
 			},
 			true,
@@ -419,7 +431,8 @@ func TestToUpdatePayload(t *testing.T) {
 				"role_1",
 				"role_2",
 			},
-			&postgresflex.UpdateUserPayload{
+			&postgresflex.PartialUpdateUserPayload{
+				Name: new("username"),
 				Roles: []string{
 					"role_1",
 					"role_2",
@@ -435,7 +448,7 @@ func TestToUpdatePayload(t *testing.T) {
 			[]string{
 				"",
 			},
-			&postgresflex.UpdateUserPayload{
+			&postgresflex.PartialUpdateUserPayload{
 				Roles: []string{
 					"",
 				},

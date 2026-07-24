@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -236,7 +237,7 @@ func (r *resourcePoolResource) Schema(_ context.Context, _ resource.SchemaReques
 						Description: "Name of the snapshot policy.",
 						Computed:    true,
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringChanged, "id", "sets `UseStateForUnknown` only if `id` has not changed"),
+							stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringUnchanged(path.Root("snapshot_policy").AtName("id")), "sets `UseStateForUnknown` only if `id` has not changed"),
 						},
 					},
 				},

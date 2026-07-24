@@ -7,26 +7,27 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 type postgresFlexClientMocked struct {
-	returnError    bool
-	getFlavorsResp *postgresflex.ListFlavorsResponse
-	listFlavorsReq postgresflex.ApiListFlavorsRequest
+	returnError     bool
+	listFlavorsResp *postgresflex.ListFlavorsResponse
+	listFlavorsReq  postgresflex.ApiListFlavorsRequest
 }
 
 func (c *postgresFlexClientMocked) ListFlavors(_ context.Context, _, _ string) postgresflex.ApiListFlavorsRequest {
 	return c.listFlavorsReq
 }
 
-func (c *postgresFlexClientMocked) ListFlavorsExecute(_ postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, error) {
+func (c *postgresFlexClientMocked) ListFlavorsExecute(_ postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, error) { // nolint:gocritic // function signature required by the Go SDK
 	if c.returnError {
 		return nil, fmt.Errorf("get flavors failed")
 	}
 
-	return c.getFlavorsResp, nil
+	return c.listFlavorsResp, nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -37,21 +38,35 @@ func TestMapFields(t *testing.T) {
 			Id:             types.StringValue("pid,region,iid"),
 			InstanceId:     types.StringValue("iid"),
 			ProjectId:      types.StringValue("pid"),
-			Name:           types.StringNull(),
+			Name:           types.StringValue(""),
 			ACL:            types.ListNull(types.StringType),
 			BackupSchedule: types.StringNull(),
+			ConnectionInfo: types.ObjectValueMust(connectionInfoTypes, map[string]attr.Value{
+				"write": types.ObjectValueMust(connectionInfoWriteTypes, map[string]attr.Value{
+					"host": types.StringValue(""),
+					"port": types.Int32Value(0),
+				}),
+			}),
+			FlavorId: types.StringValue(""),
 			Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
 				"id":          types.StringNull(),
 				"description": types.StringNull(),
 				"cpu":         types.Int64Null(),
 				"ram":         types.Int64Null(),
+				"node_type":   types.StringNull(),
 			}),
 			Replicas: types.Int32Null(),
 			Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 				"class": types.StringNull(),
 				"size":  types.Int64Null(),
 			}),
-			Version: types.StringNull(),
+			Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+				"acl":              types.ListNull(types.StringType),
+				"access_scope":     types.StringNull(),
+				"instance_address": types.StringNull(),
+				"router_address":   types.StringNull(),
+			}),
+			Version: types.StringValue(""),
 			Region:  types.StringValue(testRegion),
 		}
 
@@ -65,65 +80,52 @@ func TestMapFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       Model
-		input       *postgresflex.InstanceResponse
+		input       *postgresflex.GetInstanceResponse
 		flavor      *flavorModel
-		storage     *storageModel
 		region      string
 		expected    Model
 		isValid     bool
 	}{
 		{
-			"default_values",
-			Model{
+			description: "default_values",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{},
-			},
-			&flavorModel{},
-			&storageModel{},
-			testRegion,
-			fixtureModel(),
-			true,
+			input:    &postgresflex.GetInstanceResponse{},
+			flavor:   &flavorModel{},
+			region:   testRegion,
+			expected: fixtureModel(),
+			isValid:  true,
 		},
 		{
-			"simple_values",
-			Model{
+			description: "simple_values",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{
-					Acl: &postgresflex.ACL{
-						Items: []string{
-							"ip1",
-							"ip2",
-							"",
-						},
+			input: &postgresflex.GetInstanceResponse{
+				Network: postgresflex.InstanceNetwork{
+					Acl: []string{
+						"ip1",
+						"ip2",
+						"",
 					},
-					BackupSchedule: new("schedule"),
-					Flavor: &postgresflex.Flavor{
-						Cpu:         new(int64(12)),
-						Description: new("description"),
-						Id:          new("flavor_id"),
-						Memory:      new(int64(34)),
-					},
-					Id:       new("iid"),
-					Name:     new("name"),
-					Replicas: new(int32(56)),
-					Status:   new("status"),
-					Storage: &postgresflex.Storage{
-						Class: new("class"),
-						Size:  new(int64(78)),
-					},
-					Version: new("version"),
 				},
+				BackupSchedule: "schedule",
+				FlavorId:       "4.8",
+				Id:             "iid",
+				Name:           "name",
+				State:          postgresflex.STATE_READY,
+				Storage: postgresflex.Storage{
+					Class: new("class"),
+					Size:  new(int64(78)),
+				},
+				Version: "version",
 			},
-			&flavorModel{},
-			&storageModel{},
-			testRegion,
-			Model{
+			flavor: &flavorModel{},
+			region: testRegion,
+			expected: Model{
 				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -133,14 +135,32 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ip2"),
 					types.StringValue(""),
 				}),
-				BackupSchedule: types.StringValue("schedule"),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringValue("flavor_id"),
-					"description": types.StringValue("description"),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
+				ConnectionInfo: types.ObjectValueMust(connectionInfoTypes, map[string]attr.Value{
+					"write": types.ObjectValueMust(connectionInfoWriteTypes, map[string]attr.Value{
+						"host": types.StringValue(""),
+						"port": types.Int32Value(0),
+					}),
 				}),
-				Replicas: types.Int32Value(56),
+				BackupSchedule: types.StringValue("schedule"),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("ip1"),
+						types.StringValue("ip2"),
+						types.StringValue(""),
+					}),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
+				}),
+				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
+					"id":          types.StringNull(),
+					"description": types.StringNull(),
+					"cpu":         types.Int64Null(),
+					"ram":         types.Int64Null(),
+					"node_type":   types.StringNull(),
+				}),
+				FlavorId: types.StringValue("4.8"),
+				Replicas: types.Int32Null(),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
@@ -148,43 +168,41 @@ func TestMapFields(t *testing.T) {
 				Version: types.StringValue("version"),
 				Region:  types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values_no_flavor_and_storage",
-			Model{
+			description: "simple_values_no_flavor_and_storage",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			&postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{
-					Acl: &postgresflex.ACL{
-						Items: []string{
-							"ip1",
-							"ip2",
-							"",
-						},
+			input: &postgresflex.GetInstanceResponse{
+				Network: postgresflex.InstanceNetwork{
+					Acl: []string{
+						"ip1",
+						"ip2",
+						"",
 					},
-					BackupSchedule: new("schedule"),
-					Flavor:         nil,
-					Id:             new("iid"),
-					Name:           new("name"),
-					Replicas:       new(int32(56)),
-					Status:         new("status"),
-					Storage:        nil,
-					Version:        new("version"),
 				},
+				BackupSchedule: "schedule",
+				FlavorId:       "",
+				Id:             "iid",
+				Name:           "name",
+				State:          postgresflex.STATE_READY,
+				Storage: postgresflex.Storage{
+					Class: new("class"),
+					Size:  new(int64(78)),
+				},
+				Version: "version",
 			},
-			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
+			flavor: &flavorModel{
+				Id:       types.StringValue("12.34"),
+				CPU:      types.Int64Value(12),
+				RAM:      types.Int64Value(34),
+				NodeType: types.StringValue(NODE_TYPE_SINGLE),
 			},
-			&storageModel{
-				Class: types.StringValue("class"),
-				Size:  types.Int64Value(78),
-			},
-			testRegion,
-			Model{
+			region: testRegion,
+			expected: Model{
 				Id:         types.StringValue("pid,region,iid"),
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
@@ -193,6 +211,91 @@ func TestMapFields(t *testing.T) {
 					types.StringValue("ip1"),
 					types.StringValue("ip2"),
 					types.StringValue(""),
+				}),
+				ConnectionInfo: types.ObjectValueMust(connectionInfoTypes, map[string]attr.Value{
+					"write": types.ObjectValueMust(connectionInfoWriteTypes, map[string]attr.Value{
+						"host": types.StringValue(""),
+						"port": types.Int32Value(0),
+					}),
+				}),
+				FlavorId: types.StringValue(""),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("ip1"),
+						types.StringValue("ip2"),
+						types.StringValue(""),
+					}),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
+				}),
+				BackupSchedule: types.StringValue("schedule"),
+				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
+					"id":          types.StringValue("12.34"),
+					"description": types.StringNull(),
+					"cpu":         types.Int64Value(12),
+					"ram":         types.Int64Value(34),
+					"node_type":   types.StringValue(NODE_TYPE_SINGLE),
+				}),
+				Replicas: types.Int32Value(1),
+				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
+					"class": types.StringValue("class"),
+					"size":  types.Int64Value(78),
+				}),
+				Version: types.StringValue("version"),
+				Region:  types.StringValue(testRegion),
+			},
+			isValid: true,
+		},
+		{
+			description: "acl_unordered",
+			state: Model{
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("ip2"),
+					types.StringValue(""),
+					types.StringValue("ip1"),
+				}),
+			},
+			input: &postgresflex.GetInstanceResponse{
+				Network: postgresflex.InstanceNetwork{
+					Acl: []string{
+						"",
+						"ip1",
+						"ip2",
+					},
+				},
+				BackupSchedule: "schedule",
+				Id:             "iid",
+				Name:           "name",
+				Storage: postgresflex.Storage{
+					Class: new("class"),
+					Size:  new(int64(78)),
+				},
+				Version: "version",
+			},
+			flavor: &flavorModel{
+				CPU:      types.Int64Value(12),
+				RAM:      types.Int64Value(34),
+				NodeType: types.StringValue(NODE_TYPE_REPLICA),
+			},
+			region: testRegion,
+			expected: Model{
+				Id:         types.StringValue("pid,region,iid"),
+				InstanceId: types.StringValue("iid"),
+				ProjectId:  types.StringValue("pid"),
+				Name:       types.StringValue("name"),
+				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("ip2"),
+					types.StringValue(""),
+					types.StringValue("ip1"),
+				}),
+				ConnectionInfo: types.ObjectValueMust(connectionInfoTypes, map[string]attr.Value{
+					"write": types.ObjectValueMust(connectionInfoWriteTypes, map[string]attr.Value{
+						"host": types.StringValue(""),
+						"port": types.Int32Value(0),
+					}),
 				}),
 				BackupSchedule: types.StringValue("schedule"),
 				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
@@ -200,96 +303,39 @@ func TestMapFields(t *testing.T) {
 					"description": types.StringNull(),
 					"cpu":         types.Int64Value(12),
 					"ram":         types.Int64Value(34),
+					"node_type":   types.StringValue(NODE_TYPE_REPLICA),
 				}),
-				Replicas: types.Int32Value(56),
+				FlavorId: types.StringValue(""),
+				Replicas: types.Int32Value(NODE_TYPE_REPLICA_VALUE),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
 					"size":  types.Int64Value(78),
 				}),
-				Version: types.StringValue("version"),
-				Region:  types.StringValue(testRegion),
-			},
-			true,
-		},
-		{
-			"acl_unordered",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ip2"),
-					types.StringValue(""),
-					types.StringValue("ip1"),
-				}),
-			},
-			&postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{
-					Acl: &postgresflex.ACL{
-						Items: []string{
-							"",
-							"ip1",
-							"ip2",
-						},
-					},
-					BackupSchedule: new("schedule"),
-					Flavor:         nil,
-					Id:             new("iid"),
-					Name:           new("name"),
-					Replicas:       new(int32(56)),
-					Status:         new("status"),
-					Storage:        nil,
-					Version:        new("version"),
-				},
-			},
-			&flavorModel{
-				CPU: types.Int64Value(12),
-				RAM: types.Int64Value(34),
-			},
-			&storageModel{
-				Class: types.StringValue("class"),
-				Size:  types.Int64Value(78),
-			},
-			testRegion,
-			Model{
-				Id:         types.StringValue("pid,region,iid"),
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-				Name:       types.StringValue("name"),
-				ACL: types.ListValueMust(types.StringType, []attr.Value{
-					types.StringValue("ip2"),
-					types.StringValue(""),
-					types.StringValue("ip1"),
-				}),
-				BackupSchedule: types.StringValue("schedule"),
-				Flavor: types.ObjectValueMust(flavorTypes, map[string]attr.Value{
-					"id":          types.StringNull(),
-					"description": types.StringNull(),
-					"cpu":         types.Int64Value(12),
-					"ram":         types.Int64Value(34),
-				}),
-				Replicas: types.Int32Value(56),
-				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
-					"class": types.StringValue("class"),
-					"size":  types.Int64Value(78),
+				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
+					"acl": types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("ip2"),
+						types.StringValue(""),
+						types.StringValue("ip1"),
+					}),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
 				}),
 				Version: types.StringValue("version"),
 				Region:  types.StringValue(testRegion),
 			},
-			true,
+			isValid: true,
 		},
 		{
 			description: "backup schedule - keep state value when API strips leading zeros",
 			state: fixtureModel(func(m *Model) {
 				m.BackupSchedule = types.StringValue("00 00 * * *")
 			}),
-			input: &postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{
-					BackupSchedule: new("0 0 * * *"),
-				},
+			input: &postgresflex.GetInstanceResponse{
+				BackupSchedule: "0 0 * * *",
 			},
-			flavor:  &flavorModel{},
-			storage: &storageModel{},
-			region:  testRegion,
+			flavor: &flavorModel{},
+			region: testRegion,
 			expected: fixtureModel(func(m *Model) {
 				m.BackupSchedule = types.StringValue("00 00 * * *")
 			}),
@@ -300,49 +346,32 @@ func TestMapFields(t *testing.T) {
 			state: fixtureModel(func(m *Model) {
 				m.BackupSchedule = types.StringValue("00 01 * * *")
 			}),
-			input: &postgresflex.InstanceResponse{
-				Item: &postgresflex.Instance{
-					BackupSchedule: new("0 2 * * *"),
-				},
+			input: &postgresflex.GetInstanceResponse{
+				BackupSchedule: "0 2 * * *",
 			},
-			flavor:  &flavorModel{},
-			storage: &storageModel{},
-			region:  testRegion,
+			flavor: &flavorModel{},
+			region: testRegion,
 			expected: fixtureModel(func(m *Model) {
 				m.BackupSchedule = types.StringValue("0 2 * * *")
 			}),
 			isValid: true,
 		},
 		{
-			"nil_response",
-			Model{
+			description: "nil_response",
+			state: Model{
 				InstanceId: types.StringValue("iid"),
 				ProjectId:  types.StringValue("pid"),
 			},
-			nil,
-			&flavorModel{},
-			&storageModel{},
-			testRegion,
-			Model{},
-			false,
-		},
-		{
-			"no_resource_id",
-			Model{
-				InstanceId: types.StringValue("iid"),
-				ProjectId:  types.StringValue("pid"),
-			},
-			&postgresflex.InstanceResponse{},
-			&flavorModel{},
-			&storageModel{},
-			testRegion,
-			Model{},
-			false,
+			input:    nil,
+			flavor:   &flavorModel{},
+			region:   testRegion,
+			expected: Model{},
+			isValid:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.storage, tt.region)
+			err := mapFields(context.Background(), tt.input, &tt.state, tt.flavor, tt.region)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -361,50 +390,63 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description  string
-		input        *Model
-		inputAcl     []string
-		inputFlavor  *flavorModel
-		inputStorage *storageModel
-		expected     *postgresflex.CreateInstancePayload
-		isValid      bool
+		description     string
+		input           *Model
+		inputAcl        []string
+		inputFlavor     *flavorModel
+		inputStorage    *storageModel
+		inputNetwork    *networkModel
+		inputEncryption *encryptionModel
+		expected        *postgresflex.CreateInstancePayload
+		isValid         bool
 	}{
 		{
-			"default_values",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			&postgresflex.CreateInstancePayload{
-				Acl: postgresflex.ACL{
-					Items: []string{},
-				},
-				Storage: postgresflex.Storage{},
+			description: "default_values",
+			input: &Model{
+				FlavorId: types.StringValue("1.2"),
 			},
-			true,
+			inputAcl:        []string{},
+			inputFlavor:     &flavorModel{},
+			inputStorage:    &storageModel{},
+			inputNetwork:    &networkModel{},
+			inputEncryption: nil,
+			expected: &postgresflex.CreateInstancePayload{
+				FlavorId: "1.2",
+				Network: postgresflex.InstanceNetworkCreate{
+					Acl: []string{},
+				},
+				Storage: postgresflex.StorageCreate{},
+			},
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&Model{
+			description: "simple_values",
+			input: &Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
 				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
-			[]string{
+			inputAcl: []string{
 				"ip_1",
 				"ip_2",
 			},
-			&flavorModel{
+			inputFlavor: &flavorModel{
 				Id: types.StringValue("flavor_id"),
 			},
-			&storageModel{
+			inputStorage: &storageModel{
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(34),
 			},
-			&postgresflex.CreateInstancePayload{
-				Acl: postgresflex.ACL{
-					Items: []string{
+			inputNetwork: &networkModel{
+				Acl: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("test"),
+				}),
+			},
+			inputEncryption: nil,
+			expected: &postgresflex.CreateInstancePayload{
+				Network: postgresflex.InstanceNetworkCreate{
+					Acl: []string{
 						"ip_1",
 						"ip_2",
 					},
@@ -412,91 +454,121 @@ func TestToCreatePayload(t *testing.T) {
 				BackupSchedule: "schedule",
 				FlavorId:       "flavor_id",
 				Name:           "name",
-				Replicas:       int32(12),
-				Storage: postgresflex.Storage{
+				Storage: postgresflex.StorageCreate{
 					Class: new("class"),
-					Size:  new(int64(34)),
+					Size:  34,
 				},
 				Version: "version",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&Model{
+			description: "null_fields_and_int_conversions",
+			input: &Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
 				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
+				FlavorId:       types.StringValue("flavor_id"),
 			},
-			[]string{
+			inputAcl: []string{
 				"",
 			},
-			&flavorModel{
+			inputFlavor: &flavorModel{
 				Id: types.StringNull(),
 			},
-			&storageModel{
+			inputStorage: &storageModel{
 				Class: types.StringNull(),
 				Size:  types.Int64Null(),
 			},
-			&postgresflex.CreateInstancePayload{
-				Acl: postgresflex.ACL{
-					Items: []string{
+			inputNetwork: &networkModel{
+				Acl: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("test"),
+				}),
+			},
+			inputEncryption: nil,
+			expected: &postgresflex.CreateInstancePayload{
+				Network: postgresflex.InstanceNetworkCreate{
+					Acl: []string{
 						"",
 					},
 				},
 				BackupSchedule: "",
-				FlavorId:       "",
+				FlavorId:       "flavor_id",
 				Name:           "",
-				Replicas:       int32(2123456789),
-				Storage: postgresflex.Storage{
+				Storage: postgresflex.StorageCreate{
 					Class: nil,
-					Size:  nil,
+					Size:  0,
 				},
 				Version: "",
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_model",
-			nil,
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			nil,
-			false,
+			description:  "nil_model",
+			input:        nil,
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputNetwork: &networkModel{
+				Acl: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("test"),
+				}),
+			},
+			inputEncryption: nil,
+			expected:        nil,
+			isValid:         false,
 		},
 		{
-			"nil_acl",
-			&Model{},
-			nil,
-			&flavorModel{},
-			&storageModel{},
-			nil,
-			false,
+			description:  "nil_acl",
+			input:        &Model{},
+			inputAcl:     nil,
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			inputNetwork: &networkModel{
+				Acl: types.ListNull(types.StringType),
+			},
+			inputEncryption: nil,
+			expected:        nil,
+			isValid:         false,
 		},
 		{
-			"nil_flavor",
-			&Model{},
-			[]string{},
-			nil,
-			&storageModel{},
-			nil,
-			false,
+			description:     "nil_flavor",
+			input:           &Model{},
+			inputAcl:        []string{},
+			inputFlavor:     nil,
+			inputStorage:    &storageModel{},
+			inputNetwork:    &networkModel{},
+			inputEncryption: nil,
+			expected:        nil,
+			isValid:         false,
 		},
 		{
-			"nil_storage",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			nil,
-			nil,
-			false,
+			description:     "nil_storage",
+			input:           &Model{},
+			inputAcl:        []string{},
+			inputFlavor:     &flavorModel{},
+			inputStorage:    nil,
+			inputNetwork:    &networkModel{},
+			inputEncryption: nil,
+			expected:        nil,
+			isValid:         false,
+		},
+		{
+			description:     "nil_network",
+			input:           &Model{},
+			inputAcl:        []string{},
+			inputFlavor:     &flavorModel{},
+			inputStorage:    &storageModel{},
+			inputNetwork:    nil,
+			inputEncryption: nil,
+			expected:        nil,
+			isValid:         false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage)
+			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputNetwork, tt.inputEncryption)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -504,7 +576,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(output, tt.expected)
+				diff := cmp.Diff(output, tt.expected, cmp.AllowUnexported(postgresflex.NullableInt32{}))
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
@@ -520,45 +592,49 @@ func TestToUpdatePayload(t *testing.T) {
 		inputAcl     []string
 		inputFlavor  *flavorModel
 		inputStorage *storageModel
+		inputNetwork *networkModel
 		expected     *postgresflex.PartialUpdateInstancePayload
 		isValid      bool
 	}{
 		{
-			"default_values",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			&postgresflex.PartialUpdateInstancePayload{
-				Acl: &postgresflex.ACL{
-					Items: []string{},
+			description: "default_values",
+			input: &Model{
+				FlavorId: types.StringValue("flavor_id"),
+			},
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			expected: &postgresflex.PartialUpdateInstancePayload{
+				FlavorId: new("flavor_id"),
+				Network: &postgresflex.InstanceNetworkOpt{
+					Acl: []string{},
 				},
 				Storage: &postgresflex.StorageUpdate{},
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"simple_values",
-			&Model{
+			description: "simple_values",
+			input: &Model{
 				BackupSchedule: types.StringValue("schedule"),
 				Name:           types.StringValue("name"),
 				Replicas:       types.Int32Value(12),
 				Version:        types.StringValue("version"),
 			},
-			[]string{
+			inputAcl: []string{
 				"ip_1",
 				"ip_2",
 			},
-			&flavorModel{
+			inputFlavor: &flavorModel{
 				Id: types.StringValue("flavor_id"),
 			},
-			&storageModel{
+			inputStorage: &storageModel{
 				Class: types.StringValue("class"),
 				Size:  types.Int64Value(34),
 			},
-			&postgresflex.PartialUpdateInstancePayload{
-				Acl: &postgresflex.ACL{
-					Items: []string{
+			expected: &postgresflex.PartialUpdateInstancePayload{
+				Network: &postgresflex.InstanceNetworkOpt{
+					Acl: []string{
 						"ip_1",
 						"ip_2",
 					},
@@ -566,87 +642,86 @@ func TestToUpdatePayload(t *testing.T) {
 				BackupSchedule: new("schedule"),
 				FlavorId:       new("flavor_id"),
 				Name:           new("name"),
-				Replicas:       new(int32(12)),
 				Version:        new("version"),
 				Storage: &postgresflex.StorageUpdate{
 					Size: new(int64(34)),
 				},
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"null_fields_and_int_conversions",
-			&Model{
+			description: "null_fields_and_int_conversions",
+			input: &Model{
 				BackupSchedule: types.StringNull(),
 				Name:           types.StringNull(),
 				Replicas:       types.Int32Value(2123456789),
 				Version:        types.StringNull(),
+				FlavorId:       types.StringValue("flavor_id"),
 			},
-			[]string{
+			inputAcl: []string{
 				"",
 			},
-			&flavorModel{
+			inputFlavor: &flavorModel{
 				Id: types.StringNull(),
 			},
-			&storageModel{
+			inputStorage: &storageModel{
 				Class: types.StringNull(),
 				Size:  types.Int64Null(),
 			},
-			&postgresflex.PartialUpdateInstancePayload{
-				Acl: &postgresflex.ACL{
-					Items: []string{
+			expected: &postgresflex.PartialUpdateInstancePayload{
+				Network: &postgresflex.InstanceNetworkOpt{
+					Acl: []string{
 						"",
 					},
 				},
 				BackupSchedule: nil,
-				FlavorId:       nil,
+				FlavorId:       new("flavor_id"),
 				Name:           nil,
-				Replicas:       new(int32(2123456789)),
 				Version:        nil,
 				Storage:        &postgresflex.StorageUpdate{},
 			},
-			true,
+			isValid: true,
 		},
 		{
-			"nil_model",
-			nil,
-			[]string{},
-			&flavorModel{},
-			&storageModel{},
-			nil,
-			false,
+			description:  "nil_model",
+			input:        nil,
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			expected:     nil,
+			isValid:      false,
 		},
 		{
-			"nil_acl",
-			&Model{},
-			nil,
-			&flavorModel{},
-			&storageModel{},
-			nil,
-			false,
+			description:  "nil_acl",
+			input:        &Model{},
+			inputAcl:     nil,
+			inputFlavor:  &flavorModel{},
+			inputStorage: &storageModel{},
+			expected:     nil,
+			isValid:      false,
 		},
 		{
-			"nil_flavor",
-			&Model{},
-			[]string{},
-			nil,
-			&storageModel{},
-			nil,
-			false,
+			description:  "nil_flavor",
+			input:        &Model{},
+			inputAcl:     []string{},
+			inputFlavor:  nil,
+			inputStorage: &storageModel{},
+			expected:     nil,
+			isValid:      false,
 		},
 		{
-			"nil_storage",
-			&Model{},
-			[]string{},
-			&flavorModel{},
-			nil,
-			nil,
-			false,
+			description:  "nil_storage",
+			input:        &Model{},
+			inputAcl:     []string{},
+			inputFlavor:  &flavorModel{},
+			inputStorage: nil,
+			expected:     nil,
+			isValid:      false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage)
+			output, err := toUpdatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputNetwork)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -667,133 +742,152 @@ func TestLoadFlavorId(t *testing.T) {
 	tests := []struct {
 		description     string
 		inputFlavor     *flavorModel
+		inputReplicas   int32
 		mockedResp      *postgresflex.ListFlavorsResponse
 		expected        *flavorModel
 		getFlavorsFails bool
 		isValid         bool
 	}{
 		{
-			"ok_flavor",
-			&flavorModel{
+			description: "ok_flavor",
+			inputFlavor: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.ListFlavorsResponse{
-				Flavors: []postgresflex.Flavor{
+			inputReplicas: NODE_TYPE_SINGLE_VALUE,
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
 					{
-						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
-						Description: new("description"),
-						Memory:      new(int64(8)),
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description",
+						Memory:      8,
+						NodeType:    NODE_TYPE_SINGLE,
 					},
 				},
 			},
-			&flavorModel{
+			expected: &flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
 				CPU:         types.Int64Value(2),
 				RAM:         types.Int64Value(8),
+				NodeType:    types.StringValue(NODE_TYPE_SINGLE),
 			},
-			false,
-			true,
+			getFlavorsFails: false,
+			isValid:         true,
 		},
 		{
-			"ok_flavor_2",
-			&flavorModel{
+			description: "ok_flavor_2",
+			inputFlavor: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.ListFlavorsResponse{
-				Flavors: []postgresflex.Flavor{
+			inputReplicas: NODE_TYPE_REPLICA_VALUE,
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
 					{
-						Id:          new("fid-1"),
-						Cpu:         new(int64(2)),
-						Description: new("description"),
-						Memory:      new(int64(8)),
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description",
+						Memory:      8,
+						NodeType:    NODE_TYPE_REPLICA,
 					},
 					{
-						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
-						Description: new("description"),
-						Memory:      new(int64(4)),
+						Id:          "fid-2",
+						Cpu:         1,
+						Description: "description",
+						Memory:      4,
+						NodeType:    NODE_TYPE_SINGLE,
 					},
 				},
 			},
-			&flavorModel{
+			expected: &flavorModel{
 				Id:          types.StringValue("fid-1"),
 				Description: types.StringValue("description"),
 				CPU:         types.Int64Value(2),
 				RAM:         types.Int64Value(8),
+				NodeType:    types.StringValue(NODE_TYPE_REPLICA),
 			},
-			false,
-			true,
+			getFlavorsFails: false,
+			isValid:         true,
 		},
 		{
-			"no_matching_flavor",
-			&flavorModel{
+			description: "no_matching_flavor",
+			inputFlavor: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.ListFlavorsResponse{
-				Flavors: []postgresflex.Flavor{
+			inputReplicas: NODE_TYPE_SINGLE_VALUE,
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
 					{
-						Id:          new("fid-1"),
-						Cpu:         new(int64(1)),
-						Description: new("description"),
-						Memory:      new(int64(8)),
+						Id:          "fid-1",
+						Cpu:         1,
+						Description: "description",
+						Memory:      8,
+						NodeType:    NODE_TYPE_REPLICA,
 					},
 					{
-						Id:          new("fid-2"),
-						Cpu:         new(int64(1)),
-						Description: new("description"),
-						Memory:      new(int64(4)),
+						Id:          "fid-2",
+						Cpu:         1,
+						Description: "description",
+						Memory:      4,
+						NodeType:    NODE_TYPE_REPLICA,
+					},
+					{
+						Id:          "fid-3",
+						Cpu:         2,
+						Description: "description",
+						Memory:      8,
+						NodeType:    NODE_TYPE_REPLICA,
 					},
 				},
 			},
-			&flavorModel{
+			expected: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			false,
-			false,
+			getFlavorsFails: false,
+			isValid:         false,
 		},
 		{
-			"nil_response",
-			&flavorModel{
+			description: "nil_response",
+			inputFlavor: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.ListFlavorsResponse{},
-			&flavorModel{
+			mockedResp: &postgresflex.ListFlavorsResponse{},
+			expected: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			false,
-			false,
+			getFlavorsFails: false,
+			isValid:         false,
 		},
 		{
-			"error_response",
-			&flavorModel{
+			description: "error_response",
+			inputFlavor: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			&postgresflex.ListFlavorsResponse{},
-			&flavorModel{
+			mockedResp: &postgresflex.ListFlavorsResponse{},
+			expected: &flavorModel{
 				CPU: types.Int64Value(2),
 				RAM: types.Int64Value(8),
 			},
-			true,
-			false,
+			getFlavorsFails: true,
+			isValid:         false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &postgresFlexClientMocked{
-				returnError:    tt.getFlavorsFails,
-				getFlavorsResp: tt.mockedResp,
+				returnError:     tt.getFlavorsFails,
+				listFlavorsResp: tt.mockedResp,
 			}
 			model := &Model{
 				ProjectId: types.StringValue("pid"),
+				Replicas:  types.Int32Value(tt.inputReplicas),
 			}
 			flavorModel := &flavorModel{
 				CPU: tt.inputFlavor.CPU,
@@ -808,6 +902,194 @@ func TestLoadFlavorId(t *testing.T) {
 			}
 			if tt.isValid {
 				diff := cmp.Diff(flavorModel, tt.expected)
+				if diff != "" {
+					t.Fatalf("Data does not match: %s", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleV3Migration(t *testing.T) {
+	tests := []struct {
+		name         string
+		configModel  *Model
+		planModel    *Model
+		expectedPlan *Model
+		warnings     int
+	}{
+		{
+			name: "all_values_provided_no_migration",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			warnings: 0,
+		},
+		{
+			name: "migration_triggered_for_all_null_fields",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringNull(),
+				RetentionDays:  types.Int32Null(),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringNull(),
+				RetentionDays:  types.Int32Null(),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringNull(),
+				RetentionDays:  types.Int32Value(32),
+			},
+			warnings: 1, // retention_days fallback
+		},
+		{
+			name: "migration_triggered_for_unknown_retention_days",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Unknown(),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Unknown(),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("0 16 * * *"),
+				RetentionDays:  types.Int32Value(32),
+			},
+			warnings: 1,
+		},
+		{
+			name: "backup_schedule_unsimplified_triggers_warning",
+			configModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("00 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			planModel: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("00 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			expectedPlan: &Model{
+				ACL:            types.ListNull(types.StringType),
+				BackupSchedule: types.StringValue("00 16 * * *"),
+				RetentionDays:  types.Int32Value(40),
+			},
+			warnings: 1, // backup_schedule simplification warning
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := &resource.ModifyPlanResponse{}
+			handleV3Migration(context.Background(), tt.planModel, tt.configModel, resp)
+
+			if len(resp.Diagnostics.Warnings()) != tt.warnings {
+				t.Errorf("expected %d warnings, got %d", tt.warnings, len(resp.Diagnostics.Warnings()))
+			}
+
+			diff := cmp.Diff(tt.planModel, tt.expectedPlan)
+			if diff != "" {
+				t.Fatalf("Data does not match: %s", diff)
+			}
+		})
+	}
+}
+
+func TestGetFlavor(t *testing.T) {
+	tests := []struct {
+		description     string
+		flavorId        string
+		mockedResp      *postgresflex.ListFlavorsResponse
+		expected        *postgresflex.ListFlavors
+		getFlavorsFails bool
+		isValid         bool
+	}{
+		{
+			description: "ok_flavor_found",
+			flavorId:    "fid-1",
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
+					{
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description-1",
+						Memory:      8,
+					},
+					{
+						Id:          "fid-2",
+						Cpu:         4,
+						Description: "description-2",
+						Memory:      16,
+					},
+				},
+			},
+			expected: &postgresflex.ListFlavors{
+				Id:          "fid-1",
+				Cpu:         2,
+				Description: "description-1",
+				Memory:      8,
+			},
+			getFlavorsFails: false,
+			isValid:         true,
+		},
+		{
+			description: "flavor_not_found",
+			flavorId:    "fid-3",
+			mockedResp: &postgresflex.ListFlavorsResponse{
+				Flavors: []postgresflex.ListFlavors{
+					{
+						Id:          "fid-1",
+						Cpu:         2,
+						Description: "description-1",
+						Memory:      8,
+					},
+				},
+			},
+			expected:        nil,
+			getFlavorsFails: false,
+			isValid:         false,
+		},
+		{
+			description:     "error_response",
+			flavorId:        "fid-1",
+			mockedResp:      nil,
+			expected:        nil,
+			getFlavorsFails: true,
+			isValid:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			client := &postgresFlexClientMocked{
+				returnError:     tt.getFlavorsFails,
+				listFlavorsResp: tt.mockedResp,
+			}
+			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
+			if !tt.isValid && err == nil {
+				t.Fatalf("Should have failed")
+			}
+			if tt.isValid && err != nil {
+				t.Fatalf("Should not have failed: %v", err)
+			}
+			if tt.isValid {
+				diff := cmp.Diff(got, tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}

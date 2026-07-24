@@ -70,8 +70,8 @@ func (m useStateForUnknownIf) PlanModifyObject(ctx context.Context, req planmodi
 	}
 }
 
-// Int32Changed sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func Int32Changed(attributePath path.Path) UseStateForUnknownIfFunc {
+// Int32Unchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func Int32Unchanged(attributePath path.Path) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, request planmodifier.ObjectRequest, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.Int32
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
@@ -94,8 +94,8 @@ func Int32Changed(attributePath path.Path) UseStateForUnknownIfFunc {
 	}
 }
 
-// ListChanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func ListChanged(attributePath path.Path) UseStateForUnknownIfFunc {
+// ListUnchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func ListUnchanged(attributePath path.Path) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, request planmodifier.ObjectRequest, response *UseStateForUnknownFuncResponse) {
 		var attributePlan types.List
 		diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)

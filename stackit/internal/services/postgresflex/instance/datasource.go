@@ -5,22 +5,20 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -63,13 +61,18 @@ func (r *instanceDataSource) Configure(ctx context.Context, req datasource.Confi
 // Schema defines the schema for the data source.
 func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{
-		"main":        "Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.",
-		"id":          "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
-		"instance_id": "ID of the PostgresFlex instance.",
-		"project_id":  "STACKIT project ID to which the instance is associated.",
-		"name":        "Instance name.",
-		"acl":         "The Access Control List (ACL) for the PostgresFlex instance.",
-		"region":      "The resource region. If not defined, the provider region is used.",
+		"main":                       "Postgres Flex instance data source schema. Must have a `region` specified in the provider configuration.",
+		"id":                         "Terraform's internal data source. ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id":                "ID of the PostgresFlex instance.",
+		"project_id":                 "STACKIT project ID to which the instance is associated.",
+		"name":                       "Instance name.",
+		"acl":                        "The Access Control List (ACL) for the PostgresFlex instance.",
+		"region":                     "The resource region. If not defined, the provider region is used.",
+		"backup_schedule":            "The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.",
+		"connection_info":            "The connection info for the PostgresFlex instance.",
+		"connection_info.write":      "The DNS name and port in the instance overview.",
+		"connection_info.write.host": "The host of the instance.",
+		"connection_info.write.port": "The port of the instance.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -100,12 +103,38 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Computed:    true,
+				Description:        descriptions["acl"],
+				DeprecationMessage: "acl is deprecated and will be removed after February 2027. Use instead `network.acl`.",
+				ElementType:        types.StringType,
+				Computed:           true,
 			},
 			"backup_schedule": schema.StringAttribute{
-				Computed: true,
+				Description: descriptions["backup_schedule"],
+				Computed:    true,
+			},
+			"connection_info": schema.SingleNestedAttribute{
+				Description: descriptions["connection_info"],
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"write": schema.SingleNestedAttribute{
+						Description: descriptions["connection_info.write"],
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"host": schema.StringAttribute{
+								Description: descriptions["connection_info.write.host"],
+								Computed:    true,
+							},
+							"port": schema.Int32Attribute{
+								Description: descriptions["connection_info.write.port"],
+								Computed:    true,
+							},
+						},
+					},
+				},
+			},
+			"flavor_id": schema.StringAttribute{
+				Description: descriptions["flavor_id"],
+				Computed:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
 				Computed: true,
@@ -122,10 +151,60 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 					"ram": schema.Int64Attribute{
 						Computed: true,
 					},
+					"node_type": schema.StringAttribute{
+						Computed: true,
+					},
+				},
+			},
+			"encryption": schema.SingleNestedAttribute{
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"kek_key_id": schema.StringAttribute{
+						Description: descriptions["encryption.kek_key_id"],
+						Computed:    true,
+					},
+					"kek_keyring_id": schema.StringAttribute{
+						Description: descriptions["encryption.kek_keyring_id"],
+						Computed:    true,
+					},
+					"kek_key_version": schema.StringAttribute{
+						Description: descriptions["encryption.kek_key_version"],
+						Computed:    true,
+					},
+					"service_account": schema.StringAttribute{
+						Description: descriptions["encryption.service_account"],
+						Computed:    true,
+					},
 				},
 			},
 			"replicas": schema.Int32Attribute{
-				Computed: true,
+				Description: descriptions["replicas"],
+				Computed:    true,
+			},
+			"retention_days": schema.Int32Attribute{
+				Description: descriptions["retention_days"],
+				Computed:    true,
+			},
+			"network": schema.SingleNestedAttribute{
+				Description: descriptions["network"],
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"access_scope": schema.StringAttribute{
+						Description: "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(postgresflex.AllowedInstanceNetworkAccessScopeEnumValues)...),
+						Computed:    true,
+					},
+					"acl": schema.ListAttribute{
+						Description: "List of IPV4 cidr.",
+						ElementType: types.StringType,
+						Computed:    true,
+					},
+					"instance_address": schema.StringAttribute{
+						Computed: true,
+					},
+					"router_address": schema.StringAttribute{
+						Computed: true,
+					},
+				},
 			},
 			"storage": schema.SingleNestedAttribute{
 				Computed: true,
@@ -185,30 +264,21 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	if instanceResp != nil && instanceResp.Item != nil && instanceResp.Item.Status != nil && *instanceResp.Item.Status == wait.InstanceStateDeleted {
-		resp.State.RemoveResource(ctx)
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", "Instance was deleted successfully")
+	flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
 		return
 	}
 
-	var flavor = &flavorModel{}
-	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
-		diags = model.Flavor.As(ctx, flavor, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-	var storage = &storageModel{}
-	if !(model.Storage.IsNull() || model.Storage.IsUnknown()) {
-		diags = model.Storage.As(ctx, storage, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	flavor := &flavorModel{
+		Id:          types.StringValue(flavorResp.Id),
+		Description: types.StringValue(flavorResp.Description),
+		CPU:         types.Int64Value(flavorResp.Cpu),
+		RAM:         types.Int64Value(flavorResp.Memory),
+		NodeType:    types.StringValue(flavorResp.NodeType),
 	}
 
-	err = mapFields(ctx, instanceResp, &model, flavor, storage, region)
+	err = mapFields(ctx, instanceResp, &model, flavor, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
 		return
