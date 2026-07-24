@@ -37,6 +37,7 @@ data "stackit_sqlserverflex_instance" "example" {
 - `acl` (List of String) The Access Control List (ACL) for the SQLServer Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").
 - `edition` (String) Edition of the MSSQL server instance.
+- `encryption` (Attributes) Parameter to define which key to use for storage encryption. (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
 - `flavor_id` (String) The flavor ID of the SQLServer Flex instance.
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
@@ -57,6 +58,19 @@ Optional:
 Read-Only:
 
 - `acl` (List of String) List of IPV4 cidr.
+- `instance_address` (String) Address of this instance.
+- `router_address` (String) Address of the router.
+
+
+<a id="nestedatt--encryption"></a>
+### Nested Schema for `encryption`
+
+Read-Only:
+
+- `kek_key_id` (String) UUID of the key within the STACKIT-KMS to use for the encryption.
+- `kek_key_version` (String) Version of the key within the STACKIT-KMS to use for the encryption.
+- `kek_keyring_id` (String) UUID of the keyring where the key is located within the STACKTI-KMS.
+- `service_account` (String) Service-Account linked to the Key within the STACKIT-KMS.
 
 
 <a id="nestedatt--flavor"></a>

@@ -74,8 +74,10 @@ func TestMapFields(t *testing.T) {
 					"retention_days": types.Int32Value(0),
 				}),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListNull(types.StringType),
-					"access_scope": types.StringNull(),
+					"acl":              types.ListNull(types.StringType),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
 				}),
 				RetentionDays: types.Int32Value(0),
 				Edition:       types.StringValue(""),
@@ -135,8 +137,10 @@ func TestMapFields(t *testing.T) {
 				Edition:       types.StringValue("edition"),
 				RetentionDays: types.Int32Value(1),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip1"), types.StringValue("ip2"), types.StringValue("")}),
-					"access_scope": types.StringNull(),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip1"), types.StringValue("ip2"), types.StringValue("")}),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
 				}),
 				Replicas: types.Int32Value(56),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
@@ -207,8 +211,10 @@ func TestMapFields(t *testing.T) {
 				RetentionDays: types.Int32Value(1),
 				Replicas:      types.Int32Value(56),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip1"), types.StringValue("ip2"), types.StringValue("")}),
-					"access_scope": types.StringNull(),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip1"), types.StringValue("ip2"), types.StringValue("")}),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
 				}),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
@@ -283,8 +289,10 @@ func TestMapFields(t *testing.T) {
 				RetentionDays: types.Int32Value(1),
 				Replicas:      types.Int32Value(56),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip2"), types.StringValue(""), types.StringValue("ip1")}),
-					"access_scope": types.StringNull(),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("ip2"), types.StringValue(""), types.StringValue("ip1")}),
+					"access_scope":     types.StringNull(),
+					"instance_address": types.StringNull(),
+					"router_address":   types.StringNull(),
 				}),
 				Storage: types.ObjectValueMust(storageTypes, map[string]attr.Value{
 					"class": types.StringValue("class"),
@@ -344,15 +352,16 @@ func TestMapFields(t *testing.T) {
 
 func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
-		description  string
-		input        *Model
-		inputAcl     []string
-		inputFlavor  *flavorModel
-		inputStorage *storageModel
-		inputOptions *optionsModel
-		inputNetwork *networkModel
-		expected     *sqlserverflex.CreateInstancePayload
-		isValid      bool
+		description     string
+		input           *Model
+		inputAcl        []string
+		inputEncryption *encryptionModel
+		inputFlavor     *flavorModel
+		inputStorage    *storageModel
+		inputOptions    *optionsModel
+		inputNetwork    *networkModel
+		expected        *sqlserverflex.CreateInstancePayload
+		isValid         bool
 	}{
 		{
 			description: "default_values",
@@ -360,11 +369,12 @@ func TestToCreatePayload(t *testing.T) {
 				FlavorId:      types.StringValue("fid"),
 				RetentionDays: types.Int32Value(1),
 			},
-			inputAcl:     []string{},
-			inputFlavor:  &flavorModel{},
-			inputStorage: &storageModel{},
-			inputOptions: &optionsModel{},
-			inputNetwork: &networkModel{},
+			inputAcl:        []string{},
+			inputEncryption: &encryptionModel{},
+			inputFlavor:     &flavorModel{},
+			inputStorage:    &storageModel{},
+			inputOptions:    &optionsModel{},
+			inputNetwork:    &networkModel{},
 			expected: &sqlserverflex.CreateInstancePayload{
 				FlavorId:      "fid",
 				RetentionDays: 1,
@@ -375,6 +385,7 @@ func TestToCreatePayload(t *testing.T) {
 					Class: "",
 					Size:  0,
 				},
+				Encryption: &sqlserverflex.InstanceEncryption{},
 			},
 			isValid: true,
 		},
@@ -401,6 +412,12 @@ func TestToCreatePayload(t *testing.T) {
 				RetentionDays: types.Int32Value(1),
 			},
 			inputNetwork: &networkModel{},
+			inputEncryption: &encryptionModel{
+				KekKeyId:       types.StringValue("id"),
+				KekKeyRingId:   types.StringValue("keyRingId"),
+				KekKeyVersion:  types.StringValue("keyVersion"),
+				ServiceAccount: types.StringValue("some_service_account"),
+			},
 			expected: &sqlserverflex.CreateInstancePayload{
 				Network: sqlserverflex.CreateInstancePayloadNetwork{
 					Acl: []string{"ip_1", "ip_2"},
@@ -414,6 +431,12 @@ func TestToCreatePayload(t *testing.T) {
 				},
 				RetentionDays: 1,
 				Version:       "version",
+				Encryption: &sqlserverflex.InstanceEncryption{
+					KekKeyId:       "id",
+					KekKeyRingId:   "keyRingId",
+					KekKeyVersion:  "keyVersion",
+					ServiceAccount: "some_service_account",
+				},
 			},
 			isValid: true,
 		},
@@ -522,7 +545,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputFlavor, tt.inputStorage, tt.inputOptions, tt.inputNetwork)
+			output, err := toCreatePayload(tt.input, tt.inputAcl, tt.inputEncryption, tt.inputFlavor, tt.inputStorage, tt.inputOptions, tt.inputNetwork)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -888,8 +911,10 @@ func TestHandleV3Migration(t *testing.T) {
 				}),
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(45),
 			},
@@ -902,8 +927,10 @@ func TestHandleV3Migration(t *testing.T) {
 				}),
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(45),
 			},
@@ -916,8 +943,10 @@ func TestHandleV3Migration(t *testing.T) {
 				}),
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(45),
 			},
@@ -968,8 +997,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -983,8 +1014,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -998,8 +1031,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1017,8 +1052,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1032,8 +1069,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSIONOPT__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1047,8 +1086,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1066,8 +1107,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringNull(),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1081,8 +1124,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringNull(),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1096,8 +1141,10 @@ func TestHandleV3Migration(t *testing.T) {
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
 				ACL:     types.ListNull(types.StringType),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("10.0.0.0/24")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Value(1),
 				Options:       types.ObjectNull(optionsTypes),
@@ -1115,8 +1162,10 @@ func TestHandleV3Migration(t *testing.T) {
 				}),
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Null(),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
@@ -1133,8 +1182,10 @@ func TestHandleV3Migration(t *testing.T) {
 				}),
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Null(),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
@@ -1151,8 +1202,10 @@ func TestHandleV3Migration(t *testing.T) {
 				}),
 				Version: types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022)),
 				Network: types.ObjectValueMust(networkTypes, map[string]attr.Value{
-					"acl":          types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
-					"access_scope": types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"acl":              types.ListValueMust(types.StringType, []attr.Value{types.StringValue("193.148.160.0/19")}),
+					"access_scope":     types.StringValue(string(sqlserverflex.INSTANCENETWORKACCESSSCOPE_PUBLIC)),
+					"instance_address": types.StringValue("instance_address"),
+					"router_address":   types.StringValue("router_address"),
 				}),
 				RetentionDays: types.Int32Null(),
 				Options: types.ObjectValueMust(optionsTypes, map[string]attr.Value{
