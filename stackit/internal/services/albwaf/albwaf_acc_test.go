@@ -30,6 +30,12 @@ var (
 
 	//go:embed testdata/managed-rule-set.tf
 	managedRuleSetConfig string
+
+	//go:embed testdata/resource-max.tf
+	wafMaxConfig string
+
+	//go:embed testdata/resource-min.tf
+	wafMinConfig string
 )
 
 var testCustomRuleGroupMin = config.Variables{
@@ -86,6 +92,40 @@ var testManagedRuleSetUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testManagedRuleSet)
 	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	return updatedConfig
+}
+
+var testConfigVarsMax = config.Variables{
+	"project_id":              config.StringVariable(testutil.ProjectId),
+	"waf_configuration_name":  config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"rule_set_name":           config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"type":                    config.StringVariable("TYPE_OWASP_CRS"),
+	"waf_configuration_label": config.StringVariable("some-label"),
+	"custom_rule_group_name":  config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"action":                  config.StringVariable("ACTION_DENY"),
+	"operator_type":           config.StringVariable("OPERATOR_VALIDATE_UTF8_ENCODING"),
+	"variable_type":           config.StringVariable("VARIABLE_RESPONSE_STATUS"),
+}
+
+var testConfigVarsMaxUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigVarsMax)
+	updatedConfig["waf_configuration_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_name"])))
+	updatedConfig["rule_set_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["rule_set_name"])))
+	updatedConfig["custom_rule_group_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["custom_rule_group_name"])))
+	updatedConfig["waf_configuration_label"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_label"])))
+	return updatedConfig
+}
+
+var testConfigVarsMin = config.Variables{
+	"project_id":             config.StringVariable(testutil.ProjectId),
+	"waf_configuration_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+}
+
+var testConfigVarsMinUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigVarsMin)
+	updatedConfig["waf_configuration_name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["waf_configuration_name"])))
 	return updatedConfig
 }
 
@@ -345,7 +385,6 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 		},
 	})
 }
-
 func TestAccManagedRuleSet(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -421,6 +460,190 @@ func TestAccManagedRuleSet(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_managed_rule_set.managed_rule_set", "id"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSetUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "type", testutil.ConvertConfigVariable(testManagedRuleSetUpdated()["type"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccWafConfigurationMin(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigVarsMin,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMinConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_configuration.waf_instance", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMin["waf_configuration_name"])),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigVarsMin,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+					data "stackit_alb_waf_configuration" "waf" {
+					  project_id = stackit_alb_waf_configuration.waf_instance.project_id
+					  name  = stackit_alb_waf_configuration.waf_instance.name
+					}
+					`,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMinConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "region", testutil.Region),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_alb_waf_configuration.waf", "id",
+						"stackit_alb_waf_configuration.waf_instance", "id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "name", testutil.ConvertConfigVariable(testConfigVarsMin["waf_configuration_name"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigVarsMin,
+				ResourceName:    "stackit_alb_waf_configuration.waf_instance",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_alb_waf_configuration.waf_instance"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_configuration.waf_instance")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigVarsMinUpdated(),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMinConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_alb_waf_configuration.waf_instance", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_configuration.waf_instance", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMinUpdated()["waf_configuration_name"])),
+				),
+			},
+			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccWafConfigurationMax(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMaxConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["rule_set_name"])),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "name", testutil.ConvertConfigVariable(testConfigVarsMax["custom_rule_group_name"])),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_configuration.waf_instance", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["waf_configuration_name"])),
+					resource.TestCheckResourceAttrPair("stackit_alb_waf_configuration.waf_instance", "managed_rule_set_name", "stackit_alb_waf_managed_rule_set.managed_rule_set", "name"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["waf_configuration_label"])),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigVarsMax,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
+					  project_id = stackit_alb_waf_custom_rule_group.custom_rule_group.project_id
+					  name  = stackit_alb_waf_custom_rule_group.custom_rule_group.name
+					}
+
+					data "stackit_alb_waf_managed_rule_set" "managed_rule_set" {
+					  project_id = stackit_alb_waf_managed_rule_set.managed_rule_set.project_id
+					  name  = stackit_alb_waf_managed_rule_set.managed_rule_set.name
+					}
+
+					data "stackit_alb_waf_configuration" "waf" {
+					  project_id = stackit_alb_waf_configuration.waf_instance.project_id
+					  name  = stackit_alb_waf_configuration.waf_instance.name
+					}
+					`,
+					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMaxConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_alb_waf_managed_rule_set.managed_rule_set", "id",
+						"stackit_alb_waf_managed_rule_set.managed_rule_set", "id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["rule_set_name"])),
+
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "region", testutil.Region),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_alb_waf_configuration.waf", "id",
+						"stackit_alb_waf_configuration.waf_instance", "id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "name", testutil.ConvertConfigVariable(testConfigVarsMax["waf_configuration_name"])),
+					resource.TestCheckResourceAttrPair("data.stackit_alb_waf_configuration.waf", "managed_rule_set_name", "data.stackit_alb_waf_managed_rule_set.managed_rule_set", "name"),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "labels.label1", testutil.ConvertConfigVariable(testConfigVarsMax["waf_configuration_label"])),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigVarsMax,
+				ResourceName:    "stackit_alb_waf_configuration.waf_instance",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_alb_waf_configuration.waf_instance"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_alb_waf_configuration.waf_instance")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, testutil.Region, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			// Update
+			{
+				ConfigVariables: testConfigVarsMaxUpdated(),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMaxConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_alb_waf_configuration.waf_instance", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "region", testutil.Region),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_configuration.waf_instance", "id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["waf_configuration_name"])),
+					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "labels.label1", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["waf_configuration_label"])),
+
+					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["rule_set_name"])),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["custom_rule_group_name"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
