@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 	_ "time/tzdata"
 	"unicode"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	MajorMinorVersionRegex = `^\d+\.\d+?$`
-	FullVersionRegex       = `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
+	FullVersionRegex = `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
 		`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)` +
 		`(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
 		`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
@@ -197,14 +196,13 @@ func MinorVersionNumber() *Validator {
 	return &Validator{
 		description: description,
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-			exp := MajorMinorVersionRegex
-			r := regexp.MustCompile(exp)
-			version := req.ConfigValue.ValueString()
-			if !r.MatchString(version) {
+			val := req.ConfigValue.ValueString()
+			version, err := semver.NewVersion(val)
+			if err != nil || val != fmt.Sprintf("%d.%d", version.Major(), version.Minor()) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
-					req.ConfigValue.ValueString(),
+					val,
 				))
 			}
 		},
@@ -217,18 +215,13 @@ func VersionNumber() *Validator {
 	return &Validator{
 		description: description,
 		validate: func(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-			minorVersionExp := MajorMinorVersionRegex
-			minorVersionRegex := regexp.MustCompile(minorVersionExp)
-
-			versionExp := FullVersionRegex
-			versionRegex := regexp.MustCompile(versionExp)
-
-			version := req.ConfigValue.ValueString()
-			if !minorVersionRegex.MatchString(version) && !versionRegex.MatchString(version) {
+			val := req.ConfigValue.ValueString()
+			version, err := semver.NewVersion(val)
+			if err != nil || (val != fmt.Sprintf("%d.%d", version.Major(), version.Minor()) && val != version.String()) {
 				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 					req.Path,
 					description,
-					req.ConfigValue.ValueString(),
+					val,
 				))
 			}
 		},
