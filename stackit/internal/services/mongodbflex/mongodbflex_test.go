@@ -172,11 +172,6 @@ func TestMongoDBUserInvalidUsernameValidationError(t *testing.T) {
 	projectId := uuid.NewString()
 	instanceId := uuid.NewString()
 	tfConfig := fmt.Sprintf(`
-provider "stackit" {
-	mongodbflex_custom_endpoint = "http://localhost:12345"
-	service_account_token = "mock-server-needs-no-auth"
-}
-
 resource "stackit_mongodbflex_user" "user" {
 	project_id = "%s"
 	instance_id = "%s"
