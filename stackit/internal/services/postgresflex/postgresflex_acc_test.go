@@ -1,4 +1,4 @@
-package postgresflex
+package postgresflex_test
 
 import (
 	"context"
