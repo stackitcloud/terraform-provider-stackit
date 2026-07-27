@@ -28,26 +28,29 @@ var (
 )
 
 type DataSourceModel struct {
-	Id               types.String `tfsdk:"id"` // needed by TF
-	ProjectId        types.String `tfsdk:"project_id"`
-	NetworkId        types.String `tfsdk:"network_id"`
-	Name             types.String `tfsdk:"name"`
-	IPv4Gateway      types.String `tfsdk:"ipv4_gateway"`
-	IPv4Nameservers  types.List   `tfsdk:"ipv4_nameservers"`
-	IPv4Prefix       types.String `tfsdk:"ipv4_prefix"`
-	IPv4PrefixLength types.Int64  `tfsdk:"ipv4_prefix_length"`
-	IPv4Prefixes     types.List   `tfsdk:"ipv4_prefixes"`
-	IPv6Gateway      types.String `tfsdk:"ipv6_gateway"`
-	IPv6Nameservers  types.List   `tfsdk:"ipv6_nameservers"`
-	IPv6Prefix       types.String `tfsdk:"ipv6_prefix"`
-	IPv6PrefixLength types.Int64  `tfsdk:"ipv6_prefix_length"`
-	IPv6Prefixes     types.List   `tfsdk:"ipv6_prefixes"`
-	PublicIP         types.String `tfsdk:"public_ip"`
-	Labels           types.Map    `tfsdk:"labels"`
-	Routed           types.Bool   `tfsdk:"routed"`
-	Region           types.String `tfsdk:"region"`
-	RoutingTableID   types.String `tfsdk:"routing_table_id"`
-	DHCP             types.Bool   `tfsdk:"dhcp"`
+	Id                    types.String `tfsdk:"id"` // needed by TF
+	ProjectId             types.String `tfsdk:"project_id"`
+	NetworkId             types.String `tfsdk:"network_id"`
+	Name                  types.String `tfsdk:"name"`
+	IPv4Gateway           types.String `tfsdk:"ipv4_gateway"`
+	IPv4Nameservers       types.List   `tfsdk:"ipv4_nameservers"`
+	IPv4Prefix            types.String `tfsdk:"ipv4_prefix"`
+	IPv4PrefixLength      types.Int64  `tfsdk:"ipv4_prefix_length"`
+	IPv4Prefixes          types.List   `tfsdk:"ipv4_prefixes"`
+	IPv4VpcNetworkRangeId types.String `tfsdk:"ipv4_vpc_network_range_id"`
+	IPv6Gateway           types.String `tfsdk:"ipv6_gateway"`
+	IPv6Nameservers       types.List   `tfsdk:"ipv6_nameservers"`
+	IPv6Prefix            types.String `tfsdk:"ipv6_prefix"`
+	IPv6PrefixLength      types.Int64  `tfsdk:"ipv6_prefix_length"`
+	IPv6Prefixes          types.List   `tfsdk:"ipv6_prefixes"`
+	IPv6VpcNetworkRangeId types.String `tfsdk:"ipv6_vpc_network_range_id"`
+	PublicIP              types.String `tfsdk:"public_ip"`
+	Labels                types.Map    `tfsdk:"labels"`
+	Routed                types.Bool   `tfsdk:"routed"`
+	Region                types.String `tfsdk:"region"`
+	RoutingTableID        types.String `tfsdk:"routing_table_id"`
+	DHCP                  types.Bool   `tfsdk:"dhcp"`
+	VPCID                 types.String `tfsdk:"vpc_id"`
 }
 
 // NewNetworkDataSource is a helper function to simplify the provider implementation.
@@ -137,6 +140,14 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:    true,
 				ElementType: types.StringType,
 			},
+			"ipv4_vpc_network_range_id": schema.StringAttribute{
+				Description: "The IPv4 VPC network range ID.",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
 			"ipv6_gateway": schema.StringAttribute{
 				Description: "The IPv6 gateway of a network. If not specified, the first IP of the network will be assigned as the gateway.",
 				Computed:    true,
@@ -159,6 +170,14 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Description: "The IPv6 prefixes of the network.",
 				Computed:    true,
 				ElementType: types.StringType,
+			},
+			"ipv6_vpc_network_range_id": schema.StringAttribute{
+				Description: "The IPv6 VPC network range ID.",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 			},
 			"public_ip": schema.StringAttribute{
 				Description: "The public IP of the network.",
@@ -189,6 +208,14 @@ func (d *networkDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"dhcp": schema.BoolAttribute{
 				Description: "Shows if DHCP is enabled for the network.",
 				Computed:    true,
+			},
+			"vpc_id": schema.StringAttribute{
+				Description: "The ID of the VPC the network is associated with.",
+				Optional:    true,
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
 			},
 		},
 	}
@@ -320,6 +347,12 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.PublicIP = types.StringPointerValue(networkResp.Ipv4.PublicIp)
 	}
 
+	if networkResp.Ipv4 == nil || networkResp.Ipv4.VpcNetworkRangeId == nil {
+		model.IPv4VpcNetworkRangeId = types.StringNull()
+	} else {
+		model.IPv4VpcNetworkRangeId = types.StringPointerValue(networkResp.Ipv4.VpcNetworkRangeId)
+	}
+
 	// IPv6
 
 	if networkResp.Ipv6 == nil || networkResp.Ipv6.Nameservers == nil {
@@ -369,6 +402,12 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 		model.IPv6Gateway = types.StringPointerValue(networkResp.Ipv6.Gateway.Get())
 	}
 
+	if networkResp.Ipv6 == nil {
+		model.IPv6VpcNetworkRangeId = types.StringNull()
+	} else {
+		model.IPv6VpcNetworkRangeId = types.StringPointerValue(networkResp.Ipv6.VpcNetworkRangeId)
+	}
+
 	model.RoutingTableID = types.StringNull()
 	if networkResp.RoutingTableId != nil {
 		model.RoutingTableID = types.StringValue(*networkResp.RoutingTableId)
@@ -380,6 +419,7 @@ func mapDataSourceFields(ctx context.Context, networkResp *iaas.Network, model *
 	model.Routed = types.BoolPointerValue(networkResp.Routed)
 	model.Region = types.StringValue(region)
 	model.DHCP = types.BoolPointerValue(networkResp.Dhcp)
+	model.VPCID = types.StringPointerValue(networkResp.VpcId)
 
 	return nil
 }
