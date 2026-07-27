@@ -702,8 +702,8 @@ github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0 h1:g7zpfQFFq3UhAWrM
 github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0/go.mod h1:tvRejL8w5KpGBbLFPQ+dXOJURgZ3OMbZmwxlKQrGMuA=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.0.1 h1:Ll1erKKms7OnFva3bRXOs9PEYLoWJp5prSg985K0glk=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.0.1/go.mod h1:joa89Y1dyn0j22FstRcIKfW2ada3FDxNfttxSvq27uY=
-github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0 h1:LfcQ++Z8a13jrJ5NOaCY/hwToh/e+QJj0eS6rd6s6k8=
-github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0/go.mod h1:u7T85YqoqncJevbPU1ODKthbmxxEh1zw+bVaAO8v0Sg=
+github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.12.0 h1:GqaT0j8w7ZDKGgM+SjZnRh9W9QznyV6ghmrn8I85piU=
+github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.12.0/go.mod h1:u7T85YqoqncJevbPU1ODKthbmxxEh1zw+bVaAO8v0Sg=
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.0 h1:SVd3WMmLAE0Jxk2SaRuM85DTOOXHycyMpZGx9vzqNkI=
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.0/go.mod h1:0hHEPiOEMAA23EzEl42Rm3FlyKIzkW+LWLvDkuFTZ+Q=
 github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0 h1:T+ll3lS0Kn18d8hTOrVAMKcQrXiab+Cuj0cTnAYHmj0=
@@ -738,10 +738,10 @@ github.com/stackitcloud/stackit-sdk-go/services/ske v1.20.0 h1:ZgXPfaGRFYFpMSFhW
 github.com/stackitcloud/stackit-sdk-go/services/ske v1.20.0/go.mod h1:TbqmZhLMofmfl+HhVl6oHYcI3zvXTm1vRjN3A/fOkM4=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.1 h1:pjFVw2Tc0cSfAzmyZRiLknuKSADs7nPXNUyrM216CwQ=
 github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.1/go.mod h1:AiUoMAqQcOlMgDtkVJlqI7P/VGD5xjN3dYjERGnwN/M=
-github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.4.0 h1:RG+cZzvIb+NoVNYemvwG5UHR9qEqea6IuHVYtojeBbQ=
-github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.4.0/go.mod h1:hgw8janWmDfP2bnuZensxqcAePr49BX5ug8Rq85o+h8=
-github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0 h1:tEKBl3g7SIjZ8aa43nNjS1Rqr/IwxQ3Pr1MArYF0fno=
-github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0/go.mod h1:WUmgKtwpe90Yq3YbgNxc2clTTULVxCu0ha6lMTjUnII=
+github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.5.0 h1:ixVBGTM5f2qSI42c/j/6a504akR4RcV8GlQ0yBroND4=
+github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.5.0/go.mod h1:hgw8janWmDfP2bnuZensxqcAePr49BX5ug8Rq85o+h8=
+github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.5.0 h1:8GgeCRarYXJc20oFdRod2BU+K1wHxGPvoHoXya0k9j8=
+github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.5.0/go.mod h1:WUmgKtwpe90Yq3YbgNxc2clTTULVxCu0ha6lMTjUnII=
 github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0 h1:LMgbzhPunuelsIsfyEj/5O/aYfNcg/eGHsnZ7AZOhYg=
 github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0/go.mod h1:toIjQk1dhxdUFVyCWJJja0w/0nFpDid8MWX0ukQfvfo=
 github.com/stbenjam/no-sprintf-host-port v0.3.1 h1:AyX7+dxI4IdLBPtDbsGAyqiTSLpCP9hWRrXQDU4Cm/g=

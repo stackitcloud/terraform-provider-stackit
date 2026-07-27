@@ -28,7 +28,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/logme v1.0.1
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.0.1
-	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.24.0
@@ -46,8 +46,8 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/sfs v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/ske v1.20.0
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.1
-	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.5.0
+	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.5.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.38.0
