@@ -826,7 +826,7 @@ func mapFields(ctx context.Context, networkResp *iaas.Network, model *Model, reg
 	}
 
     model.IPv6VpcNetworkRangeId = types.StringNull()
-	if networkResp.Ipv6 != nil || networkResp.Ipv6.VpcNetworkRangeId != nil {
+	if networkResp.Ipv6 != nil && networkResp.Ipv6.VpcNetworkRangeId != nil {
 		model.IPv6VpcNetworkRangeId = types.StringPointerValue(networkResp.Ipv6.VpcNetworkRangeId)
 	}
 
