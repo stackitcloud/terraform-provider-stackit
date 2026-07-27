@@ -12,8 +12,8 @@ variable "variable_type" {}
 variable "variable_value" {}
 
 resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
-  project_id  = var.project_id
-  name        = var.name
+  project_id = var.project_id
+  name       = var.name
   rules = [
     {
       description = var.description

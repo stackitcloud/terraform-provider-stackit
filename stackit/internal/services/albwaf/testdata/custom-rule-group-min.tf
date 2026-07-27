@@ -20,7 +20,7 @@ resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
             value = "dummy"
           }
           variable = {
-            type  = var.variable_type
+            type = var.variable_type
           }
         }
       ]

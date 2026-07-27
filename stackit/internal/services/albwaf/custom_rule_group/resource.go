@@ -565,7 +565,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 
 			conditions, err := toConditionsPayload(ctx, rule.Conditions)
 			if err != nil || conditions == nil {
-				return nil, fmt.Errorf("converting conditions: %v", err)
+				return nil, fmt.Errorf("converting conditions: %w", err)
 			}
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{

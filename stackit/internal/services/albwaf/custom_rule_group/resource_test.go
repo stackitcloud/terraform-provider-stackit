@@ -65,14 +65,14 @@ func TestToCreatePayload(t *testing.T) {
 			expected: &albWaf.CreateCustomRuleGroupPayload{
 				Name: testName.ValueStringPointer(),
 				Rules: []albWaf.CreateCustomRule{
-					albWaf.CreateCustomRule{
+					{
 						Behaviour: &albWaf.Behaviour{
 							Action: new(albWaf.BehaviourAction("some-action")),
 							Log:    new(true),
 							LogMsg: new("Log: something happened"),
 						},
 						Conditions: []albWaf.Condition{
-							albWaf.Condition{
+							{
 								Operator: &albWaf.ConditionOperator{
 									Type:  new(albWaf.ConditionOperatorType("operator-type")),
 									Value: new("operator-value"),
@@ -129,10 +129,10 @@ func TestToCreatePayload(t *testing.T) {
 			expected: &albWaf.CreateCustomRuleGroupPayload{
 				Name: testName.ValueStringPointer(),
 				Rules: []albWaf.CreateCustomRule{
-					albWaf.CreateCustomRule{
+					{
 						Behaviour: &albWaf.Behaviour{},
 						Conditions: []albWaf.Condition{
-							albWaf.Condition{
+							{
 								Operator:        &albWaf.ConditionOperator{},
 								Transformations: []albWaf.ConditionTransformationsInner{},
 								Variable:        &albWaf.ConditionVariable{},
@@ -197,7 +197,7 @@ func TestMapFields(t *testing.T) {
 			input: &albWaf.GetCustomRuleGroupResponse{
 				Name: testName.ValueStringPointer(),
 				Rules: []albWaf.GetCustomRule{
-					albWaf.GetCustomRule{
+					{
 						Behaviour: &albWaf.GetBehaviour{
 							Action:   new(albWaf.GetBehaviourAction("some-action")),
 							Log:      new(true),
@@ -205,7 +205,7 @@ func TestMapFields(t *testing.T) {
 							Severity: new(albWaf.GetBehaviourSeverity("critical")),
 						},
 						Conditions: []albWaf.Condition{
-							albWaf.Condition{
+							{
 								Operator: &albWaf.ConditionOperator{
 									Type:  new(albWaf.ConditionOperatorType("operator-type")),
 									Value: new("operator-value"),
@@ -289,7 +289,7 @@ func TestMapFields(t *testing.T) {
 			region: testRegion.ValueString(),
 			input: &albWaf.GetCustomRuleGroupResponse{
 				Rules: []albWaf.GetCustomRule{
-					albWaf.GetCustomRule{},
+					{},
 				},
 			},
 			expected: &Model{
