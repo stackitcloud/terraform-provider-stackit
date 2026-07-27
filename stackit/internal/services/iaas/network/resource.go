@@ -441,6 +441,7 @@ func (r *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators: []validator.String{
 					validate.UUID(),
 					validate.NoSeparator(),
+					stringvalidator.AlsoRequires(path.Root("ipv4_vpc_network_range_id").Expression()),
 				},
 			},
 		},
