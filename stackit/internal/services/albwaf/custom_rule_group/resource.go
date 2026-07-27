@@ -272,7 +272,7 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 						},
 						"conditions": schema.ListNestedAttribute{
 							Description: descriptions["rule_conditions"],
-							Optional:    true,
+							Required:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"operator": schema.SingleNestedAttribute{
@@ -569,8 +569,8 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 			}
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
-				Behaviour: &albWaf.Behaviour{
-					Action: (*albWaf.BehaviourAction)(behaviour.Action.ValueStringPointer()),
+				Behaviour: albWaf.Behaviour{
+					Action: albWaf.BehaviourAction(behaviour.Action.ValueString()),
 					Log:    behaviour.Log.ValueBoolPointer(),
 					LogMsg: behaviour.LogMsg.ValueStringPointer(),
 				},
@@ -581,7 +581,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 	}
 
 	payload := &albWaf.CreateCustomRuleGroupPayload{
-		Name:  model.Name.ValueStringPointer(),
+		Name:  model.Name.ValueString(),
 		Rules: payloadRules,
 	}
 
@@ -607,38 +607,28 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 				}
 			}
 
-			var operator *albWaf.ConditionOperator
 			var operatorModel = OperatorModel{}
-			if !tfutils.IsUndefined(condition.Operator) {
-				diags = condition.Operator.As(ctx, &operatorModel, basetypes.ObjectAsOptions{})
-				if diags.HasError() {
-					return nil, fmt.Errorf("converting operator: %v", diags.Errors())
-				}
-
-				operator = &albWaf.ConditionOperator{
-					Type:  (*albWaf.ConditionOperatorType)(operatorModel.Type.ValueStringPointer()),
-					Value: operatorModel.Value.ValueStringPointer(),
-				}
+			diags = condition.Operator.As(ctx, &operatorModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting operator: %v", diags.Errors())
 			}
 
-			var variable *albWaf.ConditionVariable
 			var variableModel = VariableModel{}
-			if !tfutils.IsUndefined(condition.Variable) {
-				diags = condition.Variable.As(ctx, &variableModel, basetypes.ObjectAsOptions{})
-				if diags.HasError() {
-					return nil, fmt.Errorf("converting variable: %v", diags.Errors())
-				}
-
-				variable = &albWaf.ConditionVariable{
-					Type:  (*albWaf.ConditionVariableType)(variableModel.Type.ValueStringPointer()),
-					Value: variableModel.Value.ValueStringPointer(),
-				}
+			diags = condition.Variable.As(ctx, &variableModel, basetypes.ObjectAsOptions{})
+			if diags.HasError() {
+				return nil, fmt.Errorf("converting variable: %v", diags.Errors())
 			}
 
 			result = append(result, albWaf.Condition{
-				Operator:        operator,
+				Operator: albWaf.ConditionOperator{
+					Type:  albWaf.ConditionOperatorType(operatorModel.Type.ValueString()),
+					Value: operatorModel.Value.ValueStringPointer(),
+				},
 				Transformations: transformations,
-				Variable:        variable,
+				Variable: albWaf.ConditionVariable{
+					Type:  albWaf.ConditionVariableType(variableModel.Type.ValueString()),
+					Value: variableModel.Value.ValueStringPointer(),
+				},
 			})
 		}
 	}
@@ -748,7 +738,7 @@ func mapConditions(ctx context.Context, rule albWaf.GetCustomRule) (*basetypes.L
 
 			if operator, ok := condition.GetOperatorOk(); ok {
 				operatorModel := OperatorModel{
-					Type:  types.StringPointerValue((*string)(operator.Type)),
+					Type:  types.StringValue(string(operator.Type)),
 					Value: types.StringPointerValue(operator.Value),
 				}
 
@@ -767,7 +757,7 @@ func mapConditions(ctx context.Context, rule albWaf.GetCustomRule) (*basetypes.L
 
 			if variable, ok := condition.GetVariableOk(); ok {
 				variableModel := VariableModel{
-					Type:  types.StringPointerValue((*string)(variable.Type)),
+					Type:  types.StringValue(string(variable.Type)),
 					Value: types.StringPointerValue(variable.Value),
 				}
 

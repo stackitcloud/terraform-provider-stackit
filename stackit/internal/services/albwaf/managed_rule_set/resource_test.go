@@ -36,8 +36,8 @@ func TestToCreatePayload(t *testing.T) {
 				Type:      types.StringValue(string(albWaf.MRSTYPE_TYPE_OWASP_CRS)),
 			},
 			expected: &albWaf.CreateManagedRuleSetPayload{
-				Name: testName.ValueStringPointer(),
-				Type: new(albWaf.MRSTYPE_TYPE_OWASP_CRS),
+				Name: testName.ValueString(),
+				Type: albWaf.MRSTYPE_TYPE_OWASP_CRS,
 			},
 			isValid: true,
 		},

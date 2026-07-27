@@ -63,26 +63,26 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &albWaf.CreateCustomRuleGroupPayload{
-				Name: testName.ValueStringPointer(),
+				Name: testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{
 					{
-						Behaviour: &albWaf.Behaviour{
-							Action: new(albWaf.BehaviourAction("some-action")),
+						Behaviour: albWaf.Behaviour{
+							Action: albWaf.BehaviourAction("some-action"),
 							Log:    new(true),
 							LogMsg: new("Log: something happened"),
 						},
 						Conditions: []albWaf.Condition{
 							{
-								Operator: &albWaf.ConditionOperator{
-									Type:  new(albWaf.ConditionOperatorType("operator-type")),
+								Operator: albWaf.ConditionOperator{
+									Type:  albWaf.ConditionOperatorType("operator-type"),
 									Value: new("operator-value"),
 								},
 								Transformations: []albWaf.ConditionTransformationsInner{
 									"foo",
 									"bar",
 								},
-								Variable: &albWaf.ConditionVariable{
-									Type:  new(albWaf.ConditionVariableType("variable-type")),
+								Variable: albWaf.ConditionVariable{
+									Type:  albWaf.ConditionVariableType("variable-type"),
 									Value: new("variable-value"),
 								},
 							},
@@ -127,15 +127,15 @@ func TestToCreatePayload(t *testing.T) {
 				}),
 			},
 			expected: &albWaf.CreateCustomRuleGroupPayload{
-				Name: testName.ValueStringPointer(),
+				Name: testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{
 					{
-						Behaviour: &albWaf.Behaviour{},
+						Behaviour: albWaf.Behaviour{},
 						Conditions: []albWaf.Condition{
 							{
-								Operator:        &albWaf.ConditionOperator{},
+								Operator:        albWaf.ConditionOperator{},
 								Transformations: []albWaf.ConditionTransformationsInner{},
-								Variable:        &albWaf.ConditionVariable{},
+								Variable:        albWaf.ConditionVariable{},
 							},
 						},
 					},
@@ -152,7 +152,7 @@ func TestToCreatePayload(t *testing.T) {
 				Region:    testRegion,
 			},
 			expected: &albWaf.CreateCustomRuleGroupPayload{
-				Name:  testName.ValueStringPointer(),
+				Name:  testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{},
 			},
 			isValid: true,
@@ -206,16 +206,16 @@ func TestMapFields(t *testing.T) {
 						},
 						Conditions: []albWaf.Condition{
 							{
-								Operator: &albWaf.ConditionOperator{
-									Type:  new(albWaf.ConditionOperatorType("operator-type")),
+								Operator: albWaf.ConditionOperator{
+									Type:  albWaf.ConditionOperatorType("operator-type"),
 									Value: new("operator-value"),
 								},
 								Transformations: []albWaf.ConditionTransformationsInner{
 									"foo",
 									"bar",
 								},
-								Variable: &albWaf.ConditionVariable{
-									Type:  new(albWaf.ConditionVariableType("variable-type")),
+								Variable: albWaf.ConditionVariable{
+									Type:  albWaf.ConditionVariableType("variable-type"),
 									Value: new("variable-value"),
 								},
 							},

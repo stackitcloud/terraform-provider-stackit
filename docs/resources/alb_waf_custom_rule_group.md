@@ -39,10 +39,10 @@ ALB WAF Custom Rule Group resource schema. Uses the `default_region` specified i
 Required:
 
 - `behaviour` (Attributes) (see [below for nested schema](#nestedatt--rules--behaviour))
+- `conditions` (Attributes List) (see [below for nested schema](#nestedatt--rules--conditions))
 
 Optional:
 
-- `conditions` (Attributes List) (see [below for nested schema](#nestedatt--rules--conditions))
 - `description` (String) A clear description explaining the threat vector or criteria addressed by this rule.
 
 Read-Only:

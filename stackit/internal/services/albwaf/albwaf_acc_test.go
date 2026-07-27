@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	albwaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -441,8 +441,8 @@ func TestAccManagedRuleSet(t *testing.T) {
 	})
 }
 
-func createClient() (*albwaf.APIClient, error) {
-	client, err := albwaf.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AlbWafCustomEndpoint, false)...)
+func createClient() (*albWaf.APIClient, error) {
+	client, err := albWaf.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.AlbWafCustomEndpoint, false)...)
 	if err != nil {
 		return nil, fmt.Errorf("creating client: %w", err)
 	}
