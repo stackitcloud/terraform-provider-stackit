@@ -475,13 +475,13 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 
 					ruleMap[ruleKey], diags = types.ObjectValueFrom(ctx, ruleType, ruleTF)
 					if diags.HasError() {
-						return fmt.Errorf("mapping role: %w", core.DiagsToError(diags))
+						return fmt.Errorf("mapping rule: %w", core.DiagsToError(diags))
 					}
 				}
 			}
 			groupTF.Rules, diags = types.MapValue(types.ObjectType{AttrTypes: ruleType}, ruleMap)
 			if diags.HasError() {
-				return fmt.Errorf("mapping roles: %w", core.DiagsToError(diags))
+				return fmt.Errorf("mapping rules: %w", core.DiagsToError(diags))
 			}
 
 			groupsMap[groupKey], diags = types.ObjectValueFrom(ctx, ruleGroupType, groupTF)
