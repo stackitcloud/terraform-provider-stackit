@@ -167,3 +167,27 @@ resource "stackit_mongodbflex_user" "user" {
 		},
 	})
 }
+
+func TestMongoDBUserInvalidUsernameValidationError(t *testing.T) {
+	projectId := uuid.NewString()
+	instanceId := uuid.NewString()
+	tfConfig := fmt.Sprintf(`
+resource "stackit_mongodbflex_user" "user" {
+	project_id = "%s"
+	instance_id = "%s"
+	username = "-invalid-username"
+	roles = ["read"]
+	database = "db-name"
+}
+`, projectId, instanceId)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      tfConfig,
+				ExpectError: regexp.MustCompile("Attribute username must start with a letter.*"),
+			},
+		},
+	})
+}
