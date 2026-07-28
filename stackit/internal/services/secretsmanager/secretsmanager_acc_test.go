@@ -36,8 +36,7 @@ var testConfigVarsMax = config.Variables{
 	"project_id":           config.StringVariable(testutil.ProjectId),
 	"instance_name":        config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"user_description":     config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"acl1":                 config.StringVariable("10.100.0.0/24"),
-	"acl2":                 config.StringVariable("10.100.1.0/24"),
+	"acls":                 config.ListVariable(config.StringVariable("10.100.0.0/24"), config.StringVariable("10.100.1.0/24")),
 	"write_enabled":        config.BoolVariable(true),
 	"service_account_mail": config.StringVariable(testutil.TestProjectServiceAccountEmail),
 	"use_kms_key":          config.BoolVariable(true),
@@ -61,7 +60,7 @@ func configVarsMaxUpdated() config.Variables {
 	tempConfig["instance_name"] = config.StringVariable(testutil.ConvertConfigVariable(tempConfig["instance_name"]) + "-updated")
 	tempConfig["write_enabled"] = config.BoolVariable(false)
 	tempConfig["use_kms_key"] = config.BoolVariable(false)
-	tempConfig["acl2"] = config.StringVariable("10.100.2.0/24")
+	tempConfig["acls"] = config.ListVariable(config.StringVariable("10.100.0.0/24"), config.StringVariable("10.100.2.0/24"))
 	tempConfig["user_description"] = config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	return tempConfig
 }
@@ -241,9 +240,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["instance_name"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", testutil.ConvertConfigVariable(testConfigVarsMax["acl2"])),
+					testutil.CheckListAttr("stackit_secretsmanager_instance.instance", "acls", testConfigVarsMax["acls"]),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -264,9 +261,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance_with_key", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "name", testutil.ConvertConfigVariable(testConfigVarsMax["instance_name"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "acls.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "acls.1", testutil.ConvertConfigVariable(testConfigVarsMax["acl2"])),
+					testutil.CheckListAttr("stackit_secretsmanager_instance.instance_with_key", "acls", testConfigVarsMax["acls"]),
 					resource.TestCheckResourceAttrPair(
 						"stackit_secretsmanager_instance.instance_with_key", "kms_key.key_id",
 						"stackit_kms_key.key", "key_id",
@@ -291,9 +286,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 						"data.stackit_secretsmanager_instance.instance", "instance_id",
 					),
 					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(testConfigVarsMax["instance_name"])),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl1"])),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance", "acls.1", testutil.ConvertConfigVariable(testConfigVarsMax["acl2"])),
+					testutil.CheckListAttr("data.stackit_secretsmanager_instance.instance", "acls", testConfigVarsMax["acls"]),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -319,9 +312,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance_with_key", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttrSet("data.stackit_secretsmanager_instance.instance_with_key", "instance_id"),
 					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance_with_key", "name", testutil.ConvertConfigVariable(testConfigVarsMax["instance_name"])),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance_with_key", "acls.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance_with_key", "acls.0", testutil.ConvertConfigVariable(testConfigVarsMax["acl1"])),
-					resource.TestCheckResourceAttr("data.stackit_secretsmanager_instance.instance_with_key", "acls.1", testutil.ConvertConfigVariable(testConfigVarsMax["acl2"])),
+					testutil.CheckListAttr("data.stackit_secretsmanager_instance.instance_with_key", "acls", testConfigVarsMax["acls"]),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_secretsmanager_instance.instance_with_key", "kms_key.key_id",
 						"stackit_kms_key.key", "key_id",
@@ -411,9 +402,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["instance_name"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance", "acls.1", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl2"])),
+					testutil.CheckListAttr("stackit_secretsmanager_instance.instance", "acls", configVarsMaxUpdated()["acls"]),
 
 					// User
 					resource.TestCheckResourceAttrPair(
@@ -434,9 +423,7 @@ func TestAccSecretsManagerMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "project_id", testutil.ConvertConfigVariable(configVarsMaxUpdated()["project_id"])),
 					resource.TestCheckResourceAttrSet("stackit_secretsmanager_instance.instance_with_key", "instance_id"),
 					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "name", testutil.ConvertConfigVariable(configVarsMaxUpdated()["instance_name"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "acls.#", "2"),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "acls.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl1"])),
-					resource.TestCheckResourceAttr("stackit_secretsmanager_instance.instance_with_key", "acls.1", testutil.ConvertConfigVariable(configVarsMaxUpdated()["acl2"])),
+					testutil.CheckListAttr("stackit_secretsmanager_instance.instance_with_key", "acls", configVarsMaxUpdated()["acls"]),
 					resource.TestCheckNoResourceAttr("stackit_secretsmanager_instance.instance_with_key", "kms_key"),
 				),
 			},

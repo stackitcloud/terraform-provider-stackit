@@ -14,23 +14,9 @@ variable "redirect_status_code" {}
 variable "redirect_rule_description" {}
 variable "redirect_rule_enabled" {}
 variable "redirect_rule_match_condition" {}
-variable "redirect_matcher_value" {}
+variable "redirect_matcher_values" {}
 variable "redirect_matcher_condition" {}
-variable "waf_mode" {}
-variable "waf_type" {}
-variable "waf_allowed_http_methods_0" {}
-variable "waf_allowed_request_content_types_0" {}
-variable "waf_allowed_http_versions_0" {}
-variable "waf_paranoia_level" {}
-variable "waf_enabled_rule_ids_0" {}
-variable "waf_disabled_rule_ids_0" {}
-variable "waf_log_only_rule_ids_0" {}
-variable "waf_enabled_rule_group_ids_0" {}
-variable "waf_disabled_rule_group_ids_0" {}
-variable "waf_log_only_rule_group_ids_0" {}
-variable "waf_enabled_rule_collection_ids_0" {}
-variable "waf_disabled_rule_collection_ids_0" {}
-variable "waf_log_only_rule_collection_ids_0" {}
+variable "waf" {}
 variable "tls_enable_tls_10" {}
 variable "tls_enable_tls_11" {}
 variable "strip_response_cookies" {}
@@ -75,7 +61,7 @@ resource "stackit_cdn_distribution" "distribution" {
           rule_match_condition = var.redirect_rule_match_condition
           matchers = [
             {
-              values                = [var.redirect_matcher_value]
+              values                = var.redirect_matcher_values
               value_match_condition = var.redirect_matcher_condition
             }
           ]
@@ -88,23 +74,7 @@ resource "stackit_cdn_distribution" "distribution" {
     }
     strip_response_cookies = var.strip_response_cookies
     forward_host_header    = var.forward_host_header
-    waf = {
-      mode                          = var.waf_mode
-      type                          = var.waf_type
-      allowed_http_methods          = [var.waf_allowed_http_methods_0]
-      allowed_request_content_types = [var.waf_allowed_request_content_types_0]
-      allowed_http_versions         = [var.waf_allowed_http_versions_0]
-      paranoia_level                = var.waf_paranoia_level
-      disabled_rule_ids             = [var.waf_disabled_rule_ids_0]
-      enabled_rule_ids              = [var.waf_enabled_rule_ids_0]
-      log_only_rule_ids             = [var.waf_log_only_rule_ids_0]
-      disabled_rule_group_ids       = [var.waf_disabled_rule_group_ids_0]
-      enabled_rule_group_ids        = [var.waf_enabled_rule_group_ids_0]
-      log_only_rule_group_ids       = [var.waf_log_only_rule_group_ids_0]
-      disabled_rule_collection_ids  = [var.waf_disabled_rule_collection_ids_0]
-      enabled_rule_collection_ids   = [var.waf_enabled_rule_collection_ids_0]
-      log_only_rule_collection_ids  = [var.waf_log_only_rule_collection_ids_0]
-    }
+    waf                    = var.waf
     backend = {
       type       = var.backend_http_type
       origin_url = var.backend_origin_url
