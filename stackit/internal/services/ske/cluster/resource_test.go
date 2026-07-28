@@ -80,8 +80,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   []string{"foo.onstackit.cloud"},
-						Enabled: true,
+						Zones:      []string{"foo.onstackit.cloud"},
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 				},
 				Hibernation: &ske.Hibernation{
@@ -274,6 +275,7 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("foo.onstackit.cloud"),
 						}),
+						"gateway_api": types.BoolValue(true),
 					}),
 				}),
 				Region: types.StringValue(testRegion),
@@ -334,8 +336,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   nil,
-						Enabled: true,
+						Zones:      nil,
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 				},
 				Name: new("name"),
@@ -368,8 +371,9 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringValue(""),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(true),
-						"zones":   types.ListNull(types.StringType),
+						"enabled":     types.BoolValue(true),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(true),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -391,8 +395,9 @@ func TestMapFields(t *testing.T) {
 					"instance_id": types.StringNull(),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-					"enabled": types.BoolValue(false),
-					"zones":   types.ListNull(types.StringType),
+					"enabled":     types.BoolValue(false),
+					"zones":       types.ListNull(types.StringType),
+					"gateway_api": types.BoolValue(false),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -428,8 +433,9 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringNull(),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(false),
-						"zones":   types.ListNull(types.StringType),
+						"enabled":     types.BoolValue(false),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(false),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -453,8 +459,9 @@ func TestMapFields(t *testing.T) {
 					"instance_id": types.StringValue("id"),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-					"enabled": types.BoolValue(true),
-					"zones":   types.ListNull(types.StringType),
+					"enabled":     types.BoolValue(true),
+					"zones":       types.ListNull(types.StringType),
+					"gateway_api": types.BoolValue(true),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -465,8 +472,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:      true,
 					},
 					Dns: &ske.DNS{
-						Zones:   nil,
-						Enabled: true,
+						Zones:      nil,
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 				},
 				Name: new("name"),
@@ -501,8 +509,9 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringValue("id"),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(true),
-						"zones":   types.ListNull(types.StringType),
+						"enabled":     types.BoolValue(true),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(true),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -595,8 +604,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   []string{"zone1"},
-						Enabled: true,
+						Zones:      []string{"zone1"},
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 				},
 				Hibernation: &ske.Hibernation{
@@ -755,6 +765,7 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("zone1"),
 						}),
+						"gateway_api": types.BoolValue(true),
 					}),
 				}),
 				Region: types.StringValue(testRegion),

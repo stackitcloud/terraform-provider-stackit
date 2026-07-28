@@ -21,6 +21,7 @@ variable "ext_acl_enabled" {}
 variable "ext_acl_allowed_cidr1" {}
 variable "ext_observability_enabled" {}
 variable "ext_dns_enabled" {}
+variable "ext_dns_gateway_api" {}
 variable "nodepool_hibernations1_start" {}
 variable "nodepool_hibernations1_end" {}
 variable "nodepool_hibernations1_timezone" {}
@@ -77,8 +78,9 @@ resource "stackit_ske_cluster" "cluster" {
       enabled = var.ext_observability_enabled
     }
     dns = {
-      enabled = var.ext_dns_enabled
-      zones   = [stackit_dns_zone.dns-zone.dns_name]
+      enabled     = var.ext_dns_enabled
+      zones       = [stackit_dns_zone.dns-zone.dns_name]
+      gateway_api = var.ext_dns_gateway_api
     }
   }
   hibernations = [{

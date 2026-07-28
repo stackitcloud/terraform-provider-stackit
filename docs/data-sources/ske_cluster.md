@@ -97,6 +97,7 @@ Read-Only:
 Read-Only:
 
 - `enabled` (Boolean) Flag to enable/disable DNS extensions
+- `gateway_api` (Boolean) Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.
 - `zones` (List of String) Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)
 
 
