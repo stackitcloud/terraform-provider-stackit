@@ -25,6 +25,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 )
@@ -71,6 +73,9 @@ var (
 
 	//go:embed testdata/resource-network-max.tf
 	resourceNetworkMaxConfig string
+
+	//go:embed testdata/resource-network-vpc.tf
+	resourceNetworkVpcConfig string
 
 	//go:embed testdata/resource-network-interface-min.tf
 	resourceNetworkInterfaceMinConfig string
@@ -308,6 +313,22 @@ var testConfigNetworkVarsMaxUpdated = func() config.Variables {
 	updatedConfig["ipv4_nameserver_0"] = config.StringVariable("10.2.2.10")
 	updatedConfig["label"] = config.StringVariable("updated")
 	updatedConfig["dhcp"] = config.BoolVariable(false)
+	return updatedConfig
+}()
+
+// NETWORK - VPC
+
+var testConfigNetworkVarsVpc = config.Variables{
+	"name":            config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(5, acctest.CharSetAlphaNum))),
+	"organization_id": config.StringVariable(testutil.OrganizationId),
+	"owner_email":     config.StringVariable(testutil.TestProjectServiceAccountEmail),
+	"update":          config.BoolVariable(false),
+}
+
+var testConfigNetworkVarsVpcUpdated = func() config.Variables {
+	updatedConfig := config.Variables{}
+	maps.Copy(updatedConfig, testConfigNetworkVarsVpc)
+	updatedConfig["update"] = config.BoolVariable(true)
 	return updatedConfig
 }()
 
@@ -1062,6 +1083,110 @@ func TestAccNetworkMax(t *testing.T) {
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccNetworkVpc(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				Config: fmt.Sprintf(`
+					%s
+					%s
+
+					data "stackit_network" "network_vpc" {
+						project_id  = stackit_network.network_vpc.project_id
+						network_id  = stackit_network.network_vpc.network_id
+					}
+					`,
+					testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: testConfigNetworkVarsVpc,
+				ResourceName:    "stackit_network.network_vpc",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_network.network_vpc"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_network.network_vpc")
+					}
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					networkId, ok := r.Primary.Attributes["network_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute network_id")
+					}
+					return fmt.Sprintf("%s,%s,%s", projectId, region, networkId), nil
+				},
+				ImportState: true,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "vpc_id",
+						"stackit_vpc.vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+						"stackit_vpc_network_range.network_range", "network_range_id",
+					),
+				),
+			},
+			// Update
+			{
+				ConfigVariables: testConfigNetworkVarsVpcUpdated,
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().Experiments(testutil.ExperimentNetwork, testutil.ExperimentVPC).BuildProviderConfig(), resourceNetworkVpcConfig),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_network.network_vpc", plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc.vpc-update", "vpc_id",
+						"stackit_network.network_vpc", "vpc_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_vpc_network_range.network_range-update", "network_range_id",
+						"stackit_network.network_vpc", "ipv4_vpc_network_range_id",
+					),
+				),
+			},
 		},
 	})
 }
@@ -5749,6 +5874,9 @@ func testAccCheckDestroy(s *terraform.State) error {
 		testAccCheckIaaSImageDestroy,
 		testAccCheckNetworkInterfaceDestroy,
 		testAccCheckNetworkDestroy,
+		iaasalpha.VpcNetworkRangeDestroy,
+		iaasalpha.VpcRegionDestroy,
+		iaasalpha.VpcCheckDestroy,
 		testAccCheckNetworkAreaRegionDestroy,
 		testAccCheckNetworkAreaDestroy,
 		testAccCheckRoutingTableRouteDestroy,
@@ -5779,8 +5907,12 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_network" {
 			continue
 		}
-		region := strings.Split(rs.Primary.ID, core.Separator)[1]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		split := strings.Split(rs.Primary.ID, core.Separator)
+		if len(split) != 2 {
+			continue
+		}
+		region := split[1]
+		networkId := split[2]
 		err := client.DefaultAPI.DeleteNetwork(ctx, testutil.ProjectId, region, networkId).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
@@ -5979,8 +6111,12 @@ func testAccCheckServerDestroy(s *terraform.State) error {
 			continue
 		}
 		// network terraform ID: "[project_id],[region],[network_id]"
-		projectId = strings.Split(rs.Primary.ID, core.Separator)[0]
-		networkId := strings.Split(rs.Primary.ID, core.Separator)[2]
+		split := strings.Split(rs.Primary.ID, core.Separator)
+		if len(split) != 2 {
+			continue
+		}
+		projectId = split[0]
+		networkId := split[2]
 		networksToDestroy = append(networksToDestroy, networkId)
 	}
 

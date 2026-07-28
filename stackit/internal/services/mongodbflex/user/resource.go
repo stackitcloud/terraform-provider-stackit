@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -182,6 +184,12 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile("^[A-Za-z][A-Za-z0-9-]{1,61}[A-Za-z0-9]$"),
+						"must start with a letter, must have between 3 and 63 letters, numbers or hyphens, and no hyphen at the end",
+					),
 				},
 			},
 			"roles": schema.SetAttribute{
