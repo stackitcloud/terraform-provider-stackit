@@ -22,7 +22,7 @@ resource "stackit_alb_waf_custom_rule_group" "example" {
   rules = [
     {
       description = "My custom rule group"
-      behaviour = {
+      behavior = {
         action = "ACTION_DENY"
         log    = true
         logMsg = "Some custom notification message string"
@@ -70,7 +70,7 @@ resource "stackit_alb_waf_custom_rule_group" "example" {
 
 Required:
 
-- `behaviour` (Attributes) (see [below for nested schema](#nestedatt--rules--behaviour))
+- `behavior` (Attributes) (see [below for nested schema](#nestedatt--rules--behavior))
 - `conditions` (Attributes List) (see [below for nested schema](#nestedatt--rules--conditions))
 
 Optional:
@@ -81,8 +81,8 @@ Read-Only:
 
 - `id` (Number) Backend auto-allocated unique rule ID within the valid 1-99999 threshold.
 
-<a id="nestedatt--rules--behaviour"></a>
-### Nested Schema for `rules.behaviour`
+<a id="nestedatt--rules--behavior"></a>
+### Nested Schema for `rules.behavior`
 
 Required:
 

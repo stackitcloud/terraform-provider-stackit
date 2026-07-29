@@ -35,7 +35,7 @@ func TestToCreatePayload(t *testing.T) {
 				Region:    testRegion,
 				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
 					types.ObjectValueMust(ruleType, map[string]attr.Value{
-						"behaviour": types.ObjectValueMust(behaviourType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
 							"action":   types.StringValue("some-action"),
 							"log":      types.BoolValue(true),
 							"log_msg":  types.StringValue("Log: something happened"),
@@ -102,7 +102,7 @@ func TestToCreatePayload(t *testing.T) {
 				Region:    testRegion,
 				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
 					types.ObjectValueMust(ruleType, map[string]attr.Value{
-						"behaviour": types.ObjectValueMust(behaviourType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
 							"action":   types.StringNull(),
 							"log":      types.BoolNull(),
 							"log_msg":  types.StringNull(),
@@ -240,7 +240,7 @@ func TestMapFields(t *testing.T) {
 				Id:        testId,
 				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
 					types.ObjectValueMust(ruleType, map[string]attr.Value{
-						"behaviour": types.ObjectValueMust(behaviourType, map[string]attr.Value{
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
 							"action":   types.StringValue("some-action"),
 							"log":      types.BoolValue(true),
 							"log_msg":  types.StringValue("Log: something happened"),
@@ -299,7 +299,7 @@ func TestMapFields(t *testing.T) {
 				Region:    testRegion,
 				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
 					types.ObjectValueMust(ruleType, map[string]attr.Value{
-						"behaviour":   types.ObjectNull(behaviourType),
+						"behavior":    types.ObjectNull(behaviorType),
 						"conditions":  types.ListNull(types.ObjectType{AttrTypes: conditionType}),
 						"description": types.StringNull(),
 						"id":          types.Int32Null(),

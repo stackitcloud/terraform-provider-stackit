@@ -10,7 +10,7 @@ resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
   name       = var.name
   rules = [
     {
-      behaviour = {
+      behavior = {
         action = var.action
       }
       conditions = [

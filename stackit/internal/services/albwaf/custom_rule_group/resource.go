@@ -57,14 +57,14 @@ type Model struct {
 }
 
 type RuleModel struct {
-	Behaviour   types.Object `tfsdk:"behaviour"`
+	Behavior    types.Object `tfsdk:"behavior"`
 	Conditions  types.List   `tfsdk:"conditions"`
 	Description types.String `tfsdk:"description"`
 	Id          types.Int32  `tfsdk:"id"`
 }
 
 var ruleType = map[string]attr.Type{
-	"behaviour": types.ObjectType{AttrTypes: behaviourType},
+	"behavior": types.ObjectType{AttrTypes: behaviorType},
 	"conditions": types.ListType{
 		ElemType: types.ObjectType{AttrTypes: conditionType},
 	},
@@ -72,14 +72,14 @@ var ruleType = map[string]attr.Type{
 	"id":          types.Int32Type,
 }
 
-type BehaviourModel struct {
+type BehaviorModel struct {
 	Action   types.String `tfsdk:"action"`
 	Log      types.Bool   `tfsdk:"log"`
 	LogMsg   types.String `tfsdk:"log_msg"`
 	Severity types.String `tfsdk:"severity"`
 }
 
-var behaviourType = map[string]attr.Type{
+var behaviorType = map[string]attr.Type{
 	"action":   types.StringType,
 	"log":      types.BoolType,
 	"log_msg":  types.StringType,
@@ -163,29 +163,29 @@ func (r *customRuleGroupResource) Metadata(_ context.Context, req resource.Metad
 
 // descriptions for the attributes in the Schema.
 var descriptions = map[string]string{
-	"id":                 "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`name`\".",
-	"project_id":         "STACKIT project ID associated with the ALB WAF Custom Rule Group.",
-	"region":             "STACKIT region name the resource is located in. If not defined, the provider region is used.",
-	"name":               "Custom rule group configuration name.",
-	"rules":              "Enriched rules containing auto-generated IDs and computed severity values.",
-	"rule_behaviour":     "Behaviour of the rule.",
-	"rule_condition":     "Conditions for this rule (order matters, first condition match triggers execution).",
-	"rule_description":   "A clear description explaining the threat vector or criteria addressed by this rule.",
-	"rule_id":            "Backend auto-allocated unique rule ID within the valid 1-99999 threshold.",
-	"behaviour_action":   "The protective stance action. ACTION_DENY forces a 403 status response code.",
-	"behaviour_log":      "Determines whether an entry should be generated in the security ledger upon a rule hit.",
-	"behaviour_log_msg":  "Custom notification message string mapped to underlying logdata contexts. Required if log is true.",
-	"behaviour_severity": "Severity classification metric used by internal analytics graphs.",
-	"operator":           "The comparison logic executed against the transformed variable.",
-	"operator_type":      "The operational evaluation type definition macro.",
-	"operator_value":     "The text or rule regex pattern arguments applied inside the operator execution loop.",
-	"transformations":    "Ordered normalization steps applied before the operator runs.",
-	"variable":           "The part of the HTTP transaction to inspect.",
-	"variable_type":      "The targeted validation engine variable macro.",
-	"variable_value":     "Optional key element context for map variables (e.g., matching a 'Host' header key).",
-	"usage":              "Tracking metrics for CRG resource utilization.",
-	"usage_count":        "Number of WAF configurations actively using this rule group.",
-	"usage_items":        "List of individual WAF configuration names that bind this rule group.",
+	"id":                "Terraform's internal resource identifier. Structured as \"`project_id`,`region`,`name`\".",
+	"project_id":        "STACKIT project ID associated with the ALB WAF Custom Rule Group.",
+	"region":            "STACKIT region name the resource is located in. If not defined, the provider region is used.",
+	"name":              "Custom rule group configuration name.",
+	"rules":             "Enriched rules containing auto-generated IDs and computed severity values.",
+	"rule_behavior":     "Behavior of the rule.",
+	"rule_condition":    "Conditions for this rule (order matters, first condition match triggers execution).",
+	"rule_description":  "A clear description explaining the threat vector or criteria addressed by this rule.",
+	"rule_id":           "Backend auto-allocated unique rule ID within the valid 1-99999 threshold.",
+	"behavior_action":   "The protective stance action. ACTION_DENY forces a 403 status response code.",
+	"behavior_log":      "Determines whether an entry should be generated in the security ledger upon a rule hit.",
+	"behavior_log_msg":  "Custom notification message string mapped to underlying logdata contexts. Required if log is true.",
+	"behavior_severity": "Severity classification metric used by internal analytics graphs.",
+	"operator":          "The comparison logic executed against the transformed variable.",
+	"operator_type":     "The operational evaluation type definition macro.",
+	"operator_value":    "The text or rule regex pattern arguments applied inside the operator execution loop.",
+	"transformations":   "Ordered normalization steps applied before the operator runs.",
+	"variable":          "The part of the HTTP transaction to inspect.",
+	"variable_type":     "The targeted validation engine variable macro.",
+	"variable_value":    "Optional key element context for map variables (e.g., matching a 'Host' header key).",
+	"usage":             "Tracking metrics for CRG resource utilization.",
+	"usage_count":       "Number of WAF configurations actively using this rule group.",
+	"usage_items":       "List of individual WAF configuration names that bind this rule group.",
 }
 
 func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -242,27 +242,27 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"behaviour": schema.SingleNestedAttribute{
-							Description: descriptions["behaviour"],
+						"behavior": schema.SingleNestedAttribute{
+							Description: descriptions["behavior"],
 							Required:    true,
 							Attributes: map[string]schema.Attribute{
 								"action": schema.StringAttribute{
-									Description: descriptions["behaviour_action"],
+									Description: descriptions["behavior_action"],
 									Required:    true,
 									Validators: []validator.String{
 										stringvalidator.OneOf(actionOptions...),
 									},
 								},
 								"log": schema.BoolAttribute{
-									Description: descriptions["behaviour_log"],
+									Description: descriptions["behavior_log"],
 									Optional:    true,
 								},
 								"log_msg": schema.StringAttribute{
-									Description: descriptions["behaviour_log_msg"],
+									Description: descriptions["behavior_log_msg"],
 									Optional:    true,
 								},
 								"severity": schema.StringAttribute{
-									Description: descriptions["behaviour_severity"],
+									Description: descriptions["behavior_severity"],
 									Computed:    true,
 									PlanModifiers: []planmodifier.String{
 										stringplanmodifier.UseStateForUnknown(),
@@ -555,11 +555,11 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 		}
 
 		for _, rule := range rules {
-			behaviour := BehaviourModel{}
-			if !tfutils.IsUndefined(rule.Behaviour) {
-				diags := rule.Behaviour.As(ctx, &behaviour, basetypes.ObjectAsOptions{})
+			behavior := BehaviorModel{}
+			if !tfutils.IsUndefined(rule.Behavior) {
+				diags := rule.Behavior.As(ctx, &behavior, basetypes.ObjectAsOptions{})
 				if diags.HasError() {
-					return nil, fmt.Errorf("converting to rule behaviour: %v", diags.Errors())
+					return nil, fmt.Errorf("converting to rule behavior: %v", diags.Errors())
 				}
 			}
 
@@ -570,9 +570,9 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
 				Behaviour: albWaf.Behaviour{
-					Action: albWaf.BehaviourAction(behaviour.Action.ValueString()),
-					Log:    behaviour.Log.ValueBoolPointer(),
-					LogMsg: behaviour.LogMsg.ValueStringPointer(),
+					Action: albWaf.BehaviourAction(behavior.Action.ValueString()),
+					Log:    behavior.Log.ValueBoolPointer(),
+					LogMsg: behavior.LogMsg.ValueStringPointer(),
 				},
 				Conditions:  *conditions,
 				Description: rule.Description.ValueStringPointer(),
@@ -675,11 +675,11 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 				Description: types.StringPointerValue(rule.Description),
 			}
 
-			behaviour, err := mapBehaviour(ctx, rule.Behaviour)
-			if err != nil || behaviour == nil {
-				return nil, fmt.Errorf("map behaviour: %w", err)
+			behavior, err := mapBehavior(ctx, rule.Behaviour)
+			if err != nil || behavior == nil {
+				return nil, fmt.Errorf("map behavior: %w", err)
 			}
-			ruleTF.Behaviour = *behaviour
+			ruleTF.Behavior = *behavior
 
 			conditions, err := mapConditions(ctx, rule)
 			if err != nil || conditions == nil {
@@ -704,24 +704,24 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 	return &result, nil
 }
 
-func mapBehaviour(ctx context.Context, behaviour *albWaf.GetBehaviour) (*basetypes.ObjectValue, error) {
+func mapBehavior(ctx context.Context, behavior *albWaf.GetBehaviour) (*basetypes.ObjectValue, error) {
 	var diags diag.Diagnostics
 	var result basetypes.ObjectValue
 
-	if behaviour != nil {
-		behaviourModel := BehaviourModel{
-			Action:   types.StringPointerValue((*string)(behaviour.Action)),
-			Log:      types.BoolPointerValue(behaviour.Log),
-			LogMsg:   types.StringPointerValue(behaviour.LogMsg),
-			Severity: types.StringPointerValue((*string)(behaviour.Severity)),
+	if behavior != nil {
+		behaviorModel := BehaviorModel{
+			Action:   types.StringPointerValue((*string)(behavior.Action)),
+			Log:      types.BoolPointerValue(behavior.Log),
+			LogMsg:   types.StringPointerValue(behavior.LogMsg),
+			Severity: types.StringPointerValue((*string)(behavior.Severity)),
 		}
 
-		result, diags = types.ObjectValueFrom(ctx, behaviourType, behaviourModel)
+		result, diags = types.ObjectValueFrom(ctx, behaviorType, behaviorModel)
 		if diags.HasError() {
-			return nil, fmt.Errorf("creating behaviour object: %w", core.DiagsToError(diags))
+			return nil, fmt.Errorf("creating behavior object: %w", core.DiagsToError(diags))
 		}
 	} else {
-		result = types.ObjectNull(behaviourType)
+		result = types.ObjectNull(behaviorType)
 	}
 
 	return &result, nil

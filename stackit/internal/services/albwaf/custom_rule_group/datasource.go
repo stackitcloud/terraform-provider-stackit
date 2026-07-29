@@ -97,24 +97,24 @@ func (r *customRuleGroupDataSource) Schema(_ context.Context, _ datasource.Schem
 				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"behaviour": schema.SingleNestedAttribute{
-							Description: descriptions["behaviour"],
+						"behavior": schema.SingleNestedAttribute{
+							Description: descriptions["behavior"],
 							Computed:    true,
 							Attributes: map[string]schema.Attribute{
 								"action": schema.StringAttribute{
-									Description: descriptions["behaviour_action"],
+									Description: descriptions["behavior_action"],
 									Computed:    true,
 								},
 								"log": schema.BoolAttribute{
-									Description: descriptions["behaviour_log"],
+									Description: descriptions["behavior_log"],
 									Computed:    true,
 								},
 								"log_msg": schema.StringAttribute{
-									Description: descriptions["behaviour_log_msg"],
+									Description: descriptions["behavior_log_msg"],
 									Computed:    true,
 								},
 								"severity": schema.StringAttribute{
-									Description: descriptions["behaviour_severity"],
+									Description: descriptions["behavior_severity"],
 									Computed:    true,
 								},
 							},

@@ -17,7 +17,7 @@ resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
   rules = [
     {
       description = var.description
-      behaviour = {
+      behavior = {
         action = var.action
         log    = var.log
         logMsg = var.log_msg
