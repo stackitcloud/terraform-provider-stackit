@@ -1,7 +1,6 @@
 variable "server_name" {}
 variable "network_name" {}
-variable "ipv4_nameserver_0" {}
-variable "ipv4_nameserver_1" {}
+variable "ipv4_nameservers" {}
 variable "ipv4_prefix_length" {}
 variable "name_not_updated" {}
 variable "machine_type" {}
@@ -53,7 +52,7 @@ resource "stackit_volume" "data_volume" {
 resource "stackit_network" "network" {
   project_id         = stackit_resourcemanager_project.example.project_id
   name               = var.network_name
-  ipv4_nameservers   = [var.ipv4_nameserver_0, var.ipv4_nameserver_1]
+  ipv4_nameservers   = var.ipv4_nameservers
   ipv4_prefix_length = var.ipv4_prefix_length
 }
 

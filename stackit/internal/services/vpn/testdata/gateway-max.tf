@@ -6,11 +6,7 @@ variable "routing_type" {}
 variable "az_tunnel1" {}
 variable "az_tunnel2" {}
 variable "local_asn" {}
-variable "advertised_route_1" {}
-variable "advertised_route_2" {}
-variable "advertised_route_3" {
-  default = ""
-}
+variable "override_advertised_routes" {}
 variable "label_key" {}
 variable "label_value" {}
 
@@ -28,7 +24,7 @@ resource "stackit_vpn_gateway" "gateway" {
 
   bgp = {
     local_asn                  = var.local_asn
-    override_advertised_routes = compact([var.advertised_route_1, var.advertised_route_2, var.advertised_route_3])
+    override_advertised_routes = var.override_advertised_routes
   }
 
   labels = var.label_key == "" ? {} : {
