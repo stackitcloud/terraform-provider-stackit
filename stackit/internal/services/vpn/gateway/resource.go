@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -54,6 +55,11 @@ type BGPGatewayConfigModel struct {
 	OverrideAdvertisedRoutes types.List  `tfsdk:"override_advertised_routes"`
 }
 
+type NetworkConfigModel struct {
+	PredefinedNetworkPrefix types.List   `tfsdk:"predefined_network_prefix"`
+	RoutingTableId          types.String `tfsdk:"routing_table_id"`
+}
+
 type Model struct {
 	Id                types.String            `tfsdk:"id"` // needed by TF
 	GatewayId         types.String            `tfsdk:"gateway_id"`
@@ -64,6 +70,7 @@ type Model struct {
 	RoutingType       types.String            `tfsdk:"routing_type"`
 	AvailabilityZones *AvailabilityZonesModel `tfsdk:"availability_zones"`
 	Bgp               *BGPGatewayConfigModel  `tfsdk:"bgp"`
+	NetworkConfig     *NetworkConfigModel     `tfsdk:"network_config"`
 	Labels            types.Map               `tfsdk:"labels"`
 }
 
@@ -81,7 +88,10 @@ var schemaDescriptions = map[string]string{
 	"bgp":                            fmt.Sprintf("BGP configuration. Only applicable when routing_type is %s.", vpn.ROUTINGTYPE_BGP_ROUTE_BASED),
 	"bgp_local_asn":                  "Local ASN for BGP (private ASN range, 64512-4294967294).",
 	"bgp_override_advertised_routes": "List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.",
-	"labels":                         "Map of custom labels (key-value string pairs).",
+	"network_config":                 "Network configuration for the VPN gateway.",
+	"network_config_predefined_network_prefix": "The IPv4 network prefix (CIDR notation) allocated for the VPN gateway. Must have a prefix length of /28 or larger. Cannot be changed after the gateway is created.",
+	"network_config_routing_table_id":          "Custom routing table ID for the VPN gateway. If omitted, a default routing table is assigned.",
+	"labels":                                   "Map of custom labels (key-value string pairs).",
 }
 
 type gatewayResource struct {
@@ -211,6 +221,35 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Validators: []validator.List{
 							listvalidator.SizeAtMost(100),
 							listvalidator.ValueStringsAre(validate.CIDR()),
+						},
+					},
+				},
+			},
+			"network_config": schema.SingleNestedAttribute{
+				Description: schemaDescriptions["network_config"],
+				Optional:    true,
+				Attributes: map[string]schema.Attribute{
+					"predefined_network_prefix": schema.ListAttribute{
+						Description: schemaDescriptions["network_config_predefined_network_prefix"],
+						Optional:    true,
+						ElementType: types.StringType,
+						Validators: []validator.List{
+							listvalidator.ValueStringsAre(validate.CIDR()),
+						},
+						PlanModifiers: []planmodifier.List{
+							listplanmodifier.RequiresReplace(),
+						},
+					},
+					"routing_table_id": schema.StringAttribute{
+						Description: schemaDescriptions["network_config_routing_table_id"],
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 				},
@@ -525,6 +564,14 @@ func toCreatePayload(ctx context.Context, model *Model) (*vpn.CreateGatewayPaylo
 		payload.Bgp = bgpConfig
 	}
 
+	if model.NetworkConfig != nil {
+		networkConfig, err := toNetworkConfigPayload(model.NetworkConfig)
+		if err != nil {
+			return nil, err
+		}
+		payload.NetworkConfig = networkConfig
+	}
+
 	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
 		return nil, err
@@ -566,6 +613,14 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 		payload.Bgp = bgpConfig
 	}
 
+	if model.NetworkConfig != nil {
+		networkConfig, err := toNetworkConfigPayload(model.NetworkConfig)
+		if err != nil {
+			return nil, err
+		}
+		payload.NetworkConfig = networkConfig
+	}
+
 	labels, err := tfutils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
 		return nil, err
@@ -573,6 +628,24 @@ func toUpdatePayload(ctx context.Context, model *Model) (*vpn.UpdateGatewayPaylo
 	payload.Labels = &labels
 
 	return payload, nil
+}
+
+func toNetworkConfigPayload(model *NetworkConfigModel) (*vpn.NetworkConfig, error) {
+	networkConfig := &vpn.NetworkConfig{}
+
+	if !tfutils.IsUndefined(model.PredefinedNetworkPrefix) {
+		prefixes, err := tfutils.ListValueToStringSlice(model.PredefinedNetworkPrefix)
+		if err != nil {
+			return nil, fmt.Errorf("converting network_config.predefined_network_prefix: %w", err)
+		}
+		networkConfig.PredefinedNetworkPrefix = prefixes
+	}
+
+	if !tfutils.IsUndefined(model.RoutingTableId) {
+		networkConfig.RoutingTableId = model.RoutingTableId.ValueStringPointer()
+	}
+
+	return networkConfig, nil
 }
 
 func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, region string) error {
@@ -615,6 +688,24 @@ func mapFields(ctx context.Context, gateway *vpn.GatewayResponse, model *Model, 
 		bgpModel.OverrideAdvertisedRoutes = listVal
 
 		model.Bgp = bgpModel
+	}
+
+	model.NetworkConfig = nil
+	if gateway.NetworkConfig != nil {
+		networkConfigModel := &NetworkConfigModel{
+			RoutingTableId: types.StringPointerValue(gateway.NetworkConfig.RoutingTableId),
+		}
+
+		networkConfigModel.PredefinedNetworkPrefix = types.ListNull(types.StringType)
+		if gateway.NetworkConfig.PredefinedNetworkPrefix != nil {
+			listVal, diags := types.ListValueFrom(ctx, types.StringType, gateway.NetworkConfig.PredefinedNetworkPrefix)
+			if diags.HasError() {
+				return fmt.Errorf("mapping network_config.predefined_network_prefix: %w", core.DiagsToError(diags))
+			}
+			networkConfigModel.PredefinedNetworkPrefix = listVal
+		}
+
+		model.NetworkConfig = networkConfigModel
 	}
 
 	labels, err := tfutils.MapLabels(ctx, gateway.Labels, model.Labels)

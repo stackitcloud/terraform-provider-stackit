@@ -8,4 +8,8 @@ resource "stackit_vpn_gateway" "example" {
     tunnel1 = "eu01-1"
     tunnel2 = "eu01-2"
   }
+
+  network_config = {
+    predefined_network_prefix = ["10.20.0.0/28"]
+  }
 }

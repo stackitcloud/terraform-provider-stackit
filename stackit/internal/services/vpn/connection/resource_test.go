@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -349,6 +350,36 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "bgp_with_inbound_filter_id",
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				bgp := &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+				bgp.SetInboundFilterId("filter-id")
+				m.Tunnel1.Bgp = bgp
+			}),
+			expected: fixtureModel(func(m *Model) {
+				m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+					RemoteAsn:       types.Int64Value(65000),
+					InboundFilterId: types.StringValue("filter-id"),
+				}
+			}),
+			isValid: true,
+		},
+		{
+			description: "bgp_with_explicit_null_inbound_filter_id",
+			input: fixtureConnectionResponse(func(m *vpn.ConnectionResponse) {
+				bgp := &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+				bgp.SetInboundFilterIdNil()
+				m.Tunnel1.Bgp = bgp
+			}),
+			expected: fixtureModel(func(m *Model) {
+				m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+					RemoteAsn:       types.Int64Value(65000),
+					InboundFilterId: types.StringNull(),
+				}
+			}),
+			isValid: true,
+		},
+		{
 			description: "nil_response",
 			input:       nil,
 			expected:    Model{},
@@ -517,6 +548,63 @@ func TestToCreatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "inbound_filter_id set on create",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+					m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+						RemoteAsn:       types.Int64Value(65000),
+						InboundFilterId: types.StringValue("filter-id"),
+					}
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
+			expected: fixtureCreatePayload(func(m *vpn.CreateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+				bgp := &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+				bgp.SetInboundFilterId("filter-id")
+				m.Tunnel1.Bgp = bgp
+			}),
+			isValid: true,
+		},
+		{
+			description: "inbound_filter_id omitted on create leaves it unset",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+					m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+						RemoteAsn: types.Int64Value(65000),
+					}
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
+			expected: fixtureCreatePayload(func(m *vpn.CreateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+				m.Tunnel1.Bgp = &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+			}),
+			isValid: true,
+		},
+		{
 			description: "minimal_create",
 			args: args{
 				planModel: &Model{
@@ -563,7 +651,7 @@ func TestToCreatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.expected, payload)
+				diff := cmp.Diff(tt.expected, payload, cmpopts.IgnoreUnexported(vpn.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match (-want +got):\n%s", diff)
 				}
@@ -752,6 +840,125 @@ func TestToUpdatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "inbound_filter_id unchanged on update",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+					m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+						RemoteAsn:       types.Int64Value(65000),
+						InboundFilterId: types.StringValue("filter-id"),
+					}
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						DataSourceTunnelModel: DataSourceTunnelModel{
+							Bgp: &BGPTunnelConfigModel{
+								RemoteAsn:       types.Int64Value(65000),
+								InboundFilterId: types.StringValue("filter-id"),
+							},
+						},
+					},
+					Tunnel2: &TunnelModel{},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+				bgp := &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+				bgp.SetInboundFilterId("filter-id")
+				m.Tunnel1.Bgp = bgp
+			}),
+			isValid: true,
+		},
+		{
+			description: "inbound_filter_id cleared on update",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+					m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+						RemoteAsn:       types.Int64Value(65000),
+						InboundFilterId: types.StringNull(),
+					}
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						DataSourceTunnelModel: DataSourceTunnelModel{
+							Bgp: &BGPTunnelConfigModel{
+								RemoteAsn:       types.Int64Value(65000),
+								InboundFilterId: types.StringValue("filter-id"),
+							},
+						},
+					},
+					Tunnel2: &TunnelModel{},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+				bgp := &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+				bgp.SetInboundFilterIdNil()
+				m.Tunnel1.Bgp = bgp
+			}),
+			isValid: true,
+		},
+		{
+			description: "inbound_filter_id never set stays untouched on update",
+			args: args{
+				planModel: new(fixtureModel(func(m *Model) {
+					m.Tunnel1.PreSharedKey = types.StringNull()
+					m.Tunnel1.PreSharedKeyWo = types.StringNull()
+					m.Tunnel1.PreSharedKeyWoVersion = types.Int64Null()
+					m.Tunnel1.Bgp = &BGPTunnelConfigModel{
+						RemoteAsn: types.Int64Value(65000),
+					}
+
+					m.Tunnel2.PreSharedKey = types.StringNull()
+					m.Tunnel2.PreSharedKeyWo = types.StringNull()
+					m.Tunnel2.PreSharedKeyWoVersion = types.Int64Null()
+				})),
+				stateModel: &Model{
+					Tunnel1: &TunnelModel{
+						DataSourceTunnelModel: DataSourceTunnelModel{
+							Bgp: &BGPTunnelConfigModel{
+								RemoteAsn: types.Int64Value(65000),
+							},
+						},
+					},
+					Tunnel2: &TunnelModel{},
+				},
+				configModel: &Model{
+					Tunnel1: &TunnelModel{},
+					Tunnel2: &TunnelModel{},
+				},
+			},
+			expected: fixtureUpdatePayload(func(m *vpn.UpdateGatewayConnectionPayload) {
+				m.Tunnel1.PreSharedKey = nil
+				m.Tunnel2.PreSharedKey = nil
+				m.Tunnel1.Bgp = &vpn.BGPTunnelConfig{RemoteAsn: 65000}
+			}),
+			isValid: true,
+		},
+		{
 			description: "minimal_update",
 			args: args{
 				planModel: &Model{
@@ -837,7 +1044,7 @@ func TestToUpdatePayload(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(tt.expected, payload)
+				diff := cmp.Diff(tt.expected, payload, cmpopts.IgnoreUnexported(vpn.NullableString{}))
 				if diff != "" {
 					t.Fatalf("Data does not match (-want +got):\n%s", diff)
 				}

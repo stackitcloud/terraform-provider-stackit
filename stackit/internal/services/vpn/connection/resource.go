@@ -68,7 +68,8 @@ type PeeringConfigModel struct {
 }
 
 type BGPTunnelConfigModel struct {
-	RemoteAsn types.Int64 `tfsdk:"remote_asn"`
+	RemoteAsn       types.Int64  `tfsdk:"remote_asn"`
+	InboundFilterId types.String `tfsdk:"inbound_filter_id"`
 }
 
 type TunnelModel struct {
@@ -351,6 +352,14 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							Required:    true,
 							Validators: []validator.Int64{
 								int64validator.Between(64512, 4294967294),
+							},
+						},
+						"inbound_filter_id": schema.StringAttribute{
+							Description: "UUID of a `stackit_vpn_bgp_filter` to apply for inbound route filtering on this tunnel's BGP peering session. If omitted, no inbound filtering is applied.",
+							Optional:    true,
+							Validators: []validator.String{
+								validate.UUID(),
+								validate.NoSeparator(),
 							},
 						},
 					},
@@ -761,6 +770,19 @@ func toCreatePayload(ctx context.Context, planModel, configModel *Model) (*vpn.C
 	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, configModel.Tunnel1)
 	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, configModel.Tunnel2)
 
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing.
+	// On create there is no prior state to compare against - either the value is set, or it's left
+	// untouched (omitted from the payload).
+	setInboundFilterId := func(planTunnelModel *TunnelModel, bgpPayload *vpn.BGPTunnelConfig) {
+		if bgpPayload == nil || planTunnelModel.Bgp == nil || tfutils.IsUndefined(planTunnelModel.Bgp.InboundFilterId) {
+			return
+		}
+		bgpPayload.SetInboundFilterId(planTunnelModel.Bgp.InboundFilterId.ValueString())
+	}
+
+	setInboundFilterId(planModel.Tunnel1, payload.Tunnel1.Bgp)
+	setInboundFilterId(planModel.Tunnel2, payload.Tunnel2.Bgp)
+
 	return payload, nil
 }
 
@@ -806,6 +828,26 @@ func toUpdatePayload(ctx context.Context, planModel, stateModel, configModel *Mo
 
 	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, stateModel.Tunnel1, configModel.Tunnel1)
 	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, stateModel.Tunnel2, configModel.Tunnel2)
+
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing.
+	// inbound_filter_id is nullable server-side: if the plan has a value, send it; if the plan has no
+	// value but state previously had one, the user removed it - send an explicit null to clear it;
+	// otherwise it was never set, so leave the payload field untouched (omitted).
+	setInboundFilterId := func(planTunnelModel, stateTunnelModel *TunnelModel, bgpPayload *vpn.BGPTunnelConfig) {
+		if bgpPayload == nil {
+			return
+		}
+		if planTunnelModel.Bgp != nil && !tfutils.IsUndefined(planTunnelModel.Bgp.InboundFilterId) {
+			bgpPayload.SetInboundFilterId(planTunnelModel.Bgp.InboundFilterId.ValueString())
+			return
+		}
+		if stateTunnelModel.Bgp != nil && !tfutils.IsUndefined(stateTunnelModel.Bgp.InboundFilterId) {
+			bgpPayload.SetInboundFilterIdNil()
+		}
+	}
+
+	setInboundFilterId(planModel.Tunnel1, stateModel.Tunnel1, payload.Tunnel1.Bgp)
+	setInboundFilterId(planModel.Tunnel2, stateModel.Tunnel2, payload.Tunnel2.Bgp)
 
 	return payload, nil
 }
@@ -1082,8 +1124,10 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel
 
 	tfTunnel.Bgp = nil
 	if apiTunnel.Bgp != nil {
+		inboundFilterId, _ := apiTunnel.Bgp.GetInboundFilterIdOk()
 		tfTunnel.Bgp = &BGPTunnelConfigModel{
-			RemoteAsn: types.Int64Value(apiTunnel.Bgp.RemoteAsn),
+			RemoteAsn:       types.Int64Value(apiTunnel.Bgp.RemoteAsn),
+			InboundFilterId: types.StringPointerValue(inboundFilterId),
 		}
 	}
 

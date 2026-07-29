@@ -160,6 +160,91 @@ func TestMapFields(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "with_network_config",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
+				},
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					NetworkConfig: &vpn.NetworkConfig{
+						PredefinedNetworkPrefix: []string{"10.20.0.0/28"},
+						RoutingTableId:          new("routing-table-id"),
+					},
+				},
+			},
+			expected: Model{
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
+				GatewayId:   types.StringValue("gateway-id"),
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: &NetworkConfigModel{
+					PredefinedNetworkPrefix: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("10.20.0.0/28"),
+					}),
+					RoutingTableId: types.StringValue("routing-table-id"),
+				},
+				Labels: types.MapNull(types.StringType),
+			},
+			isValid: true,
+		},
+		{
+			description: "network_config_without_routing_table_id",
+			args: args{
+				state: Model{
+					ProjectId: types.StringValue(projectId),
+				},
+				input: &vpn.GatewayResponse{
+					Id:          new("gateway-id"),
+					DisplayName: "test-gateway",
+					PlanId:      "p500",
+					RoutingType: vpn.ROUTINGTYPE_ROUTE_BASED,
+					AvailabilityZones: vpn.GatewayAvailabilityZones{
+						Tunnel1: "eu01-1",
+						Tunnel2: "eu01-2",
+					},
+					NetworkConfig: &vpn.NetworkConfig{
+						PredefinedNetworkPrefix: []string{"10.20.0.0/28"},
+					},
+				},
+			},
+			expected: Model{
+				Id:          types.StringValue(fmt.Sprintf("%s,%s,%s", projectId, region, "gateway-id")),
+				ProjectId:   types.StringValue(projectId),
+				Region:      types.StringValue(region),
+				GatewayId:   types.StringValue("gateway-id"),
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: &NetworkConfigModel{
+					PredefinedNetworkPrefix: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("10.20.0.0/28"),
+					}),
+					RoutingTableId: types.StringNull(),
+				},
+				Labels: types.MapNull(types.StringType),
+			},
+			isValid: true,
+		},
+		{
 			description: "nil_response",
 			args: args{
 				state: Model{},
@@ -269,6 +354,39 @@ func TestToCreatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
+			description: "with_network_config",
+			input: &Model{
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				RoutingType: types.StringValue("ROUTE_BASED"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: &NetworkConfigModel{
+					PredefinedNetworkPrefix: types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("10.20.0.0/28"),
+					}),
+					RoutingTableId: types.StringValue("routing-table-id"),
+				},
+			},
+			expected: &vpn.CreateGatewayPayload{
+				DisplayName: "test-gateway",
+				PlanId:      "p500",
+				RoutingType: vpn.RoutingType("ROUTE_BASED"),
+				AvailabilityZones: vpn.CreateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+				NetworkConfig: &vpn.NetworkConfig{
+					PredefinedNetworkPrefix: []string{"10.20.0.0/28"},
+					RoutingTableId:          new("routing-table-id"),
+				},
+				Labels: &map[string]string{},
+			},
+			isValid: true,
+		},
+		{
 			description: "nil_model",
 			input:       nil,
 			expected:    nil,
@@ -356,6 +474,33 @@ func TestToUpdatePayload(t *testing.T) {
 					"env":  "prod",
 					"team": "network",
 				},
+			},
+			isValid: true,
+		},
+		{
+			description: "with_network_config",
+			input: &Model{
+				DisplayName: types.StringValue("test-gateway"),
+				PlanId:      types.StringValue("p500"),
+				AvailabilityZones: &AvailabilityZonesModel{
+					Tunnel1: types.StringValue("eu01-1"),
+					Tunnel2: types.StringValue("eu01-2"),
+				},
+				NetworkConfig: &NetworkConfigModel{
+					RoutingTableId: types.StringValue("routing-table-id"),
+				},
+			},
+			expected: &vpn.UpdateGatewayPayload{
+				DisplayName: "test-gateway",
+				PlanId:      "p500",
+				AvailabilityZones: vpn.UpdateGatewayPayloadAvailabilityZones{
+					Tunnel1: "eu01-1",
+					Tunnel2: "eu01-2",
+				},
+				NetworkConfig: &vpn.NetworkConfig{
+					RoutingTableId: new("routing-table-id"),
+				},
+				Labels: &map[string]string{},
 			},
 			isValid: true,
 		},

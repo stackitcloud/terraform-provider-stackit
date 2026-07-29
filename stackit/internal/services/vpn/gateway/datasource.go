@@ -123,6 +123,21 @@ func (d *vpnGatewayDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					},
 				},
 			},
+			"network_config": schema.SingleNestedAttribute{
+				Description: schemaDescriptions["network_config"],
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"predefined_network_prefix": schema.ListAttribute{
+						Description: schemaDescriptions["network_config_predefined_network_prefix"],
+						Computed:    true,
+						ElementType: types.StringType,
+					},
+					"routing_table_id": schema.StringAttribute{
+						Description: schemaDescriptions["network_config_routing_table_id"],
+						Computed:    true,
+					},
+				},
+			},
 			"labels": schema.MapAttribute{
 				Description: schemaDescriptions["labels"],
 				Computed:    true,

@@ -135,6 +135,8 @@ import (
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+	vpnBgpFilter "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/bgp_filter"
+	vpnBgpFilterRule "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/bgp_filter_rule"
 	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
@@ -782,6 +784,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 		vpnConnection.NewVPNConnectionDataSource,
+		vpnBgpFilter.NewVPNBGPFilterDataSource,
+		vpnBgpFilterRule.NewVPNBGPFilterRuleDataSource,
 	}
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
@@ -890,6 +894,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryLink.NewTelemetryLinkResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
+		vpnBgpFilter.NewVPNBGPFilterResource,
+		vpnBgpFilterRule.NewVPNBGPFilterRuleResource,
 	}
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
