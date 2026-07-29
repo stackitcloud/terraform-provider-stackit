@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -43,7 +44,7 @@ import (
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	skeWait "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
 
-	"golang.org/x/mod/semver"
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -947,30 +948,6 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	tflog.Info(ctx, "SKE cluster created")
 }
 
-func sortK8sVersions(versions []ske.KubernetesVersion) {
-	sort.Slice(versions, func(i, j int) bool {
-		v1, v2 := (versions)[i].Version, (versions)[j].Version
-		if v1 == nil {
-			return false
-		}
-		if v2 == nil {
-			return true
-		}
-
-		// we have to make copies of the input strings to add prefixes,
-		// otherwise we would be changing the passed elements
-		t1, t2 := *v1, *v2
-
-		if !strings.HasPrefix(t1, "v") {
-			t1 = "v" + t1
-		}
-		if !strings.HasPrefix(t2, "v") {
-			t2 = "v" + t2
-		}
-		return semver.Compare(t1, t2) > 0
-	})
-}
-
 // loadAvailableVersions loads the available k8s and machine versions from the API.
 // The k8s versions are sorted descending order, i.e. the latest versions (including previews)
 // are listed first
@@ -1243,8 +1220,6 @@ func verifySystemComponentsInNodePools(nodePools []ske.Nodepool) error {
 //
 // 3. For the selected version, check its state and return it, indicating if it is deprecated or not.
 func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin *string, osName string, currentImage *ske.Image) (version *string, deprecated bool, err error) {
-	deprecated = false
-
 	if availableImages == nil {
 		return nil, false, fmt.Errorf("nil available machine versions")
 	}
@@ -1255,111 +1230,23 @@ func latestMatchingMachineVersion(availableImages []ske.MachineImage, versionMin
 			availableMachineVersions = machine.Versions
 		}
 	}
-
-	if len(availableImages) == 0 {
+	if len(availableMachineVersions) == 0 {
 		return nil, false, fmt.Errorf("there are no available machine versions for the provided machine image name %s", osName)
 	}
 
-	if versionMin == nil {
-		// Different machine OSes have different versions.
-		// If the current machine image is nil or the machine image name has been updated,
-		// retrieve the latest supported version. Otherwise, use the current machine version.
-		if currentImage == nil || currentImage.Name != osName {
-			latestVersion, err := getLatestSupportedMachineVersion(availableMachineVersions)
-			if err != nil {
-				return nil, false, fmt.Errorf("get latest supported machine image version: %w", err)
-			}
-			return latestVersion, false, nil
-		}
-		versionMin = &currentImage.Version
-	} else if currentImage != nil && currentImage.Name == osName {
-		// If the os_version_min is set but is lower than the current version used in the cluster,
-		// retain the current version to avoid downgrading.
-		minimumVersion := "v" + *versionMin
-		currentVersion := "v" + currentImage.Version
-
-		if semver.Compare(minimumVersion, currentVersion) == -1 {
-			versionMin = &currentImage.Version
-		}
+	var currentVersion *string
+	if currentImage != nil && currentImage.Name == osName {
+		currentVersion = &currentImage.Version
 	}
 
-	var fullVersion bool
-	versionExp := validate.FullVersionRegex
-	versionRegex := regexp.MustCompile(versionExp)
-	if versionRegex.MatchString(*versionMin) {
-		fullVersion = true
+	versions := toVersionsWithState(availableMachineVersions, func(version *ske.MachineImageVersion) VersionWithState {
+		return version
+	})
+	version, deprecated, _, err = latestMatchingVersion(versions, versionMin, currentVersion)
+	if err != nil {
+		return nil, false, fmt.Errorf("selecting machine image version: %w", err)
 	}
-
-	providedVersionPrefixed := "v" + *versionMin
-
-	if !semver.IsValid(providedVersionPrefixed) {
-		return nil, false, fmt.Errorf("provided version is invalid")
-	}
-
-	var versionUsed *string
-	var state *string
-	var availableVersionsArray []string
-	// Get the higher available version that matches the major, minor and patch version provided by the user
-	for _, v := range availableMachineVersions {
-		if v.State == nil || v.Version == nil {
-			continue
-		}
-		availableVersionsArray = append(availableVersionsArray, *v.Version)
-		vPreffixed := "v" + *v.Version
-
-		if fullVersion {
-			// [MAJOR].[MINOR].[PATCH] version provided, match available version
-			if semver.Compare(vPreffixed, providedVersionPrefixed) == 0 {
-				versionUsed = v.Version
-				state = v.State
-				break
-			}
-		} else {
-			// [MAJOR].[MINOR] version provided, get the latest patch version
-			if semver.MajorMinor(vPreffixed) == semver.MajorMinor(providedVersionPrefixed) &&
-				(semver.Compare(vPreffixed, providedVersionPrefixed) == 1 || semver.Compare(vPreffixed, providedVersionPrefixed) == 0) &&
-				(v.State != nil && *v.State != VersionStatePreview) {
-				versionUsed = v.Version
-				state = v.State
-			}
-		}
-	}
-
-	if versionUsed != nil {
-		deprecated = strings.EqualFold(*state, VersionStateDeprecated)
-	}
-
-	// Throwing error if we could not match the version with the available versions
-	if versionUsed == nil {
-		return nil, false, fmt.Errorf("provided version is not one of the available machine image versions, available versions are: %s", strings.Join(availableVersionsArray, ","))
-	}
-
-	return versionUsed, deprecated, nil
-}
-
-func getLatestSupportedMachineVersion(versions []ske.MachineImageVersion) (*string, error) {
-	foundMachineVersion := false
-	var latestVersion *string
-	for i := range versions {
-		version := versions[i]
-		if *version.State != VersionStateSupported {
-			continue
-		}
-		if latestVersion != nil {
-			oldSemVer := fmt.Sprintf("v%s", *latestVersion)
-			newSemVer := fmt.Sprintf("v%s", *version.Version)
-			if semver.Compare(newSemVer, oldSemVer) != 1 {
-				continue
-			}
-		}
-
-		foundMachineVersion = true
-		latestVersion = version.Version
-	}
-	if !foundMachineVersion {
-		return nil, fmt.Errorf("no supported machine version found")
-	}
-	return latestVersion, nil
+	return version, deprecated, nil
 }
 
 func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, error) {
@@ -2177,165 +2064,17 @@ func toKubernetesPayload(m *Model, availableVersions []ske.KubernetesVersion, cu
 }
 
 func latestMatchingKubernetesVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin, currentKubernetesVersion *string, diags *diag.Diagnostics) (version *string, deprecated bool, err error) {
-	if availableVersions == nil {
-		return nil, false, fmt.Errorf("nil available kubernetes versions")
+	versions := toVersionsWithState(availableVersions, func(version *ske.KubernetesVersion) VersionWithState {
+		return version
+	})
+	version, deprecated, preview, err := latestMatchingVersion(versions, kubernetesVersionMin, currentKubernetesVersion)
+	if err != nil {
+		return nil, false, fmt.Errorf("selecting kubernetes version: %w", err)
 	}
-
-	if kubernetesVersionMin == nil {
-		if currentKubernetesVersion == nil {
-			latestVersion, err := getLatestSupportedKubernetesVersion(availableVersions)
-			if err != nil {
-				return nil, false, fmt.Errorf("get latest supported kubernetes version: %w", err)
-			}
-			return latestVersion, false, nil
-		}
-		kubernetesVersionMin = currentKubernetesVersion
-	} else if currentKubernetesVersion != nil {
-		// For an already existing cluster, if kubernetes_version_min is set to a lower version than what is being used in the cluster
-		// return the currently used version
-		kubernetesVersionUsed := *currentKubernetesVersion
-		kubernetesVersionMinString := *kubernetesVersionMin
-
-		minVersionPrefixed := "v" + kubernetesVersionMinString
-		usedVersionPrefixed := "v" + kubernetesVersionUsed
-
-		if semver.Compare(minVersionPrefixed, usedVersionPrefixed) == -1 {
-			kubernetesVersionMin = currentKubernetesVersion
-		}
+	if preview {
+		diags.AddWarning("preview version selected", fmt.Sprintf("only the preview version %q matched the selection criteria", *version))
 	}
-
-	versionRegex := regexp.MustCompile(validate.FullVersionRegex)
-	fullVersion := versionRegex.MatchString(*kubernetesVersionMin)
-
-	providedVersionPrefixed := "v" + *kubernetesVersionMin
-	if !semver.IsValid(providedVersionPrefixed) {
-		return nil, false, fmt.Errorf("provided version is invalid")
-	}
-
-	var (
-		selectedVersion        *ske.KubernetesVersion
-		availableVersionsArray []string
-	)
-	if fullVersion {
-		availableVersionsArray, selectedVersion = selectFullVersion(availableVersions, providedVersionPrefixed)
-	} else {
-		availableVersionsArray, selectedVersion = selectMatchingVersion(availableVersions, providedVersionPrefixed)
-	}
-
-	deprecated = isDeprecated(selectedVersion)
-
-	if isPreview(selectedVersion) {
-		diags.AddWarning("preview version selected", fmt.Sprintf("only the preview version %q matched the selection criteria", *selectedVersion.Version))
-	}
-
-	// Throwing error if we could not match the version with the available versions
-	if selectedVersion == nil {
-		return nil, false, fmt.Errorf("provided version is not one of the available kubernetes versions, available versions are: %s", strings.Join(availableVersionsArray, ","))
-	}
-
-	return selectedVersion.Version, deprecated, nil
-}
-
-func selectFullVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin string) (availableVersionsArray []string, selectedVersion *ske.KubernetesVersion) {
-	for _, versionCandidate := range availableVersions {
-		if versionCandidate.State == nil || versionCandidate.Version == nil {
-			continue
-		}
-		availableVersionsArray = append(availableVersionsArray, *versionCandidate.Version)
-		vPrefixed := "v" + *versionCandidate.Version
-
-		// [MAJOR].[MINOR].[PATCH] version provided, match available version
-		if semver.Compare(vPrefixed, kubernetesVersionMin) == 0 {
-			selectedVersion = &versionCandidate
-			break
-		}
-	}
-	return availableVersionsArray, selectedVersion
-}
-
-func selectMatchingVersion(availableVersions []ske.KubernetesVersion, kubernetesVersionMin string) (availableVersionsArray []string, selectedVersion *ske.KubernetesVersion) {
-	sortK8sVersions(availableVersions)
-	for _, candidateVersion := range availableVersions {
-		if candidateVersion.State == nil || candidateVersion.Version == nil {
-			continue
-		}
-		availableVersionsArray = append(availableVersionsArray, *candidateVersion.Version)
-		vPreffixed := "v" + *candidateVersion.Version
-
-		// [MAJOR].[MINOR] version provided, get the latest non-preview patch version
-		if semver.MajorMinor(vPreffixed) == semver.MajorMinor(kubernetesVersionMin) &&
-			(semver.Compare(vPreffixed, kubernetesVersionMin) >= 0) &&
-			(candidateVersion.State != nil) {
-			// take the current version as a candidate, if we have no other version inspected before
-			// OR the previously found version was a preview version
-			if selectedVersion == nil || (isSupported(&candidateVersion) && isPreview(selectedVersion)) {
-				selectedVersion = &candidateVersion
-			}
-			// all other cases are ignored
-		}
-	}
-	return availableVersionsArray, selectedVersion
-}
-
-func isDeprecated(v *ske.KubernetesVersion) bool {
-	if v == nil {
-		return false
-	}
-
-	if v.State == nil {
-		return false
-	}
-
-	return *v.State == VersionStateDeprecated
-}
-
-func isPreview(v *ske.KubernetesVersion) bool {
-	if v == nil {
-		return false
-	}
-
-	if v.State == nil {
-		return false
-	}
-
-	return *v.State == VersionStatePreview
-}
-
-func isSupported(v *ske.KubernetesVersion) bool {
-	if v == nil {
-		return false
-	}
-
-	if v.State == nil {
-		return false
-	}
-
-	return *v.State == VersionStateSupported
-}
-
-func getLatestSupportedKubernetesVersion(versions []ske.KubernetesVersion) (*string, error) {
-	foundKubernetesVersion := false
-	var latestVersion *string
-	for i := range versions {
-		version := versions[i]
-		if *version.State != VersionStateSupported {
-			continue
-		}
-		if latestVersion != nil {
-			oldSemVer := fmt.Sprintf("v%s", *latestVersion)
-			newSemVer := fmt.Sprintf("v%s", *version.Version)
-			if semver.Compare(newSemVer, oldSemVer) != 1 {
-				continue
-			}
-		}
-
-		foundKubernetesVersion = true
-		latestVersion = version.Version
-	}
-	if !foundKubernetesVersion {
-		return nil, fmt.Errorf("no supported Kubernetes version found")
-	}
-	return latestVersion, nil
+	return version, deprecated, nil
 }
 
 func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
@@ -2476,4 +2215,139 @@ func (r *clusterResource) ImportState(ctx context.Context, req resource.ImportSt
 		"name":       idParts[2],
 	})
 	tflog.Info(ctx, "SKE cluster state imported")
+}
+
+type VersionWithState interface {
+	GetState() string
+	GetVersion() string
+}
+
+// toVersionsWithState converts SDK-specific version slices at the boundary of the
+// version-selection call tree. All helpers below can therefore remain independent
+// of the SKE SDK's concrete version types.
+func toVersionsWithState[E any](versions []E, convert func(*E) VersionWithState) []VersionWithState {
+	if versions == nil {
+		return nil
+	}
+
+	result := make([]VersionWithState, 0, len(versions))
+	for i := range versions {
+		result = append(result, convert(&versions[i]))
+	}
+	return result
+}
+
+// latestMatchingVersion selects a version while preventing downgrades. Preview
+// versions can be excluded for version families that do not support a preview
+// fallback (currently machine images).
+func latestMatchingVersion(availableVersions []VersionWithState, versionMin, currentVersion *string) (version *string, deprecated, preview bool, err error) {
+	if availableVersions == nil {
+		return nil, false, false, fmt.Errorf("nil available versions")
+	}
+
+	if versionMin == nil {
+		if currentVersion == nil {
+			latestVersion, err := getLatestSupportedVersion(availableVersions)
+			if err != nil {
+				return nil, false, false, fmt.Errorf("get latest supported version: %w", err)
+			}
+			return latestVersion, false, false, nil
+		}
+		versionMin = currentVersion
+	} else if currentVersion != nil {
+		minimum, errMin := semver.NewVersion(*versionMin)
+		current, errCurrent := semver.NewVersion(*currentVersion)
+		if errMin == nil && errCurrent == nil && minimum.LessThan(current) {
+			versionMin = currentVersion
+		}
+	}
+
+	minConstraint, err := semver.NewConstraint(*versionMin)
+	if err != nil {
+		return nil, false, false, fmt.Errorf("provided version is invalid")
+	}
+	selected := selectVersion(availableVersions, minConstraint)
+	if selected == nil {
+		var available []string
+		for _, availableVersion := range availableVersions {
+			if availableVersion.GetVersion() == "" || availableVersion.GetState() == "" {
+				continue
+			}
+			available = append(available, availableVersion.GetVersion())
+		}
+		return nil, false, false, fmt.Errorf("provided version is not one of the available versions, available versions are: %s", strings.Join(available, ","))
+	}
+
+	selectedVersion := selected.GetVersion()
+	return &selectedVersion, isDeprecated(selected), isPreview(selected), nil
+}
+
+func selectVersion(availableVersions []VersionWithState, versionMin *semver.Constraints) (selected VersionWithState) {
+	sortVersions(availableVersions)
+	for _, candidate := range availableVersions {
+		if candidate.GetState() == "" || candidate.GetVersion() == "" {
+			continue
+		}
+		candidateVersion, err := semver.NewVersion(candidate.GetVersion())
+		if err != nil || !versionMin.Check(candidateVersion) {
+			continue
+		}
+		// Prefer a supported version over a preview. Otherwise, sorting ensures
+		// that the first matching candidate is the latest one.
+		if selected == nil || (isSupported(candidate) && isPreview(selected)) {
+			selected = candidate
+		}
+	}
+	return selected
+}
+
+func sortVersions(versions []VersionWithState) {
+	sort.Slice(versions, func(i, j int) bool {
+		if versions[i].GetVersion() == "" {
+			return false
+		}
+		if versions[j].GetVersion() == "" {
+			return true
+		}
+
+		left, leftErr := semver.NewVersion(versions[i].GetVersion())
+		right, rightErr := semver.NewVersion(versions[j].GetVersion())
+		if leftErr != nil || rightErr != nil {
+			return false
+		}
+		return left.GreaterThan(right)
+	})
+}
+
+func isDeprecated(version VersionWithState) bool {
+	return version != nil && version.GetState() == VersionStateDeprecated
+}
+
+func isPreview(version VersionWithState) bool {
+	return version != nil && version.GetState() == VersionStatePreview
+}
+
+func isSupported(version VersionWithState) bool {
+	return version != nil && version.GetState() == VersionStateSupported
+}
+
+func getLatestSupportedVersion(versions []VersionWithState) (*string, error) {
+	var supportedVersions []*semver.Version
+	for _, version := range versions {
+		if !isSupported(version) || version.GetVersion() == "" {
+			continue
+		}
+		parsed, err := semver.NewVersion(version.GetVersion())
+		if err != nil {
+			return nil, err
+		}
+		supportedVersions = append(supportedVersions, parsed)
+	}
+	if len(supportedVersions) == 0 {
+		return nil, fmt.Errorf("no supported versions found")
+	}
+	latest := slices.MaxFunc(supportedVersions, func(a, b *semver.Version) int {
+		return a.Compare(b)
+	})
+	return new(latest.Original()), nil
 }
