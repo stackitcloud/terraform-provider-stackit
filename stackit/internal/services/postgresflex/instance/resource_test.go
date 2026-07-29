@@ -3,7 +3,6 @@ package postgresflex
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -1292,7 +1291,7 @@ func TestGetAllFlavors(t *testing.T) {
 				t.Errorf("getAllFlavors() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !cmp.Equal(got, tt.want) {
 				t.Errorf("getAllFlavors() got = %v, want %v", got, tt.want)
 			}
 		})

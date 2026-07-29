@@ -20,7 +20,7 @@ import (
 	int32planmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/int32planmodifier"
 	listplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
 	objectplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/objectplanmodifier"
-	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
+	stringplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -63,12 +63,13 @@ type Model struct {
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Encryption     types.Object `tfsdk:"encryption"`
-	Flavor         types.Object `tfsdk:"flavor"`
-	FlavorId       types.String `tfsdk:"flavor_id"`
-	Storage        types.Object `tfsdk:"storage"`
-	Version        types.String `tfsdk:"version"`
-	Replicas       types.Int32  `tfsdk:"replicas"`
-	Edition        types.String `tfsdk:"edition"`
+	// Deprecated: Flavor is deprecated and will be removed after February 2027.
+	Flavor   types.Object `tfsdk:"flavor"`
+	FlavorId types.String `tfsdk:"flavor_id"`
+	Storage  types.Object `tfsdk:"storage"`
+	Version  types.String `tfsdk:"version"`
+	Replicas types.Int32  `tfsdk:"replicas"`
+	Edition  types.String `tfsdk:"edition"`
 	// Deprecated: Options is deprecated and will be removed after January 2027
 	Options       types.Object `tfsdk:"options"`
 	RetentionDays types.Int32  `tfsdk:"retention_days"`
@@ -108,7 +109,7 @@ var networkTypes = map[string]attr.Type{
 	"router_address":   basetypes.StringType{},
 }
 
-// Struct corresponding to Model.Flavor
+// Deprecated: Will be removed after February 2027. Struct corresponding to Model.Flavor
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
@@ -116,7 +117,7 @@ type flavorModel struct {
 	RAM         types.Int64  `tfsdk:"ram"`
 }
 
-// Types corresponding to flavorModel
+// Deprecated: Will be removed after February 2027. Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
@@ -311,7 +312,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 }
 
 // Schema defines the schema for the resource.
-func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	willBeRequired := " Will be required in the future. Set a value to prevent breaking changes."
 	descriptions := map[string]string{
 		"main":                 "SQLServer Flex instance resource schema. Must have a `region` specified in the provider configuration.",
@@ -327,7 +328,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"kek_key_version":      "Version of the key within the STACKIT-KMS to use for the encryption.",
 		"service_account":      "Service-Account linked to the Key within the STACKIT-KMS.",
 		"options":              "Custom parameters for the SQLServer Flex instance.",
-		"flavor_id":            "The flavor ID of the sqlserver Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit curl https://mssql-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100\n```",
+		"flavor_id":            "The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit curl https://mssql-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100\n```",
 		"network":              "The network configuration of the instance." + willBeRequired,
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr." + willBeRequired,
@@ -405,7 +406,7 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifierCustom.CronNormalizationModifier{},
+					stringplanmodifier2.CronNormalizationModifier{},
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
@@ -488,6 +489,9 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						path.Root("flavor_id").Expression(),
 						path.Root("flavor").Expression(),
 					),
+				},
+				PlanModifiers: []planmodifier.String{
+					UseStateForUnknownIfFlavorUnchanged(req),
 				},
 			},
 			"network": schema.SingleNestedAttribute{
@@ -824,7 +828,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		// Read the flavor here from the API, because during an import the flavor should be set
 		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 		if err != nil {
-			// Log a warning or handle missing flavor specifically, while failing on hard network/API errors
 			core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
 		} else if flavorResp != nil {
 			flavor = &flavorModel{
@@ -1272,6 +1275,7 @@ type sqlserverflexClient interface {
 	ListFlavorsExecute(r sqlserverflex.ApiListFlavorsRequest) (*sqlserverflex.ListFlavorsResponse, error)
 }
 
+// Deprecated: getAllFlavors is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getAllFlavors(ctx context.Context, client sqlserverflexClient, projectId, region string) ([]sqlserverflex.ListFlavors, error) {
 	var result []sqlserverflex.ListFlavors
 	req := client.ListFlavors(ctx, projectId, region).Size(100)
@@ -1309,6 +1313,7 @@ func getAllFlavors(ctx context.Context, client sqlserverflexClient, projectId, r
 	return result, nil
 }
 
+// Deprecated: loadFlavorId is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
@@ -1354,6 +1359,7 @@ func loadFlavorId(ctx context.Context, client sqlserverflexClient, model *Model,
 	return nil
 }
 
+// Deprecated: getFlavor is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getFlavor(ctx context.Context, client sqlserverflexClient, projectId, region, flavorId string) (*sqlserverflex.ListFlavors, error) {
 	flavorsResp, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {

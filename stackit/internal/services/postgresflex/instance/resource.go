@@ -65,18 +65,19 @@ type Model struct {
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	ConnectionInfo types.Object `tfsdk:"connection_info"`
-	Flavor         types.Object `tfsdk:"flavor"`
-	FlavorId       types.String `tfsdk:"flavor_id"`
-	Replicas       types.Int32  `tfsdk:"replicas"`
-	Storage        types.Object `tfsdk:"storage"`
-	Encryption     types.Object `tfsdk:"encryption"`
-	Network        types.Object `tfsdk:"network"`
-	RetentionDays  types.Int32  `tfsdk:"retention_days"`
-	Version        types.String `tfsdk:"version"`
-	Region         types.String `tfsdk:"region"`
+	// Deprecated: Flavor is deprecated and will be removed after February 2027.
+	Flavor        types.Object `tfsdk:"flavor"`
+	FlavorId      types.String `tfsdk:"flavor_id"`
+	Replicas      types.Int32  `tfsdk:"replicas"`
+	Storage       types.Object `tfsdk:"storage"`
+	Encryption    types.Object `tfsdk:"encryption"`
+	Network       types.Object `tfsdk:"network"`
+	RetentionDays types.Int32  `tfsdk:"retention_days"`
+	Version       types.String `tfsdk:"version"`
+	Region        types.String `tfsdk:"region"`
 }
 
-// Struct corresponding to Model.Flavor
+// Deprecated: Will be removed after February 2027. Struct corresponding to Model.Flavor
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
@@ -85,7 +86,7 @@ type flavorModel struct {
 	NodeType    types.String `tfsdk:"node_type"`
 }
 
-// Types corresponding to flavorModel
+// Deprecated: Will be removed after February 2027. Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
@@ -704,7 +705,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	} else {
 		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 		if err != nil {
-			// Log a warning or handle missing flavor specifically, while failing on hard network/API errors
 			core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
 		} else if flavorResp != nil {
 			flavor = &flavorModel{
@@ -715,7 +715,6 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 				NodeType:    types.StringValue(flavorResp.NodeType),
 			}
 		}
-
 	}
 
 	// Map response body to schema
@@ -1138,6 +1137,7 @@ type postgresFlexClient interface {
 	ListFlavorsExecute(r postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, error)
 }
 
+// Deprecated: getAllFlavors is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getAllFlavors(ctx context.Context, client postgresFlexClient, projectId, region string) ([]postgresflex.ListFlavors, error) {
 	var result []postgresflex.ListFlavors
 	req := client.ListFlavors(ctx, projectId, region).Size(100)
@@ -1175,6 +1175,7 @@ func getAllFlavors(ctx context.Context, client postgresFlexClient, projectId, re
 	return result, nil
 }
 
+// Deprecated: loadFlavorId is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
@@ -1233,6 +1234,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	return nil
 }
 
+// Deprecated: getFlavor is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getFlavor(ctx context.Context, client postgresFlexClient, projectId, region, flavorId string) (*postgresflex.ListFlavors, error) {
 	flavorsResp, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {

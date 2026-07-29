@@ -44,7 +44,7 @@ resource "stackit_sqlserverflex_instance" "example" {
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *") Will be required in the future. Set a value to prevent breaking changes.
 - `encryption` (Attributes) Parameter to define which key to use for storage encryption. (see [below for nested schema](#nestedatt--encryption))
 - `flavor` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--flavor))
-- `flavor_id` (String) The flavor ID of the sqlserver Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
+- `flavor_id` (String) The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
 ```bash
 stackit curl https://mssql-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\?size=100
 ```
