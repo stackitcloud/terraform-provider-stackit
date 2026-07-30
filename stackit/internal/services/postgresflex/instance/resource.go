@@ -28,7 +28,6 @@ import (
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
-	stringplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -261,7 +260,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"connection_info.write.host": "The host of the instance.",
 		"connection_info.write.port": "The port of the instance.",
 		"replicas":                   "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication. Can only be set together with `flavor`",
-		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --flavors\n```",
+		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit curl https://postgres-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100\n```",
 		"encryption.kek_key_id":      "The ID of the Key within the STACKIT-KMS to use for the encryption.",
 		"encryption.kek_keyring_id":  "The ID of the keyring where the key is located within the STACKTI-KMS.",
 		"encryption.kek_key_version": "Version of the key within the STACKIT-KMS to use for the encryption.",
@@ -386,22 +385,15 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:           true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can get the available flavors using the STACKIT-CLI using `stackit curl https://postgres-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 					"cpu": schema.Int64Attribute{
 						Required: true,
@@ -411,10 +403,6 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					},
 					"node_type": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 				},
 				Validators: []validator.Object{
