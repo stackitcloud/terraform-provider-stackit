@@ -45,7 +45,7 @@ resource "stackit_postgresflex_instance" "example" {
 
 - `acl` (List of String, Deprecated) The Access Control List (ACL) for the PostgresFlex instance.
 - `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--flavor))
 - `flavor_id` (String) The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
 ```bash
 stackit postgresflex options --flavors

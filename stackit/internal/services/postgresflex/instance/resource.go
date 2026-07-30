@@ -28,7 +28,6 @@ import (
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
-	stringplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -386,22 +385,15 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:           true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can get the available flavors using the STACKIT-CLI using `stackit postgresflex flavor list`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 					"cpu": schema.Int64Attribute{
 						Required: true,
@@ -411,10 +403,6 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					},
 					"node_type": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 				},
 				Validators: []validator.Object{
