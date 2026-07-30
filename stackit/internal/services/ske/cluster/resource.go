@@ -208,18 +208,20 @@ var hibernationTypes = map[string]attr.Type{
 
 // Struct corresponding to Model.Extensions
 type extensions struct {
-	Argus         types.Object `tfsdk:"argus"`
-	Observability types.Object `tfsdk:"observability"`
-	ACL           types.Object `tfsdk:"acl"`
-	DNS           types.Object `tfsdk:"dns"`
+	Argus                   types.Object `tfsdk:"argus"`
+	Observability           types.Object `tfsdk:"observability"`
+	ApplicationLoadBalancer types.Object `tfsdk:"application_load_balancer"`
+	ACL                     types.Object `tfsdk:"acl"`
+	DNS                     types.Object `tfsdk:"dns"`
 }
 
 // Types corresponding to extensions
 var extensionsTypes = map[string]attr.Type{
-	"argus":         basetypes.ObjectType{AttrTypes: argusTypes},
-	"observability": basetypes.ObjectType{AttrTypes: observabilityTypes},
-	"acl":           basetypes.ObjectType{AttrTypes: aclTypes},
-	"dns":           basetypes.ObjectType{AttrTypes: dnsTypes},
+	"argus":                     basetypes.ObjectType{AttrTypes: argusTypes},
+	"observability":             basetypes.ObjectType{AttrTypes: observabilityTypes},
+	"application_load_balancer": basetypes.ObjectType{AttrTypes: applicationLoadBalancerTypes},
+	"acl":                       basetypes.ObjectType{AttrTypes: aclTypes},
+	"dns":                       basetypes.ObjectType{AttrTypes: dnsTypes},
 }
 
 // Struct corresponding to extensions.ACL
@@ -244,6 +246,16 @@ type argus struct {
 var argusTypes = map[string]attr.Type{
 	"enabled":           basetypes.BoolType{},
 	"argus_instance_id": basetypes.StringType{},
+}
+
+// Struct corresponding to extensions.applicationLoadBalancer
+type applicationLoadBalancer struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+// Types corresponding to applicationLoadBalancer
+var applicationLoadBalancerTypes = map[string]attr.Type{
+	"enabled": basetypes.BoolType{},
 }
 
 // Struct corresponding to extensions.Observability
@@ -812,6 +824,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								// zones = []. This ensures the config (empty list) matches the
 								// API response (empty list).
 								Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+						},
+					},
+					"application_load_balancer": schema.SingleNestedAttribute{
+						Description: "Application Load Balancer extension.",
+						Optional:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Enables the application load balancer extension.",
+								Required:    true,
 							},
 						},
 					},
@@ -1448,6 +1470,19 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		}
 	}
 
+	var skeApplicationLoadBalancer *ske.ApplicationLoadBalancer
+	if !(ex.ApplicationLoadBalancer.IsNull() || ex.ApplicationLoadBalancer.IsUnknown()) {
+		applicationLoadBalancer := applicationLoadBalancer{}
+		diags = ex.ApplicationLoadBalancer.As(ctx, &applicationLoadBalancer, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, fmt.Errorf("converting extensions.applicationLoadBalancer object: %v", diags.Errors())
+		}
+
+		skeApplicationLoadBalancer = &ske.ApplicationLoadBalancer{
+			Enabled: applicationLoadBalancer.Enabled.ValueBool(),
+		}
+	}
+
 	var skeDNS *ske.DNS
 	if !(ex.DNS.IsNull() || ex.DNS.IsUnknown()) {
 		dns := dns{}
@@ -1469,9 +1504,10 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 	}
 
 	return &ske.Extension{
-		Acl:           skeAcl,
-		Observability: skeObservability,
-		Dns:           skeDNS,
+		Acl:                     skeAcl,
+		Observability:           skeObservability,
+		ApplicationLoadBalancer: skeApplicationLoadBalancer,
+		Dns:                     skeDNS,
 	}, nil
 }
 
@@ -1943,7 +1979,7 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	return startTime, endTime, nil
 }
 
-func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, observabilityDisabled, dnsDisabled bool, err error) {
+func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, observabilityDisabled, dnsDisabled, applicationLoadBalancerDisabled bool, err error) {
 	var diags diag.Diagnostics
 	acl := acl{}
 	if ex.ACL.IsNull() {
@@ -1951,7 +1987,7 @@ func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, 
 	} else {
 		diags = ex.ACL.As(ctx, &acl, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
+			return false, false, false, false, fmt.Errorf("converting extensions.acl object: %v", diags.Errors())
 		}
 	}
 
@@ -1962,14 +1998,14 @@ func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, 
 		argus := argus{}
 		diags = ex.Argus.As(ctx, &argus, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
+			return false, false, false, false, fmt.Errorf("converting extensions.argus object: %v", diags.Errors())
 		}
 		observability.Enabled = argus.Enabled
 		observability.InstanceId = argus.ArgusInstanceId
 	} else {
 		diags = ex.Observability.As(ctx, &observability, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, false, fmt.Errorf("converting extensions.observability object: %v", diags.Errors())
+			return false, false, false, false, fmt.Errorf("converting extensions.observability object: %v", diags.Errors())
 		}
 	}
 
@@ -1979,11 +2015,21 @@ func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, 
 	} else {
 		diags = ex.DNS.As(ctx, &dns, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
-			return false, false, false, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
+			return false, false, false, false, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
 		}
 	}
 
-	return !acl.Enabled.ValueBool(), !observability.Enabled.ValueBool(), !dns.Enabled.ValueBool(), nil
+	applicationLoadBalancer := applicationLoadBalancer{}
+	if ex.ApplicationLoadBalancer.IsNull() {
+		applicationLoadBalancer.Enabled = types.BoolValue(false)
+	} else {
+		diags = ex.ApplicationLoadBalancer.As(ctx, &applicationLoadBalancer, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return false, false, false, false, fmt.Errorf("converting extensions.applicationLoadBalancer object: %v", diags.Errors())
+		}
+	}
+
+	return !acl.Enabled.ValueBool(), !observability.Enabled.ValueBool(), !dns.Enabled.ValueBool(), !applicationLoadBalancer.Enabled.ValueBool(), nil
 }
 
 func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
@@ -2010,11 +2056,11 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	// If we parse that object into the terraform model, it will produce an inconsistent result after apply
 	// error
 
-	aclDisabled, observabilityDisabled, dnsDisabled, err := checkDisabledExtensions(ctx, &ex)
+	aclDisabled, observabilityDisabled, dnsDisabled, applicationLoadBalancerDisabled, err := checkDisabledExtensions(ctx, &ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
-	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled
+	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled && applicationLoadBalancerDisabled
 
 	if skeUtils.IsEmptyExtension(cl.Extensions) && (disabledExtensions || m.Extensions.IsNull()) {
 		if m.Extensions.Attributes() == nil {
@@ -2089,6 +2135,20 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		}
 	}
 
+	applicationLoadBalancerExtension := types.ObjectNull(applicationLoadBalancerTypes)
+	if cl.Extensions.ApplicationLoadBalancer != nil {
+		applicationLoadBalancerValues := map[string]attr.Value{
+			"enabled": types.BoolValue(cl.Extensions.ApplicationLoadBalancer.Enabled),
+		}
+
+		applicationLoadBalancerExtension, diags = types.ObjectValue(applicationLoadBalancerTypes, applicationLoadBalancerValues)
+		if diags.HasError() {
+			return fmt.Errorf("creating applicationLoadBalancer: %w", core.DiagsToError(diags))
+		}
+	} else if applicationLoadBalancerDisabled && !ex.ApplicationLoadBalancer.IsNull() {
+		applicationLoadBalancerExtension = ex.ApplicationLoadBalancer
+	}
+
 	dnsExtension := types.ObjectNull(dnsTypes)
 	if cl.Extensions.Dns != nil {
 		enabled := types.BoolValue(cl.Extensions.Dns.Enabled)
@@ -2116,17 +2176,19 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	var extensionsValues map[string]attr.Value
 	if utils.IsUndefined(ex.Argus) {
 		extensionsValues = map[string]attr.Value{
-			"acl":           aclExtension,
-			"argus":         types.ObjectNull(argusTypes),
-			"observability": observabilityExtension,
-			"dns":           dnsExtension,
+			"acl":                       aclExtension,
+			"argus":                     types.ObjectNull(argusTypes),
+			"observability":             observabilityExtension,
+			"application_load_balancer": applicationLoadBalancerExtension,
+			"dns":                       dnsExtension,
 		}
 	} else {
 		extensionsValues = map[string]attr.Value{
-			"acl":           aclExtension,
-			"argus":         argusExtension,
-			"observability": types.ObjectNull(observabilityTypes),
-			"dns":           dnsExtension,
+			"acl":                       aclExtension,
+			"argus":                     argusExtension,
+			"observability":             types.ObjectNull(observabilityTypes),
+			"application_load_balancer": applicationLoadBalancerExtension,
+			"dns":                       dnsExtension,
 		}
 	}
 
