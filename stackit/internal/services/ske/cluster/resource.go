@@ -862,13 +862,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"audit": schema.SingleNestedAttribute{
 				Description: descriptions["audit"],
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						Description: descriptions["audit_enabled"],
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
 					},
 				},
 			},
