@@ -686,8 +686,6 @@ github.com/stackitcloud/stackit-sdk-go/services/dremio v0.4.0 h1:kAWRUptc9g6lA9X
 github.com/stackitcloud/stackit-sdk-go/services/dremio v0.4.0/go.mod h1:iMoiM8fM1mXC1Nz8FBiiQ08Yh+0C3yN0GPCdAbOlRXo=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.0 h1:MD475tdG7oSRquUr4SA4MIevVTb82sBPM2Fkf5J7aE0=
 github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.0/go.mod h1:Ylse6gqGJtsd5TVmvha+hoLd1QQHLKvhY5dO15+q5kg=
-github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0 h1:VZBneGprCmHqckcSMPs3puBlK8rBpLMtYKmBktwdoVE=
-github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0/go.mod h1:YZEL+gaK+ELn5E9VtK8yvz5RcmCBH+JkRpf6YbNVSbM=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0 h1:PQZ6n71CMadLU3DjJxJXiPHdK9Bz4hMttBREQD6no34=
 github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0/go.mod h1:AbPN9BGkdjc+tVsXEX9Vr8BPDjdlDmG26K1FwCKZQVU=
 github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.0 h1:zuZIWgm8ak6aOyvgHouIBSoAnUkNBy4HMSba5AHYI7U=
@@ -772,6 +770,8 @@ github.com/timonwong/loggercheck v0.11.0 h1:jdaMpYBl+Uq9mWPXv1r8jc5fC3gyXx4/WGwT
 github.com/timonwong/loggercheck v0.11.0/go.mod h1:HEAWU8djynujaAVX7QI65Myb8qgfcZ1uKbdpg3ZzKl8=
 github.com/tomarrell/wrapcheck/v2 v2.12.0 h1:H/qQ1aNWz/eeIhxKAFvkfIA+N7YDvq6TWVFL27Of9is=
 github.com/tomarrell/wrapcheck/v2 v2.12.0/go.mod h1:AQhQuZd0p7b6rfW+vUwHm5OMCGgp63moQ9Qr/0BpIWo=
+github.com/tomkillen/stackit-sdk-go/services/git v0.0.0-20260729221006-2d48dc4d514c h1:Ad1R0NV4Ff93FHw6XS6qVB3XMPb4m/IS3yaWBL1yZeY=
+github.com/tomkillen/stackit-sdk-go/services/git v0.0.0-20260729221006-2d48dc4d514c/go.mod h1:YZEL+gaK+ELn5E9VtK8yvz5RcmCBH+JkRpf6YbNVSbM=
 github.com/tommy-muehle/go-mnd/v2 v2.5.1 h1:NowYhSdyE/1zwK9QCLeRb6USWdoif80Ie+v+yU8u1Zw=
 github.com/tommy-muehle/go-mnd/v2 v2.5.1/go.mod h1:WsUAkMJMYww6l/ufffCD3m+P7LEvr8TnZn9lwVDlgzw=
 github.com/ultraware/funlen v0.2.0 h1:gCHmCn+d2/1SemTdYMiKLAHFYxTYz7z9VIDRaTGyLkI=
