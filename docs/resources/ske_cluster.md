@@ -138,7 +138,7 @@ Optional:
 <a id="nestedatt--audit"></a>
 ### Nested Schema for `audit`
 
-Required:
+Optional:
 
 - `enabled` (Boolean) Enable cluster audit log forwarding to a Telemetry Router.
 
