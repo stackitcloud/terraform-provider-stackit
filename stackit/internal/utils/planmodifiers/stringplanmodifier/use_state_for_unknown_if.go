@@ -94,6 +94,39 @@ func StringUnchanged(attributePath path.Path) UseStateForUnknownIfFunc { // noli
 	}
 }
 
+// This function is the pathExpression compatible version of StringUnchanged and should replace StringUnchanged in the future
+func StringUnchangedExpressionFunction(pathExpressions ...path.Expression) UseStateForUnknownIfFunc { // nolint:gocritic // function signature required by Terraform
+	return func(ctx context.Context, request planmodifier.StringRequest, response *UseStateForUnknownFuncResponse) {
+		expressions := request.PathExpression.MergeExpressions(pathExpressions...)
+
+		for _, expression := range expressions {
+			matchedPaths, diags := request.Config.PathMatches(ctx, expression)
+			response.Diagnostics.Append(diags...)
+
+			for _, attributePath := range matchedPaths {
+				var attributePlan types.String
+				diags := request.Plan.GetAttribute(ctx, attributePath, &attributePlan)
+				response.Diagnostics.Append(diags...)
+				if response.Diagnostics.HasError() {
+					continue
+				}
+
+				var attributeState types.String
+				diags = request.State.GetAttribute(ctx, attributePath, &attributeState)
+				response.Diagnostics.Append(diags...)
+				if response.Diagnostics.HasError() {
+					continue
+				}
+
+				if attributeState == attributePlan {
+					response.UseStateForUnknown = true
+					return
+				}
+			}
+		}
+	}
+}
+
 // Int64Unchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
 func Int64Unchanged(attributePath path.Path) UseStateForUnknownIfFunc { // nolint:gocritic // function signature required by Terraform
 	return func(ctx context.Context, request planmodifier.StringRequest, response *UseStateForUnknownFuncResponse) {
