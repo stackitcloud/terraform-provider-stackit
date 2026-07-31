@@ -199,6 +199,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "audit.enabled", "false"),
 				),
 			},
 			// 3) Import cluster
@@ -255,6 +256,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(configVarsMinUpdated()["region"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(configVarsMinUpdated()["network_control_plane_access_scope"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "audit.enabled", "false"),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
