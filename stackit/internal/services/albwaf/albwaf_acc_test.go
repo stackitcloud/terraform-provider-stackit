@@ -110,8 +110,6 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMin["operator_type"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.transformations.#", "0"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.type", testutil.ConvertConfigVariable(testCustomRuleGroupMin["variable_type"])),
-
-					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "usage.count", "0"),
 				),
 			},
 			// Data source
@@ -154,8 +152,6 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMin["operator_type"])),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.transformations.#", "0"),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.type", testutil.ConvertConfigVariable(testCustomRuleGroupMin["variable_type"])),
-
-					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "usage.count", "0"),
 				),
 			},
 			// Import
@@ -202,8 +198,6 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMinUpdated()["operator_type"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.transformations.#", "0"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.type", testutil.ConvertConfigVariable(testCustomRuleGroupMinUpdated()["variable_type"])),
-
-					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "usage.count", "0"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -242,8 +236,6 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.transformations.0", testutil.ConvertConfigVariable(testCustomRuleGroupMax["transformation"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.type", testutil.ConvertConfigVariable(testCustomRuleGroupMax["variable_type"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.value", testutil.ConvertConfigVariable(testCustomRuleGroupMax["variable_value"])),
-
-					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "usage.count", "0"),
 				),
 			},
 			// Data source
@@ -291,8 +283,6 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.transformations.0", testutil.ConvertConfigVariable(testCustomRuleGroupMax["transformation"])),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.type", testutil.ConvertConfigVariable(testCustomRuleGroupMax["variable_type"])),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.value", testutil.ConvertConfigVariable(testCustomRuleGroupMax["variable_value"])),
-
-					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "usage.count", "0"),
 				),
 			},
 			// Import
@@ -344,8 +334,6 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.transformations.0", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["transformation"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.type", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["variable_type"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.variable.value", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["variable_value"])),
-
-					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "usage.count", "0"),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -368,8 +356,6 @@ func TestAccManagedRuleSet(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_managed_rule_set.managed_rule_set", "id"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSet["name"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "type", testutil.ConvertConfigVariable(testManagedRuleSet["type"])),
-
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "usage.count", "0"),
 				),
 			},
 			// Data source
@@ -395,8 +381,6 @@ func TestAccManagedRuleSet(t *testing.T) {
 					),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSet["name"])),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "type", testutil.ConvertConfigVariable(testManagedRuleSet["type"])),
-
-					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "usage.count", "0"),
 				),
 			},
 			// Import
@@ -432,8 +416,6 @@ func TestAccManagedRuleSet(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_managed_rule_set.managed_rule_set", "id"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testManagedRuleSetUpdated()["name"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "type", testutil.ConvertConfigVariable(testManagedRuleSetUpdated()["type"])),
-
-					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "usage.count", "0"),
 				),
 			},
 			// Deletion is done by the framework implicitly

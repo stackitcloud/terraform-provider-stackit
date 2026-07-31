@@ -53,7 +53,6 @@ type Model struct {
 	Region    types.String `tfsdk:"region"`
 	Name      types.String `tfsdk:"name"`
 	Rules     types.List   `tfsdk:"rules"`
-	Usage     types.Object `tfsdk:"usage"`
 }
 
 type RuleModel struct {
@@ -118,16 +117,6 @@ var variableType = map[string]attr.Type{
 	"value": types.StringType,
 }
 
-type UsageModel struct {
-	Count types.Int32 `tfsdk:"count"`
-	Items types.List  `tfsdk:"items"`
-}
-
-var usageType = map[string]attr.Type{
-	"count": types.Int32Type,
-	"items": types.ListType{ElemType: types.StringType},
-}
-
 type customRuleGroupResource struct {
 	client       *albWaf.APIClient
 	providerData core.ProviderData
@@ -183,9 +172,6 @@ var descriptions = map[string]string{
 	"variable":          "The part of the HTTP transaction to inspect.",
 	"variable_type":     "The targeted validation engine variable macro.",
 	"variable_value":    "Optional key element context for map variables (e.g., matching a 'Host' header key).",
-	"usage":             "Tracking metrics for CRG resource utilization.",
-	"usage_count":       "Number of WAF configurations actively using this rule group.",
-	"usage_items":       "List of individual WAF configuration names that bind this rule group.",
 }
 
 func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -333,21 +319,6 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 								int32planmodifier.UseStateForUnknown(),
 							},
 						},
-					},
-				},
-			},
-			"usage": schema.SingleNestedAttribute{
-				Description: descriptions["usage"],
-				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"count": schema.Int32Attribute{
-						Description: descriptions["usage_count"],
-						Computed:    true,
-					},
-					"items": schema.ListAttribute{
-						Description: descriptions["usage_items"],
-						Computed:    true,
-						ElementType: types.StringType,
 					},
 				},
 			},
@@ -654,12 +625,6 @@ func mapFields(ctx context.Context, customRuleGroup *albWaf.GetCustomRuleGroupRe
 	}
 	model.Rules = *rules
 
-	usage, err := mapUsage(ctx, customRuleGroup.Usage)
-	if err != nil || usage == nil {
-		return fmt.Errorf("map usage: %w", err)
-	}
-	model.Usage = *usage
-
 	return nil
 }
 
@@ -781,31 +746,6 @@ func mapConditions(ctx context.Context, rule albWaf.GetCustomRule) (*basetypes.L
 		}
 	} else {
 		result = types.ListNull(types.ObjectType{AttrTypes: conditionType})
-	}
-
-	return &result, nil
-}
-
-func mapUsage(ctx context.Context, usage *albWaf.CRGUsage) (*basetypes.ObjectValue, error) {
-	var diags diag.Diagnostics
-	var result basetypes.ObjectValue
-
-	if usage != nil {
-		usageModel := UsageModel{
-			Count: types.Int32PointerValue(usage.Count),
-		}
-
-		usageModel.Items, diags = types.ListValueFrom(ctx, types.StringType, usage.GetItems())
-		if diags.HasError() {
-			return nil, fmt.Errorf("creating usage object: %w", core.DiagsToError(diags))
-		}
-
-		result, diags = types.ObjectValueFrom(ctx, usageType, usageModel)
-		if diags.HasError() {
-			return nil, fmt.Errorf("creating usage object: %w", core.DiagsToError(diags))
-		}
-	} else {
-		result = types.ObjectNull(usageType)
 	}
 
 	return &result, nil

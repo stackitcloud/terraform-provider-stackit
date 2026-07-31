@@ -224,14 +224,6 @@ func TestMapFields(t *testing.T) {
 						Id:          new(int32(42)),
 					},
 				},
-				Usage: &albWaf.CRGUsage{
-					Count: new(int32(42)),
-					Items: []string{
-						"one",
-						"two",
-						"three",
-					},
-				},
 			},
 			expected: &Model{
 				ProjectId: testProjectId,
@@ -264,14 +256,6 @@ func TestMapFields(t *testing.T) {
 						}),
 						"description": types.StringValue("foo-bar"),
 						"id":          types.Int32Value(42),
-					}),
-				}),
-				Usage: types.ObjectValueMust(usageType, map[string]attr.Value{
-					"count": types.Int32Value(42),
-					"items": types.ListValueMust(types.StringType, []attr.Value{
-						types.StringValue("one"),
-						types.StringValue("two"),
-						types.StringValue("three"),
 					}),
 				}),
 			},

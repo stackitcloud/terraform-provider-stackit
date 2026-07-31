@@ -38,7 +38,6 @@ data "stackit_alb_waf_custom_rule_group" "example" {
 
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`name`".
 - `rules` (Attributes List) Enriched rules containing auto-generated IDs and computed severity values. (see [below for nested schema](#nestedatt--rules))
-- `usage` (Attributes) Tracking metrics for CRG resource utilization. (see [below for nested schema](#nestedatt--usage))
 
 <a id="nestedatt--rules"></a>
 ### Nested Schema for `rules`
@@ -86,14 +85,3 @@ Read-Only:
 
 - `type` (String) The targeted validation engine variable macro.
 - `value` (String) Optional key element context for map variables (e.g., matching a 'Host' header key).
-
-
-
-
-<a id="nestedatt--usage"></a>
-### Nested Schema for `usage`
-
-Read-Only:
-
-- `count` (Number) Number of WAF configurations actively using this rule group.
-- `items` (List of String) List of individual WAF configuration names that bind this rule group.

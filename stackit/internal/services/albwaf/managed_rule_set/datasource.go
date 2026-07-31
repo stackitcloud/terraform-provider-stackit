@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
@@ -99,21 +98,6 @@ func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.Schema
 			"version": schema.StringAttribute{
 				Description: descriptions["version"],
 				Computed:    true,
-			},
-			"usage": schema.SingleNestedAttribute{
-				Description: descriptions["usage"],
-				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"count": schema.Int32Attribute{
-						Description: descriptions["usage_count"],
-						Computed:    true,
-					},
-					"items": schema.ListAttribute{
-						Description: descriptions["usage_items"],
-						Computed:    true,
-						ElementType: types.StringType,
-					},
-				},
 			},
 			"groups": schema.MapNestedAttribute{
 				Description: descriptions["groups"],

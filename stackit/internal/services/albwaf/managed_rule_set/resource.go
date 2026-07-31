@@ -43,7 +43,6 @@ type Model struct {
 	Name      types.String `tfsdk:"name"`
 	Groups    types.Map    `tfsdk:"groups"`
 	Type      types.String `tfsdk:"type"`
-	Usage     types.Object `tfsdk:"usage"`
 	Version   types.String `tfsdk:"version"`
 }
 
@@ -71,16 +70,6 @@ var ruleType = map[string]attr.Type{
 	"description": types.StringType,
 	"mode":        types.StringType,
 	"severity":    types.StringType,
-}
-
-type UsageModel struct {
-	Count types.Int32 `tfsdk:"count"`
-	Items types.List  `tfsdk:"items"`
-}
-
-var usageType = map[string]attr.Type{
-	"count": types.Int32Type,
-	"items": types.ListType{ElemType: types.StringType},
 }
 
 type managedRuleSetResource struct {
@@ -124,9 +113,6 @@ var descriptions = map[string]string{
 	"name":              "Managed Rule Set configuration name.",
 	"type":              "Type of the Managed Rule Set.",
 	"version":           "Managed Rule Set version.",
-	"usage":             "Managed Rule Set usage",
-	"usage_count":       "Number of WAFs using this Managed Rule Set.",
-	"usage_items":       "List of WAFs that use this Managed Rule Set.",
 	"groups":            "Inventory of all available Managed Rule Set groups and their current configuration.",
 	"group_description": "A description of what this group covers.",
 	"group_name":        "The name for the rule group.",
@@ -189,21 +175,6 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"version": schema.StringAttribute{
 				Description: descriptions["version"],
 				Computed:    true,
-			},
-			"usage": schema.SingleNestedAttribute{
-				Description: descriptions["usage"],
-				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"count": schema.Int32Attribute{
-						Description: descriptions["usage_count"],
-						Computed:    true,
-					},
-					"items": schema.ListAttribute{
-						Description: descriptions["usage_items"],
-						Computed:    true,
-						ElementType: types.StringType,
-					},
-				},
 			},
 			"groups": schema.MapNestedAttribute{
 				Description: descriptions["groups"],
@@ -496,24 +467,6 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 	)
 	if diags.HasError() {
 		return fmt.Errorf("mapping groups: %w", core.DiagsToError(diags))
-	}
-
-	if usage, ok := managedRuleSet.GetUsageOk(); ok {
-		usageModel := UsageModel{
-			Count: types.Int32PointerValue(usage.Count),
-		}
-
-		usageModel.Items, diags = types.ListValueFrom(ctx, types.StringType, usage.GetItems())
-		if diags.HasError() {
-			return fmt.Errorf("creating usage object: %w", core.DiagsToError(diags))
-		}
-
-		model.Usage, diags = types.ObjectValueFrom(ctx, usageType, usageModel)
-		if diags.HasError() {
-			return fmt.Errorf("creating usage object: %w", core.DiagsToError(diags))
-		}
-	} else {
-		model.Usage = types.ObjectNull(usageType)
 	}
 
 	return nil

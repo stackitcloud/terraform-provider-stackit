@@ -171,21 +171,6 @@ func (r *customRuleGroupDataSource) Schema(_ context.Context, _ datasource.Schem
 					},
 				},
 			},
-			"usage": schema.SingleNestedAttribute{
-				Description: descriptions["usage"],
-				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"count": schema.Int32Attribute{
-						Description: descriptions["usage_count"],
-						Computed:    true,
-					},
-					"items": schema.ListAttribute{
-						Description: descriptions["usage_items"],
-						Computed:    true,
-						ElementType: types.StringType,
-					},
-				},
-			},
 		},
 	}
 }
