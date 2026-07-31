@@ -94,7 +94,7 @@ func StringUnchanged(attributePath path.Path) UseStateForUnknownIfFunc { // noli
 	}
 }
 
-// This function is the pathExpression compatible version of StringUnchanged and should replace StringUnchanged in the future
+// StringUnchangedExpressionFunction This function is the pathExpression compatible version of StringUnchanged and should replace StringUnchanged in the future
 func StringUnchangedExpressionFunction(pathExpressions ...path.Expression) UseStateForUnknownIfFunc { // nolint:gocritic // function signature required by Terraform
 	return func(ctx context.Context, request planmodifier.StringRequest, response *UseStateForUnknownFuncResponse) {
 		expressions := request.PathExpression.MergeExpressions(pathExpressions...)
