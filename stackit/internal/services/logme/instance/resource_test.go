@@ -2,14 +2,17 @@ package logme
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 )
+
+const testRegion = "eu02"
 
 var fixtureModelParameters = types.ObjectValueMust(parametersTypes, map[string]attr.Value{
 	"sgw_acl":                 types.StringValue("acl"),
@@ -106,7 +109,7 @@ func TestMapFields(t *testing.T) {
 			"default_values",
 			&logmeSdk.Instance{},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
 				PlanId:             types.StringValue(""),
@@ -117,6 +120,7 @@ func TestMapFields(t *testing.T) {
 				ImageUrl:           types.StringValue(""),
 				CfOrganizationGuid: types.StringValue(""),
 				Parameters:         types.ObjectNull(parametersTypes),
+				Region:             types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -159,7 +163,7 @@ func TestMapFields(t *testing.T) {
 				},
 			},
 			Model{
-				Id:                 types.StringValue("pid,iid"),
+				Id:                 types.StringValue(fmt.Sprintf("pid,%s,iid", testRegion)),
 				InstanceId:         types.StringValue("iid"),
 				ProjectId:          types.StringValue("pid"),
 				PlanId:             types.StringValue("plan"),
@@ -170,6 +174,7 @@ func TestMapFields(t *testing.T) {
 				ImageUrl:           types.StringValue("image"),
 				CfOrganizationGuid: types.StringValue("org"),
 				Parameters:         fixtureModelParameters,
+				Region:             types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -212,7 +217,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, state)
+			err := mapFields(tt.input, state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

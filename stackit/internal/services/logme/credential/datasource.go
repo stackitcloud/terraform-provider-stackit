@@ -17,7 +17,7 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -32,37 +32,40 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the data source implementation.
 type credentialDataSource struct {
-	client *logmeSdk.APIClient
+	client       *logmeSdk.APIClient
+	providerData core.ProviderData
 }
 
 // Metadata returns the data source type name.
-func (r *credentialDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *credentialDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_logme_credential"
 }
 
 // Configure adds the provider configured client to the data source.
-func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+func (d *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	var ok bool
+	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := logmeUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	apiClient := logmeUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+	d.client = apiClient
 	tflog.Info(ctx, "LogMe credential client configured")
 }
 
 // Schema defines the schema for the data source.
-func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	descriptions := map[string]string{ //nolint:gosec // description for credential id
 		"main":          "LogMe credential data source schema. Must have a `region` specified in the provider configuration.",
-		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`instance_id`,`credential_id`\".",
+		"id":            "Terraform's internal data source. identifier. It is structured as \"`project_id`,`region`,`instance_id`,`credential_id`\".",
 		"credential_id": "The credential's ID.",
 		"instance_id":   "ID of the LogMe instance.",
 		"project_id":    "STACKIT project ID to which the instance is associated.",
+		"region":        "The resource region. If not defined, the provider region is used.",
 	}
 
 	resp.Schema = schema.Schema{
@@ -113,12 +116,18 @@ func (r *credentialDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 			"username": schema.StringAttribute{
 				Computed: true,
 			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+			},
 		},
 	}
 }
 
 // Read refreshes the Terraform state with the latest data.
-func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+func (d *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	var model Model
 	diags := req.Config.Get(ctx, &model)
 	resp.Diagnostics.Append(diags...)
@@ -129,13 +138,15 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
+	region := d.providerData.GetRegionWithOverride(model.Region)
 	instanceId := model.InstanceId.ValueString()
 	credentialId := model.CredentialId.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, instanceId, credentialId).Execute()
+	recordSetResp, err := d.client.DefaultAPI.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -154,7 +165,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model)
+	err = mapFields(recordSetResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credential", fmt.Sprintf("Processing API payload: %v", err))
 		return
