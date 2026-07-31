@@ -79,7 +79,7 @@ func (f *flavors) Configure(ctx context.Context, req datasource.ConfigureRequest
 	tflog.Info(ctx, "SqlserverFlex client configured")
 }
 
-func (f *flavors) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (f *flavors) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "SqlserverFlex flavors data source schema",
 		Attributes: map[string]schema.Attribute{
