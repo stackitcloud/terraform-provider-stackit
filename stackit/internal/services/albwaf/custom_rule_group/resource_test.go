@@ -66,7 +66,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name: testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{
 					{
-						Behaviour: albWaf.Behaviour{
+						Behaviour: albWaf.Behaviour{ // nolint:misspell // Generated from API spec
 							Action: albWaf.BehaviourAction("some-action"),
 							Log:    new(true),
 							LogMsg: new("Log: something happened"),
@@ -130,7 +130,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name: testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{
 					{
-						Behaviour: albWaf.Behaviour{},
+						Behaviour: albWaf.Behaviour{}, // nolint:misspell // Generated from API spec
 						Conditions: []albWaf.Condition{
 							{
 								Operator:        albWaf.ConditionOperator{},
@@ -198,7 +198,7 @@ func TestMapFields(t *testing.T) {
 				Name: testName.ValueStringPointer(),
 				Rules: []albWaf.GetCustomRule{
 					{
-						Behaviour: &albWaf.GetBehaviour{
+						Behaviour: &albWaf.GetBehaviour{ // nolint:misspell // Generated from API spec
 							Action:   new(albWaf.GetBehaviourAction("some-action")),
 							Log:      new(true),
 							LogMsg:   new("Log: something happened"),

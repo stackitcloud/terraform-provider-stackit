@@ -569,7 +569,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 			}
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
-				Behaviour: albWaf.Behaviour{
+				Behaviour: albWaf.Behaviour{ // nolint:misspell // Generated from API spec
 					Action: albWaf.BehaviourAction(behavior.Action.ValueString()),
 					Log:    behavior.Log.ValueBoolPointer(),
 					LogMsg: behavior.LogMsg.ValueStringPointer(),
@@ -675,7 +675,7 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 				Description: types.StringPointerValue(rule.Description),
 			}
 
-			behavior, err := mapBehavior(ctx, rule.Behaviour)
+			behavior, err := mapBehavior(ctx, rule.Behaviour) // nolint:misspell // Generated from API spec
 			if err != nil || behavior == nil {
 				return nil, fmt.Errorf("map behavior: %w", err)
 			}
