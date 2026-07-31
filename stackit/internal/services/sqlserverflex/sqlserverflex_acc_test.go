@@ -418,6 +418,37 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 	})
 }
 
+func TestAccSqlserverFlexFlavorsDatasource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: config.Variables{
+					"project_id": config.StringVariable(testutil.ProjectId),
+				},
+				Config: fmt.Sprintf(`
+				%s
+
+				data "stackit_sqlserverflex_flavors" "datasource" {
+					project_id = vars.project_id
+				}`, testutil.NewConfigBuilder().BuildProviderConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.id"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.description"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.cpu"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.memory"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.min_GB"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.max_GB"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.node_type"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.storage_classes.0.class"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.storage_classes.0.max_io_per_sec"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.storage_classes.0.max_through_in_MB"),
+				),
+			},
+		},
+	})
+}
+
 func testAccChecksqlserverflexDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	client, err := sqlserverflex.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.SQLServerFlexCustomEndpoint, false)...)
