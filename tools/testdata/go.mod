@@ -1,4 +1,4 @@
-module facttests
+module github.com/stackitcloud/terraform-provider-stackit
 
 go 1.25.9
 

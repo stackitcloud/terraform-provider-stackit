@@ -12,5 +12,5 @@ func TestAnalyzer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	analysistest.Run(t, dir, Analyzer, "facttests/servicecall")
+	analysistest.Run(t, dir, Analyzer, "github.com/stackitcloud/terraform-provider-stackit/servicecall")
 }
