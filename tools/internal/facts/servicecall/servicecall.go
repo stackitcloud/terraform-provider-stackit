@@ -70,6 +70,16 @@ func run(pass *analysis.Pass) (any, error) {
 	serviceCalls := make(map[*types.Func]struct{})
 	var serviceCallers []*types.Func
 
+	// A function that receives a known service-call function will invoke that
+	// function indirectly, so it is itself a service-call function.
+	markReferencedServiceCall := func(caller, referencedFunction *types.Func) {
+		if referencedFunction == nil || !isKnownServiceCall(pass, nil, referencedFunction) {
+			return
+		}
+		serviceCalls[referencedFunction.Origin()] = struct{}{}
+		serviceCallers = append(serviceCallers, caller)
+	}
+
 	inspect.Preorder([]ast.Node{(*ast.FuncDecl)(nil)}, func(n ast.Node) {
 		decl := n.(*ast.FuncDecl)
 		if decl.Body == nil {
@@ -93,10 +103,7 @@ func run(pass *analysis.Pass) (any, error) {
 				return true
 			}
 			for _, argument := range call.Args {
-				referencedFunction := functionReference(argument, pass.TypesInfo)
-				if referencedFunction != nil && isKnownServiceCall(pass, referencedFunction) {
-					serviceCalls[referencedFunction.Origin()] = struct{}{}
-				}
+				markReferencedServiceCall(caller, functionReference(argument, pass.TypesInfo))
 			}
 
 			callee, _ := typeutil.Callee(pass.TypesInfo, call).(*types.Func)
@@ -105,7 +112,7 @@ func run(pass *analysis.Pass) (any, error) {
 			}
 			callee = callee.Origin()
 
-			if isKnownServiceCall(pass, callee) {
+			if isKnownServiceCall(pass, call, callee) {
 				serviceCalls[callee] = struct{}{}
 				serviceCallers = append(serviceCallers, caller)
 				return true
@@ -196,8 +203,10 @@ func functionReference(expr ast.Expr, info *types.Info) *types.Func {
 	return nil
 }
 
-func isKnownServiceCall(pass *analysis.Pass, fn *types.Func) bool {
-	return isSDKCallAPI(fn) || hasServiceCallFact(pass, fn)
+func isKnownServiceCall(pass *analysis.Pass, call *ast.CallExpr, fn *types.Func) bool {
+	return isSDKCallAPI(fn) ||
+		(call != nil && lintutils.IsWaitCall(pass.TypesInfo, call, fn.Name())) ||
+		hasServiceCallFact(pass, fn)
 }
 
 func hasServiceCallFact(pass *analysis.Pass, fn *types.Func) bool {

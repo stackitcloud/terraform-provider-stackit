@@ -8,6 +8,46 @@ import (
 
 const StackitSdkModulePrefix = "github.com/stackitcloud/stackit-sdk-go"
 
+// IsWaitCall reports whether call executes an SDK async-action wait handler.
+func IsWaitCall(info *types.Info, call *ast.CallExpr, calledFuncName string) bool {
+	// Must be a selector like handler.WaitWithContext().
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	// serviceenablement itself is used in other resources and does not have an ID itself.
+	if waiterCall, ok := sel.X.(*ast.CallExpr); ok {
+		_, waiterFuncName := GetCallInfo(waiterCall, info)
+		if waiterFuncName == "EnableServiceWaitHandler" {
+			return false
+		}
+	}
+	obj := info.Uses[sel.Sel]
+	if obj == nil {
+		return false
+	}
+	sig, ok := obj.Type().(*types.Signature)
+	if !ok {
+		return false
+	}
+	recv := sig.Recv()
+	if recv == nil {
+		return false
+	}
+	recvType := recv.Type()
+	if ptr, ok := recvType.(*types.Pointer); ok {
+		recvType = ptr.Elem()
+	}
+	named, ok := recvType.(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return false
+	}
+	// Must be WaitWithContext on a wait.AsyncActionHandler receiver.
+	return named.Obj().Pkg().Path() == "github.com/stackitcloud/stackit-sdk-go/core/wait" &&
+		named.Obj().Name() == "AsyncActionHandler" &&
+		calledFuncName == "WaitWithContext"
+}
+
 // GetCallInfo resolves the package path and function name of a CallExpr.
 func GetCallInfo(call *ast.CallExpr, info *types.Info) (string, string) {
 	var ident *ast.Ident

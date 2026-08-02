@@ -2,7 +2,6 @@ package tfwriteid
 
 import (
 	"go/ast"
-	"go/types"
 
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
@@ -63,7 +62,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			}
 
 			// Check if we've hit a STACKIT SDK wait handler call before the util function
-			callsWait := isWaitCall(pass.TypesInfo, call, calledFuncName)
+			callsWait := lintutils.IsWaitCall(pass.TypesInfo, call, calledFuncName)
 			if callsWait && !hasCalledUtil {
 				pass.Reportf(
 					call.Pos(),
@@ -95,49 +94,4 @@ func (p *plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 
 func (p *plugin) GetLoadMode() string {
 	return register.LoadModeSyntax
-}
-
-func isWaitCall(info *types.Info, call *ast.CallExpr, calledFuncName string) bool {
-	// must be a selector like handler.WaitWithContext()
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	// serviceenablement itself is used in other resources and does not have an ID itself
-	if waiterCall, ok := sel.X.(*ast.CallExpr); ok {
-		_, waiterFuncName := lintutils.GetCallInfo(waiterCall, info)
-		if waiterFuncName == "EnableServiceWaitHandler" {
-			return false
-		}
-	}
-	obj := info.Uses[sel.Sel]
-	if obj == nil {
-		return false
-	}
-	sig, ok := obj.Type().(*types.Signature)
-	if !ok {
-		return false
-	}
-	// get full receiver type
-	recv := sig.Recv()
-	if recv == nil {
-		return false
-	}
-	recvType := recv.Type()
-	if ptr, ok := recvType.(*types.Pointer); ok {
-		recvType = ptr.Elem()
-	}
-	named, ok := recvType.(*types.Named)
-	if !ok {
-		return false
-	}
-	if named.Obj().Pkg() == nil {
-		return false
-	}
-	recvPkgName := named.Obj().Pkg().Path()
-	recvTypeName := named.Obj().Name()
-	// must be WaitWithContext on a wait.AsyncActionHandler receiver
-	return recvPkgName == "github.com/stackitcloud/stackit-sdk-go/core/wait" &&
-		recvTypeName == "AsyncActionHandler" &&
-		calledFuncName == "WaitWithContext"
 }
