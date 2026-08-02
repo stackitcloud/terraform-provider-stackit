@@ -67,3 +67,14 @@ func (r *resource3) Delete(ctx context.Context, req testtypes.DeleteRequest, res
 	wrapper(c.DefaultAPI.CreateAffinityGroup(ctx, "", "").Execute)
 	ctx = core.LogResponse(ctx)
 }
+
+type falseNegative struct{}
+
+func (f *falseNegative) Read(ctx context.Context, req testtypes.ReadRequest, resp *testtypes.ReadResponse) {
+	var service iaas.DefaultAPIService
+	ctx = core.InitProviderContext(ctx)
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
+	ctx = core.LogResponse(ctx)
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
+	// this should fail because the traceID of the 2nd AddNetworkToServerExecute will never be logged
+}
