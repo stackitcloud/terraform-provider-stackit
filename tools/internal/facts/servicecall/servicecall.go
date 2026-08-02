@@ -45,6 +45,22 @@ func (r *Result) HasServiceCall(fn *types.Func) bool {
 	return ok
 }
 
+// HasServiceCall reports whether call invokes a marked service-call function
+// directly or receives one as a function reference argument.
+func HasServiceCall(call *ast.CallExpr, info *types.Info, result *Result) bool {
+	callee, _ := typeutil.Callee(info, call).(*types.Func)
+	if callee != nil && result.HasServiceCall(callee) {
+		return true
+	}
+
+	for _, argument := range call.Args {
+		if referencedFunction := functionReference(argument, info); referencedFunction != nil && result.HasServiceCall(referencedFunction) {
+			return true
+		}
+	}
+	return false
+}
+
 func run(pass *analysis.Pass) (any, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
@@ -76,13 +92,20 @@ func run(pass *analysis.Pass) (any, error) {
 			if !ok {
 				return true
 			}
+			for _, argument := range call.Args {
+				referencedFunction := functionReference(argument, pass.TypesInfo)
+				if referencedFunction != nil && isKnownServiceCall(pass, referencedFunction) {
+					serviceCalls[referencedFunction.Origin()] = struct{}{}
+				}
+			}
+
 			callee, _ := typeutil.Callee(pass.TypesInfo, call).(*types.Func)
 			if callee == nil {
 				return true
 			}
 			callee = callee.Origin()
 
-			if isSDKCallAPI(callee) || hasServiceCallFact(pass, callee) {
+			if isKnownServiceCall(pass, callee) {
 				serviceCalls[callee] = struct{}{}
 				serviceCallers = append(serviceCallers, caller)
 				return true
@@ -151,6 +174,30 @@ func addInterfaceEdges(pass *analysis.Pass, callers map[*types.Func]map[*types.F
 			callers[implementationFunc][method] = struct{}{}
 		}
 	}
+}
+
+// functionReference returns the function denoted by expr, if expr is a
+// statically identifiable function value.
+func functionReference(expr ast.Expr, info *types.Info) *types.Func {
+	switch expr := expr.(type) {
+	case *ast.Ident:
+		fn, _ := info.ObjectOf(expr).(*types.Func)
+		return fn
+	case *ast.SelectorExpr:
+		fn, _ := info.ObjectOf(expr.Sel).(*types.Func)
+		return fn
+	case *ast.ParenExpr:
+		return functionReference(expr.X, info)
+	case *ast.IndexExpr:
+		return functionReference(expr.X, info)
+	case *ast.IndexListExpr:
+		return functionReference(expr.X, info)
+	}
+	return nil
+}
+
+func isKnownServiceCall(pass *analysis.Pass, fn *types.Func) bool {
+	return isSDKCallAPI(fn) || hasServiceCallFact(pass, fn)
 }
 
 func hasServiceCallFact(pass *analysis.Pass, fn *types.Func) bool {

@@ -2,10 +2,8 @@ package tfctxinit
 
 import (
 	"go/ast"
-	"go/types"
 
 	"golang.org/x/tools/go/ast/inspector"
-	"golang.org/x/tools/go/types/typeutil"
 
 	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/facts/servicecall"
 	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/lintutils"
@@ -68,7 +66,7 @@ func run(pass *analysis.Pass) (any, error) {
 			}
 
 			// Check if we've hit a service call before the util function
-			if !hasCalledUtil && hasServiceCall(serviceCalls, pass, call) {
+			if !hasCalledUtil && servicecall.HasServiceCall(call, pass.TypesInfo, serviceCalls) {
 				pass.Reportf(
 					call.Pos(),
 					"%s: call to %s must happen AFTER %s.%s is called in %s",
@@ -81,11 +79,6 @@ func run(pass *analysis.Pass) (any, error) {
 	})
 
 	return nil, nil
-}
-
-func hasServiceCall(serviceCalls *servicecall.Result, pass *analysis.Pass, call *ast.CallExpr) bool {
-	callee, _ := typeutil.Callee(pass.TypesInfo, call).(*types.Func)
-	return callee != nil && serviceCalls.HasServiceCall(callee)
 }
 
 func init() {

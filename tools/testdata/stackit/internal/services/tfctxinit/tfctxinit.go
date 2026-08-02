@@ -27,3 +27,13 @@ func (r *resource) Read(ctx context.Context, req testtypes.ReadRequest, resp *te
 func sdkCallOutsideLifecycleMethod() {
 	iaas.NewAPIClient()
 }
+
+func wrapper[T any](fn func() (*T, error)) (*T, error) {
+	return fn()
+}
+
+func (r *resource) Delete(ctx context.Context, req testtypes.DeleteRequest, resp *testtypes.DeleteResponse) {
+	var service iaas.DefaultAPIService
+	wrapper(service.CreateAffinityGroup(ctx, "", "").Execute) // want "tfctxinit: call to github.com/stackitcloud/stackit-sdk-go must happen AFTER github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core.InitProviderContext is called in Delete"
+	core.InitProviderContext(ctx)
+}
