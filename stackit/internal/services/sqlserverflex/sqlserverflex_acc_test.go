@@ -147,7 +147,7 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "user_id"),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "username", testutil.ConvertConfigVariable(testConfigVarsMin["username"])),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.0", testutil.ConvertConfigVariable(testConfigVarsMax["role"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.0", testutil.ConvertConfigVariable(testConfigVarsMin["role"])),
 				),
 			},
 			// Import

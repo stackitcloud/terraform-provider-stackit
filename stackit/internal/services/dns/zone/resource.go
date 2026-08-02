@@ -174,7 +174,7 @@ func (r *zoneResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"acl": schema.StringAttribute{
-				Description: "The access control list. E.g. `0.0.0.0/0,::/0`",
+				Description: "The access control list (e.g., 0.0.0.0/0,::/0). Note: This field currently has no effect and does not enforce any access restrictions on the DNS zone.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{
@@ -304,7 +304,7 @@ func (r *zoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	waiterTimeout := wait.CreateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout()
+	waiterTimeout := wait.CreateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -435,7 +435,7 @@ func (r *zoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	waiterTimeout := wait.PartialUpdateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout()
+	waiterTimeout := wait.PartialUpdateZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -495,7 +495,7 @@ func (r *zoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	waiterTimeout := wait.DeleteZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout()
+	waiterTimeout := wait.DeleteZoneWaitHandler(ctx, r.client.DefaultAPI, "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
@@ -27,8 +29,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api"
-	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v2api/wait"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
+	"github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -47,10 +49,13 @@ type Model struct {
 	Username   types.String `tfsdk:"username"`
 	Roles      types.Set    `tfsdk:"roles"`
 	Password   types.String `tfsdk:"password"`
-	Host       types.String `tfsdk:"host"`
-	Port       types.Int64  `tfsdk:"port"`
-	Uri        types.String `tfsdk:"uri"`
-	Region     types.String `tfsdk:"region"`
+	// Deprecated: Host is deprecated and will be removed after February 2027
+	Host types.String `tfsdk:"host"`
+	// Deprecated: Port is deprecated and will be removed after February 2027
+	Port types.Int32 `tfsdk:"port"`
+	// Deprecated: Uri is deprecated and will be removed after February 2027
+	Uri    types.String `tfsdk:"uri"`
+	Region types.String `tfsdk:"region"`
 	// RotateWhenChanged is a map of arbitrary key/value pairs that will force
 	// recreation of the resource when they change, enabling resource rotation based on
 	// external conditions such as a rotating timestamp. Changing this forces a new
@@ -177,10 +182,8 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"username": schema.StringAttribute{
-				Required: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Required:      true,
+				PlanModifiers: []planmodifier.String{},
 			},
 			"roles": schema.SetAttribute{
 				Description: descriptions["roles"],
@@ -192,14 +195,17 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Sensitive: true,
 			},
 			"host": schema.StringAttribute{
-				Computed: true,
+				DeprecationMessage: "host is deprecated and will be removed after February 2027. The host can be retrieved from the instance in `connection_info.write.host`.",
+				Computed:           true,
 			},
-			"port": schema.Int64Attribute{
-				Computed: true,
+			"port": schema.Int32Attribute{
+				DeprecationMessage: "port is deprecated and will be removed after February 2027. The port can be retrieved from the instance in `connection_info.write.port`.",
+				Computed:           true,
 			},
 			"uri": schema.StringAttribute{
-				Computed:  true,
-				Sensitive: true,
+				DeprecationMessage: "uri is deprecated and will be removed after February 2027.",
+				Computed:           true,
+				Sensitive:          true,
 			},
 			"region": schema.StringAttribute{
 				Optional: true,
@@ -259,8 +265,21 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
+
 	// Create new user
-	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
+	// Workaround: The user creation will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporary unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+		},
+	}
+	userResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -268,15 +287,36 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	if userResp == nil || userResp.Item == nil || userResp.Item.Id == nil || *userResp.Item.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return user Id. A user might have been created")
+	if userResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", "API didn't return response. A user might have been created")
 		return
 	}
-	userId := *userResp.Item.Id
-	ctx = tflog.SetField(ctx, "user_id", userId)
+
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"region":      region,
+		"instance_id": instanceId,
+		"user_id":     strconv.FormatInt(userResp.Id, 10),
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	getResp, err := wait.CreateUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
+	if err != nil {
+		return
+	}
+
+	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
+		return
+	}
 
 	// Map response body to schema
-	err = mapFieldsCreate(userResp, &model, region)
+	err = mapFieldsCreate(userResp, getResp, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -303,8 +343,8 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
-	if userId == "" {
+	userIdStr := model.UserId.ValueString()
+	if userIdStr == "" {
 		// Resource not yet created; ID is unknown.
 		resp.State.RemoveResource(ctx)
 		return
@@ -312,13 +352,19 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	region := r.providerData.GetRegionWithOverride(model.Region)
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
+
+	// In v2 the ID was a string. This was changed in the v3 API.
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
 
 	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -328,8 +374,15 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	ctx = core.LogResponse(ctx)
 
+	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapFields(recordSetResp, &model, region)
+	err = mapFields(recordSetResp, instanceResp, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -358,12 +411,19 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userIdStr := model.UserId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
+
+	// In v2 the ID was a string. This was changed in the v3 API.
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
 
 	// Retrieve values from state
 	var stateModel Model
@@ -390,7 +450,19 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Update existing instance
-	err = r.client.DefaultAPI.UpdateUser(ctx, projectId, region, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	// Workaround: The user update will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporary unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+		},
+	}
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.PartialUpdateUser(ctx, projectId, region, instanceId, userId).PartialUpdateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
@@ -404,8 +476,15 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
+		return
+	}
+
 	// Map response body to schema
-	err = mapFields(userResp, &stateModel, region)
+	err = mapFields(userResp, instanceResp, &stateModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -434,18 +513,37 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	projectId := model.ProjectId.ValueString()
 	instanceId := model.InstanceId.ValueString()
-	userId := model.UserId.ValueString()
+	userIdStr := model.UserId.ValueString()
 	region := model.Region.ValueString()
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
-	ctx = tflog.SetField(ctx, "user_id", userId)
+	ctx = tflog.SetField(ctx, "user_id", userIdStr)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	// Delete existing record set
-	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
+	// In v2 the ID was a string. This was changed in the v3 API.
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Parsing user ID: %v", err))
+		return
+	}
+
+	// Delete existing record set
+	// Workaround: The user delete will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporary unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+		},
+	}
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, config)
+	if err != nil {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
 			return
 		}
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Calling API: %v", err))
@@ -485,35 +583,33 @@ func (r *userResource) ImportState(ctx context.Context, req resource.ImportState
 	tflog.Info(ctx, "Postgresflex user state imported")
 }
 
-func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model, region string) error {
-	if userResp == nil || userResp.Item == nil {
-		return fmt.Errorf("response is nil")
+func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, getUserResp *postgresflex.GetUserResponse, instanceResp *postgresflex.GetInstanceResponse, model *Model, region string) error {
+	if userResp == nil {
+		return fmt.Errorf("create response is nil")
+	}
+	if getUserResp == nil {
+		return fmt.Errorf("get response is nil")
+	}
+	if instanceResp == nil {
+		return fmt.Errorf("instance response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
 
-	if user.Id == nil {
-		return fmt.Errorf("user id not present")
-	}
-	userId := *user.Id
+	userId := strconv.FormatInt(userResp.Id, 10)
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Username = types.StringValue(userResp.Name)
+	model.Password = types.StringValue(userResp.Password)
 
-	if user.Password == nil {
-		return fmt.Errorf("user password not present")
-	}
-	model.Password = types.StringValue(*user.Password)
-
-	if user.Roles == nil {
+	if getUserResp.Roles == nil {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range user.Roles {
+		for _, role := range getUserResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -522,41 +618,41 @@ func mapFieldsCreate(userResp *postgresflex.CreateUserResponse, model *Model, re
 		}
 		model.Roles = rolesSet
 	}
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
-	model.Uri = types.StringPointerValue(user.Uri)
+	model.Host = types.StringValue(instanceResp.ConnectionInfo.Write.Host)
+	model.Port = types.Int32Value(instanceResp.ConnectionInfo.Write.Port)
+	model.Uri = types.StringValue(fmt.Sprintf("postgresql://%s:%s@%s:%d/stackit", userResp.Name, userResp.Password, instanceResp.ConnectionInfo.Write.Host, instanceResp.ConnectionInfo.Write.Port))
 	model.Region = types.StringValue(region)
 	return nil
 }
 
-func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region string) error {
-	if userResp == nil || userResp.Item == nil {
-		return fmt.Errorf("response is nil")
+func mapFields(userResp *postgresflex.GetUserResponse, instanceResp *postgresflex.GetInstanceResponse, model *Model, region string) error {
+	if userResp == nil {
+		return fmt.Errorf("user response is nil")
+	}
+	if instanceResp == nil {
+		return fmt.Errorf("instance response is nil")
 	}
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
-	user := userResp.Item
 
 	var userId string
 	if model.UserId.ValueString() != "" {
 		userId = model.UserId.ValueString()
-	} else if user.Id != nil {
-		userId = *user.Id
 	} else {
-		return fmt.Errorf("user id not present")
+		userId = strconv.FormatInt(userResp.Id, 10)
 	}
 	model.Id = utils.BuildInternalTerraformId(
 		model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), userId,
 	)
 	model.UserId = types.StringValue(userId)
-	model.Username = types.StringPointerValue(user.Username)
+	model.Username = types.StringValue(userResp.Name)
 
-	if user.Roles == nil {
+	if userResp.Roles == nil {
 		model.Roles = types.SetNull(types.StringType)
 	} else {
 		roles := []attr.Value{}
-		for _, role := range user.Roles {
+		for _, role := range userResp.Roles {
 			roles = append(roles, types.StringValue(role))
 		}
 		rolesSet, diags := types.SetValue(types.StringType, roles)
@@ -565,8 +661,8 @@ func mapFields(userResp *postgresflex.GetUserResponse, model *Model, region stri
 		}
 		model.Roles = rolesSet
 	}
-	model.Host = types.StringPointerValue(user.Host)
-	model.Port = types.Int64PointerValue(user.Port)
+	model.Host = types.StringValue(instanceResp.ConnectionInfo.Write.Host)
+	model.Port = types.Int32Value(instanceResp.ConnectionInfo.Write.Port)
 	model.Region = types.StringValue(region)
 	return nil
 }
@@ -580,12 +676,12 @@ func toCreatePayload(model *Model, roles []string) (*postgresflex.CreateUserPayl
 	}
 
 	return &postgresflex.CreateUserPayload{
-		Roles:    roles,
-		Username: conversion.StringValueToPointer(model.Username),
+		Roles: roles,
+		Name:  model.Username.ValueString(),
 	}, nil
 }
 
-func toUpdatePayload(model *Model, roles []string) (*postgresflex.UpdateUserPayload, error) {
+func toUpdatePayload(model *Model, roles []string) (*postgresflex.PartialUpdateUserPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
 	}
@@ -593,7 +689,8 @@ func toUpdatePayload(model *Model, roles []string) (*postgresflex.UpdateUserPayl
 		return nil, fmt.Errorf("nil roles")
 	}
 
-	return &postgresflex.UpdateUserPayload{
+	return &postgresflex.PartialUpdateUserPayload{
+		Name:  model.Username.ValueStringPointer(),
 		Roles: roles,
 	}, nil
 }

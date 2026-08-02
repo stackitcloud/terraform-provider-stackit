@@ -33,7 +33,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/observability v0.24.0
 	github.com/stackitcloud/stackit-sdk-go/services/opensearch v1.1.0
-	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.11.0
+	github.com/stackitcloud/stackit-sdk-go/services/postgresflex v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.1.1
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.1.1
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0
@@ -105,7 +105,7 @@ require (
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )

@@ -36,7 +36,7 @@ resource "stackit_dns_zone" "example" {
 
 ### Optional
 
-- `acl` (String) The access control list. E.g. `0.0.0.0/0,::/0`
+- `acl` (String) The access control list (e.g., 0.0.0.0/0,::/0). Note: This field currently has no effect and does not enforce any access restrictions on the DNS zone.
 - `active` (Boolean)
 - `contact_email` (String) A contact e-mail for the zone.
 - `default_ttl` (Number) Default time to live. E.g. 3600.

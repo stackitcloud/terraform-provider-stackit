@@ -100,12 +100,6 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"acls": schema.SetAttribute{ //nolint:tfacl // field is deprecated already
-				Description:        descriptions["acl"] + " This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
-				ElementType:        types.StringType,
-				Computed:           true,
-				DeprecationMessage: "This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
-			},
-			"acl": schema.SetAttribute{
 				Description: descriptions["acl"],
 				ElementType: types.StringType,
 				Computed:    true,
@@ -172,7 +166,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 

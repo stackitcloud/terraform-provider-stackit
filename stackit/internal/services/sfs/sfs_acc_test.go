@@ -71,11 +71,9 @@ var testConfigExportPolicyVarsMax = config.Variables{
 	"region":                 config.StringVariable(testutil.Region),
 	"name":                   config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"first_rule_description": config.StringVariable("Some description"),
-	"first_rule_ip_acl_1":    config.StringVariable("172.16.0.0/24"),
-	"first_rule_ip_acl_2":    config.StringVariable("172.16.0.250/32"),
+	"first_rule_ip_acl":      config.ListVariable(config.StringVariable("172.16.0.0/24"), config.StringVariable("172.16.0.250/32")),
 	"first_rule_set_uuid":    config.BoolVariable(true),
-	"second_rule_ip_acl_1":   config.StringVariable("172.16.0.0/24"),
-	"second_rule_ip_acl_2":   config.StringVariable("172.16.0.250/32"),
+	"second_rule_ip_acl":     config.ListVariable(config.StringVariable("172.16.0.0/24"), config.StringVariable("172.16.0.250/32")),
 	"second_rule_read_only":  config.BoolVariable(true),
 	"second_rule_super_user": config.BoolVariable(false),
 	"label":                  config.StringVariable("foo"),
@@ -86,8 +84,7 @@ var testConfigExportPolicyVarsMaxUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigExportPolicyVarsMax)
 
 	updatedConfig["first_rule_description"] = config.StringVariable("Some other description")
-	updatedConfig["first_rule_ip_acl_1"] = config.StringVariable("172.17.0.0/24")
-	updatedConfig["first_rule_ip_acl_2"] = config.StringVariable("172.17.0.250/32")
+	updatedConfig["first_rule_ip_acl"] = config.ListVariable(config.StringVariable("172.17.0.0/24"), config.StringVariable("172.17.0.250/32"))
 	updatedConfig["label"] = config.StringVariable("bar")
 
 	return updatedConfig
@@ -98,8 +95,7 @@ var testConfigExportPolicyVarsMaxUpdated = func() config.Variables {
 var testConfigResourcePoolVarsMin = config.Variables{
 	"project_id":        config.StringVariable(testutil.ProjectId),
 	"name":              config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"ip_acl_1":          config.StringVariable("192.168.42.1/32"),
-	"ip_acl_2":          config.StringVariable("192.168.42.2/32"),
+	"ip_acl":            config.ListVariable(config.StringVariable("192.168.42.1/32"), config.StringVariable("192.168.42.2/32")),
 	"availability_zone": config.StringVariable("eu01-m"),
 	"performance_class": config.StringVariable("Standard"),
 	"size_gigabytes":    config.IntegerVariable(500),
@@ -110,8 +106,7 @@ var testConfigResourcePoolVarsMinUpdated = func() config.Variables {
 	maps.Copy(updatedConfig, testConfigResourcePoolVarsMin)
 	updatedConfig["performance_class"] = config.StringVariable("Premium")
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(512)
-	updatedConfig["ip_acl_1"] = config.StringVariable("172.17.0.0/24")
-	updatedConfig["ip_acl_2"] = config.StringVariable("172.17.0.250/32")
+	updatedConfig["ip_acl"] = config.ListVariable(config.StringVariable("172.17.0.0/24"), config.StringVariable("172.17.0.250/32"))
 	return updatedConfig
 }
 
@@ -120,8 +115,7 @@ var testConfigResourcePoolVarsMinUpdated = func() config.Variables {
 var testConfigResourcePoolVarsMax = config.Variables{
 	"project_id":            config.StringVariable(testutil.ProjectId),
 	"name":                  config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"ip_acl_1":              config.StringVariable("192.168.42.1/32"),
-	"ip_acl_2":              config.StringVariable("192.168.42.2/32"),
+	"ip_acl":                config.ListVariable(config.StringVariable("192.168.42.1/32"), config.StringVariable("192.168.42.2/32")),
 	"region":                config.StringVariable(testutil.Region),
 	"availability_zone":     config.StringVariable("eu01-m"),
 	"performance_class":     config.StringVariable("Standard"),
@@ -137,8 +131,7 @@ var testConfigResourcePoolVarsMaxUpdated = func() config.Variables {
 	updatedConfig["performance_class"] = config.StringVariable("Premium")
 	updatedConfig["snapshots_are_visible"] = config.BoolVariable(false)
 	updatedConfig["size_gigabytes"] = config.IntegerVariable(1024)
-	updatedConfig["ip_acl_1"] = config.StringVariable("172.17.0.0/24")
-	updatedConfig["ip_acl_2"] = config.StringVariable("172.17.0.250/32")
+	updatedConfig["ip_acl"] = config.ListVariable(config.StringVariable("172.17.0.0/24"), config.StringVariable("172.17.0.250/32"))
 	updatedConfig["label"] = config.StringVariable("bar")
 	return updatedConfig
 }
@@ -298,18 +291,14 @@ func TestAccExportPolicyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "2"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.description", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_description"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.order", "1"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.0", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.1", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl", testConfigExportPolicyVarsMax["first_rule_ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.read_only", "false"), // default value
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.set_uuid", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_set_uuid"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.super_user", "true"), // default value
 
 					resource.TestCheckNoResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.description"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.order", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.0", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.1", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl", testConfigExportPolicyVarsMax["second_rule_ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.read_only", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_read_only"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.set_uuid", "false"), // default value
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.super_user", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_super_user"])),
@@ -347,18 +336,14 @@ func TestAccExportPolicyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.#", "2"),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.description", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_description"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.order", "1"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl.0", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_ip_acl_1"])),
-					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl.1", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_ip_acl_2"])),
+					testutil.CheckListAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.ip_acl", testConfigExportPolicyVarsMax["first_rule_ip_acl"]),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.read_only", "false"), // default value
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.set_uuid", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["first_rule_set_uuid"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.0.super_user", "true"), // default value
 
 					resource.TestCheckNoResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.description"),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.order", "2"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.ip_acl.0", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_ip_acl_1"])),
-					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.ip_acl.1", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_ip_acl_2"])),
+					testutil.CheckListAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.ip_acl", testConfigExportPolicyVarsMax["second_rule_ip_acl"]),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.read_only", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_read_only"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.set_uuid", "false"), // default value
 					resource.TestCheckResourceAttr("data.stackit_sfs_export_policy.policy_data_test", "rules.1.super_user", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMax["second_rule_super_user"])),
@@ -403,18 +388,14 @@ func TestAccExportPolicyMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.#", "2"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.description", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["first_rule_description"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.order", "1"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.0", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["first_rule_ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl.1", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["first_rule_ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.ip_acl", testConfigExportPolicyVarsMaxUpdated()["first_rule_ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.read_only", "false"), // default value
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.set_uuid", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["first_rule_set_uuid"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.0.super_user", "true"), // default value
 
 					resource.TestCheckNoResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.description"),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.order", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.0", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["second_rule_ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl.1", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["second_rule_ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.ip_acl", testConfigExportPolicyVarsMaxUpdated()["second_rule_ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.read_only", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["second_rule_read_only"])),
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.set_uuid", "false"), // default value
 					resource.TestCheckResourceAttr("stackit_sfs_export_policy.exportpolicy", "rules.1.super_user", testutil.ConvertConfigVariable(testConfigExportPolicyVarsMaxUpdated()["second_rule_super_user"])),
@@ -445,9 +426,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["availability_zone"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["performance_class"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["size_gigabytes"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl", testConfigResourcePoolVarsMin["ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
 					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.%", "0"),
@@ -482,9 +461,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["availability_zone"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["performance_class"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["size_gigabytes"])),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_1"])),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMin["ip_acl_2"])),
+					testutil.CheckListAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl", testConfigResourcePoolVarsMin["ip_acl"]),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", "false"),
 					resource.TestCheckNoResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy"),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "labels.%", "0"),
@@ -526,9 +503,7 @@ func TestAccResourcePoolResourceMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["availability_zone"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["performance_class"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["size_gigabytes"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMinUpdated()["ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl", testConfigResourcePoolVarsMinUpdated()["ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", "false"),
 					resource.TestCheckNoResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy"),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "labels.%", "0"),
@@ -557,9 +532,7 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["availability_zone"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["performance_class"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["size_gigabytes"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl", testConfigResourcePoolVarsMax["ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name"),
@@ -596,9 +569,7 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["availability_zone"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["performance_class"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["size_gigabytes"])),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_1"])),
-					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["ip_acl_2"])),
+					testutil.CheckListAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "ip_acl", testConfigResourcePoolVarsMax["ip_acl"]),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshots_are_visible"])),
 					resource.TestCheckResourceAttr("data.stackit_sfs_resource_pool.resource_pool_ds", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
 					resource.TestCheckResourceAttrPair(
@@ -645,9 +616,7 @@ func TestAccResourcePoolResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "availability_zone", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["availability_zone"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "performance_class", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["performance_class"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "size_gigabytes", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["size_gigabytes"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.#", "2"),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.0", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["ip_acl_1"])),
-					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl.1", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["ip_acl_2"])),
+					testutil.CheckListAttr("stackit_sfs_resource_pool.resourcepool", "ip_acl", testConfigResourcePoolVarsMaxUpdated()["ip_acl"]),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshots_are_visible", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMaxUpdated()["snapshots_are_visible"])),
 					resource.TestCheckResourceAttr("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.id", testutil.ConvertConfigVariable(testConfigResourcePoolVarsMax["snapshot_policy_id"])),
 					resource.TestCheckResourceAttrSet("stackit_sfs_resource_pool.resourcepool", "snapshot_policy.name"),

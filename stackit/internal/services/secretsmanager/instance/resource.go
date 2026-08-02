@@ -44,11 +44,8 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
-	ACL        types.Set    `tfsdk:"acl"`
 	KmsKey     *KmsKeyModel `tfsdk:"kms_key"`
-
-	// Deprecated: will be removed. Use the ACL field instead
-	ACLs types.Set `tfsdk:"acls"` //nolint:tfacl // field is deprecated already
+	ACLs       types.Set    `tfsdk:"acls"` //nolint:tfacl // field was here before linter was introduced
 }
 
 type KmsKeyModel struct {
@@ -144,11 +141,10 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"acls": schema.SetAttribute{ //nolint:tfacl // field is deprecated already
-				Description:        descriptions["acl"] + " This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
-				ElementType:        types.StringType,
-				Optional:           true,
-				DeprecationMessage: "This field is deprecated and will be removed in a future version. Please use the `acl` field instead.",
+			"acls": schema.SetAttribute{ //nolint:tfacl // field was here before linter was introduced
+				Description: descriptions["acl"],
+				ElementType: types.StringType,
+				Optional:    true,
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(
 						validate.CIDR(),
@@ -244,12 +240,12 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	// Create ACLs
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACLs: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
 		return
 	}
 	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -305,7 +301,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -365,10 +361,10 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		}
 	}
 
-	// Update ACLs
+	// Update ACL
 	err = updateACL(ctx, projectId, instanceId, acl, r.client)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACLs: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
 		return
 	}
 
@@ -382,7 +378,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACLs data: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
 	}
 
@@ -511,7 +507,6 @@ func mapACL(aclList *secretsmanager.ListACLsResponse, model *Model) error {
 	}
 
 	model.ACLs = aclListTf
-	model.ACL = aclListTf
 
 	return nil
 }
@@ -557,12 +552,12 @@ func toUpdatePayload(model *Model) (*secretsmanager.UpdateInstancePayload, error
 	return payload, nil
 }
 
-// updateACL creates and deletes ACLs so that the instance's ACL are the ones in the model
+// updateACL creates and deletes ACL so that the instance's ACL are the ones in the model
 func updateACL(ctx context.Context, projectId, instanceId string, acl []string, client *secretsmanager.APIClient) error {
-	// Get ACLs current state
-	currentACLsResp, err := client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	// Get ACL current state
+	currentACLResp, err := client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
-		return fmt.Errorf("fetching current ACLs: %w", err)
+		return fmt.Errorf("fetching current ACL: %w", err)
 	}
 
 	type aclState struct {
@@ -576,7 +571,7 @@ func updateACL(ctx context.Context, projectId, instanceId string, acl []string, 
 			isInModel: true,
 		}
 	}
-	for _, acl := range currentACLsResp.Acls {
+	for _, acl := range currentACLResp.Acls {
 		cidr := acl.Cidr
 		if _, ok := aclStates[cidr]; !ok {
 			aclStates[cidr] = &aclState{}
@@ -585,7 +580,7 @@ func updateACL(ctx context.Context, projectId, instanceId string, acl []string, 
 		aclStates[cidr].id = acl.Id
 	}
 
-	// Create/delete ACLs
+	// Create/delete ACL
 	for cidr, state := range aclStates {
 		if state.isInModel && !state.isCreated {
 			payload := secretsmanager.CreateACLPayload{

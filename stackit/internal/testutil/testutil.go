@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -351,9 +352,49 @@ func CreateDefaultLocalFile() os.File {
 	return *file
 }
 
-func ConvertConfigVariable(variable config.Variable) string {
-	tmpByteArray, _ := variable.MarshalJSON()
-	input := string(tmpByteArray)
+// resolveVariablePath marshals a variable to JSON and traverses path using
+// int indices (for arrays) and string keys (for objects). Panics on path mismatches.
+// caller sets the panic message prefix for clear error tracing.
+func resolveVariablePath(caller string, variable config.Variable, path ...any) json.RawMessage {
+	tmpByteArray, err := variable.MarshalJSON()
+	if err != nil {
+		panic(fmt.Sprintf("%s: failed to marshal variable: %s", caller, err))
+	}
+	raw := json.RawMessage(tmpByteArray)
+
+	for _, segment := range path {
+		switch key := segment.(type) {
+		case int:
+			var list []json.RawMessage
+			if err := json.Unmarshal(raw, &list); err != nil {
+				panic(fmt.Sprintf("%s: cannot apply index %d, value is not a list: %s (%s)", caller, key, string(raw), err))
+			}
+			if key < 0 || key >= len(list) {
+				panic(fmt.Sprintf("%s: index %d out of range (len %d): %s", caller, key, len(list), string(raw)))
+			}
+			raw = list[key]
+		case string:
+			var obj map[string]json.RawMessage
+			if err := json.Unmarshal(raw, &obj); err != nil {
+				panic(fmt.Sprintf("%s: cannot apply key %q, value is not an object: %s (%s)", caller, key, string(raw), err))
+			}
+			value, ok := obj[key]
+			if !ok {
+				panic(fmt.Sprintf("%s: key %q not found in: %s", caller, key, string(raw)))
+			}
+			raw = value
+		default:
+			panic(fmt.Sprintf("%s: unsupported path segment type %T, must be int or string", caller, segment))
+		}
+	}
+
+	return raw
+}
+
+// jsonScalarToString converts a single JSON scalar (string/number/bool/null)
+// into the plain string form expected by resource.TestCheckResourceAttr.
+func jsonScalarToString(raw json.RawMessage) string {
+	input := string(raw)
 
 	// If it's a JSON string (starts and ends with quotes)
 	if strings.HasPrefix(input, `"`) && strings.HasSuffix(input, `"`) {
@@ -365,6 +406,101 @@ func ConvertConfigVariable(variable config.Variable) string {
 	}
 
 	return input
+}
+
+// ConvertConfigVariable converts a config.Variable to a string for resource.TestCheckResourceAttr.
+// For composite types, pass int indices or string keys to select a nested leaf.
+// E.g., ConvertConfigVariable(list, 0) or ConvertConfigVariable(obj, "key").
+func ConvertConfigVariable(variable config.Variable, path ...any) string {
+	return jsonScalarToString(resolveVariablePath("ConvertConfigVariable", variable, path...))
+}
+
+// buildAttrChecks recursively generates TestCheckFuncs for each leaf in raw JSON,
+// mirroring Terraform's flattened state path format:
+//   - Arrays: creates a count check (<path>.#) and recurses on elements (<path>.<i>).
+//   - Objects: recurses on key-value pairs (<path>.<field>).
+//   - Leaves: creates a TestCheckResourceAttr check for the final value.
+//
+// caller is used as the panic message prefix to identify which exported
+// function failed.
+func buildAttrChecks(caller, resourceName, path string, raw json.RawMessage) []resource.TestCheckFunc {
+	trimmed := bytes.TrimSpace(raw)
+	if string(trimmed) == "null" {
+		// A nested config.ListVariable()/SetVariable() field with no elements
+		// marshals to JSON null rather than []; treat it as an empty list.
+		trimmed = json.RawMessage("[]")
+	}
+
+	if bytes.HasPrefix(trimmed, []byte("[")) {
+		var items []json.RawMessage
+		if err := json.Unmarshal(trimmed, &items); err != nil {
+			panic(fmt.Sprintf("%s: %q: cannot parse list: %s (%s)", caller, path, err, string(trimmed)))
+		}
+		checks := []resource.TestCheckFunc{
+			resource.TestCheckResourceAttr(resourceName, path+".#", strconv.Itoa(len(items))),
+		}
+		for i, item := range items {
+			checks = append(checks, buildAttrChecks(caller, resourceName, fmt.Sprintf("%s.%d", path, i), item)...)
+		}
+		return checks
+	}
+
+	if bytes.HasPrefix(trimmed, []byte("{")) {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(trimmed, &obj); err != nil {
+			panic(fmt.Sprintf("%s: %q: cannot parse object: %s (%s)", caller, path, err, string(trimmed)))
+		}
+		keys := make([]string, 0, len(obj))
+		for k := range obj {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		checks := make([]resource.TestCheckFunc, 0, len(obj))
+		for _, k := range keys {
+			checks = append(checks, buildAttrChecks(caller, resourceName, path+"."+k, obj[k])...)
+		}
+		return checks
+	}
+
+	return []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, path, jsonScalarToString(trimmed)),
+	}
+}
+
+// CheckListAttr asserts a list's count ("<attrPrefix>.#") and all elements in one call.
+// Accepts an optional path for nested variables and recursively flattens
+// elements (scalars or objects) to match Terraform state format
+func CheckListAttr(resourceName, attrPrefix string, variable config.Variable, path ...any) resource.TestCheckFunc {
+	raw := resolveVariablePath("CheckListAttr", variable, path...)
+
+	trimmed := bytes.TrimSpace(raw)
+	if string(trimmed) == "null" {
+		// An empty config.ListVariable() marshals to JSON null, not [].
+		trimmed = json.RawMessage("[]")
+	}
+	if !bytes.HasPrefix(trimmed, []byte("[")) {
+		panic(fmt.Sprintf("CheckListAttr: resolved value is not a list: %s", string(raw)))
+	}
+
+	return resource.ComposeAggregateTestCheckFunc(buildAttrChecks("CheckListAttr", resourceName, attrPrefix, trimmed)...)
+}
+
+// CheckObjectAttr asserts all fields of an object variable in one call.
+// Accepts an optional path for nested variables and recursively flattens
+// fields (scalars, lists or nested objects) to match Terraform state format.
+func CheckObjectAttr(resourceName, attrPrefix string, variable config.Variable, path ...any) resource.TestCheckFunc {
+	raw := resolveVariablePath("CheckObjectAttr", variable, path...)
+
+	trimmed := bytes.TrimSpace(raw)
+	if string(trimmed) == "null" {
+		// An empty config.ObjectVariable(nil) marshals to JSON null, not {}.
+		trimmed = json.RawMessage("{}")
+	}
+	if !bytes.HasPrefix(trimmed, []byte("{")) {
+		panic(fmt.Sprintf("CheckObjectAttr: resolved value is not an object: %s", string(raw)))
+	}
+
+	return resource.ComposeAggregateTestCheckFunc(buildAttrChecks("CheckObjectAttr", resourceName, attrPrefix, trimmed)...)
 }
 
 // CheckAttrHasPrefix returns a CheckResourceAttrWithFunc that validates
