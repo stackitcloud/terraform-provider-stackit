@@ -11,8 +11,11 @@ import (
 type resource struct{}
 
 func (r *resource) Create(ctx context.Context, req testtypes.CreateRequest, resp *testtypes.CreateResponse) {
-	// false positive: creating an API client before calling InitProviderContext is fine
-	iaas.NewAPIClient() // want "tfctxinit: call to github.com/stackitcloud/stackit-sdk-go must happen AFTER github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core.InitProviderContext is called in Create"
+	// Creating an API client before calling InitProviderContext is fine.
+	iaas.NewAPIClient()
+
+	var service *iaas.DefaultAPIService
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{}) // want "tfctxinit: call to github.com/stackitcloud/stackit-sdk-go must happen AFTER github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core.InitProviderContext is called in Create"
 	core.InitProviderContext(ctx)
 }
 
