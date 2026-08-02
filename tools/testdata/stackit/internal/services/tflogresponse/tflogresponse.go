@@ -54,3 +54,16 @@ func (f *resource2) Read(ctx context.Context, req testtypes.ReadRequest, resp *t
 func indirection(service *iaas.DefaultAPIService) {
 	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
 }
+
+func wrapper[T any](fn func() (*T, error)) (*T, error) {
+	return fn()
+}
+
+type resource3 struct{}
+
+func (r *resource3) Delete(ctx context.Context, req testtypes.DeleteRequest, resp *testtypes.DeleteResponse) {
+	c, _ := iaas.NewAPIClient()
+	ctx = core.InitProviderContext(ctx)
+	wrapper(c.DefaultAPI.CreateAffinityGroup(ctx, "", "").Execute)
+	ctx = core.LogResponse(ctx)
+}

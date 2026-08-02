@@ -2,13 +2,11 @@ package tflogresponse
 
 import (
 	"go/ast"
-	"go/types"
 
 	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
-	"golang.org/x/tools/go/types/typeutil"
 
 	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/facts/servicecall"
 	"github.com/stackitcloud/terraform-provider-stackit/tools/internal/lintutils"
@@ -79,7 +77,7 @@ func run(pass *analysis.Pass) (any, error) {
 				}
 
 			case stateLookingForSdkOrLogResponseCall:
-				if hasServiceCall(serviceCalls, pass, call) {
+				if servicecall.HasServiceCall(call, pass.TypesInfo, serviceCalls) {
 					foundIntermediateSdkModuleCall = true
 				} else if pkgPath == utilPkg && calledFuncName == funcLogResponse {
 					if !foundIntermediateSdkModuleCall {
@@ -100,11 +98,6 @@ func run(pass *analysis.Pass) (any, error) {
 	})
 
 	return nil, nil
-}
-
-func hasServiceCall(serviceCalls *servicecall.Result, pass *analysis.Pass, call *ast.CallExpr) bool {
-	callee, _ := typeutil.Callee(pass.TypesInfo, call).(*types.Func)
-	return callee != nil && serviceCalls.HasServiceCall(callee)
 }
 
 func init() {
