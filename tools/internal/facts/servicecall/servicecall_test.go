@@ -1,0 +1,16 @@
+package servicecall
+
+import (
+	"path/filepath"
+	"testing"
+
+	"golang.org/x/tools/go/analysis/analysistest"
+)
+
+func TestAnalyzer(t *testing.T) {
+	dir, err := filepath.Abs("../../../testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+	analysistest.Run(t, dir, Analyzer, "facttests/servicecall")
+}
