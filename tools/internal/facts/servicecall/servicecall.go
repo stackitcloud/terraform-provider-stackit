@@ -4,6 +4,7 @@ package servicecall
 import (
 	"go/ast"
 	"go/types"
+	"reflect"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -22,7 +23,8 @@ var Analyzer = &analysis.Analyzer{
 	FactTypes: []analysis.Fact{
 		new(IsServiceCall),
 	},
-	Run: run,
+	ResultType: reflect.TypeOf((*Result)(nil)),
+	Run:        run,
 }
 
 // IsServiceCall is a fact indicating that a function calls a STACKIT SDK service.
@@ -32,12 +34,24 @@ func (*IsServiceCall) AFact() {}
 
 func (*IsServiceCall) String() string { return "serviceCall" }
 
+// Result provides the service-call functions identified while analyzing a package.
+type Result struct {
+	functions map[*types.Func]struct{}
+}
+
+// HasServiceCall reports whether fn is marked as making a STACKIT SDK service call.
+func (r *Result) HasServiceCall(fn *types.Func) bool {
+	_, ok := r.functions[fn.Origin()]
+	return ok
+}
+
 func run(pass *analysis.Pass) (any, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
 	// callers maps a callee to the functions that call it. Once a callee is
 	// known to call a service, the fact is propagated to all of its callers.
 	callers := make(map[*types.Func]map[*types.Func]struct{})
+	serviceCalls := make(map[*types.Func]struct{})
 	var serviceCallers []*types.Func
 
 	inspect.Preorder([]ast.Node{(*ast.FuncDecl)(nil)}, func(n ast.Node) {
@@ -69,6 +83,7 @@ func run(pass *analysis.Pass) (any, error) {
 			callee = callee.Origin()
 
 			if isSDKCallAPI(callee) || hasServiceCallFact(pass, callee) {
+				serviceCalls[callee] = struct{}{}
 				serviceCallers = append(serviceCallers, caller)
 				return true
 			}
@@ -99,8 +114,11 @@ func run(pass *analysis.Pass) (any, error) {
 	for _, fn := range serviceCallers {
 		propagate(fn)
 	}
+	for fn := range marked {
+		serviceCalls[fn] = struct{}{}
+	}
 
-	return nil, nil
+	return &Result{functions: serviceCalls}, nil
 }
 
 // addInterfaceEdges models calls through interface methods as calls to each
