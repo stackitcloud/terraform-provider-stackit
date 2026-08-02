@@ -11,8 +11,9 @@ import (
 type resource struct{}
 
 func (r *resource) Create(ctx context.Context, req testtypes.CreateRequest, resp *testtypes.CreateResponse) {
+	c, _ := iaas.NewAPIClient()
 	ctx = core.InitProviderContext(ctx)
-	iaas.NewAPIClient()
+	c.DefaultAPI.AddNetworkToServer(ctx, "", "", "", "").Execute()
 	ctx = core.LogResponse(ctx)
 }
 
@@ -22,31 +23,34 @@ func (r *resource) Read(ctx context.Context, req testtypes.ReadRequest, resp *te
 }
 
 func (r *resource) Update(ctx context.Context, req testtypes.UpdateRequest, resp *testtypes.UpdateResponse) {
+	var service iaas.DefaultAPIService
 	ctx = core.InitProviderContext(ctx) // want "tflogresponse: invalid sequence: InitProviderContext was called, but LogResponse was never called afterwards"
-	iaas.NewAPIClient()
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
 }
 
 func (r *resource) Delete(ctx context.Context, req testtypes.DeleteRequest, resp *testtypes.DeleteResponse) {
+	var service iaas.DefaultAPIService
 	ctx = core.InitProviderContext(ctx)
-	iaas.NewAPIClient()
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
 	ctx = core.LogResponse(ctx)
 }
 
 func nonLifecycleMethod(ctx context.Context) {
+	var service iaas.DefaultAPIService
 	ctx = core.InitProviderContext(ctx)
-	iaas.NewAPIClient()
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
 }
 
-// fals positive, SDK call through helper func
+// SDK service call through helper func
 
-type falsePositive struct{}
+type resource2 struct{}
 
-func (f *falsePositive) Read(ctx context.Context, req testtypes.ReadRequest, resp *testtypes.ReadResponse) {
+func (f *resource2) Read(ctx context.Context, req testtypes.ReadRequest, resp *testtypes.ReadResponse) {
 	ctx = core.InitProviderContext(ctx)
-	indirection()
-	ctx = core.LogResponse(ctx) // want "tflogresponse: invalid sequence: LogResponse called without an intermediate call to github.com/stackitcloud/stackit-sdk-go after InitProviderContext"
+	indirection(nil)
+	ctx = core.LogResponse(ctx)
 }
 
-func indirection() {
-	iaas.NewAPIClient()
+func indirection(service *iaas.DefaultAPIService) {
+	service.AddNetworkToServerExecute(iaas.ApiAddNetworkToServerRequest{})
 }
