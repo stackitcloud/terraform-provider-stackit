@@ -287,7 +287,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - sdk call is hidden in getDatabase()
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(databaseResp, &model, region)

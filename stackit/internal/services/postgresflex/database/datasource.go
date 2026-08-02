@@ -153,7 +153,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - sdk call is hidden in getDatabase()
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema and populate Computed attribute values
 	err = mapFields(databaseResp, &model, region)
