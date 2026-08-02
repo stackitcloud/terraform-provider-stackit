@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -394,14 +395,42 @@ func mapFields(bucketResp *objectstorage.GetBucketResponse, model *Model, region
 	return nil
 }
 
+const (
+	// Two object storage resources created in the same apply enable the project concurrently;
+	// the API answers the losing call with 409. See enableProject.
+	enableProjectAttempts = 4
+)
+
+// Overridden in tests to keep them fast.
+var enableProjectRetryDelay = 2 * time.Second
+
 // enableProject enables object storage for the specified project. If the project is already enabled, nothing happens
 func enableProject(ctx context.Context, model *Model, region string, client objectstorage.DefaultAPI) error {
 	projectId := model.ProjectId.ValueString()
 
-	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate
-	_, err := client.EnableService(ctx, projectId, region).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create object storage project: %w", err)
+	// From the object storage OAS: Creation will also be successful if the project is already enabled, but will not create a duplicate.
+	// That holds for sequential calls. Two object storage resources created in the same apply call this concurrently,
+	// and the API rejects the second one with 409 project.create_conflict ("Two concurrent calls try to create the
+	// same project"). Retrying is safe: once the competing call has finished, enabling an already enabled project succeeds.
+	var err error
+	for attempt := 0; attempt < enableProjectAttempts; attempt++ {
+		_, err = client.EnableService(ctx, projectId, region).Execute()
+		if err == nil {
+			return nil
+		}
+
+		var oapiErr *oapierror.GenericOpenAPIError
+		if !errors.As(err, &oapiErr) || oapiErr.StatusCode != http.StatusConflict {
+			break
+		}
+
+		timer := time.NewTimer(enableProjectRetryDelay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
 	}
-	return nil
+	return fmt.Errorf("failed to create object storage project: %w", err)
 }
