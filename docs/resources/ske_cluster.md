@@ -5,6 +5,7 @@ subcategory: ""
 description: |-
   SKE Cluster Resource schema. Must have a region specified in the provider configuration.
   -> When updating node_pools of a stackit_ske_cluster, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.
+  ~> Before destroying a cluster, remove any Service of type LoadBalancer from it. Such a service makes the cloud controller create a load balancer in the project, which belongs to no Terraform state. If it still exists, the cluster stays in STATE_DELETING until this resource times out after 90 minutes.
 ---
 
 # stackit_ske_cluster (Resource)
@@ -12,6 +13,8 @@ description: |-
 SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.
 
 -> When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.
+
+~> Before destroying a cluster, remove any `Service` of type `LoadBalancer` from it. Such a service makes the cloud controller create a load balancer in the project, which belongs to no Terraform state. If it still exists, the cluster stays in `STATE_DELETING` until this resource times out after 90 minutes.
 
 ## Example Usage
 
