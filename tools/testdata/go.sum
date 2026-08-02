@@ -10,3 +10,5 @@ github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0 h1:PQZ6n71CMadLU3Dj
 github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0/go.mod h1:AbPN9BGkdjc+tVsXEX9Vr8BPDjdlDmG26K1FwCKZQVU=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0 h1:JPP6a0ME1tZXr4iB69d/LtJsCAr58ENBadFaK9f48/c=
 github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0/go.mod h1:NEz3f+GV5G++BE9/MmZCsXJyCih7jtg0pZuSyG2sLEs=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.0 h1:TNZHrunhsXRbuqZcucLs2Gqy1sEyvabufM7pB5Tscmo=
+github.com/stackitcloud/stackit-sdk-go/services/serviceenablement v1.7.0/go.mod h1:fXq3TmVLb4JMSve989NFFViMFoYa83s7M3hJWgN6mdQ=
