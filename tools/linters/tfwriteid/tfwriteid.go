@@ -103,6 +103,13 @@ func isWaitCall(info *types.Info, call *ast.CallExpr, calledFuncName string) boo
 	if !ok {
 		return false
 	}
+	// serviceenablement itself is used in other resources and does not have an ID itself
+	if waiterCall, ok := sel.X.(*ast.CallExpr); ok {
+		_, waiterFuncName := lintutils.GetCallInfo(waiterCall, info)
+		if waiterFuncName == "EnableServiceWaitHandler" {
+			return false
+		}
+	}
 	obj := info.Uses[sel.Sel]
 	if obj == nil {
 		return false
