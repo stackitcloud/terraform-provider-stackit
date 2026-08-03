@@ -396,7 +396,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	waiterTimeout := dremioWaiter.CreateDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := dremioWaiter.CreateDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout()
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -521,7 +521,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	waiterTimeout := dremioWaiter.UpdateDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := dremioWaiter.UpdateDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout()
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -592,7 +592,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	waiterTimeout := dremioWaiter.DeleteDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := dremioWaiter.DeleteDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout()
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

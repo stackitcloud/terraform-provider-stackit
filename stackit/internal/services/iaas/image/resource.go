@@ -475,9 +475,10 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Wait for image to become available
-	waiter := wait.UploadImageWaitHandler(ctx, r.client.DefaultAPI, projectId, region, imageCreateResp.Id) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
-	waiter = waiter.SetTimeout(7 * 24 * time.Hour)                                                         // Set timeout to one week, to make the timeout useless
-	waitResp, err := waiter.WaitWithContext(ctx)
+	waiter := wait.UploadImageWaitHandler(ctx, r.client.DefaultAPI, projectId, region, imageCreateResp.Id)
+	// Set timeout to one week, to make the timeout useless
+	waiter = waiter.SetTimeout(7 * 24 * time.Hour)
+	waitResp, err := waiter.WaitWithContext(ctx) //nolint:tfwriteid // false positive - id fields are actually stored already using the mapFields() call above
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating image", fmt.Sprintf("Waiting for image to become available: %v", err))
 		return
