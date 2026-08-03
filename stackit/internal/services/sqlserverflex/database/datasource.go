@@ -157,7 +157,7 @@ func (d *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 	apiResp, err := d.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, name).Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "read SqlserverFlex database",
-			fmt.Sprintf("databse with name %q does not exist in instance %q", name, instanceId),
+			fmt.Sprintf("database with name %q does not exist in instance %q", name, instanceId),
 			map[int]string{
 				http.StatusForbidden: fmt.Sprintf("Project with ID %q, or instance with ID %q not found or forbidden access", projectId, instanceId),
 			},
@@ -168,7 +168,7 @@ func (d *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, apiResp, &model.SharedModel, region)
+	err = mapFields(apiResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("mapping response: %v", err))
 		return

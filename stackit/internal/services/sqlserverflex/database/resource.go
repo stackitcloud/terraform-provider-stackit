@@ -228,7 +228,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, apiResp, &model.SharedModel, region)
+	err = mapFields(apiResp, &model.SharedModel, region)
 	if err != nil {
 		resp.Diagnostics.AddError("Error mapping resource", err.Error())
 		return
@@ -265,8 +265,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	apiResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, name).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -276,7 +275,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	err = mapFields(ctx, apiResp, &model.SharedModel, region)
+	err = mapFields(apiResp, &model.SharedModel, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading database", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -317,8 +316,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	err := r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute()
 	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
 		}
 		resp.Diagnostics.AddError("Error deleting database", err.Error())
@@ -351,7 +349,7 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 	tflog.Info(ctx, "SqlserverFlex database state imported")
 }
 
-func mapFields(_ context.Context, apiResp *sdk.GetDatabaseResponse, model *SharedModel, region string) error {
+func mapFields(apiResp *sdk.GetDatabaseResponse, model *SharedModel, region string) error {
 	if apiResp == nil {
 		return fmt.Errorf("response is nil")
 	}
