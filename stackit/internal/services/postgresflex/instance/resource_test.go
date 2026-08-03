@@ -13,9 +13,11 @@ import (
 )
 
 type postgresFlexClientMocked struct {
-	returnError     bool
-	listFlavorsResp *postgresflex.ListFlavorsResponse
-	listFlavorsReq  postgresflex.ApiListFlavorsRequest
+	returnError      bool
+	listFlavorsResps []*postgresflex.ListFlavorsResponse
+	listFlavorsReq   postgresflex.ApiListFlavorsRequest
+	callsCount       int
+	failOnCall       int
 }
 
 func (c *postgresFlexClientMocked) ListFlavors(_ context.Context, _, _ string) postgresflex.ApiListFlavorsRequest {
@@ -23,11 +25,21 @@ func (c *postgresFlexClientMocked) ListFlavors(_ context.Context, _, _ string) p
 }
 
 func (c *postgresFlexClientMocked) ListFlavorsExecute(_ postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, error) { // nolint:gocritic // function signature required by the Go SDK
-	if c.returnError {
+	c.callsCount++
+	if c.returnError || (c.failOnCall > 0 && c.callsCount == c.failOnCall) {
 		return nil, fmt.Errorf("get flavors failed")
 	}
 
-	return c.listFlavorsResp, nil
+	if len(c.listFlavorsResps) == 0 {
+		return nil, nil
+	}
+
+	idx := c.callsCount - 1
+	if idx >= len(c.listFlavorsResps) {
+		return c.listFlavorsResps[len(c.listFlavorsResps)-1], nil
+	}
+
+	return c.listFlavorsResps[idx], nil
 }
 
 func TestMapFields(t *testing.T) {
@@ -882,8 +894,8 @@ func TestLoadFlavorId(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &postgresFlexClientMocked{
-				returnError:     tt.getFlavorsFails,
-				listFlavorsResp: tt.mockedResp,
+				returnError:      tt.getFlavorsFails,
+				listFlavorsResps: []*postgresflex.ListFlavorsResponse{tt.mockedResp},
 			}
 			model := &Model{
 				ProjectId: types.StringValue("pid"),
@@ -1078,8 +1090,8 @@ func TestGetFlavor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			client := &postgresFlexClientMocked{
-				returnError:     tt.getFlavorsFails,
-				listFlavorsResp: tt.mockedResp,
+				returnError:      tt.getFlavorsFails,
+				listFlavorsResps: []*postgresflex.ListFlavorsResponse{tt.mockedResp},
 			}
 			got, err := getFlavor(context.Background(), client, "pid", "region", tt.flavorId)
 			if !tt.isValid && err == nil {
@@ -1093,6 +1105,194 @@ func TestGetFlavor(t *testing.T) {
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestGetAllFlavors(t *testing.T) {
+	type args struct {
+		ctx       context.Context
+		client    postgresFlexClient
+		projectId string
+		region    string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []postgresflex.ListFlavors
+		wantErr bool
+	}{
+		{
+			name: "single page success",
+			args: args{
+				ctx: context.Background(),
+				client: &postgresFlexClientMocked{
+					listFlavorsResps: []*postgresflex.ListFlavorsResponse{
+						{
+							Flavors: []postgresflex.ListFlavors{
+								{
+									Id:          "fid-1",
+									Cpu:         2,
+									Description: "description-1",
+									Memory:      8,
+									NodeType:    "Single",
+								},
+							},
+							Pagination: postgresflex.Pagination{
+								Page:       1,
+								TotalPages: 1,
+							},
+						},
+					},
+				},
+				projectId: "pid",
+				region:    "region",
+			},
+			want: []postgresflex.ListFlavors{
+				{
+					Id:          "fid-1",
+					Cpu:         2,
+					Description: "description-1",
+					Memory:      8,
+					NodeType:    "Single",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple pages success",
+			args: args{
+				ctx: context.Background(),
+				client: &postgresFlexClientMocked{
+					listFlavorsResps: []*postgresflex.ListFlavorsResponse{
+						{
+							Flavors: []postgresflex.ListFlavors{
+								{
+									Id:          "fid-1",
+									Cpu:         2,
+									Description: "description-1",
+									Memory:      8,
+									NodeType:    "Single",
+								},
+							},
+							Pagination: postgresflex.Pagination{
+								Page:       1,
+								TotalPages: 2,
+							},
+						},
+						{
+							Flavors: []postgresflex.ListFlavors{
+								{
+									Id:          "fid-2",
+									Cpu:         4,
+									Description: "description-2",
+									Memory:      16,
+									NodeType:    "Replica",
+								},
+							},
+							Pagination: postgresflex.Pagination{
+								Page:       2,
+								TotalPages: 2,
+							},
+						},
+					},
+				},
+				projectId: "pid",
+				region:    "region",
+			},
+			want: []postgresflex.ListFlavors{
+				{
+					Id:          "fid-1",
+					Cpu:         2,
+					Description: "description-1",
+					Memory:      8,
+					NodeType:    "Single",
+				},
+				{
+					Id:          "fid-2",
+					Cpu:         4,
+					Description: "description-2",
+					Memory:      16,
+					NodeType:    "Replica",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "error on first page",
+			args: args{
+				ctx: context.Background(),
+				client: &postgresFlexClientMocked{
+					returnError: true,
+				},
+				projectId: "pid",
+				region:    "region",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "error on second page",
+			args: args{
+				ctx: context.Background(),
+				client: &postgresFlexClientMocked{
+					listFlavorsResps: []*postgresflex.ListFlavorsResponse{
+						{
+							Flavors: []postgresflex.ListFlavors{
+								{
+									Id:          "fid-1",
+									Cpu:         2,
+									Description: "description-1",
+									Memory:      8,
+									NodeType:    "Single",
+								},
+							},
+							Pagination: postgresflex.Pagination{
+								Page:       1,
+								TotalPages: 2,
+							},
+						},
+					},
+					failOnCall: 2,
+				},
+				projectId: "pid",
+				region:    "region",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "empty response",
+			args: args{
+				ctx: context.Background(),
+				client: &postgresFlexClientMocked{
+					listFlavorsResps: []*postgresflex.ListFlavorsResponse{
+						{
+							Flavors: []postgresflex.ListFlavors{},
+							Pagination: postgresflex.Pagination{
+								Page:       1,
+								TotalPages: 1,
+							},
+						},
+					},
+				},
+				projectId: "pid",
+				region:    "region",
+			},
+			want:    nil,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getAllFlavors(tt.args.ctx, tt.args.client, tt.args.projectId, tt.args.region)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getAllFlavors() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !cmp.Equal(got, tt.want) {
+				t.Errorf("getAllFlavors() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -553,7 +553,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: "Full OS image version used. For example, if 3815.2 was set in `os_version_min`, this value may result to 3815.2.2. " + SKEUpdateDoc,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifierUtils.UseStateForUnknownIf(stringplanmodifierUtils.StringUnchanged(path.Root("os_version_min")), "sets `UseStateForUnknown` only if `os_version_min` has not changed"),
+								stringplanmodifierUtils.UseStateForUnknownIf(skeUtils.HasOsVersionMinChanged, "sets `UseStateForUnknown` only if `os_version_min` has not changed"), //nolint:staticcheck // temporary fix for issue with StringUnchanged
 							},
 						},
 						"volume_type": schema.StringAttribute{
