@@ -144,7 +144,7 @@ func (r *RoleBindingResource[C]) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
@@ -192,7 +192,7 @@ func (r *RoleBindingResource[C]) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	// Map response body to schema
 	err = mapFields(roleBindingResp, &model, region)
@@ -233,7 +233,7 @@ func (r *RoleBindingResource[C]) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	err = mapFields(roleBindingResp, &model, region)
 	if err != nil {
@@ -287,7 +287,8 @@ func (r *RoleBindingResource[C]) Delete(ctx context.Context, req resource.Delete
 		// continue
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
+
 	tflog.Info(ctx, fmt.Sprintf("%s %s role binding deleted", r.ApiName, r.ResourceType))
 }
 

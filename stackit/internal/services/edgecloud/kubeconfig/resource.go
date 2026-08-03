@@ -302,12 +302,15 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	ctx = tflog.SetField(ctx, "kubeconfig_id", kubeconfigUUID)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	// Note: The token itself must not be created via an endpoint. There's only a GET endpoint for the token.
+	// But the instance needs to be ready, that's why wait handlers are used here.
+
 	var kubeconfigResp *edgeCloud.Kubeconfig
 	var err error
 	if !model.InstanceId.IsNull() {
 		instanceId := model.InstanceId.ValueString()
 		ctx = tflog.SetField(ctx, "instance_id", model.InstanceId)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx)
+		kubeconfigResp, err = edgeCloudWait.KubeconfigWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
@@ -316,7 +319,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 	} else if !model.InstanceName.IsNull() {
 		instanceName := model.InstanceName.ValueString()
 		ctx = tflog.SetField(ctx, "instance_name", model.InstanceName)
-		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx)
+		kubeconfigResp, err = edgeCloudWait.KubeconfigByInstanceNameWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceName, &expirationSeconds).WaitWithContext(ctx) //nolint:tfwriteid // see above
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Kubeconfig creation waiting: %v", err))
 			return
