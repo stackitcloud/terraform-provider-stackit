@@ -42,6 +42,7 @@ resource "stackit_mariadb_credential" "example_rotate" {
 
 ### Optional
 
+- `region` (String) The resource region. If not defined, the provider region is used.
 - `rotate_when_changed` (Map of String) A map of arbitrary key/value pairs that will force recreation of the resource when they change, enabling resource rotation based on external conditions such as a rotating timestamp. Changing this forces a new resource to be created.
 
 ### Read-Only
@@ -49,7 +50,7 @@ resource "stackit_mariadb_credential" "example_rotate" {
 - `credential_id` (String) The credential's ID.
 - `host` (String)
 - `hosts` (List of String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`credential_id`".
 - `name` (String)
 - `password` (String, Sensitive)
 - `port` (Number)
@@ -66,6 +67,6 @@ In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://
 # Only use the import statement, if you want to import an existing mariadb credential
 import {
   to = stackit_mariadb_credential.import-example
-  id = "${var.project_id},${var.mariadb_instance_id},${var.mariadb_credential_id}"
+  id = "${var.project_id},${var.region},${var.mariadb_instance_id},${var.mariadb_credential_id}"
 }
 ```
