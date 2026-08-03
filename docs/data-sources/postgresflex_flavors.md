@@ -20,8 +20,8 @@ data "stackit_postgresflex_flavors" "example" {
 
 # Example usage with an instance
 resource "stackit_postgresflex_instance" "example" {
-  project_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  name       = "example"
+  project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  name            = "example"
   flavor_id       = one([for flavor in data.stackit_postgresflex_flavors.example.flavors : flavor.id if flavor.cpu == 2 && flavor.memory == 4 && flavor.node_type == "Single"])
   backup_schedule = "0 16 * * *"
   storage = {
