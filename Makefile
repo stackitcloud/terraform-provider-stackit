@@ -12,19 +12,19 @@ project-tools:
 
 # LINT
 lint-golangci-lint:
-	@echo "Linting with golangci-lint"
+	@echo ">> Linting with golangci-lint"
 	@golangci-lint custom
 	@${ROOT_DIR}/custom-gcl run ${GOLANG_CI_ARGS}
 
 lint-tf: 
-	@echo "Linting terraform files"
+	@echo ">> Linting terraform files"
 	@terraform fmt -check -diff -recursive
 
 lint: lint-golangci-lint lint-tf
 
 # DOCUMENTATION GENERATION
 generate-docs:
-	@echo "Generating documentation with tfplugindocs"
+	@echo ">> Generating documentation with tfplugindocs"
 	@$(SCRIPTS_BASE)/tfplugindocs.sh
 
 build:
@@ -37,14 +37,16 @@ fmt:
 
 # TEST
 test:
-	@echo "Running tests for the terraform provider"
-	@cd $(ROOT_DIR)/stackit && go test ./... -count=1 -coverprofile=coverage.out && cd $(ROOT_DIR)
+	@echo ">> Running tests for the terraform provider"
+	@go test ./... -count=1 -coverprofile=coverage.out
+	@echo ">> Running tests for the tools module"
+	@cd tools && go test ./... -count=1 -coverprofile=coverage.out
 
 # Test coverage
 coverage:
 	@echo ">> Creating test coverage report for the terraform provider"
-	@cd $(ROOT_DIR)/stackit && (go test ./... -count=1 -coverprofile=coverage.out || true) && cd $(ROOT_DIR)
-	@cd $(ROOT_DIR)/stackit && go tool cover -html=coverage.out -o coverage.html && cd $(ROOT_DIR)
+	@go test ./... -count=1 -coverprofile=coverage.out
+	@go tool cover -html=coverage.out -o coverage.html
 
 test-acceptance-tf:
 	@if [ -z $(TF_ACC_PROJECT_ID) ]; then echo "Input TF_ACC_PROJECT_ID missing"; exit 1; fi

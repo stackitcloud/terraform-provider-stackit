@@ -39,7 +39,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspectNode.Preorder(nodeFilter, func(n ast.Node) {
 		funcDecl := n.(*ast.FuncDecl)
 
-		if !lintutils.IsTerraformLifecycleMethodCreateOnlyTODO(funcDecl) {
+		if !lintutils.IsTerraformLifecycleMethod(funcDecl, "Create") {
 			return
 		}
 
