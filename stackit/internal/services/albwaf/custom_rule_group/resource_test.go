@@ -272,6 +272,7 @@ func TestMapFields(t *testing.T) {
 			},
 			region: testRegion.ValueString(),
 			input: &albWaf.GetCustomRuleGroupResponse{
+				Name: testName.ValueStringPointer(),
 				Rules: []albWaf.GetCustomRule{
 					{},
 				},
@@ -301,7 +302,9 @@ func TestMapFields(t *testing.T) {
 				Id:        testId,
 			},
 			region: testRegion.ValueString(),
-			input:  &albWaf.GetCustomRuleGroupResponse{},
+			input: &albWaf.GetCustomRuleGroupResponse{
+				Name: testName.ValueStringPointer(),
+			},
 			expected: &Model{
 				Name:      testName,
 				Id:        testId,

@@ -522,7 +522,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 		rules := []RuleModel{}
 		diags := model.Rules.ElementsAs(ctx, &rules, true)
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting to rule map: %v", diags.Errors())
+			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
 		}
 
 		for _, rule := range rules {
@@ -530,13 +530,15 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 			if !tfutils.IsUndefined(rule.Behavior) {
 				diags := rule.Behavior.As(ctx, &behavior, basetypes.ObjectAsOptions{})
 				if diags.HasError() {
-					return nil, fmt.Errorf("converting to rule behavior: %v", diags.Errors())
+					return nil, fmt.Errorf("converting to rule behavior: %w", core.DiagsToError(diags))
 				}
 			}
 
 			conditions, err := toConditionsPayload(ctx, rule.Conditions)
-			if err != nil || conditions == nil {
+			if err != nil {
 				return nil, fmt.Errorf("converting conditions: %w", err)
+			} else if conditions == nil {
+				return nil, fmt.Errorf("conditions can not be empty")
 			}
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
@@ -566,7 +568,7 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 		conditionModels := []ConditionModel{}
 		diags := conditions.ElementsAs(ctx, &conditionModels, true)
 		if diags.HasError() {
-			return nil, fmt.Errorf("converting to rule map: %v", diags.Errors())
+			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
 		}
 
 		for _, condition := range conditionModels {
@@ -574,20 +576,20 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 			if !tfutils.IsUndefined(condition.Transformations) {
 				diags := condition.Transformations.ElementsAs(ctx, &transformations, true)
 				if diags.HasError() {
-					return nil, fmt.Errorf("converting transformations: %v", diags.Errors())
+					return nil, fmt.Errorf("converting transformations: %w", core.DiagsToError(diags))
 				}
 			}
 
 			var operatorModel = OperatorModel{}
 			diags = condition.Operator.As(ctx, &operatorModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return nil, fmt.Errorf("converting operator: %v", diags.Errors())
+				return nil, fmt.Errorf("converting operator: %w", core.DiagsToError(diags))
 			}
 
 			var variableModel = VariableModel{}
 			diags = condition.Variable.As(ctx, &variableModel, basetypes.ObjectAsOptions{})
 			if diags.HasError() {
-				return nil, fmt.Errorf("converting variable: %v", diags.Errors())
+				return nil, fmt.Errorf("converting variable: %w", core.DiagsToError(diags))
 			}
 
 			result = append(result, albWaf.Condition{
@@ -616,12 +618,14 @@ func mapFields(ctx context.Context, customRuleGroup *albWaf.GetCustomRuleGroupRe
 	}
 
 	model.Id = tfutils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.Name.ValueString())
-	model.Name = types.StringValue(model.Name.ValueString())
+	model.Name = types.StringValue(customRuleGroup.GetName())
 	model.Region = types.StringValue(region)
 
 	rules, err := mapRules(ctx, &customRuleGroup.Rules)
-	if err != nil || rules == nil {
+	if err != nil {
 		return fmt.Errorf("map rules: %w", err)
+	} else if rules == nil {
+		return fmt.Errorf("rules can not be empty")
 	}
 	model.Rules = *rules
 
@@ -641,14 +645,18 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 			}
 
 			behavior, err := mapBehavior(ctx, rule.Behaviour) // nolint:misspell // Generated from API spec
-			if err != nil || behavior == nil {
+			if err != nil {
 				return nil, fmt.Errorf("map behavior: %w", err)
+			} else if behavior == nil {
+				return nil, fmt.Errorf("behavior can not be empty")
 			}
 			ruleTF.Behavior = *behavior
 
 			conditions, err := mapConditions(ctx, rule)
-			if err != nil || conditions == nil {
+			if err != nil {
 				return nil, fmt.Errorf("map conditions: %w", err)
+			} else if conditions == nil {
+				return nil, fmt.Errorf("conditions can not be empty")
 			}
 			ruleTF.Conditions = *conditions
 
