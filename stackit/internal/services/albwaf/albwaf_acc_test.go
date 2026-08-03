@@ -66,7 +66,8 @@ var testCustomRuleGroupMax = config.Variables{
 var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMax)
-	updatedConfig["name"] = config.StringVariable(fmt.Sprintf("%s-updated", testutil.ConvertConfigVariable(updatedConfig["name"])))
+	// Name should not be updated, test if the update works in place
+	updatedConfig["log_msg"] = config.StringVariable("foo-bar:")
 	// updatedConfig["log"] = config.BoolVariable(false)
 	return updatedConfig
 }
@@ -309,7 +310,7 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("stackit_alb_waf_custom_rule_group.custom_rule_group", plancheck.ResourceActionReplace),
+						plancheck.ExpectResourceAction("stackit_alb_waf_custom_rule_group.custom_rule_group", plancheck.ResourceActionUpdate),
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(

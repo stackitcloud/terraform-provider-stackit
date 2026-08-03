@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -220,9 +219,6 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 			"rules": schema.ListNestedAttribute{
 				Description: descriptions["rules"],
 				Required:    true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
 				Validators: []validator.List{
 					listvalidator.SizeAtLeast(1),
 				},
@@ -431,8 +427,52 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 	tflog.Info(ctx, "ALB WAF Custom Rule Group created")
 }
 
-func (r *customRuleGroupResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Ressource not updatable", "ALB WAF Custom Rule Group is not updatable")
+func (r *customRuleGroupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	customRuleGroupName := model.Name.ValueString()
+	region := model.Region.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "name", customRuleGroupName)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	payload, err := toUpdatePayload(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+
+	updateResp, err := r.client.DefaultAPI.UpdateCustomRuleGroup(ctx, projectId, region, customRuleGroupName).UpdateCustomRuleGroupPayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	// map export policy
+	err = mapFields(ctx, updateResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "ALB WAF Custom Rule Group update")
 }
 
 func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
@@ -517,10 +557,46 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 		return nil, fmt.Errorf("nil model")
 	}
 
+	payloadRules, err := toRulesPayload(ctx, model.Rules)
+	if err != nil {
+		return nil, fmt.Errorf("generating rules payload: %w", err)
+	} else if payloadRules == nil {
+		return nil, fmt.Errorf("rules can not be empty")
+	}
+
+	payload := &albWaf.CreateCustomRuleGroupPayload{
+		Name:  model.Name.ValueString(),
+		Rules: *payloadRules,
+	}
+
+	return payload, nil
+}
+
+func toUpdatePayload(ctx context.Context, model *Model) (*albWaf.UpdateCustomRuleGroupPayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	payloadRules, err := toRulesPayload(ctx, model.Rules)
+	if err != nil {
+		return nil, fmt.Errorf("generating rules payload: %w", err)
+	} else if payloadRules == nil {
+		return nil, fmt.Errorf("rules can not be empty")
+	}
+
+	payload := &albWaf.UpdateCustomRuleGroupPayload{
+		Name:  model.Name.ValueString(),
+		Rules: *payloadRules,
+	}
+
+	return payload, nil
+}
+
+func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]albWaf.CreateCustomRule, error) {
 	payloadRules := []albWaf.CreateCustomRule{}
-	if !tfutils.IsUndefined(model.Rules) {
+	if !tfutils.IsUndefined(modelRules) {
 		rules := []RuleModel{}
-		diags := model.Rules.ElementsAs(ctx, &rules, true)
+		diags := modelRules.ElementsAs(ctx, &rules, true)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting to rule map: %w", core.DiagsToError(diags))
 		}
@@ -553,12 +629,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateCustomRul
 		}
 	}
 
-	payload := &albWaf.CreateCustomRuleGroupPayload{
-		Name:  model.Name.ValueString(),
-		Rules: payloadRules,
-	}
-
-	return payload, nil
+	return &payloadRules, nil
 }
 
 func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*[]albWaf.Condition, error) {

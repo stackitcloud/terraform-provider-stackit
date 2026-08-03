@@ -20,7 +20,7 @@ resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
       behavior = {
         action = var.action
         log    = var.log
-        logMsg = var.log_msg
+        log_msg = var.log_msg
       }
       conditions = [
         {
