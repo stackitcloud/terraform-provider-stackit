@@ -208,3 +208,80 @@ func TestToCreatePayload(t *testing.T) {
 		})
 	}
 }
+
+func TestToUpdatePayload(t *testing.T) {
+	tests := []struct {
+		description string
+		input       *Model
+		expected    git.PatchInstancePayload
+		expectError bool
+	}{
+		{
+			description: "null ACL omitted",
+			input: &Model{
+				Name: types.StringValue("example-instance"),
+				ACL:  types.ListNull(types.StringType),
+			},
+			expected:    git.PatchInstancePayload{},
+			expectError: false,
+		},
+		{
+			description: "unknown ACL omitted",
+			input: &Model{
+				Name: types.StringValue("example-instance"),
+				ACL:  types.ListUnknown(types.StringType),
+			},
+			expected:    git.PatchInstancePayload{},
+			expectError: false,
+		},
+		{
+			description: "simple ACL values",
+			input: &Model{
+				Name: types.StringValue("my-instance"),
+				ACL: types.ListValueMust(types.StringType, []attr.Value{
+					types.StringValue("10.0.0.1"),
+					types.StringValue("10.0.0.2"),
+				}),
+			},
+			expected: git.PatchInstancePayload{
+				Acl: []string{"10.0.0.1", "10.0.0.2"},
+			},
+			expectError: false,
+		},
+		{
+			description: "empty ACL still valid",
+			input: &Model{
+				Name: types.StringValue("my-instance"),
+				ACL:  types.ListValueMust(types.StringType, []attr.Value{}),
+			},
+			expected: git.PatchInstancePayload{
+				Acl: []string{},
+			},
+			expectError: false,
+		},
+		{
+			description: "nil input model",
+			input:       nil,
+			expected:    git.PatchInstancePayload{},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.description, func(t *testing.T) {
+			output, diags := toPatchPayload(context.Background(), tt.input)
+
+			if tt.expectError && !diags.HasError() {
+				t.Fatalf("expected diagnostics error but got none")
+			}
+
+			if !tt.expectError && diags.HasError() {
+				t.Fatalf("unexpected diagnostics error: %v", diags)
+			}
+
+			if diff := cmp.Diff(tt.expected, output); diff != "" {
+				t.Fatalf("unexpected payload (-want +got):\n%s", diff)
+			}
+		})
+	}
+}

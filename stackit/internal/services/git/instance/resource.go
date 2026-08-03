@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	gitUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -36,18 +36,31 @@ var (
 	_ resource.ResourceWithImportState = &gitResource{}
 )
 
+// Default to an open access-control-list unless otherwise specified
+var defaultAclValue = types.ListValueMust(
+	types.StringType,
+	[]attr.Value{types.StringValue("0.0.0.0/0")},
+)
+
 // Model represents the schema for the git resource.
 type Model struct {
-	Id                    types.String `tfsdk:"id"` // Required by Terraform
-	ACL                   types.List   `tfsdk:"acl"`
+	Id types.String `tfsdk:"id"` // Required by Terraform
+
+	ProjectId  types.String `tfsdk:"project_id"`
+	InstanceId types.String `tfsdk:"instance_id"`
+
+	// Requires replacement on change
+	Name   types.String `tfsdk:"name"`
+	Flavor types.String `tfsdk:"flavor"`
+
+	// Updateable fields
+	ACL types.List `tfsdk:"acl"`
+
+	// Read-only fields
+	Created               types.String `tfsdk:"created"`
+	Url                   types.String `tfsdk:"url"`
 	ConsumedDisk          types.String `tfsdk:"consumed_disk"`
 	ConsumedObjectStorage types.String `tfsdk:"consumed_object_storage"`
-	Created               types.String `tfsdk:"created"`
-	Flavor                types.String `tfsdk:"flavor"`
-	InstanceId            types.String `tfsdk:"instance_id"`
-	Name                  types.String `tfsdk:"name"`
-	ProjectId             types.String `tfsdk:"project_id"`
-	Url                   types.String `tfsdk:"url"`
 	Version               types.String `tfsdk:"version"`
 }
 
@@ -63,16 +76,17 @@ type gitResource struct {
 
 // descriptions for the attributes in the Schema
 var descriptions = map[string]string{
+	"main":                    "Git Instance resource schema.",
 	"id":                      "Terraform's internal resource ID, structured as \"`project_id`,`instance_id`\".",
+	"project_id":              "STACKIT project ID to which the git instance is associated.",
+	"instance_id":             "ID linked to the git instance.",
+	"name":                    "Unique name linked to the git instance.",
+	"flavor":                  "Instance flavor. If not provided, defaults to git-100. For a list of available flavors, refer to our API documentation: `https://docs.api.stackit.cloud/documentation/git/version/v1beta`",
+	"created":                 "Instance creation timestamp in RFC3339 format.",
+	"url":                     "Url linked to the git instance.",
 	"acl":                     "Restricted ACL for instance access.",
 	"consumed_disk":           "How many bytes of disk space is consumed.",
 	"consumed_object_storage": "How many bytes of Object Storage is consumed.",
-	"created":                 "Instance creation timestamp in RFC3339 format.",
-	"flavor":                  "Instance flavor. If not provided, defaults to git-100. For a list of available flavors, refer to our API documentation: `https://docs.api.stackit.cloud/documentation/git/version/v1beta`",
-	"instance_id":             "ID linked to the git instance.",
-	"name":                    "Unique name linked to the git instance.",
-	"project_id":              "STACKIT project ID to which the git instance is associated.",
-	"url":                     "Url linked to the git instance.",
 	"version":                 "Version linked to the git instance.",
 }
 
@@ -83,7 +97,6 @@ func (g *gitResource) Configure(ctx context.Context, req resource.ConfigureReque
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_git", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -104,16 +117,14 @@ func (g *gitResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 // Schema defines the schema for the resource.
 func (g *gitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: fmt.Sprintf(
-			"%s %s",
-			features.AddBetaDescription("Git Instance resource schema.", core.Resource),
-			"This resource currently does not support updates. Changing the ACLs, flavor, or name will trigger resource recreation. Update functionality will be added soon. In the meantime, please proceed with caution. To update these attributes, please open a support ticket.",
-		),
-		Description: "Git Instance resource schema.",
+		Description: descriptions["main"],
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Description: descriptions["project_id"],
@@ -133,15 +144,16 @@ func (g *gitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 					validate.UUID(),
 					validate.NoSeparator(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"acl": schema.ListAttribute{
 				Description: descriptions["acl"],
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
 				ElementType: types.StringType,
 				Optional:    true,
 				Computed:    true,
+				Default:     listdefault.StaticValue(defaultAclValue),
 			},
 			"consumed_disk": schema.StringAttribute{
 				Description: descriptions["consumed_disk"],
@@ -154,6 +166,9 @@ func (g *gitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 			"created": schema.StringAttribute{
 				Description: descriptions["created"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"flavor": schema.StringAttribute{
 				Description: descriptions["flavor"],
@@ -176,6 +191,9 @@ func (g *gitResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 			"url": schema.StringAttribute{
 				Description: descriptions["url"],
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"version": schema.StringAttribute{
 				Description: descriptions["version"],
@@ -299,15 +317,63 @@ func (g *gitResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	tflog.Info(ctx, fmt.Sprintf("read git instance %s", instanceId))
 }
 
-// Update attempts to update the resource. In this case, git instances cannot be updated.
-// Note: This method is intentionally left without update logic because changes
-// to 'project_id' or 'name' require the resource to be entirely replaced.
-// As a result, the Update function is redundant since any modifications will
-// automatically trigger a resource recreation through Terraform's built-in
-// lifecycle management.
-func (g *gitResource) Update(ctx context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
-	// git instances cannot be updated, so we log an error.
-	core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating git instance", "Git Instance can't be updated")
+// Updates the git instance.
+func (g *gitResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve the planned values for the resource.
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+
+	payload, diags := toPatchPayload(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "updating instance", map[string]interface{}{
+		"project_id": projectId,
+		"instanceId": instanceId,
+		"payload":    payload,
+	})
+
+	gitInstanceResp, err := g.client.DefaultAPI.PatchInstance(ctx, projectId, instanceId).
+		PatchInstancePayload(payload).
+		Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating git instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	// Wait for update
+	_, err = wait.UpdateGitInstanceWaitHandler(ctx, g.client.DefaultAPI, projectId, instanceId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating git instance", fmt.Sprintf("Git instance update waiting: %v", err))
+		return
+	}
+
+	err = mapFields(ctx, gitInstanceResp, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating git instance", fmt.Sprintf("Processing API response: %v", err))
+		return
+	}
+
+	// Set the updated state.
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Git instance updated")
 }
 
 // Delete deletes the git instance and removes it from the Terraform state on success.
@@ -431,6 +497,28 @@ func toCreatePayload(ctx context.Context, model *Model) (git.CreateInstancePaylo
 
 	if !(model.Flavor.IsNull() || model.Flavor.IsUnknown()) {
 		payload.Flavor = conversion.StringValueToEnumPointer[git.CreateInstancePayloadFlavor](model.Flavor)
+	}
+
+	return payload, diags
+}
+
+// toPatchPayload creates the payload to update a git instance
+func toPatchPayload(ctx context.Context, model *Model) (git.PatchInstancePayload, diag.Diagnostics) {
+	diags := diag.Diagnostics{}
+
+	if model == nil {
+		return git.PatchInstancePayload{}, diags
+	}
+
+	payload := git.PatchInstancePayload{}
+
+	if !(model.ACL.IsNull() || model.ACL.IsUnknown()) {
+		var acl []string
+		aclDiags := model.ACL.ElementsAs(ctx, &acl, false)
+		diags.Append(aclDiags...)
+		if !aclDiags.HasError() {
+			payload.Acl = acl
+		}
 	}
 
 	return payload, diags

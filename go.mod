@@ -2,6 +2,11 @@ module github.com/stackitcloud/terraform-provider-stackit
 
 go 1.26.0
 
+replace (
+	github.com/stackitcloud/stackit-sdk-go/services/git => github.com/tomkillen/stackit-sdk-go/services/git v0.0.0-20260729221006-2d48dc4d514c
+	github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi/wait => github.com/tomkillen/stackit-sdk-go/services/git/v1betaapi/wait v0.0.0-20260729221006-2d48dc4d514c
+)
+
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
