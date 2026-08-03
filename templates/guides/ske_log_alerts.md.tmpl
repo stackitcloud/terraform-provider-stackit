@@ -12,10 +12,6 @@ This guide walks you through setting up log-based alerting in STACKIT Observabil
    Begin by configuring the STACKIT and Kubernetes providers to connect to the STACKIT services.
 
    ```hcl
-   provider "stackit" {
-     region = "eu01"
-   }
-
    provider "kubernetes" {
      host                   = yamldecode(stackit_ske_kubeconfig.example.kube_config).clusters.0.cluster.server
      client_certificate     = base64decode(yamldecode(stackit_ske_kubeconfig.example.kube_config).users.0.user.client-certificate-data)
