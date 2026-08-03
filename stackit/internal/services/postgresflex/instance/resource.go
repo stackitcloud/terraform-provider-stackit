@@ -28,7 +28,6 @@ import (
 	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/listplanmodifier"
-	stringplanmodifier2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -66,18 +65,19 @@ type Model struct {
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	ConnectionInfo types.Object `tfsdk:"connection_info"`
-	Flavor         types.Object `tfsdk:"flavor"`
-	FlavorId       types.String `tfsdk:"flavor_id"`
-	Replicas       types.Int32  `tfsdk:"replicas"`
-	Storage        types.Object `tfsdk:"storage"`
-	Encryption     types.Object `tfsdk:"encryption"`
-	Network        types.Object `tfsdk:"network"`
-	RetentionDays  types.Int32  `tfsdk:"retention_days"`
-	Version        types.String `tfsdk:"version"`
-	Region         types.String `tfsdk:"region"`
+	// Deprecated: Flavor is deprecated and will be removed after February 2027.
+	Flavor        types.Object `tfsdk:"flavor"`
+	FlavorId      types.String `tfsdk:"flavor_id"`
+	Replicas      types.Int32  `tfsdk:"replicas"`
+	Storage       types.Object `tfsdk:"storage"`
+	Encryption    types.Object `tfsdk:"encryption"`
+	Network       types.Object `tfsdk:"network"`
+	RetentionDays types.Int32  `tfsdk:"retention_days"`
+	Version       types.String `tfsdk:"version"`
+	Region        types.String `tfsdk:"region"`
 }
 
-// Struct corresponding to Model.Flavor
+// Deprecated: Will be removed after February 2027. Struct corresponding to Model.Flavor
 type flavorModel struct {
 	Id          types.String `tfsdk:"id"`
 	Description types.String `tfsdk:"description"`
@@ -86,7 +86,7 @@ type flavorModel struct {
 	NodeType    types.String `tfsdk:"node_type"`
 }
 
-// Types corresponding to flavorModel
+// Deprecated: Will be removed after February 2027. Types corresponding to flavorModel
 var flavorTypes = map[string]attr.Type{
 	"id":          basetypes.StringType{},
 	"description": basetypes.StringType{},
@@ -261,7 +261,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"connection_info.write.host": "The host of the instance.",
 		"connection_info.write.port": "The port of the instance.",
 		"replicas":                   "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication. Can only be set together with `flavor`",
-		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --flavors\n```",
+		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit curl https://postgres-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100\n```",
 		"encryption.kek_key_id":      "The ID of the Key within the STACKIT-KMS to use for the encryption.",
 		"encryption.kek_keyring_id":  "The ID of the keyring where the key is located within the STACKTI-KMS.",
 		"encryption.kek_key_version": "Version of the key within the STACKIT-KMS to use for the encryption.",
@@ -386,22 +386,15 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:           true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can get the available flavors using the STACKIT-CLI using `stackit curl https://postgres-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 					"description": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 					"cpu": schema.Int64Attribute{
 						Required: true,
@@ -411,10 +404,6 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 					},
 					"node_type": schema.StringAttribute{
 						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							UseStateForUnknownIfFlavorUnchanged(req),
-							stringplanmodifier2.UseStateForUnknownIf(stringplanmodifier2.StringUnchanged(path.Root("flavor_id")), "sets `UseStateForUnknown` if `flavor_id` remains unchanged"),
-						},
 					},
 				},
 				Validators: []validator.Object{
@@ -716,15 +705,15 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	} else {
 		flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
-			return
-		}
-		flavor = &flavorModel{
-			Id:          types.StringValue(flavorResp.Id),
-			Description: types.StringValue(flavorResp.Description),
-			CPU:         types.Int64Value(flavorResp.Cpu),
-			RAM:         types.Int64Value(flavorResp.Memory),
-			NodeType:    types.StringValue(flavorResp.NodeType),
+			core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+		} else if flavorResp != nil {
+			flavor = &flavorModel{
+				Id:          types.StringValue(flavorResp.Id),
+				Description: types.StringValue(flavorResp.Description),
+				CPU:         types.Int64Value(flavorResp.Cpu),
+				RAM:         types.Int64Value(flavorResp.Memory),
+				NodeType:    types.StringValue(flavorResp.NodeType),
+			}
 		}
 	}
 
@@ -1148,6 +1137,45 @@ type postgresFlexClient interface {
 	ListFlavorsExecute(r postgresflex.ApiListFlavorsRequest) (*postgresflex.ListFlavorsResponse, error)
 }
 
+// Deprecated: getAllFlavors is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
+func getAllFlavors(ctx context.Context, client postgresFlexClient, projectId, region string) ([]postgresflex.ListFlavors, error) {
+	var result []postgresflex.ListFlavors
+	req := client.ListFlavors(ctx, projectId, region).Size(100)
+	resp, err := client.ListFlavorsExecute(req)
+	if err != nil {
+		return nil, fmt.Errorf("error listing flavors: %w", err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("nil response received when listing flavors")
+	}
+	if resp.Flavors != nil {
+		result = append(result, resp.Flavors...)
+	}
+
+	currentPage := resp.Pagination.Page
+	totalPages := resp.Pagination.TotalPages
+	for currentPage < totalPages {
+		nextPage := currentPage + 1
+		resp, err = client.ListFlavorsExecute(req.Page(nextPage))
+		if err != nil {
+			return nil, fmt.Errorf("error listing flavors: %w", err)
+		}
+		if resp == nil {
+			return nil, fmt.Errorf("nil response received when listing flavors on page %d", nextPage)
+		}
+		if resp.Flavors != nil {
+			result = append(result, resp.Flavors...)
+		}
+		if resp.Pagination.Page <= currentPage {
+			break // Prevent infinite loop if page number does not advance
+		}
+		currentPage = resp.Pagination.Page
+		totalPages = resp.Pagination.TotalPages
+	}
+	return result, nil
+}
+
+// Deprecated: loadFlavorId is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, flavor *flavorModel) error {
 	if model == nil {
 		return fmt.Errorf("nil model")
@@ -1166,14 +1194,13 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 
 	projectId := model.ProjectId.ValueString()
 	region := model.Region.ValueString()
-	req := client.ListFlavors(ctx, projectId, region)
-	res, err := client.ListFlavorsExecute(req)
+	res, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
 		return fmt.Errorf("listing postgresflex flavors: %w", err)
 	}
 
 	avl := ""
-	if res.Flavors == nil {
+	if res == nil {
 		return fmt.Errorf("finding flavors for project %s", projectId)
 	}
 	if model.Replicas.IsNull() || model.Replicas.IsUnknown() {
@@ -1188,7 +1215,7 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	default:
 		return fmt.Errorf("unknown replica count. only 1 and 3 are supported")
 	}
-	for _, f := range res.Flavors {
+	for _, f := range res {
 		if f.Id == "" || f.Cpu == 0 || f.Memory == 0 {
 			continue
 		}
@@ -1207,13 +1234,13 @@ func loadFlavorId(ctx context.Context, client postgresFlexClient, model *Model, 
 	return nil
 }
 
+// Deprecated: getFlavor is deprecated and will be removed after February 2027. This function is only required for the v2 to v3 api migration.
 func getFlavor(ctx context.Context, client postgresFlexClient, projectId, region, flavorId string) (*postgresflex.ListFlavors, error) {
-	req := client.ListFlavors(ctx, projectId, region)
-	flavorsResp, err := client.ListFlavorsExecute(req)
+	flavorsResp, err := getAllFlavors(ctx, client, projectId, region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list flavors: %w", err)
 	}
-	for _, flavor := range flavorsResp.Flavors {
+	for _, flavor := range flavorsResp {
 		if flavor.Id == flavorId {
 			return &flavor, nil
 		}

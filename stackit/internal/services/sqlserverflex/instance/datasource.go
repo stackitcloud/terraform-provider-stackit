@@ -278,16 +278,17 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
+	flavor := &flavorModel{}
 	flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
-		return
-	}
-	flavor := &flavorModel{
-		Id:          types.StringValue(flavorResp.Id),
-		Description: types.StringValue(flavorResp.Description),
-		CPU:         types.Int64Value(flavorResp.Cpu),
-		RAM:         types.Int64Value(flavorResp.Memory),
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+	} else if flavorResp != nil {
+		flavor = &flavorModel{
+			Id:          types.StringValue(flavorResp.Id),
+			Description: types.StringValue(flavorResp.Description),
+			CPU:         types.Int64Value(flavorResp.Cpu),
+			RAM:         types.Int64Value(flavorResp.Memory),
+		}
 	}
 
 	err = mapFields(ctx, instanceResp, &model, flavor, region)
