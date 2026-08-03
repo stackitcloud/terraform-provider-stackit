@@ -412,25 +412,13 @@ func enableProject(ctx context.Context, model *Model, region string, client obje
 	// That holds for sequential calls. Two object storage resources created in the same apply call this concurrently,
 	// and the API rejects the second one with 409 project.create_conflict ("Two concurrent calls try to create the
 	// same project"). Retrying is safe: once the competing call has finished, enabling an already enabled project succeeds.
-	var err error
-	for attempt := 0; attempt < enableProjectAttempts; attempt++ {
-		_, err = client.EnableService(ctx, projectId, region).Execute()
-		if err == nil {
-			return nil
-		}
-
-		var oapiErr *oapierror.GenericOpenAPIError
-		if !errors.As(err, &oapiErr) || oapiErr.StatusCode != http.StatusConflict {
-			break
-		}
-
-		timer := time.NewTimer(enableProjectRetryDelay)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return ctx.Err()
-		case <-timer.C:
-		}
+	config := utils.RetryConfig{
+		Attempts:         enableProjectAttempts,
+		Delay:            enableProjectRetryDelay,
+		RetryStatusCodes: []int{http.StatusConflict},
 	}
-	return fmt.Errorf("failed to create object storage project: %w", err)
+	if _, err := utils.RetryRequest(ctx, client.EnableService(ctx, projectId, region).Execute, config); err != nil {
+		return fmt.Errorf("failed to create object storage project: %w", err)
+	}
+	return nil
 }
