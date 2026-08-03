@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
@@ -149,18 +147,6 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					setvalidator.ValueStringsAre(
 						validate.CIDR(),
 					),
-					setvalidator.ConflictsWith(path.MatchRoot("acl")),
-				},
-			},
-			"acl": schema.SetAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Optional:    true,
-				Validators: []validator.Set{
-					setvalidator.ValueStringsAre(
-						validate.CIDR(),
-					),
-					setvalidator.ConflictsWith(path.MatchRoot("acls")),
 				},
 			},
 			"kms_key": schema.SingleNestedAttribute{
