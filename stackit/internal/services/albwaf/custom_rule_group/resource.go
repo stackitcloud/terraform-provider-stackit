@@ -446,22 +446,21 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 
 	payload, err := toUpdatePayload(ctx, &model)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Creating API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
 
 	updateResp, err := r.client.DefaultAPI.UpdateCustomRuleGroup(ctx, projectId, region, customRuleGroupName).UpdateCustomRuleGroupPayload(*payload).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Calling API to update export policy: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Calling API update endpoint: %v", err))
 		return
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	// map export policy
 	err = mapFields(ctx, updateResp, &model, region)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating export policy", fmt.Sprintf("Processing API payload: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 

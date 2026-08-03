@@ -25,7 +25,7 @@ resource "stackit_alb_waf_custom_rule_group" "example" {
       behavior = {
         action = "ACTION_DENY"
         log    = true
-        logMsg = "Some custom notification message string"
+        log_msg = "Some custom notification message string"
       }
       conditions = [
         {
