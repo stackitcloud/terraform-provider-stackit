@@ -84,6 +84,28 @@ func configVarsBucketUpdated() config.Variables {
 	return updatedConfig
 }
 
+// wafConfigVariable builds the nested "waf" object variable used in the CDN
+// distribution config.
+func wafConfigVariable(mode, wafType, paranoiaLevel, allowedMethod, allowedContentType, allowedVersion, disabledId, enabledId, logOnlyId string) config.Variable {
+	return config.ObjectVariable(map[string]config.Variable{
+		"mode":                          config.StringVariable(mode),
+		"type":                          config.StringVariable(wafType),
+		"paranoia_level":                config.StringVariable(paranoiaLevel),
+		"allowed_http_methods":          config.ListVariable(config.StringVariable(allowedMethod)),
+		"allowed_http_versions":         config.ListVariable(config.StringVariable(allowedVersion)),
+		"allowed_request_content_types": config.ListVariable(config.StringVariable(allowedContentType)),
+		"disabled_rule_ids":             config.ListVariable(config.StringVariable(disabledId)),
+		"disabled_rule_group_ids":       config.ListVariable(config.StringVariable(disabledId)),
+		"disabled_rule_collection_ids":  config.ListVariable(config.StringVariable(disabledId)),
+		"enabled_rule_ids":              config.ListVariable(config.StringVariable(enabledId)),
+		"enabled_rule_group_ids":        config.ListVariable(config.StringVariable(enabledId)),
+		"enabled_rule_collection_ids":   config.ListVariable(config.StringVariable(enabledId)),
+		"log_only_rule_ids":             config.ListVariable(config.StringVariable(logOnlyId)),
+		"log_only_rule_group_ids":       config.ListVariable(config.StringVariable(logOnlyId)),
+		"log_only_rule_collection_ids":  config.ListVariable(config.StringVariable(logOnlyId)),
+	})
+}
+
 var testConfigVarsHttp = config.Variables{
 	"project_id":                          config.StringVariable(testutil.ProjectId),
 	"name":                                config.StringVariable(httpTestName),
@@ -140,12 +162,7 @@ func configVarsHttpUpdated() config.Variables {
 	updatedConfig["blocked_ips"] = config.ListVariable(config.StringVariable("1.1.1.1"), config.StringVariable("2.2.2.2"))
 
 	// Update WAF configuration to test mutation
-	updatedConfig["waf_mode"] = config.StringVariable("LOG_ONLY")
-	updatedConfig["waf_type"] = config.StringVariable("PREMIUM")
-	updatedConfig["waf_allowed_http_methods_0"] = config.StringVariable("POST")
-	updatedConfig["waf_allowed_request_content_types_0"] = config.StringVariable("text/plain")
-	updatedConfig["waf_allowed_http_versions_0"] = config.StringVariable("HTTP/1.1")
-	updatedConfig["waf_paranoia_level"] = config.StringVariable("L3")
+	updatedConfig["waf"] = wafConfigVariable("LOG_ONLY", "PREMIUM", "L3", "POST", "text/plain", "HTTP/1.1", wafRule3, wafRule2, wafRule1)
 
 	// Update TLS
 	updatedConfig["tls_enable_tls_10"] = config.BoolVariable(false)
@@ -154,25 +171,6 @@ func configVarsHttpUpdated() config.Variables {
 	// Update small features
 	updatedConfig["strip_response_cookies"] = config.BoolVariable(true)
 	updatedConfig["forward_host_header"] = config.BoolVariable(false)
-
-	// Update WAF rules
-	updatedConfig["waf_disabled_rule_ids_0"] = config.StringVariable(wafRule3)
-	updatedConfig["waf_disabled_rule_group_ids_0"] = config.StringVariable(wafRule3)
-	updatedConfig["waf_disabled_rule_collection_ids_0"] = config.StringVariable(wafRule3)
-
-	updatedConfig["waf_enabled_rule_ids_0"] = config.StringVariable(wafRule1)
-
-	updatedConfig["waf_enabled_rule_ids_0"] = config.StringVariable(wafRule2)
-	updatedConfig["waf_enabled_rule_group_ids_0"] = config.StringVariable(wafRule2)
-	updatedConfig["waf_enabled_rule_collection_ids_0"] = config.StringVariable(wafRule2)
-
-	updatedConfig["waf_log_only_rule_ids_0"] = config.StringVariable(wafRule1)
-	updatedConfig["waf_log_only_rule_group_ids_0"] = config.StringVariable(wafRule1)
-	updatedConfig["waf_log_only_rule_collection_ids_0"] = config.StringVariable(wafRule1)
-
-	updatedConfig["waf_disabled_rule_ids_0"] = config.StringVariable(wafRule3)
-	updatedConfig["waf_disabled_rule_group_ids_0"] = config.StringVariable(wafRule3)
-	updatedConfig["waf_disabled_rule_collection_ids_0"] = config.StringVariable(wafRule3)
 
 	return updatedConfig
 }
@@ -240,7 +238,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_rule_enabled"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.rule_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_rule_match_condition"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values.0", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_value"])),
+					testutil.CheckListAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values", testConfigVarsHttp["redirect_matcher_values"]),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.value_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_condition"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
@@ -254,10 +252,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 						fmt.Sprintf("config.backend.origin_request_headers.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_name"])),
 						testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_value"]),
 					),
-					resource.TestCheckResourceAttr(
+					testutil.CheckListAttr(
 						"stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
-						"DE",
+						fmt.Sprintf("config.backend.geofencing.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
+						testConfigVarsHttp["geofencing_list"],
 					),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["optimizer"])),
 
@@ -270,38 +268,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
 
 					// WAF Checks
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_allowed_http_methods_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_allowed_request_content_types_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_allowed_http_versions_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.paranoia_level", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_paranoia_level"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_disabled_rule_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_disabled_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_disabled_rule_collection_ids_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_enabled_rule_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_enabled_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_enabled_rule_collection_ids_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_log_only_rule_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_log_only_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_log_only_rule_collection_ids_0"])),
+					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -389,16 +356,16 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "domains.1.type", "custom"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.#", "2"),
+					testutil.CheckListAttr("data.stackit_cdn_distribution.distribution", "config.regions", testConfigVarsHttp["regions"]),
 					resource.TestCheckResourceAttr(
 						"data.stackit_cdn_distribution.distribution",
 						fmt.Sprintf("config.backend.origin_request_headers.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_name"])),
 						testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_value"]),
 					),
-					resource.TestCheckResourceAttr(
+					testutil.CheckListAttr(
 						"data.stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
-						"DE",
+						fmt.Sprintf("config.backend.geofencing.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
+						testConfigVarsHttp["geofencing_list"],
 					),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.regions.1", "US"),
@@ -417,38 +384,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(testConfigVarsHttp["default_cache_duration"])),
 
 					// WAF Checks inside Data Source
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_mode"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_type"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_allowed_http_methods_0"])),
-
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_allowed_request_content_types_0"])),
-
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_allowed_http_versions_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.paranoia_level", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_paranoia_level"])),
-
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_disabled_rule_ids_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_disabled_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_disabled_rule_collection_ids_0"])),
-
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_enabled_rule_ids_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_enabled_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_enabled_rule_collection_ids_0"])),
-
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_log_only_rule_ids_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_log_only_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", testutil.ConvertConfigVariable(testConfigVarsHttp["waf_log_only_rule_collection_ids_0"])),
+					testutil.CheckObjectAttr("data.stackit_cdn_distribution.distribution", "config.waf", testConfigVarsHttp["waf"]),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -458,7 +394,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.description", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_rule_description"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.enabled", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_rule_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.rule_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_rule_match_condition"])),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values.0", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_value"])),
+					testutil.CheckListAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.values", testConfigVarsHttp["redirect_matcher_values"]),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.distribution", "config.redirects.rules.0.matchers.0.value_match_condition", testutil.ConvertConfigVariable(testConfigVarsHttp["redirect_matcher_condition"])),
 
 					resource.TestCheckResourceAttr("data.stackit_cdn_custom_domain.custom_domain", "status", "ACTIVE"),
@@ -502,38 +438,7 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.default_cache_duration", testutil.ConvertConfigVariable(configVarsHttpUpdated()["default_cache_duration"])),
 
 					// Checking WAF Mutated Configurations
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.mode", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_mode"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.type", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_type"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_methods.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_allowed_http_methods_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_request_content_types.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_allowed_request_content_types_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.allowed_http_versions.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_allowed_http_versions_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.paranoia_level", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_paranoia_level"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_disabled_rule_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_group_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_disabled_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.disabled_rule_collection_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_disabled_rule_collection_ids_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_enabled_rule_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_group_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_enabled_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.enabled_rule_collection_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_enabled_rule_collection_ids_0"])),
-
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_log_only_rule_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_group_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_log_only_rule_group_ids_0"])),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.#", "1"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.waf.log_only_rule_collection_ids.0", testutil.ConvertConfigVariable(configVarsHttpUpdated()["waf_log_only_rule_collection_ids_0"])),
+					testutil.CheckObjectAttr("stackit_cdn_distribution.distribution", "config.waf", configVarsHttpUpdated()["waf"]),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -542,10 +447,10 @@ func TestAccCDNDistributionHttp(t *testing.T) {
 						fmt.Sprintf("config.backend.origin_request_headers.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_name"])),
 						testutil.ConvertConfigVariable(testConfigVarsHttp["origin_request_headers_value"]),
 					),
-					resource.TestCheckResourceAttr(
+					testutil.CheckListAttr(
 						"stackit_cdn_distribution.distribution",
-						fmt.Sprintf("config.backend.geofencing.%s.0", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
-						"DE",
+						fmt.Sprintf("config.backend.geofencing.%s", testutil.ConvertConfigVariable(testConfigVarsHttp["backend_origin_url"])),
+						testConfigVarsHttp["geofencing_list"],
 					),
 
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.redirects.rules.#", "1"),
@@ -583,9 +488,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_cdn_distribution.distribution", "domains.0.name"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.type", "managed"),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "domains.0.status", "ACTIVE"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.#", "2"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.0", "EU"),
-					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.regions.1", "US"),
+					testutil.CheckListAttr("stackit_cdn_distribution.distribution", "config.regions", testConfigVarsBucket["regions"]),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsBucket["optimizer"])),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_cdn_distribution.distribution", "status", "ACTIVE"),
@@ -642,9 +545,7 @@ func TestAccCDNDistributionBucket(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.stackit_cdn_distribution.bucket_ds", "domains.0.name"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.status", "ACTIVE"),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "domains.0.type", "managed"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.0", "EU"),
-					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions.1", "US"),
+					testutil.CheckListAttr("data.stackit_cdn_distribution.bucket_ds", "config.regions", testConfigVarsBucket["regions"]),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "config.optimizer.enabled", testutil.ConvertConfigVariable(testConfigVarsBucket["optimizer"])),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("data.stackit_cdn_distribution.bucket_ds", "status", "ACTIVE"),

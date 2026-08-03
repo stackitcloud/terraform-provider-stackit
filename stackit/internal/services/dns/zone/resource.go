@@ -174,7 +174,7 @@ func (r *zoneResource) Schema(ctx context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"acl": schema.StringAttribute{
-				Description: "The access control list. E.g. `0.0.0.0/0,::/0`",
+				Description: "The access control list (e.g., 0.0.0.0/0,::/0). Note: This field currently has no effect and does not enforce any access restrictions on the DNS zone.",
 				Optional:    true,
 				Computed:    true,
 				Validators: []validator.String{

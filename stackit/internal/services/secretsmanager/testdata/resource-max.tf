@@ -2,18 +2,14 @@ variable "project_id" {}
 variable "instance_name" {}
 variable "user_description" {}
 variable "write_enabled" {}
-variable "acl1" {}
-variable "acl2" {}
+variable "acls" {}
 variable "service_account_mail" {}
 variable "use_kms_key" {}
 
 resource "stackit_secretsmanager_instance" "instance" {
   project_id = var.project_id
   name       = var.instance_name
-  acls = [
-    var.acl1,
-    var.acl2,
-  ]
+  acls       = var.acls
 }
 
 resource "stackit_secretsmanager_user" "user" {
@@ -54,10 +50,7 @@ resource "stackit_kms_key" "key" {
 resource "stackit_secretsmanager_instance" "instance_with_key" {
   project_id = var.project_id
   name       = var.instance_name
-  acls = [
-    var.acl1,
-    var.acl2,
-  ]
+  acls       = var.acls
 
   kms_key = var.use_kms_key ? {
     key_id                = stackit_kms_key.key.key_id

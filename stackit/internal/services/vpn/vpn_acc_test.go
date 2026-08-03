@@ -52,18 +52,17 @@ var gatewayMinVarsUpdated = func() config.Variables {
 }()
 
 var gatewayMaxVars = config.Variables{
-	"project_id":         config.StringVariable(testutil.ProjectId),
-	"region":             config.StringVariable(testutil.Region),
-	"display_name":       config.StringVariable("vpn-gw-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"plan_id":            config.StringVariable("p500"),
-	"routing_type":       config.StringVariable("BGP_ROUTE_BASED"),
-	"az_tunnel1":         config.StringVariable("eu01-1"),
-	"az_tunnel2":         config.StringVariable("eu01-2"),
-	"local_asn":          config.IntegerVariable(65000),
-	"advertised_route_1": config.StringVariable("10.0.0.0/16"),
-	"advertised_route_2": config.StringVariable("192.168.0.0/24"),
-	"label_key":          config.StringVariable("env"),
-	"label_value":        config.StringVariable("test"),
+	"project_id":                 config.StringVariable(testutil.ProjectId),
+	"region":                     config.StringVariable(testutil.Region),
+	"display_name":               config.StringVariable("vpn-gw-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"plan_id":                    config.StringVariable("p500"),
+	"routing_type":               config.StringVariable("BGP_ROUTE_BASED"),
+	"az_tunnel1":                 config.StringVariable("eu01-1"),
+	"az_tunnel2":                 config.StringVariable("eu01-2"),
+	"local_asn":                  config.IntegerVariable(65000),
+	"override_advertised_routes": config.ListVariable(config.StringVariable("10.0.0.0/16"), config.StringVariable("192.168.0.0/24")),
+	"label_key":                  config.StringVariable("env"),
+	"label_value":                config.StringVariable("test"),
 }
 
 var gatewayMaxVarsUpdated = func() config.Variables {
@@ -72,18 +71,14 @@ var gatewayMaxVarsUpdated = func() config.Variables {
 	updated["display_name"] = config.StringVariable("vpn-gw-acc-test-updated-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
 	updated["local_asn"] = config.IntegerVariable(4294967294)
 	updated["label_value"] = config.StringVariable("production")
-	updated["advertised_route_1"] = config.StringVariable("10.10.0.0/16")
-	updated["advertised_route_2"] = config.StringVariable("192.168.167.0/24")
-	updated["advertised_route_3"] = config.StringVariable("172.16.10.0/24")
+	updated["override_advertised_routes"] = config.ListVariable(config.StringVariable("10.10.0.0/16"), config.StringVariable("192.168.167.0/24"), config.StringVariable("172.16.10.0/24"))
 	return updated
 }()
 
 var gatewayMaxVarsUpdated2 = func() config.Variables {
 	updated := make(config.Variables, len(gatewayMaxVarsUpdated))
 	maps.Copy(updated, gatewayMaxVarsUpdated)
-	updated["advertised_route_1"] = config.StringVariable("")
-	updated["advertised_route_2"] = config.StringVariable("")
-	updated["advertised_route_3"] = config.StringVariable("")
+	updated["override_advertised_routes"] = config.ListVariable()
 	updated["label_key"] = config.StringVariable("")
 	updated["label_value"] = config.StringVariable("")
 	return updated
@@ -289,9 +284,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(gatewayMaxVars["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMaxVars["az_tunnel2"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVars["local_asn"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "2"),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.0", testutil.ConvertConfigVariable(gatewayMaxVars["advertised_route_1"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(gatewayMaxVars["advertised_route_2"])),
+					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
@@ -318,9 +311,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(gatewayMaxVars["az_tunnel1"])),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMaxVars["az_tunnel2"])),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVars["local_asn"])),
-					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.0", testutil.ConvertConfigVariable(gatewayMaxVars["advertised_route_1"])),
-					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(gatewayMaxVars["advertised_route_2"])),
+					testutil.CheckListAttr("data.stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
 
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "gateway_id"),
@@ -374,10 +365,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["az_tunnel2"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["local_asn"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "3"),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.0", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["advertised_route_1"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["advertised_route_2"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.2", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["advertised_route_3"])),
+					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVarsUpdated["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
@@ -395,7 +383,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["az_tunnel2"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["local_asn"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "0"),
+					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVarsUpdated2["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels.#", "0"),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
@@ -623,9 +611,7 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel1", testutil.ConvertConfigVariable(connectionMaxVars["az_tunnel1"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "availability_zones.tunnel2", testutil.ConvertConfigVariable(connectionMaxVars["az_tunnel2"])),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(connectionMaxVars["local_asn"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.#", "2"),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.0", testutil.ConvertConfigVariable(connectionMaxVars["advertised_route_1"])),
-					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes.1", testutil.ConvertConfigVariable(connectionMaxVars["advertised_route_2"])),
+					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", connectionMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(connectionMaxVars["label_key"]), testutil.ConvertConfigVariable(connectionMaxVars["label_value"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 					// Connection – identity & top-level

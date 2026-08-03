@@ -2,12 +2,13 @@ package opensearch
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v1api"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v2api"
 )
 
 func TestMapDataSourceFields(t *testing.T) {
@@ -29,7 +30,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Raw: &opensearch.RawCredentials{},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -40,6 +41,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Scheme:       types.StringNull(),
 				Uri:          types.StringNull(),
 				Username:     types.StringValue(""),
+				Region:       types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -67,7 +69,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -81,6 +83,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Scheme:   types.StringValue("scheme"),
 				Uri:      types.StringValue("uri"),
 				Username: types.StringValue("username"),
+				Region:   types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -114,7 +117,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -129,6 +132,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Scheme:   types.StringValue("scheme"),
 				Uri:      types.StringValue("uri"),
 				Username: types.StringValue("username"),
+				Region:   types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -153,7 +157,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				},
 			},
 			DataSourceModel{
-				Id:           types.StringValue("pid,iid,cid"),
+				Id:           types.StringValue(fmt.Sprintf("pid,%s,iid,cid", testRegion)),
 				CredentialId: types.StringValue("cid"),
 				InstanceId:   types.StringValue("iid"),
 				ProjectId:    types.StringValue("pid"),
@@ -164,6 +168,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Scheme:       types.StringNull(),
 				Uri:          types.StringNull(),
 				Username:     types.StringValue(""),
+				Region:       types.StringValue(testRegion),
 			},
 			true,
 		},
@@ -202,7 +207,7 @@ func TestMapDataSourceFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			err := mapDataSourceFields(context.Background(), tt.input, &tt.state)
+			err := mapDataSourceFields(context.Background(), tt.input, &tt.state, testRegion)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
