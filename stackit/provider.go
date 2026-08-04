@@ -129,6 +129,7 @@ import (
 	skeKubeconfig "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/kubeconfig"
 	skeKubernetesVersion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/kubernetesversions"
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
+	sqlServerFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/database"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
@@ -754,6 +755,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		resourceManagerFolder.NewFolderDataSource,
 		secretsManagerInstance.NewInstanceDataSource,
 		secretsManagerUser.NewUserDataSource,
+		sqlServerFlexDatabase.NewDatabaseDataSource,
 		sqlServerFlexInstance.NewInstanceDataSource,
 		sqlServerFlexUser.NewUserDataSource,
 		serverBackupSchedule.NewScheduleDataSource,
@@ -868,6 +870,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resourceManagerFolder.NewFolderResource,
 		secretsManagerInstance.NewInstanceResource,
 		secretsManagerUser.NewUserResource,
+		sqlServerFlexDatabase.NewDatabaseResource,
 		sqlServerFlexInstance.NewInstanceResource,
 		sqlServerFlexUser.NewUserResource,
 		serverBackupSchedule.NewScheduleResource,

@@ -103,7 +103,7 @@ resource "stackit_telemetryrouter_destination" "otlp" {
 - `credential_type` (String) The TelemetryRouter destination's credential type
 - `destination_id` (String) The TelemetryRouter destination ID
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`destionation_id`".
-- `status` (String) The status of the TelemetryRouter destination, possible values: Possible values are: `reconciling`, `active`, `deleting`.
+- `status` (String, Deprecated) The status of the TelemetryRouter destination, possible values: Possible values are: `reconciling`, `active`, `deleting`.
 
 <a id="nestedatt--config"></a>
 ### Nested Schema for `config`
