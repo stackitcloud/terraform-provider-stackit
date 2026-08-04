@@ -154,7 +154,7 @@ Required:
 
 Required:
 
-- `enabled` (Boolean) Enables the application load balancer extension.
+- `enabled` (Boolean) Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.
 
 
 <a id="nestedatt--extensions--argus"></a>
@@ -231,7 +231,7 @@ Optional:
 
 Optional:
 
-- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area.Possible values are: `PUBLIC`, `SNA`. The field is immutable!
+- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.Possible values are: `PUBLIC`, `SNA`. The field is immutable!
 
 ## Import
 
