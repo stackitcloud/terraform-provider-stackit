@@ -3,6 +3,7 @@ package token
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -137,12 +138,27 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	getInstanceTokenResp, err := i.client.GetInstanceToken(ctx, projectId, region, tokenId, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading AI Model Experiments instance token",
+			fmt.Sprintf("Error reading AI Model Experiments instance token %q for instance %q", tokenId, instanceId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q, AI Model Experiments instance with ID %q or AI Model Experiments instance token with ID %q not found or forbidden access", projectId, instanceId, tokenId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapDataSourceFields(ctx, &getInstanceTokenResp.Token, &model, region, instanceId)
+	if getInstanceTokenResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", "Got empty response")
+		return
+	}
+
+	err = mapDataSourceFields(ctx, &getInstanceTokenResp.Token, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -156,7 +172,7 @@ func (i *instanceTokenDataSource) Read(ctx context.Context, req datasource.ReadR
 	tflog.Info(ctx, "AI Model Experiments instance token read")
 }
 
-func mapDataSourceFields(ctx context.Context, token *modelexperiments.TokenMetadata, model *InstanceTokenDataSourceModel, region, instanceId string) error {
+func mapDataSourceFields(ctx context.Context, token *modelexperiments.TokenMetadata, model *InstanceTokenDataSourceModel, region string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
@@ -170,7 +186,7 @@ func mapDataSourceFields(ctx context.Context, token *modelexperiments.TokenMetad
 		return err
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId, token.Id)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, model.InstanceId.ValueString(), token.Id)
 	model.TokenId = types.StringValue(token.Id)
 	model.Name = types.StringValue(token.Name)
 	model.Description = types.StringPointerValue(token.Description)

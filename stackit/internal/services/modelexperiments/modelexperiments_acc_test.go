@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
@@ -193,6 +194,12 @@ func TestAccModelExperimentsInstanceMin(t *testing.T) {
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceModelexperimentsInstanceMin,
 				ConfigVariables: testModelexperimentsInstanceConfigVarsMinUpdated(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_modelexperiments_instance.example", plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction("stackit_modelexperiments_token.example", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMinUpdated()["project_id"])),
@@ -342,6 +349,12 @@ func TestAccModelExperimentsInstanceMax(t *testing.T) {
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceModelexperimentsInstanceMax,
 				ConfigVariables: testModelexperimentsInstanceConfigVarsMaxUpdated(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("stackit_modelexperiments_instance.example", plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction("stackit_modelexperiments_token.example", plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Instance
 					resource.TestCheckResourceAttr(modelexperimentsInstanceResource, "project_id", testutil.ConvertConfigVariable(testModelexperimentsInstanceConfigVarsMaxUpdated()["project_id"])),

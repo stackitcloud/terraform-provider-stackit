@@ -275,8 +275,8 @@ func (i *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	ctx = core.LogResponse(ctx)
 
-	if createInstanceResp.Instance.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
+	if createInstanceResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance", "Got empty response")
 		return
 	}
 
@@ -352,6 +352,11 @@ func (i *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 	ctx = core.LogResponse(ctx)
 
+	if getInstanceResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error AI Model Experiments reading instance", "Got empty response")
+		return
+	}
+
 	err = mapInstance(ctx, &getInstanceResp.Instance, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
@@ -407,8 +412,12 @@ func (i *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-
 	ctx = core.LogResponse(ctx)
+
+	if updateInstanceResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance", "Got empty response")
+		return
+	}
 
 	err = mapInstance(ctx, &updateInstanceResp.Instance, &plan, region)
 	if err != nil {
