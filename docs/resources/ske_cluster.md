@@ -135,6 +135,7 @@ Optional:
 Optional:
 
 - `acl` (Attributes) Cluster access control configuration. (see [below for nested schema](#nestedatt--extensions--acl))
+- `application_load_balancer` (Attributes) Application Load Balancer extension. (see [below for nested schema](#nestedatt--extensions--application_load_balancer))
 - `argus` (Attributes, Deprecated) A single argus block as defined below. This field is deprecated and will be removed 06 January 2026. (see [below for nested schema](#nestedatt--extensions--argus))
 - `dns` (Attributes) DNS extension configuration (see [below for nested schema](#nestedatt--extensions--dns))
 - `observability` (Attributes) A single observability block as defined below. (see [below for nested schema](#nestedatt--extensions--observability))
@@ -146,6 +147,14 @@ Required:
 
 - `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist.
 - `enabled` (Boolean) Is ACL enabled?
+
+
+<a id="nestedatt--extensions--application_load_balancer"></a>
+### Nested Schema for `extensions.application_load_balancer`
+
+Required:
+
+- `enabled` (Boolean) Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.
 
 
 <a id="nestedatt--extensions--argus"></a>
@@ -222,7 +231,7 @@ Optional:
 
 Optional:
 
-- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area.Possible values are: `PUBLIC`, `SNA`. The field is immutable!
+- `access_scope` (String) Access scope of the control plane. It defines if the Kubernetes control plane is public or only available inside a STACKIT Network Area. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.Possible values are: `PUBLIC`, `SNA`. The field is immutable!
 
 ## Import
 
