@@ -44,6 +44,8 @@ This guide outlines the process of utilizing the [AWS Terraform Provider](https:
    }
    ```
 
+  Important: Run terraform apply now to create the bucket and credentials before proceeding. The AWS provider requires these credential values to already exist during initialization.
+
 3. **Configure AWS Provider**
 
    Configure the AWS provider to connect to the STACKIT Object Storage bucket.
