@@ -2665,7 +2665,7 @@ func TestValidateConfig(t *testing.T) {
 					"dns":                       types.ObjectNull(dnsTypes),
 					"argus":                     types.ObjectUnknown(argusTypes),
 					"observability":             types.ObjectUnknown(observabilityTypes),
-					"application_load_balancer": types.ObjectUnknown(applicationLoadBalancerTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2775,6 +2775,19 @@ func TestValidateConfig(t *testing.T) {
 						"instance_id": types.StringValue("aid"),
 					}),
 					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "application_load_balancer unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectUnknown(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
