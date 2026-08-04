@@ -832,7 +832,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Optional:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								Description: "Enables the application load balancer extension.",
+								Description: "Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.",
 								Required:    true,
 							},
 						},
