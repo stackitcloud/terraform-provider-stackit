@@ -256,7 +256,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -396,7 +396,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -468,7 +468,7 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

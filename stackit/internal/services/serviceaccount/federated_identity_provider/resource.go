@@ -201,6 +201,8 @@ func (r *serviceAccountFederatedIdentityProviderResource) Create(ctx context.Con
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating federated identity provider", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -237,6 +239,8 @@ func (r *serviceAccountFederatedIdentityProviderResource) Read(ctx context.Conte
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("failed to map response to model: %v", err))
@@ -284,6 +288,8 @@ func (r *serviceAccountFederatedIdentityProviderResource) Update(ctx context.Con
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating federated identity provider", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -312,6 +318,10 @@ func (r *serviceAccountFederatedIdentityProviderResource) Delete(ctx context.Con
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting federated identity provider", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
+
+	tflog.Info(ctx, "Federated identity provider deleted")
 }
 
 func (r *serviceAccountFederatedIdentityProviderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
