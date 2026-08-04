@@ -34,7 +34,7 @@ resource "stackit_modelexperiments_token" "token" {
   region       = "eu01"
   instance_id  = stackit_modelexperiments_instance.example.instance_id
   description  = "Example token description"
-  ttl_duration = "1h"
+  ttl_duration = "80d"
   labels = {
     label = "ExampleLlabel"
   }

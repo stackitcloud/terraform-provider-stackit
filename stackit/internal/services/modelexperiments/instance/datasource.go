@@ -3,6 +3,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -13,16 +14,13 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	modelexperimentsutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/modelexperiments/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 var (
 	_ datasource.DataSource              = &instanceDataSource{}
 	_ datasource.DataSourceWithConfigure = &instanceDataSource{}
 )
-
-type InstanceDataSourceModel struct {
-	Model
-}
 
 func NewInstanceDataSource() datasource.DataSource {
 	return &instanceDataSource{}
@@ -113,7 +111,7 @@ func (i *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // ReadRequest and new state values set on the ReadResponse.
 func (i *instanceDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
 	// nolint:gocritic // function signature required by Terraform
-	var model InstanceDataSourceModel
+	var model Model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -130,12 +128,27 @@ func (i *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	getInstanceResp, err := i.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", fmt.Sprintf("Calling API: %v", err))
+		utils.LogError(
+			ctx,
+			&resp.Diagnostics,
+			err,
+			"Reading AI Model Experiments instance",
+			fmt.Sprintf("Error reading AI Model Experiments instance %q", instanceId),
+			map[int]string{
+				http.StatusForbidden: fmt.Sprintf("Project with ID %q or AI Model Experiments instance with ID %q not found or forbidden access", projectId, instanceId),
+			},
+		)
+		resp.State.RemoveResource(ctx)
 		return
 	}
 	ctx = core.LogResponse(ctx)
 
-	err = mapInstance(ctx, &getInstanceResp.Instance, &model.Model, region)
+	if getInstanceResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", "Got empty response")
+		return
+	}
+
+	err = mapInstance(ctx, &getInstanceResp.Instance, &model, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance", fmt.Sprintf("Processing API payload: %v", err))
 		return

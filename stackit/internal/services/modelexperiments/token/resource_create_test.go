@@ -127,7 +127,7 @@ func TestCreate_Success(t *testing.T) {
 	}
 }
 
-func TestCreate_TokenIdEmpty(t *testing.T) {
+func TestCreate_TokenResponseEmpty(t *testing.T) {
 	tc := testutils.NewTestContext(t)
 
 	projectId := uuid.New()
@@ -135,24 +135,11 @@ func TestCreate_TokenIdEmpty(t *testing.T) {
 	region := "eu01"
 	description := "token description"
 	instanceId := uuid.New()
-	validUntil := time.Now()
-	content := "token"
 
-	createTokenResp := &modelexperiments.CreateInstanceTokenResponse{
-		Token: modelexperiments.Token{
-			Content:     content,
-			Description: &description,
-			Id:          "",
-			Name:        name,
-			Region:      region,
-			State:       "creating",
-			ValidUntil:  validUntil,
-		},
-	}
 	tc.MockInstanceCLient.EXPECT().CreateInstanceToken(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(modelexperiments.ApiCreateInstanceTokenRequest{
 		ApiService: tc.MockInstanceCLient,
 	})
-	tc.MockInstanceCLient.EXPECT().CreateInstanceTokenExecute(gomock.Any()).Return(createTokenResp, nil)
+	tc.MockInstanceCLient.EXPECT().CreateInstanceTokenExecute(gomock.Any()).Return(nil, nil)
 
 	providerData := core.ProviderData{
 		DefaultRegion: "eu01",

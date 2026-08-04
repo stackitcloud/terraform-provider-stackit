@@ -99,23 +99,30 @@ func TestMapCreateResponseFields(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		description         string
-		state               *Model
-		inputCreateResponse *modelexperiments.CreateInstanceTokenResponse
-		expected            Model
-		isValid             bool
+		description string
+		state       *Model
+		input       *modelexperiments.CreateInstanceTokenResponse
+		expected    Model
+		isValid     bool
 	}{
 		{
-			description:         "should error when state is nil",
-			state:               nil,
-			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{},
-			expected:            Model{},
-			isValid:             false,
+			description: "should error when state is nil",
+			state:       nil,
+			input:       &modelexperiments.CreateInstanceTokenResponse{},
+			expected:    Model{},
+			isValid:     false,
+		},
+		{
+			description: "should error when token input is nil",
+			state:       &Model{},
+			input:       nil,
+			expected:    Model{},
+			isValid:     false,
 		},
 		{
 			description: "should error when token id is not present",
 			state:       &Model{},
-			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
+			input: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{},
 			},
 			expected: Model{},
@@ -130,7 +137,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				Region:            types.StringValue("eu01"),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
+			input: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
 					Id:          "tid",
 					Content:     "token",
@@ -165,7 +172,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 				Region:            types.StringValue("eu01"),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			inputCreateResponse: &modelexperiments.CreateInstanceTokenResponse{
+			input: &modelexperiments.CreateInstanceTokenResponse{
 				Token: modelexperiments.Token{
 					Id:          "tid",
 					Content:     "token",
@@ -198,7 +205,7 @@ func TestMapCreateResponseFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapCreateResponse(ctx, &tt.inputCreateResponse.Token, tt.state, "eu01", "id")
+			err := mapCreateResponse(ctx, tt.input, tt.state, "eu01", "id")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

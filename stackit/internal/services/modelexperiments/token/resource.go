@@ -286,8 +286,8 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	ctx = core.LogResponse(ctx)
 
-	if createInstanceTokenResp.Token.Id == "" {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance token", "Got empty token id")
+	if createInstanceTokenResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", "Got empty response")
 		return
 	}
 
@@ -309,7 +309,7 @@ func (i *tokenResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Map response body to schema
-	err = mapCreateResponse(ctx, &createInstanceTokenResp.Token, &model, region, instanceId)
+	err = mapCreateResponse(ctx, createInstanceTokenResp, &model, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
 		return
@@ -368,6 +368,11 @@ func (i *tokenResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	ctx = core.LogResponse(ctx)
 
+	if getInstanceTokenResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", "Got empty response")
+		return
+	}
+
 	err = mapToken(ctx, &getInstanceTokenResp.Token, &model, region, instanceId)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading AI Model Experiments instance token", fmt.Sprintf("Processing API payload: %v", err))
@@ -424,8 +429,12 @@ func (i *tokenResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
-
 	ctx = core.LogResponse(ctx)
+
+	if updateInstanceTokenResp == nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating AI Model Experiments instance token", "Got empty response")
+		return
+	}
 
 	plan.Token = state.Token
 	err = mapToken(ctx, &updateInstanceTokenResp.Token, &plan, region, instanceId)
@@ -512,26 +521,30 @@ func (r *tokenResource) ImportState(ctx context.Context, req resource.ImportStat
 }
 
 // mapCreateResponse maps the instace creation response and GET instance response to the model
-func mapCreateResponse(ctx context.Context, token *modelexperiments.Token, model *Model, region, instanceId string) error {
+func mapCreateResponse(ctx context.Context, resp *modelexperiments.CreateInstanceTokenResponse, model *Model, region, instanceId string) error {
 	if model == nil {
 		return fmt.Errorf("model input is nil")
 	}
 
-	if token.Id == "" {
+	if resp == nil {
+		return fmt.Errorf("token input is nil")
+	}
+
+	if resp.Token.Id == "" {
 		return fmt.Errorf("token id not present")
 	}
 
-	mapValue, err := utils.MapLabels(ctx, token.Labels, model.Labels)
+	mapValue, err := utils.MapLabels(ctx, resp.Token.Labels, model.Labels)
 	if err != nil {
 		return err
 	}
 
-	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId, token.Id)
-	model.TokenId = types.StringValue(token.Id)
-	model.Name = types.StringValue(token.Name)
-	model.Description = types.StringPointerValue(token.Description)
-	model.ValidUntil = types.StringValue(token.ValidUntil.Format(time.RFC3339))
-	model.Token = types.StringValue(token.Content)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId, resp.Token.Id)
+	model.TokenId = types.StringValue(resp.Token.Id)
+	model.Name = types.StringValue(resp.Token.Name)
+	model.Description = types.StringPointerValue(resp.Token.Description)
+	model.ValidUntil = types.StringValue(resp.Token.ValidUntil.Format(time.RFC3339))
+	model.Token = types.StringValue(resp.Token.Content)
 	model.Labels = mapValue
 
 	return nil
