@@ -67,22 +67,22 @@ func TestToCreatePayload(t *testing.T) {
 				Rules: []albWaf.CreateCustomRule{
 					{
 						Behaviour: albWaf.Behaviour{ // nolint:misspell // Generated from API spec
-							Action: albWaf.BehaviourAction("some-action"),
+							Action: albWaf.Action("some-action"),
 							Log:    new(true),
 							LogMsg: new("Log: something happened"),
 						},
 						Conditions: []albWaf.Condition{
 							{
 								Operator: albWaf.ConditionOperator{
-									Type:  albWaf.ConditionOperatorType("operator-type"),
+									Type:  albWaf.Operator("operator-type"),
 									Value: new("operator-value"),
 								},
-								Transformations: []albWaf.ConditionTransformationsInner{
+								Transformations: []albWaf.Transformation{
 									"foo",
 									"bar",
 								},
 								Variable: albWaf.ConditionVariable{
-									Type:  albWaf.ConditionVariableType("variable-type"),
+									Type:  albWaf.Variable("variable-type"),
 									Value: new("variable-value"),
 								},
 							},
@@ -134,7 +134,7 @@ func TestToCreatePayload(t *testing.T) {
 						Conditions: []albWaf.Condition{
 							{
 								Operator:        albWaf.ConditionOperator{},
-								Transformations: []albWaf.ConditionTransformationsInner{},
+								Transformations: []albWaf.Transformation{},
 								Variable:        albWaf.ConditionVariable{},
 							},
 						},
@@ -199,23 +199,23 @@ func TestMapFields(t *testing.T) {
 				Rules: []albWaf.GetCustomRule{
 					{
 						Behaviour: &albWaf.GetBehaviour{ // nolint:misspell // Generated from API spec
-							Action:   new(albWaf.GetBehaviourAction("some-action")),
+							Action:   new(albWaf.Action("some-action")),
 							Log:      new(true),
 							LogMsg:   new("Log: something happened"),
-							Severity: new(albWaf.GetBehaviourSeverity("critical")),
+							Severity: new(albWaf.Severity("critical")),
 						},
 						Conditions: []albWaf.Condition{
 							{
 								Operator: albWaf.ConditionOperator{
-									Type:  albWaf.ConditionOperatorType("operator-type"),
+									Type:  albWaf.Operator("operator-type"),
 									Value: new("operator-value"),
 								},
-								Transformations: []albWaf.ConditionTransformationsInner{
+								Transformations: []albWaf.Transformation{
 									"foo",
 									"bar",
 								},
 								Variable: albWaf.ConditionVariable{
-									Type:  albWaf.ConditionVariableType("variable-type"),
+									Type:  albWaf.Variable("variable-type"),
 									Value: new("variable-value"),
 								},
 							},

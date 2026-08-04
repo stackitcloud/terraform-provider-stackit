@@ -67,8 +67,15 @@ var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMax)
 	// Name should not be updated, test if the update works in place
-	updatedConfig["log_msg"] = config.StringVariable("foo-bar:")
+	updatedConfig["description"] = config.StringVariable("some description")
+	updatedConfig["action"] = config.StringVariable("ACTION_ALLOW")
 	// updatedConfig["log"] = config.BoolVariable(false)
+	updatedConfig["log_msg"] = config.StringVariable("foo-bar:")
+	updatedConfig["operator_type"] = config.StringVariable("OPERATOR_CONTAINS")
+	updatedConfig["operator_value"] = config.StringVariable("bar")
+	updatedConfig["transformation"] = config.StringVariable("TRANSFORMATION_UTF8_TO_UNICODE")
+	updatedConfig["variable_type"] = config.StringVariable("VARIABLE_RESPONSE_HEADERS")
+	updatedConfig["variable_value"] = config.StringVariable("foo")
 	return updatedConfig
 }
 
@@ -101,11 +108,11 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "name", testutil.ConvertConfigVariable(testCustomRuleGroupMin["name"])),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.#", "1"),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMin["action"])),
 					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.#", "1"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMin["operator_type"])),
@@ -189,11 +196,11 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "name", testutil.ConvertConfigVariable(testCustomRuleGroupMinUpdated()["name"])),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.#", "1"),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rule.0.id"),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMinUpdated()["action"])),
 					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.#", "1"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMinUpdated()["operator_type"])),
@@ -223,12 +230,12 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.#", "1"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.description", testutil.ConvertConfigVariable(testCustomRuleGroupMax["description"])),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMax["action"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", testutil.ConvertConfigVariable(testCustomRuleGroupMax["log"])),
-					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log_msg", testutil.ConvertConfigVariable(testCustomRuleGroupMax["log_msg"])),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log_msg", testutil.ConvertConfigVariable(testCustomRuleGroupMax["log_msg"])),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.#", "1"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMax["operator_type"])),
@@ -271,7 +278,7 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMax["action"])),
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", testutil.ConvertConfigVariable(testCustomRuleGroupMax["log"])),
-					// resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log_msg", testutil.ConvertConfigVariable(testCustomRuleGroupMax["log_msg"])),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log_msg", testutil.ConvertConfigVariable(testCustomRuleGroupMax["log_msg"])),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity",
 						"stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity",
@@ -320,13 +327,13 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "name", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["name"])),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.#", "1"),
-					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rule.0.description", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["description"])),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rule.0.id"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.description", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["description"])),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["action"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["log"])),
-					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log_msg", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["log_msg"])),
-					// resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log_msg", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["log_msg"])),
+					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.#", "1"),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.0.operator.type", testutil.ConvertConfigVariable(testCustomRuleGroupMaxUpdated()["operator_type"])),

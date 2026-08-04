@@ -40,10 +40,10 @@ var (
 	_ resource.ResourceWithImportState = &customRuleGroupResource{}
 	_ resource.ResourceWithModifyPlan  = &customRuleGroupResource{}
 
-	variableTypeOptions   = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedConditionVariableTypeEnumValues)
-	transformationOptions = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedConditionTransformationsInnerEnumValues)
-	operatorTypeOptions   = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedConditionOperatorTypeEnumValues)
-	actionOptions         = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedBehaviourActionEnumValues)
+	variableTypeOptions   = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedVariableEnumValues)
+	transformationOptions = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedTransformationEnumValues)
+	operatorTypeOptions   = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedOperatorEnumValues)
+	actionOptions         = sdkUtils.EnumSliceToStringSlice(albWaf.AllowedActionEnumValues)
 )
 
 type Model struct {
@@ -618,7 +618,7 @@ func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]alb
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
 				Behaviour: albWaf.Behaviour{ // nolint:misspell // Generated from API spec
-					Action: albWaf.BehaviourAction(behavior.Action.ValueString()),
+					Action: albWaf.Action(behavior.Action.ValueString()),
 					Log:    behavior.Log.ValueBoolPointer(),
 					LogMsg: behavior.LogMsg.ValueStringPointer(),
 				},
@@ -642,7 +642,7 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 		}
 
 		for _, condition := range conditionModels {
-			transformations := []albWaf.ConditionTransformationsInner{}
+			transformations := []albWaf.Transformation{}
 			if !tfutils.IsUndefined(condition.Transformations) {
 				diags := condition.Transformations.ElementsAs(ctx, &transformations, true)
 				if diags.HasError() {
@@ -664,12 +664,12 @@ func toConditionsPayload(ctx context.Context, conditions basetypes.ListValue) (*
 
 			result = append(result, albWaf.Condition{
 				Operator: albWaf.ConditionOperator{
-					Type:  albWaf.ConditionOperatorType(operatorModel.Type.ValueString()),
+					Type:  albWaf.Operator(operatorModel.Type.ValueString()),
 					Value: operatorModel.Value.ValueStringPointer(),
 				},
 				Transformations: transformations,
 				Variable: albWaf.ConditionVariable{
-					Type:  albWaf.ConditionVariableType(variableModel.Type.ValueString()),
+					Type:  albWaf.Variable(variableModel.Type.ValueString()),
 					Value: variableModel.Value.ValueStringPointer(),
 				},
 			})

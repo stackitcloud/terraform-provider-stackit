@@ -404,7 +404,7 @@ func toCreatePayload(_ context.Context, model *Model) (*albWaf.CreateManagedRule
 
 	payload := &albWaf.CreateManagedRuleSetPayload{
 		Name: model.Name.ValueString(),
-		Type: albWaf.MRSType(model.Type.ValueString()),
+		Type: albWaf.Type(model.Type.ValueString()),
 	}
 
 	return payload, nil

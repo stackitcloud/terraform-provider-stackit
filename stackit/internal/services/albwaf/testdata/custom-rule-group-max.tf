@@ -18,8 +18,8 @@ resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
     {
       description = var.description
       behavior = {
-        action = var.action
-        log    = var.log
+        action  = var.action
+        log     = var.log
         log_msg = var.log_msg
       }
       conditions = [
