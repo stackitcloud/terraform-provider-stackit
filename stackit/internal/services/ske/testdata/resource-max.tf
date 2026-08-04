@@ -113,6 +113,7 @@ resource "stackit_ske_kubeconfig" "kubeconfig" {
   expiration     = var.expiration
   refresh        = var.refresh
   refresh_before = var.refresh_before
+  region         = var.region
 }
 
 data "stackit_ske_cluster" "cluster" {
@@ -120,10 +121,23 @@ data "stackit_ske_cluster" "cluster" {
   name       = stackit_ske_cluster.cluster.name
 }
 
-
 resource "stackit_dns_zone" "dns-zone" {
   project_id = var.project_id
   name       = var.dns_zone_name
   dns_name   = var.dns_name
 }
 
+ephemeral "stackit_ske_kubeconfig" "ephemeral_kubeconfig" {
+  project_id = var.project_id
+  # cluster_name is unknown during the plan phase because stackit_ske_cluster.cluster.id is computed.
+  # This forces Terraform to defer the Open call until the Apply phase, after the cluster is ready.
+  cluster_name = stackit_ske_cluster.cluster.id != "" ? stackit_ske_cluster.cluster.name : ""
+  expiration   = var.expiration
+  region       = var.region
+}
+
+provider "echo" {
+  data = ephemeral.stackit_ske_kubeconfig.ephemeral_kubeconfig.kube_config
+}
+
+resource "echo" "example" {}

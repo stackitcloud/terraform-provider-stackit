@@ -10,8 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
@@ -119,13 +123,15 @@ func configVarsMaxUpdated() config.Variables {
 
 func TestAccSKEMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		ProtoV6ProviderFactories: testutil.TestEphemeralAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -163,10 +169,17 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", "false"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.example",
+						tfjsonpath.New("data"),
+						knownvalue.NotNull(),
+					),
+				},
 			},
 			// 2) Data source
 			{
-				Config:          resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 
@@ -219,7 +232,7 @@ func TestAccSKEMin(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
 			{
-				Config:          resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMinUpdated(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -266,13 +279,15 @@ func TestAccSKEMin(t *testing.T) {
 
 func TestAccSKEMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		ProtoV6ProviderFactories: testutil.TestEphemeralAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -347,10 +362,17 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "refresh_before", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_before"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.example",
+						tfjsonpath.New("data"),
+						knownvalue.NotNull(),
+					),
+				},
 			},
 			// 2) Data source
 			{
-				Config:          resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 
@@ -438,7 +460,7 @@ func TestAccSKEMax(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version, set access.idp.enabled to false
 			{
-				Config:          resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMaxUpdated(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
