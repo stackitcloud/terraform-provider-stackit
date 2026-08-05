@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -292,16 +292,10 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Name == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", "Got empty Managed Rule Set name")
-		return
-	}
-	managedRuleSetName := *createResp.Name
-
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
-		"name":       managedRuleSetName,
+		"name":       createResp.Name,
 	})
 	if resp.Diagnostics.HasError() {
 		return
@@ -424,24 +418,24 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 	model.Name = types.StringValue(model.Name.ValueString())
 	model.Region = types.StringValue(region)
 
-	model.Type = types.StringPointerValue((*string)(managedRuleSet.Type))
-	model.Version = types.StringPointerValue(managedRuleSet.Version)
+	model.Type = types.StringValue(string(managedRuleSet.Type))
+	model.Version = types.StringValue(managedRuleSet.Version)
 
 	groupsMap := map[string]attr.Value{}
 	if groups, ok := managedRuleSet.GetGroupsOk(); ok {
 		for groupKey, group := range *groups {
 			groupTF := RuleGroupModel{
-				Description: types.StringPointerValue(group.Description),
-				GroupName:   types.StringPointerValue(group.GroupName),
+				Description: types.StringValue(group.Description),
+				GroupName:   types.StringValue(group.GroupName),
 			}
 
 			ruleMap := map[string]attr.Value{}
 			if rules, ok := group.GetRulesOk(); ok {
 				for ruleKey, rule := range *rules {
 					ruleTF := RuleModel{
-						Description: types.StringPointerValue(rule.Description),
-						Mode:        types.StringPointerValue((*string)(rule.Mode)),
-						Severity:    types.StringPointerValue(rule.Severity),
+						Description: types.StringValue(rule.Description),
+						Mode:        types.StringValue(string(rule.Mode)),
+						Severity:    types.StringValue(rule.Severity),
 					}
 
 					ruleMap[ruleKey], diags = types.ObjectValueFrom(ctx, ruleType, ruleTF)

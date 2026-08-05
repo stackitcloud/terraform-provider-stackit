@@ -12,9 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -22,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
@@ -238,10 +241,15 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 								"log": schema.BoolAttribute{
 									Description: descriptions["behavior_log"],
 									Optional:    true,
+									Computed:    true,
+									Default:     booldefault.StaticBool(false),
 								},
 								"log_msg": schema.StringAttribute{
 									Description: descriptions["behavior_log_msg"],
 									Optional:    true,
+									Validators: []validator.String{
+										validate.OnlyIfBool(path.MatchRelative().AtParent().AtName("log"), true),
+									},
 								},
 								"severity": schema.StringAttribute{
 									Description: descriptions["behavior_severity"],
@@ -283,6 +291,8 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 												stringvalidator.OneOf(transformationOptions...),
 											),
 										},
+										Computed: true,
+										Default:  listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 									},
 									"variable": schema.SingleNestedAttribute{
 										Description: descriptions["variable"],
@@ -398,16 +408,10 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Name == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Custom Rule Group", "Got empty Custom Rule Group name")
-		return
-	}
-	customRuleGroupName := *createResp.Name
-
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
-		"name":       customRuleGroupName,
+		"name":       createResp.Name,
 	})
 	if resp.Diagnostics.HasError() {
 		return
@@ -617,7 +621,7 @@ func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]alb
 			}
 
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
-				Behaviour: albWaf.Behaviour{ // nolint:misspell // Generated from API spec
+				Behavior: albWaf.Behavior{
 					Action: albWaf.Action(behavior.Action.ValueString()),
 					Log:    behavior.Log.ValueBoolPointer(),
 					LogMsg: behavior.LogMsg.ValueStringPointer(),
@@ -710,11 +714,11 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 		rulesList := []attr.Value{}
 		for _, rule := range *rules {
 			ruleTF := RuleModel{
-				Id:          types.Int32PointerValue(rule.Id),
+				Id:          types.Int32Value(rule.Id),
 				Description: types.StringPointerValue(rule.Description),
 			}
 
-			behavior, err := mapBehavior(ctx, rule.Behaviour) // nolint:misspell // Generated from API spec
+			behavior, err := mapBehavior(ctx, rule.Behavior)
 			if err != nil {
 				return nil, fmt.Errorf("map behavior: %w", err)
 			} else if behavior == nil {
@@ -722,7 +726,7 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 			}
 			ruleTF.Behavior = *behavior
 
-			conditions, err := mapConditions(ctx, rule)
+			conditions, err := mapConditions(ctx, &rule)
 			if err != nil {
 				return nil, fmt.Errorf("map conditions: %w", err)
 			} else if conditions == nil {
@@ -747,80 +751,80 @@ func mapRules(ctx context.Context, rules *[]albWaf.GetCustomRule) (*basetypes.Li
 	return &result, nil
 }
 
-func mapBehavior(ctx context.Context, behavior *albWaf.GetBehaviour) (*basetypes.ObjectValue, error) {
+func mapBehavior(ctx context.Context, behavior albWaf.GetBehavior) (*basetypes.ObjectValue, error) {
 	var diags diag.Diagnostics
 	var result basetypes.ObjectValue
 
-	if behavior != nil {
-		behaviorModel := BehaviorModel{
-			Action:   types.StringPointerValue((*string)(behavior.Action)),
-			Log:      types.BoolPointerValue(behavior.Log),
-			LogMsg:   types.StringPointerValue(behavior.LogMsg),
-			Severity: types.StringPointerValue((*string)(behavior.Severity)),
-		}
+	behaviorModel := BehaviorModel{
+		Action:   types.StringValue(string(behavior.Action)),
+		Log:      types.BoolValue(behavior.Log),
+		LogMsg:   types.StringPointerValue(behavior.LogMsg),
+		Severity: types.StringValue(string(behavior.Severity)),
+	}
 
-		result, diags = types.ObjectValueFrom(ctx, behaviorType, behaviorModel)
-		if diags.HasError() {
-			return nil, fmt.Errorf("creating behavior object: %w", core.DiagsToError(diags))
-		}
-	} else {
-		result = types.ObjectNull(behaviorType)
+	result, diags = types.ObjectValueFrom(ctx, behaviorType, behaviorModel)
+	if diags.HasError() {
+		return nil, fmt.Errorf("creating behavior object: %w", core.DiagsToError(diags))
 	}
 
 	return &result, nil
 }
 
-func mapConditions(ctx context.Context, rule albWaf.GetCustomRule) (*basetypes.ListValue, error) {
+func mapConditions(ctx context.Context, rule *albWaf.GetCustomRule) (*basetypes.ListValue, error) {
 	var diags diag.Diagnostics
 	var result basetypes.ListValue
 
-	if conditions, ok := rule.GetConditionsOk(); ok {
-		conditionsList := []attr.Value{}
-		for _, condition := range conditions {
-			conditionTF := ConditionModel{}
+	if rule != nil {
+		if conditions, ok := rule.GetConditionsOk(); ok {
+			conditionsList := []attr.Value{}
+			for _, condition := range conditions {
+				conditionTF := ConditionModel{}
 
-			if operator, ok := condition.GetOperatorOk(); ok {
-				operatorModel := OperatorModel{
-					Type:  types.StringValue(string(operator.Type)),
-					Value: types.StringPointerValue(operator.Value),
+				if operator, ok := condition.GetOperatorOk(); ok {
+					operatorModel := OperatorModel{
+						Type:  types.StringValue(string(operator.Type)),
+						Value: types.StringPointerValue(operator.Value),
+					}
+
+					conditionTF.Operator, diags = types.ObjectValueFrom(ctx, operatorType, operatorModel)
+					if diags.HasError() {
+						return nil, fmt.Errorf("creating operator object: %w", core.DiagsToError(diags))
+					}
+				} else {
+					conditionTF.Operator = types.ObjectNull(operatorType)
 				}
 
-				conditionTF.Operator, diags = types.ObjectValueFrom(ctx, operatorType, operatorModel)
+				conditionTF.Transformations, diags = types.ListValueFrom(ctx, types.StringType, condition.Transformations)
 				if diags.HasError() {
-					return nil, fmt.Errorf("creating operator object: %w", core.DiagsToError(diags))
-				}
-			} else {
-				conditionTF.Operator = types.ObjectNull(operatorType)
-			}
-
-			conditionTF.Transformations, diags = types.ListValueFrom(ctx, types.StringType, condition.Transformations)
-			if diags.HasError() {
-				return nil, fmt.Errorf("mapping transformations: %w", core.DiagsToError(diags))
-			}
-
-			if variable, ok := condition.GetVariableOk(); ok {
-				variableModel := VariableModel{
-					Type:  types.StringValue(string(variable.Type)),
-					Value: types.StringPointerValue(variable.Value),
+					return nil, fmt.Errorf("mapping transformations: %w", core.DiagsToError(diags))
 				}
 
-				conditionTF.Variable, diags = types.ObjectValueFrom(ctx, variableType, variableModel)
+				if variable, ok := condition.GetVariableOk(); ok {
+					variableModel := VariableModel{
+						Type:  types.StringValue(string(variable.Type)),
+						Value: types.StringPointerValue(variable.Value),
+					}
+
+					conditionTF.Variable, diags = types.ObjectValueFrom(ctx, variableType, variableModel)
+					if diags.HasError() {
+						return nil, fmt.Errorf("creating variable object: %w", core.DiagsToError(diags))
+					}
+				} else {
+					conditionTF.Variable = types.ObjectNull(variableType)
+				}
+
+				condition, diags := types.ObjectValueFrom(ctx, conditionType, conditionTF)
 				if diags.HasError() {
-					return nil, fmt.Errorf("creating variable object: %w", core.DiagsToError(diags))
+					return nil, fmt.Errorf("mapping condition: %w", core.DiagsToError(diags))
 				}
-			} else {
-				conditionTF.Variable = types.ObjectNull(variableType)
+				conditionsList = append(conditionsList, condition)
 			}
-
-			condition, diags := types.ObjectValueFrom(ctx, conditionType, conditionTF)
+			result, diags = types.ListValue(types.ObjectType{AttrTypes: conditionType}, conditionsList)
 			if diags.HasError() {
-				return nil, fmt.Errorf("mapping condition: %w", core.DiagsToError(diags))
+				return nil, fmt.Errorf("mapping conditions: %w", core.DiagsToError(diags))
 			}
-			conditionsList = append(conditionsList, condition)
-		}
-		result, diags = types.ListValue(types.ObjectType{AttrTypes: conditionType}, conditionsList)
-		if diags.HasError() {
-			return nil, fmt.Errorf("mapping conditions: %w", core.DiagsToError(diags))
+		} else {
+			result = types.ListNull(types.ObjectType{AttrTypes: conditionType})
 		}
 	} else {
 		result = types.ListNull(types.ObjectType{AttrTypes: conditionType})

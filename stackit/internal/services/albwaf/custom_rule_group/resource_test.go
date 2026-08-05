@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 )
 
 var (
@@ -66,7 +66,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name: testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{
 					{
-						Behaviour: albWaf.Behaviour{ // nolint:misspell // Generated from API spec
+						Behavior: albWaf.Behavior{
 							Action: albWaf.Action("some-action"),
 							Log:    new(true),
 							LogMsg: new("Log: something happened"),
@@ -130,7 +130,7 @@ func TestToCreatePayload(t *testing.T) {
 				Name: testName.ValueString(),
 				Rules: []albWaf.CreateCustomRule{
 					{
-						Behaviour: albWaf.Behaviour{}, // nolint:misspell // Generated from API spec
+						Behavior: albWaf.Behavior{},
 						Conditions: []albWaf.Condition{
 							{
 								Operator:        albWaf.ConditionOperator{},
@@ -195,14 +195,14 @@ func TestMapFields(t *testing.T) {
 			},
 			region: testRegion.ValueString(),
 			input: &albWaf.GetCustomRuleGroupResponse{
-				Name: testName.ValueStringPointer(),
+				Name: testName.ValueString(),
 				Rules: []albWaf.GetCustomRule{
 					{
-						Behaviour: &albWaf.GetBehaviour{ // nolint:misspell // Generated from API spec
-							Action:   new(albWaf.Action("some-action")),
-							Log:      new(true),
+						Behavior: albWaf.GetBehavior{
+							Action:   albWaf.Action("some-action"),
+							Log:      true,
 							LogMsg:   new("Log: something happened"),
-							Severity: new(albWaf.Severity("critical")),
+							Severity: albWaf.Severity("critical"),
 						},
 						Conditions: []albWaf.Condition{
 							{
@@ -221,7 +221,7 @@ func TestMapFields(t *testing.T) {
 							},
 						},
 						Description: new("foo-bar"),
-						Id:          new(int32(42)),
+						Id:          int32(42),
 					},
 				},
 			},
@@ -272,7 +272,7 @@ func TestMapFields(t *testing.T) {
 			},
 			region: testRegion.ValueString(),
 			input: &albWaf.GetCustomRuleGroupResponse{
-				Name: testName.ValueStringPointer(),
+				Name: testName.ValueString(),
 				Rules: []albWaf.GetCustomRule{
 					{},
 				},
@@ -284,10 +284,15 @@ func TestMapFields(t *testing.T) {
 				Region:    testRegion,
 				Rules: types.ListValueMust(types.ObjectType{AttrTypes: ruleType}, []attr.Value{
 					types.ObjectValueMust(ruleType, map[string]attr.Value{
-						"behavior":    types.ObjectNull(behaviorType),
-						"conditions":  types.ListNull(types.ObjectType{AttrTypes: conditionType}),
+						"behavior": types.ObjectValueMust(behaviorType, map[string]attr.Value{
+							"action":   types.StringValue(""),
+							"log":      types.BoolValue(false),
+							"log_msg":  types.StringNull(),
+							"severity": types.StringValue(""),
+						}),
+						"conditions":  types.ListValueMust(types.ObjectType{AttrTypes: conditionType}, []attr.Value{}),
 						"description": types.StringNull(),
-						"id":          types.Int32Null(),
+						"id":          types.Int32Value(0),
 					}),
 				}),
 			},
@@ -303,7 +308,7 @@ func TestMapFields(t *testing.T) {
 			},
 			region: testRegion.ValueString(),
 			input: &albWaf.GetCustomRuleGroupResponse{
-				Name: testName.ValueStringPointer(),
+				Name: testName.ValueString(),
 			},
 			expected: &Model{
 				Name:      testName,

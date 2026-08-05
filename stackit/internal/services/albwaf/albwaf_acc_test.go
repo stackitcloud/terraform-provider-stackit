@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
-	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
@@ -67,14 +67,14 @@ var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	updatedConfig := config.Variables{}
 	maps.Copy(updatedConfig, testCustomRuleGroupMax)
 	// Name should not be updated, test if the update works in place
-	updatedConfig["description"] = config.StringVariable("some description")
+	updatedConfig["description"] = config.StringVariable("new description")
 	updatedConfig["action"] = config.StringVariable("ACTION_ALLOW")
 	// updatedConfig["log"] = config.BoolVariable(false)
 	updatedConfig["log_msg"] = config.StringVariable("foo-bar:")
-	updatedConfig["operator_type"] = config.StringVariable("OPERATOR_CONTAINS")
+	updatedConfig["operator_type"] = config.StringVariable("OPERATOR_BEGINS_WITH")
 	updatedConfig["operator_value"] = config.StringVariable("bar")
 	updatedConfig["transformation"] = config.StringVariable("TRANSFORMATION_UTF8_TO_UNICODE")
-	updatedConfig["variable_type"] = config.StringVariable("VARIABLE_RESPONSE_HEADERS")
+	updatedConfig["variable_type"] = config.StringVariable("VARIABLE_ARGS_POST")
 	updatedConfig["variable_value"] = config.StringVariable("foo")
 	return updatedConfig
 }

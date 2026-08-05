@@ -23,8 +23,8 @@ resource "stackit_alb_waf_custom_rule_group" "example" {
     {
       description = "My custom rule group"
       behavior = {
-        action = "ACTION_DENY"
-        log    = true
+        action  = "ACTION_DENY"
+        log     = true
         log_msg = "Some custom notification message string"
       }
       conditions = [

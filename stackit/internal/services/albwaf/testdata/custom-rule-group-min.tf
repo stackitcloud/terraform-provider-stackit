@@ -16,8 +16,7 @@ resource "stackit_alb_waf_custom_rule_group" "custom_rule_group" {
       conditions = [
         {
           operator = {
-            type  = var.operator_type
-            value = "dummy"
+            type = var.operator_type
           }
           variable = {
             type = var.variable_type
