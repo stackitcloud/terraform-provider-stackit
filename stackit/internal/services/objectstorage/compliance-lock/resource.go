@@ -183,6 +183,8 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 		}
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
 	err = mapFields(complianceResp, &model, region)
 	if err != nil {

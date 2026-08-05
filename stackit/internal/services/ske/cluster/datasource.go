@@ -331,6 +331,16 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 							},
 						},
 					},
+					"application_load_balancer": schema.SingleNestedAttribute{
+						Description: "Application Load Balancer extension.",
+						Computed:    true,
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Enables the application load balancer extension.",
+								Computed:    true,
+							},
+						},
+					},
 				},
 			},
 			"region": schema.StringAttribute{
