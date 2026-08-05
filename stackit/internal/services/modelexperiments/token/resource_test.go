@@ -17,23 +17,30 @@ func TestMapTokenFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       *Model
-		input       modelexperiments.TokenMetadata
+		input       *modelexperiments.TokenMetadata
 		expected    Model
 		isValid     bool
 	}{
 		{
 			description: "should error when state is nil",
 			state:       nil,
-			input: modelexperiments.TokenMetadata{
+			input: &modelexperiments.TokenMetadata{
 				Id: "id",
 			},
 			expected: Model{},
 			isValid:  false,
 		},
 		{
+			description: "should error when token input is nil",
+			state:       &Model{},
+			input:       nil,
+			expected:    Model{},
+			isValid:     false,
+		},
+		{
 			description: "should error when token id is not present",
 			state:       &Model{},
-			input:       modelexperiments.TokenMetadata{},
+			input:       &modelexperiments.TokenMetadata{},
 			expected:    Model{},
 			isValid:     false,
 		},
@@ -47,7 +54,7 @@ func TestMapTokenFields(t *testing.T) {
 				TokenId:           types.StringValue("tid"),
 				RotateWhenChanged: types.MapNull(types.StringType),
 			},
-			input: modelexperiments.TokenMetadata{
+			input: &modelexperiments.TokenMetadata{
 				Id:          "tid",
 				Description: new("description"),
 				Labels:      &map[string]string{"key": "value"},
@@ -76,7 +83,7 @@ func TestMapTokenFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapToken(ctx, &tt.input, tt.state, "eu01", "id")
+			err := mapToken(ctx, tt.input, tt.state, "eu01", "id")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

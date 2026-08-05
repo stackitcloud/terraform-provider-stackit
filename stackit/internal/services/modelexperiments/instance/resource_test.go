@@ -16,23 +16,30 @@ func TestMapInstanceFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       *Model
-		input       modelexperiments.Instance
+		input       *modelexperiments.Instance
 		expected    Model
 		isValid     bool
 	}{
 		{
 			description: "should error when state is nil",
 			state:       nil,
-			input: modelexperiments.Instance{
+			input: &modelexperiments.Instance{
 				Id: "id",
 			},
 			expected: Model{},
 			isValid:  false,
 		},
 		{
+			description: "should error when instance input is nil",
+			state:       &Model{},
+			input:       nil,
+			expected:    Model{},
+			isValid:     false,
+		},
+		{
 			description: "should error when instance id is not present",
 			state:       &Model{},
-			input:       modelexperiments.Instance{},
+			input:       &modelexperiments.Instance{},
 			expected:    Model{},
 			isValid:     false,
 		},
@@ -44,7 +51,7 @@ func TestMapInstanceFields(t *testing.T) {
 				InstanceId: types.StringValue("id"),
 				Region:     types.StringValue("eu01"),
 			},
-			input: modelexperiments.Instance{
+			input: &modelexperiments.Instance{
 				Id:                         "id",
 				BucketName:                 new("bucketName"),
 				Description:                new("description"),
@@ -76,7 +83,7 @@ func TestMapInstanceFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapInstance(ctx, &tt.input, tt.state, "eu01")
+			err := mapInstance(ctx, tt.input, tt.state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
