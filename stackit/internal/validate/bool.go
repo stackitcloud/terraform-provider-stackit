@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// OnlyIfBoolValidator checks if this string attribute is set when a target bool is true.
+// OnlyIfBoolValidator checks if this string attribute is set when a target bool equals the specified value.
 type OnlyIfBoolValidator struct {
 	Target path.Expression
 	Value  bool

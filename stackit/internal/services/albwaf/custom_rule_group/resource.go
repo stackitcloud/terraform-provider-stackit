@@ -15,9 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -242,11 +240,11 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 									Description: descriptions["behavior_log"],
 									Optional:    true,
 									Computed:    true,
-									Default:     booldefault.StaticBool(false),
 								},
 								"log_msg": schema.StringAttribute{
 									Description: descriptions["behavior_log_msg"],
 									Optional:    true,
+									Computed:    true,
 									Validators: []validator.String{
 										validate.OnlyIfBool(path.MatchRelative().AtParent().AtName("log"), true),
 									},
@@ -292,7 +290,6 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 											),
 										},
 										Computed: true,
-										Default:  listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 									},
 									"variable": schema.SingleNestedAttribute{
 										Description: descriptions["variable"],

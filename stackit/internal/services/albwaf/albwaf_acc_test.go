@@ -69,7 +69,6 @@ var testCustomRuleGroupMaxUpdated = func() config.Variables {
 	// Name should not be updated, test if the update works in place
 	updatedConfig["description"] = config.StringVariable("new description")
 	updatedConfig["action"] = config.StringVariable("ACTION_ALLOW")
-	// updatedConfig["log"] = config.BoolVariable(false)
 	updatedConfig["log_msg"] = config.StringVariable("foo-bar:")
 	updatedConfig["operator_type"] = config.StringVariable("OPERATOR_BEGINS_WITH")
 	updatedConfig["operator_value"] = config.StringVariable("bar")
@@ -111,7 +110,7 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMin["action"])),
-					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.#", "1"),
@@ -150,7 +149,7 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					),
 
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMin["action"])),
-					// resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
+					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
 					resource.TestCheckResourceAttrPair(
 						"data.stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity",
 						"stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity",
@@ -199,7 +198,7 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.id"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.action", testutil.ConvertConfigVariable(testCustomRuleGroupMinUpdated()["action"])),
-					// resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
+					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.log", "false"),
 					resource.TestCheckResourceAttrSet("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.behavior.severity"),
 
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "rules.0.conditions.#", "1"),
