@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
@@ -263,7 +264,20 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
+	// Workaround: The user creation will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+			http.StatusTooEarly,
+		},
+	}
+	userResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -389,7 +403,20 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	// Delete existing user
-	err = r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
+	// Workaround: The user deletion will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
+	config := utils.RetryConfig{
+		Attempts: 5,
+		Backoff: func(attempt int) time.Duration {
+			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
+			return time.Duration(attempt*5) * time.Second
+		},
+		RetryStatusCodes: []int{
+			http.StatusLocked,
+			http.StatusTooEarly,
+		},
+	}
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, config)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
