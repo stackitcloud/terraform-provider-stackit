@@ -617,14 +617,29 @@ func toRulesPayload(ctx context.Context, modelRules basetypes.ListValue) (*[]alb
 				return nil, fmt.Errorf("conditions can not be empty")
 			}
 
+			var log *bool
+			if !tfutils.IsUndefined(behavior.Log) {
+				log = behavior.Log.ValueBoolPointer()
+			}
+
+			var logMsg *string
+			if !tfutils.IsUndefined(behavior.LogMsg) {
+				logMsg = behavior.LogMsg.ValueStringPointer()
+			}
+
+			var description *string
+			if !tfutils.IsUndefined(rule.Description) {
+				description = rule.Description.ValueStringPointer()
+			}
+
 			payloadRules = append(payloadRules, albWaf.CreateCustomRule{
 				Behavior: albWaf.Behavior{
 					Action: albWaf.Action(behavior.Action.ValueString()),
-					Log:    behavior.Log.ValueBoolPointer(),
-					LogMsg: behavior.LogMsg.ValueStringPointer(),
+					Log:    log,
+					LogMsg: logMsg,
 				},
 				Conditions:  *conditions,
-				Description: rule.Description.ValueStringPointer(),
+				Description: description,
 			})
 		}
 	}

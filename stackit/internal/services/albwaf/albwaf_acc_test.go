@@ -33,13 +33,11 @@ var (
 )
 
 var testCustomRuleGroupMin = config.Variables{
-	"project_id":     config.StringVariable(testutil.ProjectId),
-	"name":           config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
-	"action":         config.StringVariable("ACTION_DENY"),
-	"operator_type":  config.StringVariable("OPERATOR_VALIDATE_UTF8_ENCODING"),
-	"operator_value": config.StringVariable("foo"),
-	"transformation": config.StringVariable("TRANSFORMATION_LOWERCASE"),
-	"variable_type":  config.StringVariable("VARIABLE_RESPONSE_STATUS"),
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"name":          config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
+	"action":        config.StringVariable("ACTION_DENY"),
+	"operator_type": config.StringVariable("OPERATOR_VALIDATE_UTF8_ENCODING"),
+	"variable_type": config.StringVariable("VARIABLE_RESPONSE_STATUS"),
 }
 
 var testCustomRuleGroupMinUpdated = func() config.Variables {
