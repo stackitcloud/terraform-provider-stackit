@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -43,7 +43,6 @@ type Model struct {
 	Name      types.String `tfsdk:"name"`
 	Groups    types.Map    `tfsdk:"groups"`
 	Type      types.String `tfsdk:"type"`
-	Usage     types.Object `tfsdk:"usage"`
 	Version   types.String `tfsdk:"version"`
 }
 
@@ -71,16 +70,6 @@ var ruleType = map[string]attr.Type{
 	"description": types.StringType,
 	"mode":        types.StringType,
 	"severity":    types.StringType,
-}
-
-type UsageModel struct {
-	Count types.Int32 `tfsdk:"count"`
-	Items types.List  `tfsdk:"items"`
-}
-
-var usageType = map[string]attr.Type{
-	"count": types.Int32Type,
-	"items": types.ListType{ElemType: types.StringType},
 }
 
 type managedRuleSetResource struct {
@@ -124,9 +113,6 @@ var descriptions = map[string]string{
 	"name":              "Managed Rule Set configuration name.",
 	"type":              "Type of the Managed Rule Set.",
 	"version":           "Managed Rule Set version.",
-	"usage":             "Managed Rule Set usage",
-	"usage_count":       "Number of WAFs using this Managed Rule Set.",
-	"usage_items":       "List of WAFs that use this Managed Rule Set.",
 	"groups":            "Inventory of all available Managed Rule Set groups and their current configuration.",
 	"group_description": "A description of what this group covers.",
 	"group_name":        "The name for the rule group.",
@@ -190,21 +176,6 @@ func (r *managedRuleSetResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Description: descriptions["version"],
 				Computed:    true,
 			},
-			"usage": schema.SingleNestedAttribute{
-				Description: descriptions["usage"],
-				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"count": schema.Int32Attribute{
-						Description: descriptions["usage_count"],
-						Computed:    true,
-					},
-					"items": schema.ListAttribute{
-						Description: descriptions["usage_items"],
-						Computed:    true,
-						ElementType: types.StringType,
-					},
-				},
-			},
 			"groups": schema.MapNestedAttribute{
 				Description: descriptions["groups"],
 				Computed:    true,
@@ -266,6 +237,27 @@ func (r *managedRuleSetResource) ModifyPlan(ctx context.Context, req resource.Mo
 		return
 	}
 
+	// Warn the user if the name is changing, as this triggers a replacement.
+	// Deletion of the old resource will fail if another resource (e.g. stackit_alb_waf_configuration)
+	// still references this managed rule set.
+	if !req.State.Raw.IsNull() {
+		var stateModel Model
+		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+		if !resp.Diagnostics.HasError() && !stateModel.Name.IsNull() && !stateModel.Name.IsUnknown() {
+			if !planModel.Name.Equal(stateModel.Name) {
+				resp.Diagnostics.AddWarning(
+					"Managed Rule Set name change requires resource replacement",
+					fmt.Sprintf(
+						"Changing the \"name\" attribute from %q to %q will destroy and recreate this resource. "+
+							"If another resource (e.g. \"stackit_alb_waf_configuration\") references this managed rule set "+
+							"by name, the replacement will fail. Remove or update that dependency before applying this change.",
+						stateModel.Name.ValueString(), planModel.Name.ValueString(),
+					),
+				)
+			}
+		}
+	}
+
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -321,16 +313,10 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 
 	ctx = core.LogResponse(ctx)
 
-	if createResp.Name == nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", "Got empty Managed Rule Set name")
-		return
-	}
-	managedRuleSetName := *createResp.Name
-
 	ctx = tfutils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
 		"project_id": projectId,
 		"region":     region,
-		"name":       managedRuleSetName,
+		"name":       createResp.Name,
 	})
 	if resp.Diagnostics.HasError() {
 		return
@@ -432,8 +418,8 @@ func toCreatePayload(_ context.Context, model *Model) (*albWaf.CreateManagedRule
 	}
 
 	payload := &albWaf.CreateManagedRuleSetPayload{
-		Name: model.Name.ValueStringPointer(),
-		Type: new(albWaf.MRSType(model.Type.ValueString())),
+		Name: model.Name.ValueString(),
+		Type: albWaf.Type(model.Type.ValueString()),
 	}
 
 	return payload, nil
@@ -453,35 +439,35 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 	model.Name = types.StringValue(model.Name.ValueString())
 	model.Region = types.StringValue(region)
 
-	model.Type = types.StringPointerValue((*string)(managedRuleSet.Type))
-	model.Version = types.StringPointerValue(managedRuleSet.Version)
+	model.Type = types.StringValue(string(managedRuleSet.Type))
+	model.Version = types.StringValue(managedRuleSet.Version)
 
 	groupsMap := map[string]attr.Value{}
 	if groups, ok := managedRuleSet.GetGroupsOk(); ok {
 		for groupKey, group := range *groups {
 			groupTF := RuleGroupModel{
-				Description: types.StringPointerValue(group.Description),
-				GroupName:   types.StringPointerValue(group.GroupName),
+				Description: types.StringValue(group.Description),
+				GroupName:   types.StringValue(group.GroupName),
 			}
 
 			ruleMap := map[string]attr.Value{}
 			if rules, ok := group.GetRulesOk(); ok {
 				for ruleKey, rule := range *rules {
 					ruleTF := RuleModel{
-						Description: types.StringPointerValue(rule.Description),
-						Mode:        types.StringPointerValue((*string)(rule.Mode)),
-						Severity:    types.StringPointerValue(rule.Severity),
+						Description: types.StringValue(rule.Description),
+						Mode:        types.StringValue(string(rule.Mode)),
+						Severity:    types.StringValue(rule.Severity),
 					}
 
 					ruleMap[ruleKey], diags = types.ObjectValueFrom(ctx, ruleType, ruleTF)
 					if diags.HasError() {
-						return fmt.Errorf("mapping role: %w", core.DiagsToError(diags))
+						return fmt.Errorf("mapping rule: %w", core.DiagsToError(diags))
 					}
 				}
 			}
 			groupTF.Rules, diags = types.MapValue(types.ObjectType{AttrTypes: ruleType}, ruleMap)
 			if diags.HasError() {
-				return fmt.Errorf("mapping roles: %w", core.DiagsToError(diags))
+				return fmt.Errorf("mapping rules: %w", core.DiagsToError(diags))
 			}
 
 			groupsMap[groupKey], diags = types.ObjectValueFrom(ctx, ruleGroupType, groupTF)
@@ -496,24 +482,6 @@ func mapFields(ctx context.Context, managedRuleSet *albWaf.GetManagedRuleSetResp
 	)
 	if diags.HasError() {
 		return fmt.Errorf("mapping groups: %w", core.DiagsToError(diags))
-	}
-
-	if usage, ok := managedRuleSet.GetUsageOk(); ok {
-		usageModel := UsageModel{
-			Count: types.Int32PointerValue(usage.Count),
-		}
-
-		usageModel.Items, diags = types.ListValueFrom(ctx, types.StringType, usage.GetItems())
-		if diags.HasError() {
-			return fmt.Errorf("creating usage object: %w", core.DiagsToError(diags))
-		}
-
-		model.Usage, diags = types.ObjectValueFrom(ctx, usageType, usageModel)
-		if diags.HasError() {
-			return fmt.Errorf("creating usage object: %w", core.DiagsToError(diags))
-		}
-	} else {
-		model.Usage = types.ObjectNull(usageType)
 	}
 
 	return nil
