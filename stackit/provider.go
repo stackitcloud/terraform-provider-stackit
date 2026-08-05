@@ -23,6 +23,7 @@ import (
 	cert "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/certificate"
 	albWafCustomRuleGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/custom_rule_group"
 	albWafManagedRuleSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/managed_rule_set"
+	albWaf "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/waf_configuration"
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
@@ -666,6 +667,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 	dataSources := []func() datasource.DataSource{
 		alb.NewApplicationLoadBalancerDataSource,
 		albWafCustomRuleGroup.NewCustomRuleGroupDataSource,
+		albWaf.NewWafConfigurationDatasource,
 		albWafManagedRuleSet.NewManagedRuleSetDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
@@ -782,6 +784,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alb.NewApplicationLoadBalancerResource,
 		albWafCustomRuleGroup.NewCustomRuleGroupResource,
+		albWaf.NewWafConfigurationResource,
 		albWafManagedRuleSet.NewManagedRuleSetResource,
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,
