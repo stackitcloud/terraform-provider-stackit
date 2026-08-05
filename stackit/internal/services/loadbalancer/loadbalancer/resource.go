@@ -908,6 +908,8 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
 	err = mapFields(ctx, loadBalancer, &model, region)
 	if err != nil {

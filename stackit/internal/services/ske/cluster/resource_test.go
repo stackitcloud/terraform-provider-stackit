@@ -83,6 +83,9 @@ func TestMapFields(t *testing.T) {
 						Zones:   []string{"foo.onstackit.cloud"},
 						Enabled: true,
 					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
+						Enabled: true,
+					},
 				},
 				Hibernation: &ske.Hibernation{
 					Schedules: []ske.HibernationSchedule{
@@ -275,6 +278,9 @@ func TestMapFields(t *testing.T) {
 							types.StringValue("foo.onstackit.cloud"),
 						}),
 					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+					}),
 				}),
 				Region: types.StringValue(testRegion),
 				Access: types.ObjectValueMust(accessTypes, map[string]attr.Value{
@@ -337,6 +343,9 @@ func TestMapFields(t *testing.T) {
 						Zones:   nil,
 						Enabled: true,
 					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
+						Enabled: true,
+					},
 				},
 				Name: new("name"),
 				Access: &ske.Access{
@@ -371,6 +380,9 @@ func TestMapFields(t *testing.T) {
 						"enabled": types.BoolValue(true),
 						"zones":   types.ListNull(types.StringType),
 					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
+					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
@@ -393,6 +405,9 @@ func TestMapFields(t *testing.T) {
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(false),
 					"zones":   types.ListNull(types.StringType),
+				}),
+				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(false),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -431,6 +446,9 @@ func TestMapFields(t *testing.T) {
 						"enabled": types.BoolValue(false),
 						"zones":   types.ListNull(types.StringType),
 					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(false),
+					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
 				Region:                types.StringValue(testRegion),
@@ -455,6 +473,9 @@ func TestMapFields(t *testing.T) {
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(true),
 					"zones":   types.ListNull(types.StringType),
+				}),
+				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(false),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -503,6 +524,9 @@ func TestMapFields(t *testing.T) {
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
 						"zones":   types.ListNull(types.StringType),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(false),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -596,6 +620,9 @@ func TestMapFields(t *testing.T) {
 					},
 					Dns: &ske.DNS{
 						Zones:   []string{"zone1"},
+						Enabled: true,
+					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
 					},
 				},
@@ -755,6 +782,9 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("zone1"),
 						}),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
 					}),
 				}),
 				Region: types.StringValue(testRegion),
@@ -2618,10 +2648,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus and observability null",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectNull(argusTypes),
-					"observability": types.ObjectNull(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2630,10 +2661,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus and observability unknown",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectUnknown(argusTypes),
-					"observability": types.ObjectUnknown(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectUnknown(argusTypes),
+					"observability":             types.ObjectUnknown(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2649,6 +2681,7 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
 					}),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2657,10 +2690,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus null and observability unknown",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectNull(argusTypes),
-					"observability": types.ObjectUnknown(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectUnknown(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2675,7 +2709,8 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
-					"observability": types.ObjectNull(observabilityTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2690,7 +2725,8 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
-					"observability": types.ObjectUnknown(observabilityTypes),
+					"observability":             types.ObjectUnknown(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2709,6 +2745,7 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
 					}),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: true,
@@ -2717,10 +2754,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus unknown observability null",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectUnknown(argusTypes),
-					"observability": types.ObjectNull(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectUnknown(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2736,6 +2774,20 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
 					}),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "application_load_balancer unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectUnknown(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,

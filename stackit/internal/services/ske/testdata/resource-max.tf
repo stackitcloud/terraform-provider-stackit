@@ -20,6 +20,7 @@ variable "nodepool_volume_type" {}
 variable "ext_acl_enabled" {}
 variable "ext_acl_allowed_cidr1" {}
 variable "ext_observability_enabled" {}
+variable "ext_application_load_balancer_enabled" {}
 variable "ext_dns_enabled" {}
 variable "nodepool_hibernations1_start" {}
 variable "nodepool_hibernations1_end" {}
@@ -80,6 +81,9 @@ resource "stackit_ske_cluster" "cluster" {
       enabled = var.ext_dns_enabled
       zones   = [stackit_dns_zone.dns-zone.dns_name]
     }
+    application_load_balancer = {
+      enabled = var.ext_application_load_balancer_enabled
+    }
   }
   hibernations = [{
     start    = var.nodepool_hibernations1_start
@@ -126,4 +130,3 @@ resource "stackit_dns_zone" "dns-zone" {
   name       = var.dns_zone_name
   dns_name   = var.dns_name
 }
-
