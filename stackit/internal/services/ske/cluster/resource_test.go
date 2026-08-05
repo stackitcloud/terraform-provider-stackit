@@ -80,8 +80,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   []string{"foo.onstackit.cloud"},
-						Enabled: true,
+						Zones:      []string{"foo.onstackit.cloud"},
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
@@ -277,6 +278,7 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("foo.onstackit.cloud"),
 						}),
+						"gateway_api": types.BoolValue(true),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -340,8 +342,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   nil,
-						Enabled: true,
+						Zones:      nil,
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
@@ -377,8 +380,9 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringValue(""),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(true),
-						"zones":   types.ListNull(types.StringType),
+						"enabled":     types.BoolValue(true),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(true),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -403,8 +407,9 @@ func TestMapFields(t *testing.T) {
 					"instance_id": types.StringNull(),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-					"enabled": types.BoolValue(false),
-					"zones":   types.ListNull(types.StringType),
+					"enabled":     types.BoolValue(false),
+					"zones":       types.ListNull(types.StringType),
+					"gateway_api": types.BoolValue(false),
 				}),
 				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(false),
@@ -443,8 +448,9 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringNull(),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(false),
-						"zones":   types.ListNull(types.StringType),
+						"enabled":     types.BoolValue(false),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(false),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(false),
@@ -471,8 +477,9 @@ func TestMapFields(t *testing.T) {
 					"instance_id": types.StringValue("id"),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-					"enabled": types.BoolValue(true),
-					"zones":   types.ListNull(types.StringType),
+					"enabled":     types.BoolValue(true),
+					"zones":       types.ListNull(types.StringType),
+					"gateway_api": types.BoolValue(true),
 				}),
 				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(false),
@@ -486,8 +493,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:      true,
 					},
 					Dns: &ske.DNS{
-						Zones:   nil,
-						Enabled: true,
+						Zones:      nil,
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 				},
 				Name: new("name"),
@@ -522,8 +530,9 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringValue("id"),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(true),
-						"zones":   types.ListNull(types.StringType),
+						"enabled":     types.BoolValue(true),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(true),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(false),
@@ -619,8 +628,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   []string{"zone1"},
-						Enabled: true,
+						Zones:      []string{"zone1"},
+						Enabled:    true,
+						GatewayApi: new(true),
 					},
 					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
@@ -782,6 +792,7 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("zone1"),
 						}),
+						"gateway_api": types.BoolValue(true),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),

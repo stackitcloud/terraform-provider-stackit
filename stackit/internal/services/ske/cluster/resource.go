@@ -272,14 +272,16 @@ var observabilityTypes = map[string]attr.Type{
 
 // Struct corresponding to extensions.DNS
 type dns struct {
-	Enabled types.Bool `tfsdk:"enabled"`
-	Zones   types.List `tfsdk:"zones"`
+	Enabled    types.Bool `tfsdk:"enabled"`
+	Zones      types.List `tfsdk:"zones"`
+	GatewayApi types.Bool `tfsdk:"gateway_api"`
 }
 
 // Types corresponding to DNS
 var dnsTypes = map[string]attr.Type{
-	"enabled": basetypes.BoolType{},
-	"zones":   basetypes.ListType{ElemType: types.StringType},
+	"enabled":     basetypes.BoolType{},
+	"zones":       basetypes.ListType{ElemType: types.StringType},
+	"gateway_api": basetypes.BoolType{},
 }
 
 // NewClusterResource is a helper function to simplify the provider implementation.
@@ -824,6 +826,11 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 								// zones = []. This ensures the config (empty list) matches the
 								// API response (empty list).
 								Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+							},
+							"gateway_api": schema.BoolAttribute{
+								Description: "Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.",
+								Optional:    true,
+								Computed:    true,
 							},
 						},
 					},
@@ -1491,6 +1498,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 			return nil, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
 		}
 		dnsEnabled := dns.Enabled.ValueBool()
+		gatewayApi := dns.GatewayApi.ValueBool()
 
 		zones := []string{}
 		diags = dns.Zones.ElementsAs(ctx, &zones, true)
@@ -1498,8 +1506,9 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 			return nil, fmt.Errorf("converting extensions.dns.zones object: %v", diags.Errors())
 		}
 		skeDNS = &ske.DNS{
-			Enabled: dnsEnabled,
-			Zones:   zones,
+			Enabled:    dnsEnabled,
+			Zones:      zones,
+			GatewayApi: &gatewayApi,
 		}
 	}
 
@@ -2152,6 +2161,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	dnsExtension := types.ObjectNull(dnsTypes)
 	if cl.Extensions.Dns != nil {
 		enabled := types.BoolValue(cl.Extensions.Dns.Enabled)
+		gatewayApi := types.BoolValue(*cl.Extensions.Dns.GatewayApi)
 
 		zonesList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Dns.Zones)
 		if diags.HasError() {
@@ -2159,8 +2169,9 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		}
 
 		dnsValues := map[string]attr.Value{
-			"enabled": enabled,
-			"zones":   zonesList,
+			"enabled":     enabled,
+			"zones":       zonesList,
+			"gateway_api": gatewayApi,
 		}
 
 		dnsExtension, diags = types.ObjectValue(dnsTypes, dnsValues)

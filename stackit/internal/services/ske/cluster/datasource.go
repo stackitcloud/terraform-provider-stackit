@@ -325,6 +325,10 @@ func (r *clusterDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 								Computed:    true,
 								ElementType: types.StringType,
 							},
+							"gateway_api": schema.BoolAttribute{
+								Description: "Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.",
+								Computed:    true,
+							},
 						},
 					},
 					"application_load_balancer": schema.SingleNestedAttribute{
