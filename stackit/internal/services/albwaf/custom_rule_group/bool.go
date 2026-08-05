@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// TODO: will be moved to validators within STACKITTPR-786
+
 // OnlyAllowedIfBoolEqualsValidator prevents that this string attribute is set if a target bool does not equal the specified value.
 type OnlyAllowedIfBoolEqualsValidator struct {
 	Target path.Expression
