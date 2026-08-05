@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -25,13 +25,17 @@ var (
 )
 
 // NewSecurityGroupRuleDataSource is a helper function to simplify the provider implementation.
-func NewSecurityGroupRuleDataSource() datasource.DataSource {
-	return &securityGroupRuleDataSource{}
+func NewSecurityGroupRuleDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &securityGroupRuleDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // securityGroupRuleDataSource is the data source implementation.
 type securityGroupRuleDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -47,11 +51,11 @@ func (d *securityGroupRuleDataSource) Configure(ctx context.Context, req datasou
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -183,7 +187,7 @@ func (d *securityGroupRuleDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := d.client.DefaultAPI.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, err := d.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

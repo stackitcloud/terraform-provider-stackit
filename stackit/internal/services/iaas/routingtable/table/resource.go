@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -55,13 +57,17 @@ type Model struct {
 }
 
 // NewRoutingTableResource is a helper function to simplify the provider implementation.
-func NewRoutingTableResource() resource.Resource {
-	return &routingTableResource{}
+func NewRoutingTableResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &routingTableResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // routingTableResource is the resource implementation.
 type routingTableResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -83,11 +89,11 @@ func (r *routingTableResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "IaaS alpha client configured")
 }
 
@@ -251,7 +257,7 @@ func (r *routingTableResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	routingTable, err := r.client.DefaultAPI.AddRoutingTableToArea(ctx, organizationId, networkAreaId, region).AddRoutingTableToAreaPayload(*payload).Execute()
+	routingTable, err := r.client.AddRoutingTableToArea(ctx, organizationId, networkAreaId, region).AddRoutingTableToAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -300,7 +306,7 @@ func (r *routingTableResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTableResp, err := r.client.DefaultAPI.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routingTableResp, err := r.client.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -370,7 +376,7 @@ func (r *routingTableResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	routingTable, err := r.client.DefaultAPI.UpdateRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).UpdateRoutingTableOfAreaPayload(*payload).Execute()
+	routingTable, err := r.client.UpdateRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).UpdateRoutingTableOfAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -415,7 +421,7 @@ func (r *routingTableResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
 	// Delete existing routing table
-	err := r.client.DefaultAPI.DeleteRoutingTableFromArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	err := r.client.DeleteRoutingTableFromArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

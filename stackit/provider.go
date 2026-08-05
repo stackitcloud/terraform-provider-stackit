@@ -16,6 +16,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -150,14 +152,25 @@ var (
 
 // Provider is the provider implementation.
 type Provider struct {
-	version string
+	version       string
+	clientFactory clientutils.ClientFactory
 }
 
 // New is a helper function to simplify provider server and testing implementation.
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
 		return &Provider{
-			version: version,
+			version:       version,
+			clientFactory: &clientutils.DefaultClientFactory{},
+		}
+	}
+}
+
+func NewTestProvider(version string, clientFactory clientutils.ClientFactory) func() provider.Provider {
+	return func() provider.Provider {
+		return &Provider{
+			version:       version,
+			clientFactory: clientFactory,
 		}
 	}
 }
@@ -685,26 +698,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeDatasource,
 		iaasAlphaVpcRegion.NewVPCRegionDatasource,
 		iaasAlphaVpcStaticRoute.NewStaticRouteDatasource,
-		iaasAffinityGroup.NewAffinityGroupDatasource,
-		iaasImage.NewImageDataSource,
-		iaasImageV2.NewImageV2DataSource,
-		iaasNetwork.NewNetworkDataSource,
-		iaasNetworkArea.NewNetworkAreaDataSource,
-		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
-		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
-		iaasNetworkInterface.NewNetworkInterfaceDataSource,
-		iaasVolume.NewVolumeDataSource,
 		iaasProject.NewProjectDataSource,
-		iaasPublicIp.NewPublicIpDataSource,
-		iaasPublicIpRanges.NewPublicIpRangesDataSource,
-		iaasKeyPair.NewKeyPairDataSource,
-		iaasServer.NewServerDataSource,
-		iaasSecurityGroup.NewSecurityGroupDataSource,
-		iaasRoutingTable.NewRoutingTableDataSource,
-		iaasRoutingTableRoute.NewRoutingTableRouteDataSource,
-		iaasRoutingTables.NewRoutingTablesDataSource,
-		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
-		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		intakeRunner.NewRunnerDataSource,
 		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
@@ -776,6 +770,36 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 	dataSources = append(dataSources, customRole.NewCustomRoleDataSources()...)
 	dataSources = append(dataSources, iamRoleBindingsV1.NewRoleBindingsDatasources()...)
 
+	// client factory approach
+	refactoredDatasources := []func(factory clientutils.ClientFactory) datasource.DataSource{
+		iaasAffinityGroup.NewAffinityGroupDatasource,
+		iaasImage.NewImageDataSource,
+		iaasImageV2.NewImageV2DataSource,
+		iaasNetwork.NewNetworkDataSource,
+		iaasNetworkArea.NewNetworkAreaDataSource,
+		iaasNetworkAreaRegion.NewNetworkAreaRegionDataSource,
+		iaasNetworkAreaRoute.NewNetworkAreaRouteDataSource,
+		iaasNetworkInterface.NewNetworkInterfaceDataSource,
+		iaasPublicIp.NewPublicIpDataSource,
+		iaasPublicIpRanges.NewPublicIpRangesDataSource,
+		iaasKeyPair.NewKeyPairDataSource,
+		iaasServer.NewServerDataSource,
+		iaasSecurityGroup.NewSecurityGroupDataSource,
+		iaasRoutingTable.NewRoutingTableDataSource,
+		iaasRoutingTableRoute.NewRoutingTableRouteDataSource,
+		iaasRoutingTables.NewRoutingTablesDataSource,
+		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
+		iaasVolume.NewVolumeDataSource,
+	}
+
+	// won't be needed after refactoring is completed
+	for _, d := range refactoredDatasources {
+		dataSources = append(dataSources, func() datasource.DataSource {
+			return d(p.clientFactory)
+		})
+	}
+
 	return dataSources
 }
 
@@ -803,25 +827,6 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasAlphaVpcNetworkRange.NewVpcNetworkRangeResource,
 		iaasAlphaVpcRegion.NewVPCRegion,
 		iaasAlphaVpcStaticRoute.NewStaticRouteResource,
-		iaasAffinityGroup.NewAffinityGroupResource,
-		iaasImage.NewImageResource,
-		iaasNetwork.NewNetworkResource,
-		iaasNetworkArea.NewNetworkAreaResource,
-		iaasNetworkAreaRegion.NewNetworkAreaRegionResource,
-		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
-		iaasNetworkInterface.NewNetworkInterfaceResource,
-		iaasVolume.NewVolumeResource,
-		iaasPublicIp.NewPublicIpResource,
-		iaasKeyPair.NewKeyPairResource,
-		iaasVolumeAttach.NewVolumeAttachResource,
-		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
-		iaasServiceAccountAttach.NewServiceAccountAttachResource,
-		iaasPublicIpAssociate.NewPublicIpAssociateResource,
-		iaasServer.NewServerResource,
-		iaasSecurityGroup.NewSecurityGroupResource,
-		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
-		iaasRoutingTable.NewRoutingTableResource,
-		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		intakeRunner.NewRunnerResource,
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
@@ -887,6 +892,36 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources = append(resources, roleAssignements.NewRoleAssignmentResources()...)
 	resources = append(resources, customRole.NewCustomRoleResources()...)
 	resources = append(resources, iamRoleBindingsV1.NewRoleBindingResources()...)
+
+	// client factory approach
+	refactoredResources := []func(factory clientutils.ClientFactory) resource.Resource{
+		iaasAffinityGroup.NewAffinityGroupResource,
+		iaasImage.NewImageResource,
+		iaasNetwork.NewNetworkResource,
+		iaasNetworkArea.NewNetworkAreaResource,
+		iaasNetworkAreaRegion.NewNetworkAreaRegionResource,
+		iaasNetworkAreaRoute.NewNetworkAreaRouteResource,
+		iaasNetworkInterface.NewNetworkInterfaceResource,
+		iaasPublicIp.NewPublicIpResource,
+		iaasKeyPair.NewKeyPairResource,
+		iaasVolumeAttach.NewVolumeAttachResource,
+		iaasNetworkInterfaceAttach.NewNetworkInterfaceAttachResource,
+		iaasServiceAccountAttach.NewServiceAccountAttachResource,
+		iaasPublicIpAssociate.NewPublicIpAssociateResource,
+		iaasServer.NewServerResource,
+		iaasSecurityGroup.NewSecurityGroupResource,
+		iaasSecurityGroupRule.NewSecurityGroupRuleResource,
+		iaasRoutingTable.NewRoutingTableResource,
+		iaasRoutingTableRoute.NewRoutingTableRouteResource,
+		iaasVolume.NewVolumeResource,
+	}
+
+	// won't be needed after refactoring
+	for _, r := range refactoredResources {
+		resources = append(resources, func() resource.Resource {
+			return r(p.clientFactory)
+		})
+	}
 
 	return resources
 }

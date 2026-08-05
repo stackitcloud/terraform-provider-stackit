@@ -2,6 +2,7 @@ package volume
 
 import (
 	"context"
+	_ "embed"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
