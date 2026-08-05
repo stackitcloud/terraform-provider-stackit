@@ -1,4 +1,4 @@
-package validate
+package custom_rule_group
 
 import (
 	"context"
@@ -91,7 +91,7 @@ func TestOnlyIfBoolValidator(t *testing.T) {
 
 			resp := &validator.StringResponse{}
 
-			OnlyIfBool(path.MatchRoot("target_bool"), tt.expectedValue).ValidateString(ctx, req, resp)
+			OnlyAllowedIfBoolEquals(path.MatchRoot("target_bool"), tt.expectedValue).ValidateString(ctx, req, resp)
 
 			if tt.isValid {
 				if resp.Diagnostics.HasError() {

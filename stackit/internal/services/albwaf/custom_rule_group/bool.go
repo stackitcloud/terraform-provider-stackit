@@ -1,4 +1,4 @@
-package validate
+package custom_rule_group
 
 import (
 	"context"
@@ -9,24 +9,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// OnlyIfBoolValidator checks if this string attribute is set when a target bool equals the specified value.
-type OnlyIfBoolValidator struct {
+// OnlyAllowedIfBoolEqualsValidator prevents that this string attribute is set if a target bool does not equal the specified value.
+type OnlyAllowedIfBoolEqualsValidator struct {
 	Target path.Expression
 	Value  bool
 }
 
 // Ensure the validator implements the String validator interface
-var _ validator.String = OnlyIfBoolValidator{}
+var _ validator.String = OnlyAllowedIfBoolEqualsValidator{}
 
-func (v OnlyIfBoolValidator) Description(_ context.Context) string {
-	return "The attribute can only be set if the boolean is set to the provided Value."
+func (v OnlyAllowedIfBoolEqualsValidator) Description(_ context.Context) string {
+	return "The attribute can only be set if the boolean is set to the provided value."
 }
 
-func (v OnlyIfBoolValidator) MarkdownDescription(ctx context.Context) string {
+func (v OnlyAllowedIfBoolEqualsValidator) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
 
-func (v OnlyIfBoolValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) { // nolint:gocritic // function signature required by Terraform
+func (v OnlyAllowedIfBoolEqualsValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) { // nolint:gocritic // function signature required by Terraform
 	expression := req.PathExpression.Merge(v.Target)
 
 	matchedPaths, diags := req.Config.PathMatches(ctx, expression)
@@ -51,8 +51,8 @@ func (v OnlyIfBoolValidator) ValidateString(ctx context.Context, req validator.S
 	}
 }
 
-func OnlyIfBool(target path.Expression, value bool) validator.String {
-	return OnlyIfBoolValidator{
+func OnlyAllowedIfBoolEquals(target path.Expression, value bool) validator.String {
+	return OnlyAllowedIfBoolEqualsValidator{
 		Target: target,
 		Value:  value,
 	}
