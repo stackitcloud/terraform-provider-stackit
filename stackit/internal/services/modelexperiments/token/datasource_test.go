@@ -15,23 +15,30 @@ func TestMapDataSourceFields(t *testing.T) {
 	tests := []struct {
 		description string
 		state       *InstanceTokenDataSourceModel
-		input       modelexperiments.TokenMetadata
+		input       *modelexperiments.TokenMetadata
 		expected    InstanceTokenDataSourceModel
 		isValid     bool
 	}{
 		{
 			description: "should error when state is nil",
 			state:       nil,
-			input: modelexperiments.TokenMetadata{
+			input: &modelexperiments.TokenMetadata{
 				Id: "id",
 			},
 			expected: InstanceTokenDataSourceModel{},
 			isValid:  false,
 		},
 		{
+			description: "should error when token input is nil",
+			state:       &InstanceTokenDataSourceModel{},
+			input:       nil,
+			expected:    InstanceTokenDataSourceModel{},
+			isValid:     false,
+		},
+		{
 			description: "should error when token id is not present",
 			state:       &InstanceTokenDataSourceModel{},
-			input:       modelexperiments.TokenMetadata{},
+			input:       &modelexperiments.TokenMetadata{},
 			expected:    InstanceTokenDataSourceModel{},
 			isValid:     false,
 		},
@@ -43,7 +50,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Region:     types.StringValue("eu01"),
 				TokenId:    types.StringValue("tid"),
 			},
-			input: modelexperiments.TokenMetadata{
+			input: &modelexperiments.TokenMetadata{
 				Id:         "tid",
 				State:      "active",
 				Name:       "name",
@@ -69,7 +76,7 @@ func TestMapDataSourceFields(t *testing.T) {
 				Region:     types.StringValue("eu01"),
 				TokenId:    types.StringValue("tid"),
 			},
-			input: modelexperiments.TokenMetadata{
+			input: &modelexperiments.TokenMetadata{
 				Id:          "tid",
 				State:       "active",
 				Name:        "name",
@@ -97,7 +104,7 @@ func TestMapDataSourceFields(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			err := mapDataSourceFields(ctx, &tt.input, tt.state, "eu01")
+			err := mapDataSourceFields(ctx, tt.input, tt.state, "eu01")
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

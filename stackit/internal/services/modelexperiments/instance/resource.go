@@ -504,8 +504,8 @@ func mapInstance(ctx context.Context, instance *modelexperiments.Instance, model
 		return fmt.Errorf("model input is nil")
 	}
 
-	if instance.Id == "" {
-		return fmt.Errorf("instance id not present")
+	if instance == nil || instance.Id == "" {
+		return fmt.Errorf("instance or instance id not present")
 	}
 
 	mapValue, err := utils.MapLabels(ctx, instance.Labels, model.Labels)

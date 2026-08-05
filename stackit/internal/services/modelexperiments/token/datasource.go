@@ -177,8 +177,8 @@ func mapDataSourceFields(ctx context.Context, token *modelexperiments.TokenMetad
 		return fmt.Errorf("model input is nil")
 	}
 
-	if token.Id == "" {
-		return fmt.Errorf("token id not present")
+	if token == nil || token.Id == "" {
+		return fmt.Errorf("token or token id not present")
 	}
 
 	mapValue, err := utils.MapLabels(ctx, token.Labels, model.Labels)
