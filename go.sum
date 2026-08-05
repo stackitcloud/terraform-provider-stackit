@@ -187,6 +187,8 @@ github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0 h1:g7zpfQFFq3UhAWrM
 github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0/go.mod h1:tvRejL8w5KpGBbLFPQ+dXOJURgZ3OMbZmwxlKQrGMuA=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.1.0 h1:3IZ3baztlqmkkDxwBfRymYTFeZa3AARVXYlt3hohfPs=
 github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.1.0/go.mod h1:joa89Y1dyn0j22FstRcIKfW2ada3FDxNfttxSvq27uY=
+github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.2.0 h1:4cM9P38lQkJRtz0ZdDRhMam/J2rlL0m3sa1JBcIPcdc=
+github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.2.0/go.mod h1:TW2PYG0kSrfAos3yY8wUxDem0J9ZYSXulnbzBZ4BTaE=
 github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0 h1:LfcQ++Z8a13jrJ5NOaCY/hwToh/e+QJj0eS6rd6s6k8=
 github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0/go.mod h1:u7T85YqoqncJevbPU1ODKthbmxxEh1zw+bVaAO8v0Sg=
 github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.0 h1:SVd3WMmLAE0Jxk2SaRuM85DTOOXHycyMpZGx9vzqNkI=
@@ -261,6 +263,8 @@ go.opentelemetry.io/otel/sdk/metric v1.43.0 h1:S88dyqXjJkuBNLeMcVPRFXpRw2fuwdvfC
 go.opentelemetry.io/otel/sdk/metric v1.43.0/go.mod h1:C/RJtwSEJ5hzTiUz5pXF1kILHStzb9zFlIEe85bhj6A=
 go.opentelemetry.io/otel/trace v1.43.0 h1:BkNrHpup+4k4w+ZZ86CZoHHEkohws8AY+WTX09nk+3A=
 go.opentelemetry.io/otel/trace v1.43.0/go.mod h1:/QJhyVBUUswCphDVxq+8mld+AvhXZLhe+8WVFxiFff0=
+go.uber.org/mock v0.6.0 h1:hyF9dfmbgIX5EfOdasqLsWD6xqpNZlXblLB/Dbnwv3Y=
+go.uber.org/mock v0.6.0/go.mod h1:KiVJ4BqZJaMj4svdfmHM0AUx4NJYO8ZNpPnZn1Z+BBU=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.53.0 h1:QZ4Muo8THX6CizN2vPPd5fBGHyogrdK9fG4wLPFUsto=
