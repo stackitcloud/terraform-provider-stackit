@@ -35,10 +35,8 @@ type EphemeralProviderData struct {
 }
 
 type ProviderData struct {
-	RoundTripper        http.RoundTripper
-	ServiceAccountEmail string
-	// Deprecated: Use DefaultRegion instead
-	Region                          string
+	RoundTripper                    http.RoundTripper
+	ServiceAccountEmail             string
 	DefaultRegion                   string
 	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
@@ -87,10 +85,7 @@ type ProviderData struct {
 func (pd *ProviderData) GetRegion() string {
 	if pd.DefaultRegion != "" {
 		return pd.DefaultRegion
-	} else if pd.Region != "" {
-		return pd.Region
 	}
-	// final fallback
 	return "eu01"
 }
 

@@ -203,7 +203,6 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `private_key_path` (String) Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
 - `redis_custom_endpoint` (String) Custom endpoint for the Redis service
-- `region` (String, Deprecated) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
 - `scf_custom_endpoint` (String) Custom endpoint for the Cloud Foundry (SCF) service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
