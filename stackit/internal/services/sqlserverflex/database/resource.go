@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -205,18 +204,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Workaround: The database creation will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the database API is temporarily unavailable. Usually this is only for 1-2 seconds.
-	config := utils.RetryConfig{
-		Attempts: 5,
-		Backoff: func(attempt int) time.Duration {
-			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
-			return time.Duration(attempt*5) * time.Second
-		},
-		RetryStatusCodes: []int{
-			http.StatusLocked,
-			http.StatusTooEarly,
-		},
-	}
-	_, err = utils.RetryRequest(ctx, r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, config)
+	_, err = utils.RetryRequest(ctx, r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", err.Error())
 		return
@@ -330,18 +318,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Workaround: The database deletion will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the database API is temporarily unavailable. Usually this is only for 1-2 seconds.
-	config := utils.RetryConfig{
-		Attempts: 5,
-		Backoff: func(attempt int) time.Duration {
-			// Wait for every attempt 5 seconds longer. 5s, 10s, 15s and so on
-			return time.Duration(attempt*5) * time.Second
-		},
-		RetryStatusCodes: []int{
-			http.StatusLocked,
-			http.StatusTooEarly,
-		},
-	}
-	err := utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute, config)
+	err := utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
