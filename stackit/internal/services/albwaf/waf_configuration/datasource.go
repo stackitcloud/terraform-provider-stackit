@@ -58,7 +58,7 @@ func (d *wafDatasource) Configure(ctx context.Context, req datasource.ConfigureR
 
 func (d *wafDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring), core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],

@@ -112,7 +112,6 @@ func (r *wafResource) Configure(ctx context.Context, req resource.ConfigureReque
 }
 
 var descriptions = map[string]string{
-	"main":                   "albwaf resource schema.",
 	"id":                     "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`name`\".",
 	"project_id":             "STACKIT project ID to which the WAF Configuration is associated.",
 	"region":                 "The resource region (e.g. eu01). If not defined, the provider region is used.",
@@ -128,7 +127,7 @@ var descriptions = map[string]string{
 
 func (r *wafResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: descriptions["main"],
+		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring), core.Resource),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
