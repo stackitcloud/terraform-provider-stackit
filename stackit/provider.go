@@ -95,6 +95,7 @@ import (
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
+	postgresFlexFlavors "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/flavors"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
@@ -724,6 +725,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
 		postgresFlexDatabase.NewDatabaseDataSource,
+		postgresFlexFlavors.NewFlavorsDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
 		postgresFlexUser.NewUserDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
