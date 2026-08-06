@@ -63,7 +63,7 @@ Read-Only:
 - `memory` (Number) The memory (Gibibyte) of the instance.
 - `min_gb` (Number) Minimum storage, which is required to order in Gigabyte.
 - `node_type` (String) Defines the node type (either single or HA).
-- `storage_classes` (Attributes List) ⚠️TODO, also nested attr descriptions are freestyled (see [below for nested schema](#nestedatt--flavors--storage_classes))
+- `storage_classes` (Attributes List) Storage classes available for the flavor. (see [below for nested schema](#nestedatt--flavors--storage_classes))
 
 <a id="nestedatt--flavors--storage_classes"></a>
 ### Nested Schema for `flavors.storage_classes`
