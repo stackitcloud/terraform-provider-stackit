@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -122,6 +123,14 @@ func TestMapFields(t *testing.T) {
 }
 
 func TestEnableProject(t *testing.T) {
+	// enableProject retries, and the mock returns a plain error rather than an
+	// *oapierror.GenericOpenAPIError - RetryRequest only filters by status code
+	// when it can type-assert the error, so the failing case uses up every
+	// attempt. Without shrinking the delay this test would sleep for seconds.
+	oldDelay := enableProjectRetryDelay
+	enableProjectRetryDelay = time.Millisecond
+	defer func() { enableProjectRetryDelay = oldDelay }()
+
 	tests := []struct {
 		description string
 		enableFails bool
