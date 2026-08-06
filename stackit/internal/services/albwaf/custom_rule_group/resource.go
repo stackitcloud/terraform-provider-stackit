@@ -350,6 +350,14 @@ func (r *customRuleGroupResource) ModifyPlan(ctx context.Context, req resource.M
 		return
 	}
 
+	if !req.State.Raw.IsNull() {
+		var stateModel Model
+		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+		if !resp.Diagnostics.HasError() {
+			utils.WarnIfNameChanges(stateModel.Name, planModel.Name, "Custom Rule Group", &resp.Diagnostics)
+		}
+	}
+
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return

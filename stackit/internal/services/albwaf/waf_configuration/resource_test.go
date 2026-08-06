@@ -17,7 +17,7 @@ const (
 	testCustomRuleGroupName = "crg_name"
 )
 
-func Test_mapFields(t *testing.T) {
+func TestMapFields(t *testing.T) {
 	fixtureModel := func(mods ...func(*Model)) *Model {
 		m := Model{
 			Id:        types.StringValue(fmt.Sprintf("pid,%s,name", testRegion)),
@@ -105,7 +105,7 @@ func Test_mapFields(t *testing.T) {
 	}
 }
 
-func Test_toCreatePayload(t *testing.T) {
+func TestToCreatePayload(t *testing.T) {
 	tests := []struct {
 		name    string
 		model   *Model
