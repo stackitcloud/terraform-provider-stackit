@@ -166,7 +166,7 @@ func (v *vpcRegion) Create(ctx context.Context, request resource.CreateRequest, 
 		return
 	}
 
-	waiterTimeout := wait.CreateVPCRegionWaitHandler(ctx, v.client.DefaultAPI, "", "", "").GetTimeout()
+	waiterTimeout := wait.CreateVPCRegionWaitHandler(ctx, v.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {
@@ -331,7 +331,7 @@ func (v *vpcRegion) Delete(ctx context.Context, request resource.DeleteRequest, 
 		return
 	}
 
-	waiterTimeout := wait.DeleteVPCRegionWaitHandler(ctx, v.client.DefaultAPI, "", "", "").GetTimeout()
+	waiterTimeout := wait.DeleteVPCRegionWaitHandler(ctx, v.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	response.Diagnostics.Append(diags...)
 	if response.Diagnostics.HasError() {

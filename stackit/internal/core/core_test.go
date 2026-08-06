@@ -70,22 +70,7 @@ func TestProviderData_GetRegion(t *testing.T) {
 			want: "eu02",
 		},
 		{
-			name: "(legacy) region is set",
-			providerData: &ProviderData{
-				Region: "eu02",
-			},
-			want: "eu02",
-		},
-		{
-			name: "default region wins over (legacy) region",
-			providerData: &ProviderData{
-				DefaultRegion: "eu02",
-				Region:        "eu01",
-			},
-			want: "eu02",
-		},
-		{
-			name:         "final fallback - neither region (legacy) nor default region is set",
+			name:         "no default region, use fallback",
 			providerData: &ProviderData{},
 			want:         "eu01",
 		},
