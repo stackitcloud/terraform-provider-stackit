@@ -79,23 +79,7 @@ resource "stackit_cdn_distribution" "distribution" {
     forward_host_header    = var.forward_host_header
     monthly_limit_bytes    = var.monthly_limit_bytes
     default_cache_duration = var.default_cache_duration
-    waf = {
-      mode                          = var.waf_mode
-      type                          = var.waf_type
-      allowed_http_methods          = [var.waf_allowed_http_methods_0]
-      allowed_request_content_types = [var.waf_allowed_request_content_types_0]
-      allowed_http_versions         = [var.waf_allowed_http_versions_0]
-      paranoia_level                = var.waf_paranoia_level
-      disabled_rule_ids             = [var.waf_disabled_rule_ids_0]
-      enabled_rule_ids              = [var.waf_enabled_rule_ids_0]
-      log_only_rule_ids             = [var.waf_log_only_rule_ids_0]
-      disabled_rule_group_ids       = [var.waf_disabled_rule_group_ids_0]
-      enabled_rule_group_ids        = [var.waf_enabled_rule_group_ids_0]
-      log_only_rule_group_ids       = [var.waf_log_only_rule_group_ids_0]
-      disabled_rule_collection_ids  = [var.waf_disabled_rule_collection_ids_0]
-      enabled_rule_collection_ids   = [var.waf_enabled_rule_collection_ids_0]
-      log_only_rule_collection_ids  = [var.waf_log_only_rule_collection_ids_0]
-    }
+    waf = var.waf
     backend = {
       type       = var.backend_http_type
       origin_url = var.backend_origin_url
