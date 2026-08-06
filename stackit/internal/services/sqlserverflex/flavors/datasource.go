@@ -122,11 +122,11 @@ func (f *flavors) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *
 							Description: "The memory (Gibibyte) of the instance.",
 							Computed:    true,
 						},
-						"min_gb": schema.Int64Attribute{
+						"min_gb": schema.Int32Attribute{
 							Description: "Minimum storage, which is required to order in Gigabyte.",
 							Computed:    true,
 						},
-						"max_gb": schema.Int64Attribute{
+						"max_gb": schema.Int32Attribute{
 							Description: "Maximum storage, which can be ordered for the flavor in Gigabyte.",
 							Computed:    true,
 						},
@@ -135,7 +135,7 @@ func (f *flavors) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *
 							Computed:    true,
 						},
 						"storage_classes": schema.ListNestedAttribute{
-							Description: "⚠️TODO, also nested attr descriptions are freestyled",
+							Description: "Storage classes available for the flavor.",
 							Computed:    true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
