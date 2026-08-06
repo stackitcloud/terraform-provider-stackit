@@ -78,6 +78,8 @@ var testConfigVarsMax = config.Variables{
 	"ext_acl_allowed_cidr1":                            config.StringVariable("10.0.100.0/24"),
 	"ext_observability_enabled":                        config.StringVariable("false"),
 	"ext_dns_enabled":                                  config.StringVariable("true"),
+	"ext_dns_gateway_api":                              config.StringVariable("true"),
+	"ext_application_load_balancer_enabled":            config.StringVariable("true"),
 	"nodepool_hibernations1_start":                     config.StringVariable("0 18 * * *"),
 	"nodepool_hibernations1_end":                       config.StringVariable("59 23 * * *"),
 	"nodepool_hibernations1_timezone":                  config.StringVariable("Europe/Berlin"),
@@ -113,6 +115,7 @@ func configVarsMaxUpdated() config.Variables {
 	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
 	updatedConfig["access_idp_enabled"] = config.BoolVariable(false)
+	updatedConfig["ext_application_load_balancer_enabled"] = config.BoolVariable(false)
 
 	return updatedConfig
 }
@@ -306,8 +309,10 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_allowed_cidr1"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.observability.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_observability_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.gateway_api", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_gateway_api"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(testConfigVarsMax["dns_name"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.application_load_balancer.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_application_load_balancer_enabled"])),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", testutil.ConvertConfigVariable(testConfigVarsMax["nodepool_hibernations1_start"])),
@@ -386,8 +391,10 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_allowed_cidr1"])),
 					// no check for observability, as it was disabled in the setup
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.gateway_api", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_gateway_api"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(testConfigVarsMax["dns_name"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.application_load_balancer.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_application_load_balancer_enabled"])),
 
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.0.start", testutil.ConvertConfigVariable(testConfigVarsMax["nodepool_hibernations1_start"])),
@@ -477,8 +484,10 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_acl_allowed_cidr1"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.observability.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_observability_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_dns_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.gateway_api", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_dns_gateway_api"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["dns_name"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.application_load_balancer.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_application_load_balancer_enabled"])),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", testutil.ConvertConfigVariable(configVarsMaxUpdated()["nodepool_hibernations1_start"])),

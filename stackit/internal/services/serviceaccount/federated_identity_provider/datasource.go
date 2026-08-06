@@ -141,6 +141,8 @@ func (r *serviceAccountFederatedIdentityProviderDatasource) Read(ctx context.Con
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	if err := mapFields(ctx, apiResp, &model, projectId, serviceAccountEmail); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading federated identity provider", fmt.Sprintf("failed to map response to model: %v", err))
 		return

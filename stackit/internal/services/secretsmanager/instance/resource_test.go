@@ -19,11 +19,11 @@ import (
 
 func TestMapFields(t *testing.T) {
 	tests := []struct {
-		description      string
-		input            *secretsmanager.Instance
-		ListACLsResponse *secretsmanager.ListACLsResponse
-		expected         Model
-		isValid          bool
+		description     string
+		input           *secretsmanager.Instance
+		ListACLResponse *secretsmanager.ListACLsResponse
+		expected        Model
+		isValid         bool
 	}{
 		{
 			"default_values",
@@ -100,7 +100,7 @@ func TestMapFields(t *testing.T) {
 				ProjectId:  tt.expected.ProjectId,
 				InstanceId: tt.expected.InstanceId,
 			}
-			err := mapFields(tt.input, tt.ListACLsResponse, state)
+			err := mapFields(tt.input, tt.ListACLResponse, state)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -198,9 +198,9 @@ func TestToCreatePayload(t *testing.T) {
 	}
 }
 
-func TestUpdateACLs(t *testing.T) {
-	// This is the response used when getting all ACLs currently, across all tests
-	getAllACLsResp := secretsmanager.ListACLsResponse{
+func TestUpdateACL(t *testing.T) {
+	// This is the response used when getting all ACL currently, across all tests
+	getAllACLResp := secretsmanager.ListACLsResponse{
 		Acls: []secretsmanager.ACL{
 			{
 				Cidr: "acl-1",
@@ -220,27 +220,27 @@ func TestUpdateACLs(t *testing.T) {
 			},
 		},
 	}
-	getAllACLsRespBytes, err := json.Marshal(getAllACLsResp)
+	getAllACLRespBytes, err := json.Marshal(getAllACLResp)
 	if err != nil {
-		t.Fatalf("Failed to marshal get all ACLs response: %v", err)
+		t.Fatalf("Failed to marshal get all ACL response: %v", err)
 	}
 
 	// This is the response used whenever an API returns a failure response
 	failureRespBytes := []byte("{\"message\": \"Something bad happened\"")
 
 	tests := []struct {
-		description        string
-		acls               []string
-		getAllACLsFails    bool
-		createACLFails     bool
-		deleteACLFails     bool
-		isValid            bool
-		expectedACLsStates map[string]bool // Keys are CIDR; value is true if CIDR should exist at the end, false if should be deleted
+		description       string
+		acl               []string
+		getAllACLFails    bool
+		createACLFails    bool
+		deleteACLFails    bool
+		isValid           bool
+		expectedACLStates map[string]bool // Keys are CIDR; value is true if CIDR should exist at the end, false if should be deleted
 	}{
 		{
 			description: "no_changes",
-			acls:        []string{"acl-3", "acl-2", "acl-1"},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{"acl-3", "acl-2", "acl-1"},
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": true,
 				"acl-3": true,
@@ -249,8 +249,8 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "create_acl",
-			acls:        []string{"acl-1", "acl-2", "acl-3", "acl-4"},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{"acl-1", "acl-2", "acl-3", "acl-4"},
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": true,
 				"acl-3": true,
@@ -260,8 +260,8 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "delete_acl",
-			acls:        []string{"acl-3", "acl-1"},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{"acl-3", "acl-1"},
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": false,
 				"acl-3": true,
@@ -270,8 +270,8 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "multiple_changes",
-			acls:        []string{"acl-4", "acl-3", "acl-1", "acl-5"},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{"acl-4", "acl-3", "acl-1", "acl-5"},
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": false,
 				"acl-3": true,
@@ -282,8 +282,8 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "multiple_changes_repetition",
-			acls:        []string{"acl-4", "acl-3", "acl-1", "acl-5", "acl-5"},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{"acl-4", "acl-3", "acl-1", "acl-5", "acl-5"},
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": false,
 				"acl-3": true,
@@ -294,8 +294,8 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "multiple_changes_2",
-			acls:        []string{"acl-4", "acl-5"},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{"acl-4", "acl-5"},
+			expectedACLStates: map[string]bool{
 				"acl-1": false,
 				"acl-2": false,
 				"acl-3": false,
@@ -306,8 +306,8 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description: "multiple_changes_3",
-			acls:        []string{},
-			expectedACLsStates: map[string]bool{
+			acl:         []string{},
+			expectedACLStates: map[string]bool{
 				"acl-1": false,
 				"acl-2": false,
 				"acl-3": false,
@@ -315,22 +315,22 @@ func TestUpdateACLs(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description:     "get_fails",
-			acls:            []string{"acl-1", "acl-2", "acl-3"},
-			getAllACLsFails: true,
-			isValid:         false,
+			description:    "get_fails",
+			acl:            []string{"acl-1", "acl-2", "acl-3"},
+			getAllACLFails: true,
+			isValid:        false,
 		},
 		{
 			description:    "create_fails_1",
-			acls:           []string{"acl-1", "acl-2", "acl-3", "acl-4"},
+			acl:            []string{"acl-1", "acl-2", "acl-3", "acl-4"},
 			createACLFails: true,
 			isValid:        false,
 		},
 		{
 			description:    "create_fails_2",
-			acls:           []string{"acl-1", "acl-2"},
+			acl:            []string{"acl-1", "acl-2"},
 			createACLFails: true,
-			expectedACLsStates: map[string]bool{
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": true,
 				"acl-3": false,
@@ -339,15 +339,15 @@ func TestUpdateACLs(t *testing.T) {
 		},
 		{
 			description:    "delete_fails_1",
-			acls:           []string{"acl-1", "acl-2"},
+			acl:            []string{"acl-1", "acl-2"},
 			deleteACLFails: true,
 			isValid:        false,
 		},
 		{
 			description:    "delete_fails_2",
-			acls:           []string{"acl-1", "acl-2", "acl-3", "acl-4"},
+			acl:            []string{"acl-1", "acl-2", "acl-3", "acl-4"},
 			deleteACLFails: true,
-			expectedACLsStates: map[string]bool{
+			expectedACLStates: map[string]bool{
 				"acl-1": true,
 				"acl-2": true,
 				"acl-3": true,
@@ -359,27 +359,27 @@ func TestUpdateACLs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			// Will be compared to tt.expectedACLsStates at the end
-			aclsStates := make(map[string]bool)
-			aclsStates["acl-1"] = true
-			aclsStates["acl-2"] = true
-			aclsStates["acl-3"] = true
+			// Will be compared to tt.expectedACLStates at the end
+			aclStates := make(map[string]bool)
+			aclStates["acl-1"] = true
+			aclStates["acl-2"] = true
+			aclStates["acl-3"] = true
 
-			// Handler for getting all ACLs
-			getAllACLsHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			// Handler for getting all ACL
+			getAllACLHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
-				if tt.getAllACLsFails {
+				if tt.getAllACLFails {
 					w.WriteHeader(http.StatusInternalServerError)
 					_, err := w.Write(failureRespBytes)
 					if err != nil {
-						t.Errorf("Get all ACLs handler: failed to write bad response: %v", err)
+						t.Errorf("Get all ACL handler: failed to write bad response: %v", err)
 					}
 					return
 				}
 
-				_, err := w.Write(getAllACLsRespBytes)
+				_, err := w.Write(getAllACLRespBytes)
 				if err != nil {
-					t.Errorf("Get all ACLs handler: failed to write response: %v", err)
+					t.Errorf("Get all ACL handler: failed to write response: %v", err)
 				}
 			})
 
@@ -397,7 +397,7 @@ func TestUpdateACLs(t *testing.T) {
 					return
 				}
 				cidr := payload.Cidr
-				if cidrExists, cidrWasCreated := aclsStates[cidr]; cidrWasCreated && cidrExists {
+				if cidrExists, cidrWasCreated := aclStates[cidr]; cidrWasCreated && cidrExists {
 					t.Errorf("Create ACL handler: attempted to create CIDR '%v' that already exists", payload.Cidr)
 					return
 				}
@@ -425,7 +425,7 @@ func TestUpdateACLs(t *testing.T) {
 				if err != nil {
 					t.Errorf("Create ACL handler: failed to write response: %v", err)
 				}
-				aclsStates[cidr] = true
+				aclStates[cidr] = true
 			})
 
 			// Handler for deleting ACL
@@ -442,7 +442,7 @@ func TestUpdateACLs(t *testing.T) {
 					return
 				}
 				cidr, _ = strings.CutSuffix(cidr, "-repeated")
-				cidrExists, cidrWasCreated := aclsStates[cidr]
+				cidrExists, cidrWasCreated := aclStates[cidr]
 				if !cidrWasCreated {
 					t.Errorf("Delete ACL handler: attempted to delete CIDR '%v' that wasn't created", cidr)
 					return
@@ -466,7 +466,7 @@ func TestUpdateACLs(t *testing.T) {
 				if err != nil {
 					t.Errorf("Delete ACL handler: failed to write response: %v", err)
 				}
-				aclsStates[cidr] = false
+				aclStates[cidr] = false
 			})
 
 			// Setup server and client
@@ -474,7 +474,7 @@ func TestUpdateACLs(t *testing.T) {
 			router.HandleFunc("/v1/projects/{projectId}/instances/{instanceId}/acls", func(w http.ResponseWriter, r *http.Request) {
 				switch r.Method {
 				case http.MethodGet:
-					getAllACLsHandler(w, r)
+					getAllACLHandler(w, r)
 				case http.MethodPost:
 					createACLHandler(w, r)
 				}
@@ -491,7 +491,7 @@ func TestUpdateACLs(t *testing.T) {
 			}
 
 			// Run test
-			err = updateACLs(context.Background(), "pid", "iid", tt.acls, client)
+			err = updateACL(context.Background(), "pid", "iid", tt.acl, client)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}
@@ -499,7 +499,7 @@ func TestUpdateACLs(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
-				diff := cmp.Diff(aclsStates, tt.expectedACLsStates)
+				diff := cmp.Diff(aclStates, tt.expectedACLStates)
 				if diff != "" {
 					t.Fatalf("ACL states do not match: %s", diff)
 				}

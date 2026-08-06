@@ -199,8 +199,9 @@ func (r *telemetryLinkResource) Schema(_ context.Context, _ resource.SchemaReque
 				Computed:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: schemaDescriptions["status"],
-				Computed:    true,
+				Description:        schemaDescriptions["status"],
+				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
+				Computed:           true,
 			},
 		},
 	}

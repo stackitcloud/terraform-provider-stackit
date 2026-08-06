@@ -39,7 +39,6 @@ data "stackit_alb_waf_managed_rule_set" "example" {
 - `groups` (Attributes Map) Inventory of all available Managed Rule Set groups and their current configuration. (see [below for nested schema](#nestedatt--groups))
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`name`".
 - `type` (String) Type of the Managed Rule Set.
-- `usage` (Attributes) Managed Rule Set usage (see [below for nested schema](#nestedatt--usage))
 - `version` (String) Managed Rule Set version.
 
 <a id="nestedatt--groups"></a>
@@ -59,13 +58,3 @@ Read-Only:
 - `description` (String) A description of what this rule does.
 - `mode` (String) The current mode of the rule.
 - `severity` (String) Impact level.
-
-
-
-<a id="nestedatt--usage"></a>
-### Nested Schema for `usage`
-
-Read-Only:
-
-- `count` (Number) Number of WAFs using this Managed Rule Set.
-- `items` (List of String) List of WAFs that use this Managed Rule Set.

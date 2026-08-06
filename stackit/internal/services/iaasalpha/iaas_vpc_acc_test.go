@@ -772,8 +772,8 @@ func TestAccVPCRegionMin(t *testing.T) {
 
 				data "stackit_vpc_region" "region" {
 					project_id = stackit_vpc.vpc.project_id
-					vpc_id = stackit_vpc.vpc.vpc_id
 					region = "eu01"
+					vpc_id = stackit_vpc.vpc.vpc_id
 				}
 				`, testutil.NewConfigBuilder().Experiments(testutil.ExperimentVPC).BuildProviderConfig(), resourceVpcRegionMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
