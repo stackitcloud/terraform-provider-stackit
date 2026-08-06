@@ -137,7 +137,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Computed: true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can get the available flavors using the STACKIT-CLI using `stackit postgresflex flavor list`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -178,8 +179,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"replicas": schema.Int32Attribute{
-				Description: descriptions["replicas"],
-				Computed:    true,
+				Description:        descriptions["replicas"],
+				DeprecationMessage: "replicas is deprecated and will be removed after February 2027. Use instead `flavor_id` and choose a flavor with your wanted replica configuration. You can get the available flavors using the STACKIT-CLI using `stackit postgresflex flavor list`.",
+				Computed:           true,
 			},
 			"retention_days": schema.Int32Attribute{
 				Description: descriptions["retention_days"],
