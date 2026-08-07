@@ -1,0 +1,67 @@
+variable "project_id" {}
+variable "region" {}
+variable "runner_name" {}
+variable "intake_name" {}
+variable "description" {}
+variable "max_message_size_kib" {}
+variable "max_messages_per_hour" {}
+
+// Dremio Variables for Dynamic Provisioning
+variable "dremio_display_name" {}
+variable "dremio_user_email" {}
+variable "dremio_user_first_name" {}
+variable "dremio_user_last_name" {}
+variable "dremio_user_name" {}
+variable "dremio_user_password" {}
+variable "dremio_personal_access_token" {}
+
+resource "stackit_intake_runner" "example" {
+  project_id            = var.project_id
+  region                = var.region
+  name                  = var.runner_name
+  max_message_size_kib  = var.max_message_size_kib
+  max_messages_per_hour = var.max_messages_per_hour
+}
+
+// Dynamically provision Dremio Instance for test
+resource "stackit_dremio_instance" "dremio" {
+  project_id   = var.project_id
+  region       = var.region
+  display_name = var.dremio_display_name
+  authentication = {
+    type = "local-only"
+  }
+}
+
+// Dynamically provision Dremio User for test
+resource "stackit_dremio_user" "dremio_user" {
+  project_id  = var.project_id
+  region      = var.region
+  instance_id = stackit_dremio_instance.dremio.instance_id
+
+  email      = var.dremio_user_email
+  first_name = var.dremio_user_first_name
+  last_name  = var.dremio_user_last_name
+  name       = var.dremio_user_name
+  password   = var.dremio_user_password
+}
+
+resource "stackit_intakes" "example" {
+  project_id  = var.project_id
+  region      = var.region
+  runner_id   = stackit_intake_runner.example.runner_id
+  name        = var.intake_name
+  description = var.description
+
+  labels = {
+    "env"        = "development"
+    "created_by" = "terraform-provider-stackit"
+  }
+
+  catalog_auth_type            = "dremio"
+  catalog_namespace            = "intake"
+  catalog_warehouse            = "default"
+  catalog_uri                  = stackit_dremio_instance.dremio.endpoints.catalog
+  dremio_token_endpoint        = "${stackit_dremio_instance.dremio.endpoints.ui}/oauth/token"
+  dremio_personal_access_token = var.dremio_personal_access_token
+}
