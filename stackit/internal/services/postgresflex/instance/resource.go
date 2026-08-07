@@ -66,8 +66,9 @@ type Model struct {
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	ConnectionInfo types.Object `tfsdk:"connection_info"`
 	// Deprecated: Flavor is deprecated and will be removed after February 2027.
-	Flavor        types.Object `tfsdk:"flavor"`
-	FlavorId      types.String `tfsdk:"flavor_id"`
+	Flavor   types.Object `tfsdk:"flavor"`
+	FlavorId types.String `tfsdk:"flavor_id"`
+	// Deprecated: Replicas is deprecated and will be removed after February 2027.
 	Replicas      types.Int32  `tfsdk:"replicas"`
 	Storage       types.Object `tfsdk:"storage"`
 	Encryption    types.Object `tfsdk:"encryption"`
@@ -261,12 +262,12 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"connection_info.write.host": "The host of the instance.",
 		"connection_info.write.port": "The port of the instance.",
 		"replicas":                   "How many replicas the instance should have. Valid values are 1 for single mode or 3 for replication. Can only be set together with `flavor`",
-		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit curl https://postgres-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100\n```",
+		"flavor_id":                  "The flavor ID of the PostgreSQL Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available flavors using the datasource `stackit_postgresflex_flavors`",
 		"encryption.kek_key_id":      "The ID of the Key within the STACKIT-KMS to use for the encryption.",
 		"encryption.kek_keyring_id":  "The ID of the keyring where the key is located within the STACKTI-KMS.",
 		"encryption.kek_key_version": "Version of the key within the STACKIT-KMS to use for the encryption.",
 		"encryption.service_account": "Service-Account linked to the Key within the STACKIT-KMS.",
-		"storage_class":              "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex options --storages --flavor-id FLAVOR_ID\n```",
+		"storage_class":              "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit postgresflex flavor describe FLAVOR_ID\n```",
 		"network":                    "The network configuration of the instance." + willBeRequired,
 		"network.access_scope":       "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(postgresflex.AllowedInstanceNetworkAccessScopeEnumValues)...),
 		"network.acl":                "List of IPV4 cidr." + willBeRequired,
@@ -388,7 +389,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 			"flavor": schema.SingleNestedAttribute{
 				Optional:           true,
 				Computed:           true,
-				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can get the available flavors using the STACKIT-CLI using `stackit curl https://postgres-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100`.",
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_postgresflex_flavors`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -451,9 +452,10 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"replicas": schema.Int32Attribute{
-				Description: descriptions["replicas"],
-				Optional:    true,
-				Computed:    true,
+				Description:        descriptions["replicas"],
+				DeprecationMessage: "replicas is deprecated and will be removed after February 2027. Use instead `flavor_id` and choose a flavor with your wanted replica configuration. You can list available flavors using the datasource `stackit_postgresflex_flavors`.",
+				Optional:           true,
+				Computed:           true,
 				Validators: []validator.Int32{
 					int32validator.OneOf(1, 3),
 					int32validator.AlsoRequires(path.Root("flavor").Expression()),
