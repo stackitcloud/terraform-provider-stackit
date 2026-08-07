@@ -2161,7 +2161,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	dnsExtension := types.ObjectNull(dnsTypes)
 	if cl.Extensions.Dns != nil {
 		enabled := types.BoolValue(cl.Extensions.Dns.Enabled)
-		gatewayApi := types.BoolValue(*cl.Extensions.Dns.GatewayApi)
+		gatewayApi := types.BoolPointerValue(cl.Extensions.Dns.GatewayApi)
 
 		zonesList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Dns.Zones)
 		if diags.HasError() {
