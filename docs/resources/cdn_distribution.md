@@ -28,6 +28,10 @@ resource "stackit_cdn_distribution" "example_distribution" {
     }
     regions           = ["EU", "US", "ASIA", "AF", "SA"]
     blocked_countries = ["DE", "AT", "CH"]
+    blocked_ips       = ["1.1.1.1"]
+
+    default_cache_duration = "P1DT2H30M"
+    monthly_limit_bytes    = 1048576
 
     optimizer = {
       enabled = true
@@ -52,6 +56,10 @@ resource "stackit_cdn_distribution" "example_bucket_distribution" {
     }
     regions           = ["EU", "US"]
     blocked_countries = ["CN", "RU"]
+    blocked_ips       = ["1.1.1.1"]
+
+    default_cache_duration = "P1DT2H30M"
+    monthly_limit_bytes    = 1048576
 
     optimizer = {
       enabled = false
@@ -147,7 +155,10 @@ Required:
 Optional:
 
 - `blocked_countries` (List of String) The configured countries where distribution of content is blocked
+- `blocked_ips` (List of String) Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution.
+- `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M)
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
+- `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use.
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 - `strip_response_cookies` (Boolean) Enable this to prevent origin-level cookies from being forwarded to the end user.

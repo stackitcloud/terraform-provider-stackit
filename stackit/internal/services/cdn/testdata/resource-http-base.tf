@@ -4,6 +4,7 @@ variable "backend_http_type" {}
 variable "backend_origin_url" {}
 variable "geofencing_list" {}
 variable "blocked_countries" {}
+variable "blocked_ips" {}
 variable "optimizer" {}
 variable "origin_request_headers_name" {}
 variable "origin_request_headers_value" {}
@@ -21,6 +22,8 @@ variable "tls_enable_tls_10" {}
 variable "tls_enable_tls_11" {}
 variable "strip_response_cookies" {}
 variable "forward_host_header" {}
+variable "monthly_limit_bytes" {}
+variable "default_cache_duration" {}
 
 # dns
 variable "dns_zone_name" {}
@@ -74,7 +77,9 @@ resource "stackit_cdn_distribution" "distribution" {
     }
     strip_response_cookies = var.strip_response_cookies
     forward_host_header    = var.forward_host_header
-    waf                    = var.waf
+    monthly_limit_bytes    = var.monthly_limit_bytes
+    default_cache_duration = var.default_cache_duration
+    waf = var.waf
     backend = {
       type       = var.backend_http_type
       origin_url = var.backend_origin_url
@@ -86,6 +91,7 @@ resource "stackit_cdn_distribution" "distribution" {
       }
     }
     blocked_countries = var.blocked_countries
+    blocked_ips       = var.blocked_ips
   }
 }
 

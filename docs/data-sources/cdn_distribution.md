@@ -50,7 +50,10 @@ Optional:
 Read-Only:
 
 - `backend` (Attributes) The configured backend for the distribution (see [below for nested schema](#nestedatt--config--backend))
+- `blocked_ips` (List of String) Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution.
+- `default_cache_duration` (String) Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M)
 - `forward_host_header` (Boolean) Enable this allows the 'Host' header to be passed through to the origin.
+- `monthly_limit_bytes` (Number) Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use.
 - `optimizer` (Attributes) Configuration for the Image Optimizer. This is a paid feature that automatically optimizes images to reduce their file size for faster delivery, leading to improved website performance and a better user experience. (see [below for nested schema](#nestedatt--config--optimizer))
 - `redirects` (Attributes) A wrapper for a list of redirect rules that allows for redirect settings on a distribution (see [below for nested schema](#nestedatt--config--redirects))
 - `regions` (List of String) The configured regions where content will be hosted
