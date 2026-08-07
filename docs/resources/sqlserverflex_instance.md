@@ -115,7 +115,7 @@ Read-Only:
 
 Optional:
 
-- `class` (String) The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors` Will be required in the future. Set a value to prevent breaking changes.
+- `class` (String) The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`. Will be required in the future. Set a value to prevent breaking changes.
 - `size` (Number) The storage size in Gigabytes. Will be required in the future. Set a value to prevent breaking changes.
 
 ## Import

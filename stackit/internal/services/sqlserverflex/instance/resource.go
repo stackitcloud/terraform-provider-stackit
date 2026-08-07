@@ -338,7 +338,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
 		"storage":              "The object containing information about the storage size and class." + willBeRequired,
-		"storage.class":        "The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`" + willBeRequired,
+		"storage.class":        "The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`." + willBeRequired,
 		"storage.size":         "The storage size in Gigabytes." + willBeRequired,
 		"version":              "The sqlserver version used for the instance. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(sqlserverflex.AllowedInstanceVersionEnumValues)...) + willBeRequired,
 	}
