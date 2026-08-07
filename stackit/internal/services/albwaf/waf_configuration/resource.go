@@ -87,6 +87,14 @@ func (r *wafResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 		return
 	}
 
+	if !req.State.Raw.IsNull() {
+		var stateModel Model
+		resp.Diagnostics.Append(req.State.Get(ctx, &stateModel)...)
+		if !resp.Diagnostics.HasError() {
+			albwafUtils.WarnIfNameChanges(stateModel.Name, planModel.Name, "WAF Configuration", &resp.Diagnostics)
+		}
+	}
+
 	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -407,7 +415,7 @@ func toUpdatePayload(ctx context.Context, model *Model) (*albWaf.UpdateWAFPayloa
 	}
 
 	var labels *map[string]string
-	if !(model.Labels.IsNull() || model.Labels.IsUnknown()) {
+	if !tfutils.IsUndefined(model.Labels) {
 		diags := model.Labels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
@@ -426,7 +434,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*albWaf.CreateWAFPayloa
 	}
 
 	var labels *map[string]string
-	if !(model.Labels.IsNull() || model.Labels.IsUnknown()) {
+	if !tfutils.IsUndefined(model.Labels) {
 		diags := model.Labels.ElementsAs(ctx, &labels, false)
 		if diags.HasError() {
 			return nil, core.DiagsToError(diags)
