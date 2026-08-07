@@ -418,6 +418,9 @@ var descriptions = map[string]string{
 	"main": "SKE Cluster Resource schema. Must have a `region` specified in the provider configuration.",
 	"node_pools_plan_note": "When updating `node_pools` of a `stackit_ske_cluster`, the Terraform plan might appear incorrect as it matches the node pools by index rather than by name. " +
 		"However, the SKE API correctly identifies node pools by name and applies the intended changes. Please review your changes carefully to ensure the correct configuration will be applied.",
+	"destroy_load_balancer_note": "Before destroying a cluster, remove any `Service` of type `LoadBalancer` from it. " +
+		"Such a service makes the cloud controller create a load balancer in the project, which belongs to no Terraform state. " +
+		"If it still exists, the cluster stays in `STATE_DELETING` until this resource times out after 90 minutes.",
 	"max_surge":           "Maximum number of additional VMs that are created during an update.",
 	"max_unavailable":     "Maximum number of VMs that that can be unavailable during an update.",
 	"nodepool_validators": "If set (larger than 0), then it must be at least the amount of zones configured for the nodepool. The `max_surge` and `max_unavailable` fields cannot both be unset at the same time.",
@@ -431,9 +434,9 @@ var descriptions = map[string]string{
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
+		Description: fmt.Sprintf("%s\n%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"], descriptions["destroy_load_balancer_note"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
-		MarkdownDescription: fmt.Sprintf("%s\n\n-> %s", descriptions["main"], descriptions["node_pools_plan_note"]),
+		MarkdownDescription: fmt.Sprintf("%s\n\n-> %s\n\n~> %s", descriptions["main"], descriptions["node_pools_plan_note"], descriptions["destroy_load_balancer_note"]),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`name`\".",
@@ -2524,7 +2527,12 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf(
+			"Cluster deletion waiting: %v.\n\n"+
+				"A cluster can stay in STATE_DELETING because of resources it created outside of Terraform. "+
+				"The most common one is a load balancer: a Service of type LoadBalancer makes the cloud controller "+
+				"create one in the project, and it is not removed by deleting the cluster. Check with "+
+				"`stackit load-balancer list -p %s` and remove any leftovers, then retry.", err, projectId))
 		return
 	}
 	tflog.Info(ctx, "SKE cluster deleted")
