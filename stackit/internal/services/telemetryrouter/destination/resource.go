@@ -295,12 +295,12 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
 				Validators: []validator.String{
-                    stringvalidator.LengthBetween(1, 32),
-                    stringvalidator.RegexMatches(
-                        regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
-                        "must start with an alphanumeric character and contain only alphanumeric characters, spaces, and hyphens",
-                    ),
-				},	
+					stringvalidator.LengthBetween(1, 32),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
+						"must start with an alphanumeric character and contain only alphanumeric characters, spaces, and hyphens",
+					),
+				},
 			},
 			"config": schema.SingleNestedAttribute{
 				Description: schemaDescriptions["config"],
@@ -429,8 +429,12 @@ func (r *telemetryRouterDestinationResource) Schema(_ context.Context, _ resourc
 				Description: schemaDescriptions["description"],
 				Optional:    true,
 				Validators: []validator.String{
-                    stringvalidator.LengthAtMost(1024),
-				},	
+					stringvalidator.LengthAtMost(1024),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9 \-]*)?$`),
+						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"creation_time": schema.StringAttribute{
 				Description: schemaDescriptions["creation_time"],
