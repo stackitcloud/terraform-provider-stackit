@@ -59,7 +59,7 @@ type Model struct {
 	InstanceId types.String `tfsdk:"instance_id"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	Name       types.String `tfsdk:"name"`
-	// Deprecated: ACL is deprecated and will be removed after January 2027
+	// Deprecated: ACL is deprecated and will be removed after February 2027
 	ACL            types.List   `tfsdk:"acl"`
 	BackupSchedule types.String `tfsdk:"backup_schedule"`
 	Encryption     types.Object `tfsdk:"encryption"`
@@ -70,7 +70,7 @@ type Model struct {
 	Version  types.String `tfsdk:"version"`
 	Replicas types.Int32  `tfsdk:"replicas"`
 	Edition  types.String `tfsdk:"edition"`
-	// Deprecated: Options is deprecated and will be removed after January 2027
+	// Deprecated: Options is deprecated and will be removed after February 2027
 	Options       types.Object `tfsdk:"options"`
 	RetentionDays types.Int32  `tfsdk:"retention_days"`
 	Network       types.Object `tfsdk:"network"`
@@ -220,7 +220,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			planModel.BackupSchedule = types.StringValue("0 0 * * *")
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("backup_schedule"),
-			"backup_schedule will be required in future", "backup_schedule will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to '0 0 * * *' during deprecation period.")
+			"backup_schedule will be required in future", "backup_schedule will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to '0 0 * * *' during deprecation period.")
 	}
 
 	// storage
@@ -232,7 +232,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			})
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("storage"),
-			"storage will be required in future", "storage will be a required field after January 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
+			"storage will be required in future", "storage will be a required field after February 2027. Set values to prevent breaking changes. Fallback to class 'premium-perf12-stackit' with a size of 40 gigabytes during deprecation period.")
 	} else {
 		var storageConfig = &storageModel{}
 		resp.Diagnostics.Append(configModel.Storage.As(ctx, storageConfig, basetypes.ObjectAsOptions{})...)
@@ -251,7 +251,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 				storagePlan.Class = types.StringValue("premium-perf12-stackit")
 			}
 			resp.Diagnostics.AddAttributeWarning(path.Root("storage.class"),
-				"storage.class will be required in future", "storage.class will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 'premium-perf12-stackit' during deprecation period.")
+				"storage.class will be required in future", "storage.class will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 'premium-perf12-stackit' during deprecation period.")
 		}
 
 		// storage.size
@@ -260,7 +260,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 				storagePlan.Size = types.Int64Value(40)
 			}
 			resp.Diagnostics.AddAttributeWarning(path.Root("storage.size"),
-				"storage.size will be required in future", "storage.size will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 40 gigabytes during deprecation period.")
+				"storage.size will be required in future", "storage.size will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 40 gigabytes during deprecation period.")
 		}
 
 		var diags diag.Diagnostics
@@ -277,14 +277,14 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			planModel.Version = types.StringValue(string(sqlserverflex.INSTANCEVERSION__2022))
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("version"),
-			"version will be required in future", "version will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to '2022' during deprecation period.")
+			"version will be required in future", "version will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to '2022' during deprecation period.")
 	}
 
 	// acl
 	if (configModel.ACL.IsNull() || configModel.ACL.IsUnknown()) && (configModel.Network.IsNull() || configModel.Network.IsUnknown()) {
 		// Not setting default ACL and scope to the configModel, instead we send an empty array to the API, where they set the default value.
 		resp.Diagnostics.AddAttributeWarning(path.Root("network").AtName("acl"),
-			"network.acl will be required in future", "network.acl will be a required field after January 2027. Set values to prevent breaking changes.")
+			"network.acl will be required in future", "network.acl will be a required field after February 2027. Set values to prevent breaking changes.")
 	}
 
 	// retention_days
@@ -307,7 +307,7 @@ func handleV3Migration(ctx context.Context, planModel, configModel *Model, resp 
 			planModel.RetentionDays = types.Int32Value(30)
 		}
 		resp.Diagnostics.AddAttributeWarning(path.Root("retention_days"),
-			"retention_days will be required in future", "retention_days will be a required field after January 2027. Set a value to prevent breaking changes. Fallback to 30 days during deprecation period.")
+			"retention_days will be required in future", "retention_days will be a required field after February 2027. Set a value to prevent breaking changes. Fallback to 30 days during deprecation period.")
 	}
 }
 
@@ -328,7 +328,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"kek_key_version":      "Version of the key within the STACKIT-KMS to use for the encryption.",
 		"service_account":      "Service-Account linked to the Key within the STACKIT-KMS.",
 		"options":              "Custom parameters for the SQLServer Flex instance.",
-		"flavor_id":            "The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit curl https://mssql-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100\n```",
+		"flavor_id":            "The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 		"network":              "The network configuration of the instance." + willBeRequired,
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr." + willBeRequired,
@@ -338,7 +338,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
 		"storage":              "The object containing information about the storage size and class." + willBeRequired,
-		"storage.class":        "The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):\n```bash\nstackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID\n```" + willBeRequired,
+		"storage.class":        "The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`" + willBeRequired,
 		"storage.size":         "The storage size in Gigabytes." + willBeRequired,
 		"version":              "The sqlserver version used for the instance. " + utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(sqlserverflex.AllowedInstanceVersionEnumValues)...) + willBeRequired,
 	}
@@ -388,7 +388,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 			},
 			"acl": schema.ListAttribute{
 				Description:        descriptions["acl"],
-				DeprecationMessage: "acl is deprecated and will be removed after January 2027. Use instead `network.acl`.",
+				DeprecationMessage: "acl is deprecated and will be removed after February 2027. Use instead `network.acl`.",
 				ElementType:        types.StringType,
 				Optional:           true,
 				Computed:           true,
@@ -458,7 +458,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 			"flavor": schema.SingleNestedAttribute{
 				Computed:           true,
 				Optional:           true,
-				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can get the available flavors using the STACKIT-CLI using `stackit curl https://mssql-flex-service.api.stackit.cloud/v3/projects/{project_id}/regions/{region}/flavors\\?size=100`.",
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -587,7 +587,7 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 			},
 			"options": schema.SingleNestedAttribute{
-				DeprecationMessage: "option is deprecated and will be removed after January 2027.",
+				DeprecationMessage: "option is deprecated and will be removed after February 2027.",
 				Optional:           true,
 				Computed:           true,
 				PlanModifiers: []planmodifier.Object{
@@ -595,14 +595,14 @@ func (r *instanceResource) Schema(_ context.Context, req resource.SchemaRequest,
 				},
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						DeprecationMessage: "edition is deprecated and will be removed after January 2027.",
+						DeprecationMessage: "edition is deprecated and will be removed after February 2027.",
 						Computed:           true,
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},
 					},
 					"retention_days": schema.Int32Attribute{
-						DeprecationMessage: "retention_days is deprecated and will be removed after January 2027. Use instead `retention_days` from root.",
+						DeprecationMessage: "retention_days is deprecated and will be removed after February 2027. Use instead `retention_days` from root.",
 						Optional:           true,
 						Computed:           true,
 						PlanModifiers: []planmodifier.Int32{
