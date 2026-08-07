@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -46,7 +46,6 @@ func TestConfigureClient(t *testing.T) {
 			},
 			expected: func() *logmeSdk.APIClient {
 				apiClient, err := logmeSdk.NewAPIClient(
-					config.WithRegion("eu01"),
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
