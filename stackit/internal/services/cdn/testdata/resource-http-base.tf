@@ -79,7 +79,7 @@ resource "stackit_cdn_distribution" "distribution" {
     forward_host_header    = var.forward_host_header
     monthly_limit_bytes    = var.monthly_limit_bytes
     default_cache_duration = var.default_cache_duration
-    waf = var.waf
+    waf                    = var.waf
     backend = {
       type       = var.backend_http_type
       origin_url = var.backend_origin_url
