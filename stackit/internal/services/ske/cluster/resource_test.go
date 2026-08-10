@@ -2448,10 +2448,9 @@ func TestToNetworkPayload(t *testing.T) {
 func TestToAuditPayload(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name    string
-		input   types.Object
-		want    *ske.Audit
-		wantErr bool
+		name  string
+		input types.Object
+		want  *ske.Audit
 	}{
 		{
 			name:  "null audit",
@@ -2490,11 +2489,8 @@ func TestToAuditPayload(t *testing.T) {
 				Audit: tt.input,
 			}
 			got, err := toAuditPayload(t.Context(), m)
-			if err != nil && !tt.wantErr {
+			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
-			}
-			if err == nil && tt.wantErr {
-				t.Fatalf("expected error, but got none")
 			}
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
@@ -2885,7 +2881,6 @@ func TestMapAudit(t *testing.T) {
 		input      *ske.Audit
 		stateAudit types.Object
 		want       types.Object
-		wantErr    bool
 	}{
 		{
 			name:       "nil audit",
@@ -2934,11 +2929,8 @@ func TestMapAudit(t *testing.T) {
 			}
 
 			err := mapAudit(cluster, m)
-			if !tt.wantErr && err != nil {
+			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
-			}
-			if tt.wantErr && err == nil {
-				t.Fatalf("expected error, but got none")
 			}
 			if diff := cmp.Diff(tt.want, m.Audit); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
