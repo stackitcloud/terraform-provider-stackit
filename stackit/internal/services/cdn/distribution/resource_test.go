@@ -26,6 +26,31 @@ func createTestConfig(vals map[string]attr.Value) types.Object {
 	return types.ObjectValueMust(configTypes, vals)
 }
 
+// configFixture builds a config Object with fully-null defaults for every
+// attribute. Callers opt in to specific values via mod funcs. Follows the
+// fixture pattern used elsewhere in the repo (see fixtureModel in
+// stackit/internal/services/telemetryrouter/accesstoken/resource_test.go).
+func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
+	vals := map[string]attr.Value{
+		"backend":                types.ObjectNull(backendTypes),
+		"regions":                types.ListNull(types.StringType),
+		"blocked_countries":      types.ListValueMust(types.StringType, []attr.Value{}),
+		"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+		"default_cache_duration": types.StringNull(),
+		"monthly_limit_bytes":    types.Int64Null(),
+		"optimizer":              types.ObjectNull(optimizerTypes),
+		"redirects":              types.ObjectNull(redirectsTypes),
+		"waf":                    types.ObjectNull(wafTypes),
+		"tls":                    types.ObjectNull(tlsTypes),
+		"strip_response_cookies": types.BoolUnknown(),
+		"forward_host_header":    types.BoolUnknown(),
+	}
+	for _, mod := range mods {
+		mod(vals)
+	}
+	return types.ObjectValueMust(configTypes, vals)
+}
+
 func TestToCreatePayload(t *testing.T) {
 	headers := map[string]attr.Value{
 		"testHeader0": types.StringValue("testHeaderValue0"),
@@ -422,6 +447,87 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			IsValid: true,
 		},
+		"happy_path_with_blocked_ips": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("1.2.3.4"),
+						types.StringValue("5.6.7.8"),
+					})
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				BlockedIps:       []string{"1.2.3.4", "5.6.7.8"},
+				Waf:              &expectedDefaultWafConfig,
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_default_cache_duration": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:              []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:     []string{"XX", "YY", "ZZ"},
+				DefaultCacheDuration: cdnSdk.PtrString("P1DT2H30M"),
+				Waf:                  &expectedDefaultWafConfig,
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_monthly_limit_bytes": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:           []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:  []string{"XX", "YY", "ZZ"},
+				MonthlyLimitBytes: cdnSdk.PtrInt64(1073741824),
+				Waf:               &expectedDefaultWafConfig,
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
 		"sad_path_model_nil": {
 			Input:    nil,
 			Expected: nil,
@@ -795,6 +901,96 @@ func TestConvertConfig(t *testing.T) {
 				},
 				Regions:          []cdnSdk.Region{"EU", "US"},
 				BlockedCountries: []string{"XX", "YY", "ZZ"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_blocked_ips": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("1.2.3.4"),
+						types.StringValue("5.6.7.8"),
+					})
+				})
+			}),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+					},
+				},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				BlockedIps:       []string{"1.2.3.4", "5.6.7.8"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_default_cache_duration": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
+				})
+			}),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+					},
+				},
+				Regions:              []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:     []string{"XX", "YY", "ZZ"},
+				DefaultCacheDuration: *cdnSdk.NewNullableString(cdnSdk.PtrString("P1DT2H30M")),
+			},
+			IsValid: true,
+		},
+		"happy_path_with_monthly_limit_bytes": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
+				})
+			}),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+					},
+				},
+				Regions:           []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:  []string{"XX", "YY", "ZZ"},
+				MonthlyLimitBytes: *cdnSdk.NewNullableInt64(cdnSdk.PtrInt64(1073741824)),
 			},
 			IsValid: true,
 		},
@@ -1275,6 +1471,63 @@ func TestMapFields(t *testing.T) {
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_blocked_ips": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["tls"] = defaultTls
+					v["strip_response_cookies"] = types.BoolValue(false)
+					v["forward_host_header"] = types.BoolValue(false)
+					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("1.2.3.4"),
+						types.StringValue("5.6.7.8"),
+					})
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.BlockedIps = []string{"1.2.3.4", "5.6.7.8"}
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_default_cache_duration": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["tls"] = defaultTls
+					v["strip_response_cookies"] = types.BoolValue(false)
+					v["forward_host_header"] = types.BoolValue(false)
+					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.DefaultCacheDuration = *cdnSdk.NewNullableString(cdnSdk.PtrString("P1DT2H30M"))
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_monthly_limit_bytes": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["tls"] = defaultTls
+					v["strip_response_cookies"] = types.BoolValue(false)
+					v["forward_host_header"] = types.BoolValue(false)
+					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(cdnSdk.PtrInt64(1073741824))
 			}),
 			IsValid: true,
 		},

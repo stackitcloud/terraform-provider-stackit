@@ -514,7 +514,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 													},
 												},
 											},
-										}},
+										},
+									},
 								},
 							},
 						},
@@ -681,7 +682,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"region": schema.StringAttribute{
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_region"],
-								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Validators:  []validator.String{stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("bucket_url"))},
 							},
 							"credentials": schema.SingleNestedAttribute{
 								Optional:    true,
@@ -699,7 +700,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 										Description: schemaDescriptions["config_backend_credentials_access_key_id"],
 									},
 								},
-								Validators: []validator.Object{objectvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Validators: []validator.Object{objectvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("bucket_url"))},
 							},
 						},
 					},
@@ -728,7 +729,12 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						Computed:    true, // Required when using Default
 						Description: schemaDescriptions["config_blocked_ips"],
 						ElementType: types.StringType,
-						Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+						// The API returns an empty list for blocked_ips even if the field is omitted
+						// (null) in the request. Same rationale as blocked_countries (see comment above):
+						// set a Default of an empty list so the config (empty list) matches the API
+						// response (empty list) and Terraform doesn't error with
+						// "Provider produced inconsistent result after apply".
+						Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 					},
 					"default_cache_duration": schema.StringAttribute{
 						Optional:    true,
