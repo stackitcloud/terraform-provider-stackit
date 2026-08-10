@@ -266,7 +266,7 @@ func (r *kubeconfigResource) Create(ctx context.Context, req resource.CreateRequ
 
 	err := r.createKubeconfig(ctx, &model)
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // SDK call is hidden in r.createKubeconfig()
 
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating kubeconfig", fmt.Sprintf("Creating kubeconfig: %v", err))

@@ -202,7 +202,9 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	ctx = core.InitProviderContext(ctx)
 
-	_, err = r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute()
+	// Workaround: The database creation will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the database API is temporarily unavailable. Usually this is only for 1-2 seconds.
+	_, err = utils.RetryRequest(ctx, r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", err.Error())
 		return
@@ -314,7 +316,9 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.InitProviderContext(ctx)
 
-	err := r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute()
+	// Workaround: The database deletion will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the database API is temporarily unavailable. Usually this is only for 1-2 seconds.
+	err := utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return

@@ -1,4 +1,3 @@
-
 variable "project_id" {}
 variable "type" {}
 variable "name" {}

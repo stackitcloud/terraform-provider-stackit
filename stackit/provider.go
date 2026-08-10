@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
@@ -24,7 +21,9 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
 	alb "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/applicationloadbalancer"
 	cert "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/certificate"
+	albWafCustomRuleGroup "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/custom_rule_group"
 	albWafManagedRuleSet "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/managed_rule_set"
+	albWaf "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/waf_configuration"
 	customRole "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/customrole"
 	roleAssignements "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/roleassignments"
 	cdnCustomDomain "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/customdomain"
@@ -98,6 +97,7 @@ import (
 	openSearchCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/credential"
 	openSearchInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/opensearch/instance"
 	postgresFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/database"
+	postgresFlexFlavors "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/flavors"
 	postgresFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/instance"
 	postgresFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/user"
 	rabbitMQCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/rabbitmq/credential"
@@ -179,8 +179,6 @@ type providerModel struct {
 	WifFederatedToken     types.String `tfsdk:"service_account_federated_token"`
 	UseOIDC               types.Bool   `tfsdk:"use_oidc"`
 
-	// Deprecated: Use DefaultRegion instead
-	Region        types.String `tfsdk:"region"`
 	DefaultRegion types.String `tfsdk:"default_region"`
 
 	// Custom endpoints
@@ -244,7 +242,6 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"use_oidc":                             "Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.",
 		"oidc_request_url":                     "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Account using OpenID Connect.",
 		"oidc_request_token":                   "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Account using OpenID Connect.",
-		"region":                               "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"default_region":                       "Region will be used as the default location for regional services. Not all services require a region, some are global",
 		"alb_certificates_custom_endpoint":     "Custom endpoint for the Application Load Balancer TLS Certificate service",
 		"alb_waf_custom_endpoint":              "Custom endpoint for the Application Load Balancer Web Application Firewall service",
@@ -341,20 +338,9 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["oidc_request_url"],
 			},
-			"region": schema.StringAttribute{
-				Optional:           true,
-				Description:        descriptions["region"],
-				DeprecationMessage: "This attribute is deprecated. Use 'default_region' instead",
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("default_region")),
-				},
-			},
 			"default_region": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["default_region"],
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("region")),
-				},
 			},
 			"enable_beta_resources": schema.BoolAttribute{
 				Optional:    true,
@@ -566,7 +552,6 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.TokenCustomEndpoint, func(v string) { sdkConfig.TokenCustomUrl = v })
 
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
-	setStringField(providerConfig.Region, func(v string) { providerData.Region = v }) // nolint:staticcheck // preliminary handling of deprecated attribute
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
 	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { providerData.ALBCertificatesCustomEndpoint = v })
@@ -681,6 +666,8 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource {
 	dataSources := []func() datasource.DataSource{
 		alb.NewApplicationLoadBalancerDataSource,
+		albWafCustomRuleGroup.NewCustomRuleGroupDataSource,
+		albWaf.NewWafConfigurationDatasource,
 		albWafManagedRuleSet.NewManagedRuleSetDataSource,
 		alertGroup.NewAlertGroupDataSource,
 		cdn.NewDistributionDataSource,
@@ -742,6 +729,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		openSearchInstance.NewInstanceDataSource,
 		openSearchCredential.NewCredentialDataSource,
 		postgresFlexDatabase.NewDatabaseDataSource,
+		postgresFlexFlavors.NewFlavorsDataSource,
 		postgresFlexInstance.NewInstanceDataSource,
 		postgresFlexUser.NewUserDataSource,
 		rabbitMQInstance.NewInstanceDataSource,
@@ -795,6 +783,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{
 		alb.NewApplicationLoadBalancerResource,
+		albWafCustomRuleGroup.NewCustomRuleGroupResource,
+		albWaf.NewWafConfigurationResource,
 		albWafManagedRuleSet.NewManagedRuleSetResource,
 		alertGroup.NewAlertGroupResource,
 		cdn.NewDistributionResource,

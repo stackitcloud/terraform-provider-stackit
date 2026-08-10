@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
+	"github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api/wait"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -263,7 +264,9 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute()
+	// Workaround: The user creation will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
+	userResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -282,6 +285,13 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"instance_id": instanceId,
 		"user_id":     userId,
 	})
+
+	_, err = wait.CreateUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("user creation waiting: %v", err))
+		return
+	}
+
 	// Map response body to schema
 	err = mapFieldsCreate(userResp, &model, region)
 	if err != nil {
@@ -389,7 +399,9 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	// Delete existing user
-	err = r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute()
+	// Workaround: The user deletion will be tried 5 times. In some cases the instance might be
+	// in maintenance mode and the user API is temporarily unavailable. Usually this is only for 1-2 seconds.
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return
@@ -399,6 +411,12 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	ctx = core.LogResponse(ctx)
+
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("user deletion waiting: %v", err))
+		return
+	}
 
 	tflog.Info(ctx, "SQLServer Flex user deleted")
 }
