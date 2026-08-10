@@ -46,12 +46,13 @@ func testConfigVarsMinUpdated() config.Variables {
 }
 
 var testConfigVarsMax = config.Variables{
-	"project_id":    config.StringVariable(testutil.ProjectId),
-	"resource_type": config.StringVariable("project"),
-	"resource_id":   config.StringVariable(testutil.ProjectId),
-	"region":        config.StringVariable(testutil.Region),
-	"display_name":  config.StringVariable("tf-acc-test-link-max"),
-	"description":   config.StringVariable("tf-acc-test-link-description"),
+	"project_id":              config.StringVariable(testutil.ProjectId),
+	"resource_type":           config.StringVariable("project"),
+	"resource_id":             config.StringVariable(testutil.ProjectId),
+	"region":                  config.StringVariable(testutil.Region),
+	"display_name":            config.StringVariable("tf-acc-test-link-max"),
+	"description":             config.StringVariable("tf-acc-test-link-description"),
+	"access_token_wo_version": config.IntegerVariable(1),
 }
 
 func testConfigVarsMaxUpdated() config.Variables {
@@ -59,6 +60,17 @@ func testConfigVarsMaxUpdated() config.Variables {
 	maps.Copy(newVars, testConfigVarsMin)
 	newVars["display_name"] = config.StringVariable("tf-acc-test-link-updated")
 	newVars["description"] = config.StringVariable("Terraform Acceptance Test TelemetryLink Updated")
+	newVars["access_token_wo_version"] = config.IntegerVariable(1)
+	return newVars
+}
+
+// testConfigVarsMaxRotated exercises the write-only access_token_wo rotation workflow: bumping
+// access_token_wo_version signals the provider to re-send the write-only token value to the API,
+// instead of leaving the previously stored token untouched.
+func testConfigVarsMaxRotated() config.Variables {
+	newVars := make(config.Variables, len(testConfigVarsMin))
+	maps.Copy(newVars, testConfigVarsMaxUpdated())
+	newVars["access_token_wo_version"] = config.IntegerVariable(2)
 	return newVars
 }
 
@@ -177,7 +189,9 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMax["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMax["display_name"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMax["description"])),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token_wo_version", testutil.ConvertConfigVariable(testConfigVarsMax["access_token_wo_version"])),
+					// access_token_wo is write-only and must never be persisted to state
+					resource.TestCheckNoResourceAttr("stackit_telemetrylink.link", "access_token_wo"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
@@ -244,9 +258,10 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 				},
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"access_token"},
+				ImportStateVerifyIgnore: []string{"access_token_wo", "access_token_wo_version"},
 			},
-			// Update
+			// Update - change display name and description; access_token_wo_version is unchanged,
+			// so the provider must NOT re-send the write-only token to the API.
 			{
 				ConfigVariables: testConfigVarsMaxUpdated(),
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
@@ -256,7 +271,26 @@ func TestAccTelemetryLinkMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "region", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["region"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["display_name"])),
 					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["description"])),
-					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "access_token"),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token_wo_version", testutil.ConvertConfigVariable(testConfigVarsMaxUpdated()["access_token_wo_version"])),
+					// access_token_wo is write-only and must never be persisted to state
+					resource.TestCheckNoResourceAttr("stackit_telemetrylink.link", "access_token_wo"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
+					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "status"),
+				),
+			},
+			// Token rotation - increment access_token_wo_version 1 -> 2. The write-only
+			// access_token_wo value is re-sent to the API; all other fields must be unchanged.
+			{
+				ConfigVariables: testConfigVarsMaxRotated(),
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceMax,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "access_token_wo_version", testutil.ConvertConfigVariable(testConfigVarsMaxRotated()["access_token_wo_version"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "display_name", testutil.ConvertConfigVariable(testConfigVarsMaxRotated()["display_name"])),
+					resource.TestCheckResourceAttr("stackit_telemetrylink.link", "description", testutil.ConvertConfigVariable(testConfigVarsMaxRotated()["description"])),
+					// access_token_wo is write-only and must never be persisted to state
+					resource.TestCheckNoResourceAttr("stackit_telemetrylink.link", "access_token_wo"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "telemetry_router_id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "id"),
 					resource.TestCheckResourceAttrSet("stackit_telemetrylink.link", "create_time"),
