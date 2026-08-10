@@ -1,0 +1,931 @@
+package valkey
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"strings"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
+	valkeyUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/utils"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
+	valkey "github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/valkey/v2api/wait"
+)
+
+// Ensure the implementation satisfies the expected interfaces.
+var (
+	_ resource.Resource                = &instanceResource{}
+	_ resource.ResourceWithConfigure   = &instanceResource{}
+	_ resource.ResourceWithImportState = &instanceResource{}
+)
+
+type Model struct {
+	Id                 types.String `tfsdk:"id"` // needed by TF
+	InstanceId         types.String `tfsdk:"instance_id"`
+	ProjectId          types.String `tfsdk:"project_id"`
+	Region             types.String `tfsdk:"region"`
+	CfGuid             types.String `tfsdk:"cf_guid"`
+	CfSpaceGuid        types.String `tfsdk:"cf_space_guid"`
+	DashboardUrl       types.String `tfsdk:"dashboard_url"`
+	ImageUrl           types.String `tfsdk:"image_url"`
+	Name               types.String `tfsdk:"name"`
+	CfOrganizationGuid types.String `tfsdk:"cf_organization_guid"`
+	Parameters         types.Object `tfsdk:"parameters"`
+	Version            types.String `tfsdk:"version"`
+	PlanName           types.String `tfsdk:"plan_name"`
+	PlanId             types.String `tfsdk:"plan_id"`
+}
+
+// Struct corresponding to DataSourceModel.Parameters
+type parametersModel struct {
+	SgwAcl                types.String `tfsdk:"sgw_acl"`
+	DownAfterMilliseconds types.Int32  `tfsdk:"down_after_milliseconds"`
+	EnableMonitoring      types.Bool   `tfsdk:"enable_monitoring"`
+	FailoverTimeout       types.Int32  `tfsdk:"failover_timeout"`
+	Graphite              types.String `tfsdk:"graphite"`
+	LazyfreeLazyEviction  types.String `tfsdk:"lazyfree_lazy_eviction"`
+	LazyfreeLazyExpire    types.String `tfsdk:"lazyfree_lazy_expire"`
+	LuaTimeLimit          types.Int32  `tfsdk:"lua_time_limit"`
+	MaxDiskThreshold      types.Int32  `tfsdk:"max_disk_threshold"`
+	Maxclients            types.Int32  `tfsdk:"maxclients"`
+	MaxmemoryPolicy       types.String `tfsdk:"maxmemory_policy"`
+	MaxmemorySamples      types.Int32  `tfsdk:"maxmemory_samples"`
+	MetricsFrequency      types.Int32  `tfsdk:"metrics_frequency"`
+	MetricsPrefix         types.String `tfsdk:"metrics_prefix"`
+	MinReplicasMaxLag     types.Int32  `tfsdk:"min_replicas_max_lag"`
+	MonitoringInstanceId  types.String `tfsdk:"monitoring_instance_id"`
+	NotifyKeyspaceEvents  types.String `tfsdk:"notify_keyspace_events"`
+	Snapshot              types.String `tfsdk:"snapshot"`
+	Syslog                types.List   `tfsdk:"syslog"`
+}
+
+// Types corresponding to parametersModel
+var parametersTypes = map[string]attr.Type{
+	"sgw_acl":                 basetypes.StringType{},
+	"down_after_milliseconds": basetypes.Int32Type{},
+	"enable_monitoring":       basetypes.BoolType{},
+	"failover_timeout":        basetypes.Int32Type{},
+	"graphite":                basetypes.StringType{},
+	"lazyfree_lazy_eviction":  basetypes.StringType{},
+	"lazyfree_lazy_expire":    basetypes.StringType{},
+	"lua_time_limit":          basetypes.Int32Type{},
+	"max_disk_threshold":      basetypes.Int32Type{},
+	"maxclients":              basetypes.Int32Type{},
+	"maxmemory_policy":        basetypes.StringType{},
+	"maxmemory_samples":       basetypes.Int32Type{},
+	"metrics_frequency":       basetypes.Int32Type{},
+	"metrics_prefix":          basetypes.StringType{},
+	"min_replicas_max_lag":    basetypes.Int32Type{},
+	"monitoring_instance_id":  basetypes.StringType{},
+	"notify_keyspace_events":  basetypes.StringType{},
+	"snapshot":                basetypes.StringType{},
+	"syslog":                  basetypes.ListType{ElemType: types.StringType},
+}
+
+// NewInstanceResource is a helper function to simplify the provider implementation.
+func NewInstanceResource() resource.Resource {
+	return &instanceResource{}
+}
+
+// instanceResource is the resource implementation.
+type instanceResource struct {
+	client       *valkey.APIClient
+	providerData core.ProviderData
+}
+
+// Metadata returns the resource type name.
+func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_valkey_instance"
+}
+
+// Configure adds the provider configured client to the resource.
+func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	var ok bool
+	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	apiClient := valkeyUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	r.client = apiClient
+	tflog.Info(ctx, "Valkey instance client configured")
+}
+
+// Schema defines the schema for the resource.
+func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	descriptions := map[string]string{
+		"main":        "Valkey instance resource schema. Must have a `region` specified in the provider configuration.",
+		"id":          "Terraform's internal resource ID. It is structured as \"`project_id`,`region`,`instance_id`\".",
+		"instance_id": "ID of the Valkey instance.",
+		"project_id":  "STACKIT project ID to which the instance is associated.",
+		"name":        "Instance name.",
+		"version":     "The service version.",
+		"plan_name":   "The selected plan name.",
+		"plan_id":     "The selected plan ID.",
+		"parameters":  "Configuration parameters. Please note that removing a previously configured field from your Terraform configuration won't replace its value in the API. To update a previously configured field, explicitly set a new value for it.",
+		"region":      "The resource region. If not defined, the provider region is used.",
+	}
+
+	parametersDescriptions := map[string]string{
+		"sgw_acl":                 "Comma separated list of IP networks in CIDR notation which are allowed to access this instance.",
+		"down_after_milliseconds": "The number of milliseconds after which the instance is considered down.",
+		"enable_monitoring":       "Enable monitoring.",
+		"failover_timeout":        "The failover timeout in milliseconds.",
+		"graphite":                "Graphite server URL (host and port). If set, monitoring with Graphite will be enabled.",
+		"lazyfree_lazy_eviction":  "The lazy eviction enablement (yes or no).",
+		"lazyfree_lazy_expire":    "The lazy expire enablement (yes or no).",
+		"lua_time_limit":          "The Lua time limit.",
+		"max_disk_threshold":      "The maximum disk threshold in MB. If the disk usage exceeds this threshold, the instance will be stopped.",
+		"maxclients":              "The maximum number of clients.",
+		"maxmemory_policy":        "The policy to handle the maximum memory (volatile-lru, noeviction, etc).",
+		"maxmemory_samples":       "The maximum memory samples.",
+		"metrics_frequency":       "The frequency in seconds at which metrics are emitted.",
+		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"min_replicas_max_lag":    "The minimum replicas maximum lag.",
+		"monitoring_instance_id":  "The ID of the STACKIT monitoring instance.",
+		"notify_keyspace_events":  "The notify keyspace events.",
+		"snapshot":                "The snapshot configuration.",
+		"syslog":                  "List of syslog servers to send logs to.",
+	}
+
+	resp.Schema = schema.Schema{
+		Description: descriptions["main"],
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: descriptions["id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"instance_id": schema.StringAttribute{
+				Description: descriptions["instance_id"],
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Description: descriptions["project_id"],
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validate.UUID(),
+					validate.NoSeparator(),
+				},
+			},
+			"name": schema.StringAttribute{
+				Description: descriptions["name"],
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"version": schema.StringAttribute{
+				Description: descriptions["version"],
+				Required:    true,
+			},
+			"plan_name": schema.StringAttribute{
+				Description: descriptions["plan_name"],
+				Required:    true,
+			},
+			"plan_id": schema.StringAttribute{
+				Description: descriptions["plan_id"],
+				Computed:    true,
+			},
+			"parameters": schema.SingleNestedAttribute{
+				Description: descriptions["parameters"],
+				Attributes: map[string]schema.Attribute{
+					"sgw_acl": schema.StringAttribute{
+						Description: parametersDescriptions["sgw_acl"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"down_after_milliseconds": schema.Int32Attribute{
+						Description: parametersDescriptions["down_after_milliseconds"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"enable_monitoring": schema.BoolAttribute{
+						Description: parametersDescriptions["enable_monitoring"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"failover_timeout": schema.Int32Attribute{
+						Description: parametersDescriptions["failover_timeout"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"graphite": schema.StringAttribute{
+						Description: parametersDescriptions["graphite"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"lazyfree_lazy_eviction": schema.StringAttribute{
+						Description: parametersDescriptions["lazyfree_lazy_eviction"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"lazyfree_lazy_expire": schema.StringAttribute{
+						Description: parametersDescriptions["lazyfree_lazy_expire"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"lua_time_limit": schema.Int32Attribute{
+						Description: parametersDescriptions["lua_time_limit"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"max_disk_threshold": schema.Int32Attribute{
+						Description: parametersDescriptions["max_disk_threshold"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"maxclients": schema.Int32Attribute{
+						Description: parametersDescriptions["maxclients"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"maxmemory_policy": schema.StringAttribute{
+						Description: parametersDescriptions["maxmemory_policy"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"maxmemory_samples": schema.Int32Attribute{
+						Description: parametersDescriptions["maxmemory_samples"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_frequency": schema.Int32Attribute{
+						Description: parametersDescriptions["metrics_frequency"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"metrics_prefix": schema.StringAttribute{
+						Description: parametersDescriptions["metrics_prefix"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"min_replicas_max_lag": schema.Int32Attribute{
+						Description: parametersDescriptions["min_replicas_max_lag"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"monitoring_instance_id": schema.StringAttribute{
+						Description: parametersDescriptions["monitoring_instance_id"],
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.String{
+							validate.UUID(),
+							validate.NoSeparator(),
+						},
+					},
+					"notify_keyspace_events": schema.StringAttribute{
+						Description: parametersDescriptions["notify_keyspace_events"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"snapshot": schema.StringAttribute{
+						Description: parametersDescriptions["snapshot"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"syslog": schema.ListAttribute{
+						Description: parametersDescriptions["syslog"],
+						ElementType: types.StringType,
+						Optional:    true,
+						Computed:    true,
+					},
+				},
+				Optional: true,
+				Computed: true,
+			},
+			"cf_guid": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"cf_space_guid": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"dashboard_url": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"image_url": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"cf_organization_guid": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"region": schema.StringAttribute{
+				Optional: true,
+				// must be computed to allow for storing the override value from the provider
+				Computed:    true,
+				Description: descriptions["region"],
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+		},
+	}
+}
+
+// Create creates the resource and sets the initial Terraform state.
+func (r *instanceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	var parameters *parametersModel
+	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters = &parametersModel{}
+		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	err := r.loadPlanId(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading service plan: %v", err))
+		return
+	}
+
+	// Generate API request body from model
+	payload, err := toCreatePayload(&model, parameters)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	// Create new instance
+	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	if createResp.InstanceId == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", "Got empty instance id")
+		return
+	}
+	instanceId := createResp.InstanceId
+	// Write id attributes to state before polling via the wait handler - just in case anything goes wrong during the wait handler
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  projectId,
+		"instance_id": instanceId,
+		"region":      region,
+	})
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(waitResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Valkey instance created")
+}
+
+// Read refreshes the Terraform state with the latest data.
+func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	if instanceId == "" {
+		// Resource not yet created; ID is unknown.
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	region := r.providerData.GetRegionWithOverride(model.Region)
+
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	// Map response body to schema
+	err = mapFields(instanceResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	// Compute and store values not present in the API response
+	err = loadPlanNameAndVersion(ctx, r.client, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Loading service plan details: %v", err))
+		return
+	}
+
+	// Set refreshed state
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Valkey instance read")
+}
+
+// Update updates the resource and sets the updated Terraform state on success.
+func (r *instanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { // nolint:gocritic // function signature required by Terraform
+	var model Model
+	diags := req.Plan.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	var parameters *parametersModel
+	if !(model.Parameters.IsNull() || model.Parameters.IsUnknown()) {
+		parameters = &parametersModel{}
+		diags = model.Parameters.As(ctx, parameters, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	err := r.loadPlanId(ctx, &model)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading service plan: %v", err))
+		return
+	}
+
+	// Generate API request body from model
+	payload, err := toUpdatePayload(&model, parameters)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
+		return
+	}
+	// Update existing instance
+	err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	waitResp, err := wait.PartialUpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
+		return
+	}
+
+	// Map response body to schema
+	err = mapFields(waitResp, &model, region)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Processing API payload: %v", err))
+		return
+	}
+
+	diags = resp.State.Set(ctx, model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Info(ctx, "Valkey instance updated")
+}
+
+// Delete deletes the resource and removes the Terraform state on success.
+func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) { // nolint:gocritic // function signature required by Terraform
+	// Retrieve values from state
+	var model Model
+	diags := req.State.Get(ctx, &model)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = core.InitProviderContext(ctx)
+
+	projectId := model.ProjectId.ValueString()
+	instanceId := model.InstanceId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	ctx = tflog.SetField(ctx, "project_id", projectId)
+	ctx = tflog.SetField(ctx, "instance_id", instanceId)
+	ctx = tflog.SetField(ctx, "region", region)
+
+	// Delete existing instance
+	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, region, instanceId).Execute()
+	if err != nil {
+		var oapiErr *oapierror.GenericOpenAPIError
+		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Calling API: %v", err))
+		return
+	}
+
+	ctx = core.LogResponse(ctx)
+
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	if err != nil {
+		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
+		return
+	}
+	tflog.Info(ctx, "Valkey instance deleted")
+}
+
+// ImportState imports a resource into the Terraform state on success.
+// The expected format of the resource import identifier is: project_id,region,instance_id
+func (r *instanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	idParts := strings.Split(req.ID, core.Separator)
+
+	if len(idParts) != 3 || idParts[0] == "" || idParts[1] == "" || idParts[2] == "" {
+		core.LogAndAddError(ctx, &resp.Diagnostics,
+			"Error importing instance",
+			fmt.Sprintf("Expected import identifier with format: [project_id],[region],[instance_id]  Got: %q", req.ID),
+		)
+		return
+	}
+
+	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
+		"project_id":  idParts[0],
+		"region":      idParts[1],
+		"instance_id": idParts[2],
+	})
+	tflog.Info(ctx, "Valkey instance state imported")
+}
+
+func mapFields(instance *valkey.Instance, model *Model, region string) error {
+	if instance == nil {
+		return fmt.Errorf("response input is nil")
+	}
+	if model == nil {
+		return fmt.Errorf("model input is nil")
+	}
+
+	var instanceId string
+	if model.InstanceId.ValueString() != "" {
+		instanceId = model.InstanceId.ValueString()
+	} else if instance.InstanceId != nil {
+		instanceId = *instance.InstanceId
+	} else {
+		return fmt.Errorf("instance id not present")
+	}
+
+	model.Region = types.StringValue(region)
+	model.Id = utils.BuildInternalTerraformId(model.ProjectId.ValueString(), region, instanceId)
+	model.InstanceId = types.StringValue(instanceId)
+	model.PlanId = types.StringValue(instance.PlanId)
+	model.CfGuid = types.StringValue(instance.CfGuid)
+	model.CfSpaceGuid = types.StringValue(instance.CfSpaceGuid)
+	model.DashboardUrl = types.StringValue(instance.DashboardUrl)
+	model.ImageUrl = types.StringValue(instance.ImageUrl)
+	model.Name = types.StringValue(instance.Name)
+	model.CfOrganizationGuid = types.StringValue(instance.CfOrganizationGuid)
+
+	if instance.Parameters == nil {
+		model.Parameters = types.ObjectNull(parametersTypes)
+	} else {
+		parameters, err := mapParameters(instance.Parameters)
+		if err != nil {
+			return fmt.Errorf("mapping parameters: %w", err)
+		}
+		model.Parameters = parameters
+	}
+	return nil
+}
+
+func mapParameters(params map[string]any) (types.Object, error) {
+	attributes := map[string]attr.Value{}
+	for attribute := range parametersTypes {
+		var valueInterface any
+		var ok bool
+
+		// This replacement is necessary because Terraform does not allow hyphens in attribute names
+		// And the API uses hyphens in some of the attribute names, which would cause a mismatch
+		// The following attributes have hyphens in the API but underscores in the schema
+		hyphenAttributes := []string{
+			"down_after_milliseconds",
+			"failover_timeout",
+			"lazyfree_lazy_eviction",
+			"lazyfree_lazy_expire",
+			"lua_time_limit",
+			"maxmemory_policy",
+			"maxmemory_samples",
+			"notify_keyspace_events",
+		}
+		if slices.Contains(hyphenAttributes, attribute) {
+			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
+			valueInterface, ok = params[alteredAttribute]
+		} else {
+			valueInterface, ok = params[attribute]
+		}
+		if !ok {
+			// All fields are optional, so this is ok
+			// Set the value as nil, will be handled accordingly
+			valueInterface = nil
+		}
+
+		var value attr.Value
+		switch parametersTypes[attribute].(type) {
+		default:
+			return types.ObjectNull(parametersTypes), fmt.Errorf("found unexpected attribute type '%T'", parametersTypes[attribute])
+		case basetypes.StringType:
+			if valueInterface == nil {
+				value = types.StringNull()
+			} else {
+				valueString, ok := valueInterface.(string)
+				if !ok {
+					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as string", attribute, valueInterface)
+				}
+				value = types.StringValue(valueString)
+			}
+		case basetypes.BoolType:
+			if valueInterface == nil {
+				value = types.BoolNull()
+			} else {
+				valueBool, ok := valueInterface.(bool)
+				if !ok {
+					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as bool", attribute, valueInterface)
+				}
+				value = types.BoolValue(valueBool)
+			}
+		case basetypes.Int32Type:
+			if valueInterface == nil {
+				value = types.Int32Null()
+			} else {
+				// This may be int64, int32, int or float64
+				// We try to assert all 4
+				var valueInt32 int32
+				switch temp := valueInterface.(type) {
+				default:
+					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as int", attribute, valueInterface)
+				case int32:
+					valueInt32 = temp
+				case float64:
+					valueInt32 = int32(temp)
+				}
+				value = types.Int32Value(valueInt32)
+			}
+		case basetypes.ListType: // Assumed to be a list of strings
+			if valueInterface == nil {
+				value = types.ListNull(types.StringType)
+			} else {
+				// This may be []string{} or []interface{}
+				// We try to assert all 2
+				var valueList []attr.Value
+				switch temp := valueInterface.(type) {
+				default:
+					return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' of type %T, failed to assert as array of interface", attribute, valueInterface)
+				case []string:
+					for _, x := range temp {
+						valueList = append(valueList, types.StringValue(x))
+					}
+				case []any:
+					for _, x := range temp {
+						xString, ok := x.(string)
+						if !ok {
+							return types.ObjectNull(parametersTypes), fmt.Errorf("found attribute '%s' with element '%s' of type %T, failed to assert as string", attribute, x, x)
+						}
+						valueList = append(valueList, types.StringValue(xString))
+					}
+				}
+				temp2, diags := types.ListValue(types.StringType, valueList)
+				if diags.HasError() {
+					return types.ObjectNull(parametersTypes), fmt.Errorf("failed to map %s: %w", attribute, core.DiagsToError(diags))
+				}
+				value = temp2
+			}
+		}
+		attributes[attribute] = value
+	}
+
+	output, diags := types.ObjectValue(parametersTypes, attributes)
+	if diags.HasError() {
+		return types.ObjectNull(parametersTypes), fmt.Errorf("failed to create object: %w", core.DiagsToError(diags))
+	}
+	return output, nil
+}
+
+func toCreatePayload(model *Model, parameters *parametersModel) (*valkey.CreateInstancePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
+	}
+
+	return &valkey.CreateInstancePayload{
+		InstanceName: model.Name.ValueString(),
+		Parameters:   payloadParams,
+		PlanId:       model.PlanId.ValueString(),
+	}, nil
+}
+
+func toUpdatePayload(model *Model, parameters *parametersModel) (*valkey.PartialUpdateInstancePayload, error) {
+	if model == nil {
+		return nil, fmt.Errorf("nil model")
+	}
+
+	payloadParams, err := toInstanceParams(parameters)
+	if err != nil {
+		return nil, fmt.Errorf("converting parameters: %w", err)
+	}
+
+	return &valkey.PartialUpdateInstancePayload{
+		Parameters: payloadParams,
+		PlanId:     conversion.StringValueToPointer(model.PlanId),
+	}, nil
+}
+
+func toInstanceParams(parameters *parametersModel) (*valkey.InstanceParameters, error) {
+	if parameters == nil {
+		return nil, nil
+	}
+	payloadParams := &valkey.InstanceParameters{}
+
+	payloadParams.SgwAcl = conversion.StringValueToPointer(parameters.SgwAcl)
+	payloadParams.DownAfterMilliseconds = conversion.Int32ValueToPointer(parameters.DownAfterMilliseconds)
+	payloadParams.EnableMonitoring = conversion.BoolValueToPointer(parameters.EnableMonitoring)
+	payloadParams.FailoverTimeout = conversion.Int32ValueToPointer(parameters.FailoverTimeout)
+	payloadParams.Graphite = conversion.StringValueToPointer(parameters.Graphite)
+	payloadParams.LazyfreeLazyEviction = conversion.StringValueToEnumPointer[valkey.InstanceParametersLazyfreeLazyEviction](parameters.LazyfreeLazyEviction)
+	payloadParams.LazyfreeLazyExpire = conversion.StringValueToEnumPointer[valkey.InstanceParametersLazyfreeLazyExpire](parameters.LazyfreeLazyExpire)
+	payloadParams.LuaTimeLimit = conversion.Int32ValueToPointer(parameters.LuaTimeLimit)
+	payloadParams.MaxDiskThreshold = conversion.Int32ValueToPointer(parameters.MaxDiskThreshold)
+	payloadParams.Maxclients = conversion.Int32ValueToPointer(parameters.Maxclients)
+	payloadParams.MaxmemoryPolicy = conversion.StringValueToEnumPointer[valkey.InstanceParametersMaxmemoryPolicy](parameters.MaxmemoryPolicy)
+	payloadParams.MaxmemorySamples = conversion.Int32ValueToPointer(parameters.MaxmemorySamples)
+	payloadParams.MetricsFrequency = conversion.Int32ValueToPointer(parameters.MetricsFrequency)
+	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MinReplicasMaxLag = conversion.Int32ValueToPointer(parameters.MinReplicasMaxLag)
+	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
+	payloadParams.NotifyKeyspaceEvents = conversion.StringValueToPointer(parameters.NotifyKeyspaceEvents)
+	payloadParams.Snapshot = conversion.StringValueToPointer(parameters.Snapshot)
+
+	var err error
+	payloadParams.Syslog, err = conversion.StringListToSlice(parameters.Syslog)
+	if err != nil {
+		return nil, fmt.Errorf("converting syslog: %w", err)
+	}
+
+	return payloadParams, nil
+}
+
+func (r *instanceResource) loadPlanId(ctx context.Context, model *Model) error {
+	projectId := model.ProjectId.ValueString()
+	region := r.providerData.GetRegionWithOverride(model.Region)
+	res, err := r.client.DefaultAPI.ListOfferings(ctx, projectId, region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting Valkey offerings: %w", err)
+	}
+
+	version := model.Version.ValueString()
+	planName := model.PlanName.ValueString()
+	availableVersions := ""
+	availablePlanNames := ""
+	isValidVersion := false
+	for _, offer := range res.Offerings {
+		if !strings.EqualFold(offer.Version, version) {
+			availableVersions = fmt.Sprintf("%s\n- %s", availableVersions, offer.Version)
+			continue
+		}
+		isValidVersion = true
+
+		for _, plan := range offer.Plans {
+			if plan.Name == "" {
+				continue
+			}
+			if strings.EqualFold(plan.Name, planName) && plan.Id != "" {
+				model.PlanId = types.StringValue(plan.Id)
+				return nil
+			}
+			availablePlanNames = fmt.Sprintf("%s\n- %s", availablePlanNames, plan.Name)
+		}
+	}
+
+	if !isValidVersion {
+		return fmt.Errorf("couldn't find version '%s', available versions are: %s", version, availableVersions)
+	}
+	return fmt.Errorf("couldn't find plan_name '%s' for version %s, available names are: %s", planName, version, availablePlanNames)
+}
+
+func loadPlanNameAndVersion(ctx context.Context, client *valkey.APIClient, model *Model, region string) error {
+	projectId := model.ProjectId.ValueString()
+	planId := model.PlanId.ValueString()
+	res, err := client.DefaultAPI.ListOfferings(ctx, projectId, region).Execute()
+	if err != nil {
+		return fmt.Errorf("getting Valkey offerings: %w", err)
+	}
+
+	for _, offer := range res.Offerings {
+		for _, plan := range offer.Plans {
+			if strings.EqualFold(plan.Id, planId) && plan.Id != "" {
+				model.PlanName = types.StringValue(plan.Name)
+				model.Version = types.StringValue(offer.Version)
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("couldn't find plan_name and version for plan_id '%s'", planId)
+}

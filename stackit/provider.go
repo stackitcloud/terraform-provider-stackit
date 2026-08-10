@@ -137,6 +137,8 @@ import (
 	telemetryRouterAccessToken "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/accesstoken"
 	telemetryRouterDestination "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/destination"
 	telemetryRouterInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/instance"
+	valkeyCredential "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/credential"
+	valkeyInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/valkey/instance"
 	vpnConnection "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/connection"
 	vpnGateway "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway"
 	vpnGatewayStatus "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/gateway_status"
@@ -220,6 +222,7 @@ type providerModel struct {
 	TelemetryLinkCustomEndpoint     types.String `tfsdk:"telemetrylink_custom_endpoint"`
 	TelemetryRouterCustomEndpoint   types.String `tfsdk:"telemetryrouter_custom_endpoint"`
 	TokenCustomEndpoint             types.String `tfsdk:"token_custom_endpoint"`
+	ValkeyCustomEndpoint            types.String `tfsdk:"valkey_custom_endpoint"`
 	VpnCustomEndpoint               types.String `tfsdk:"vpn_custom_endpoint"`
 	OIDCTokenRequestURL             types.String `tfsdk:"oidc_request_url"`
 	OIDCTokenRequestToken           types.String `tfsdk:"oidc_request_token"`
@@ -281,6 +284,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"telemetrylink_custom_endpoint":        "Custom endpoint for the Telemetry Link service",
 		"telemetryrouter_custom_endpoint":      "Custom endpoint for the Telemetry Router service",
 		"token_custom_endpoint":                "Custom endpoint for the token API, which is used to request access tokens when using the key flow",
+		"valkey_custom_endpoint":               "Custom endpoint for the Key Value Store service",
 		"vpn_custom_endpoint":                  "Custom endpoint for the VPN service",
 		"enable_beta_resources":                "Enable beta resources. Default is false.",
 		"experiments":                          fmt.Sprintf("Enables experiments. These are unstable features without official support. More information can be found in the README. Available Experiments: %v", strings.Join(features.AvailableExperiments, ", ")),
@@ -497,6 +501,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["telemetrylink_custom_endpoint"],
 			},
+			"valkey_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["valkey_custom_endpoint"],
+			},
 			"vpn_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["vpn_custom_endpoint"],
@@ -591,6 +599,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
 	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
+	setStringField(providerConfig.ValkeyCustomEndpoint, func(v string) { providerData.ValkeyCustomEndpoint = v })
 	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
@@ -771,6 +780,8 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		telemetryRouterInstance.NewTelemetryRouterInstanceDataSource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationDataSource,
 		telemetryLink.NewTelemetryLinkDataSource,
+		valkeyInstance.NewInstanceDataSource,
+		valkeyCredential.NewCredentialDataSource,
 		vpnGateway.NewVPNGatewayDataSource,
 		vpnGatewayStatus.NewVPNGatewayStatusDataSource,
 		vpnConnection.NewVPNConnectionDataSource,
@@ -883,6 +894,8 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		telemetryRouterInstance.NewTelemetryRouterInstanceResource,
 		telemetryRouterDestination.NewTelemetryRouterDestinationResource,
 		telemetryLink.NewTelemetryLinkResource,
+		valkeyInstance.NewInstanceResource,
+		valkeyCredential.NewCredentialResource,
 		vpnConnection.NewVpnConnectionResource,
 		vpnGateway.NewGatewayResource,
 	}
