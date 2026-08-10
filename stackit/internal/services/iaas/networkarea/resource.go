@@ -13,14 +13,10 @@ import (
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -36,29 +32,12 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
-const (
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	defaultValueDefaultPrefixLength = 25
-
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	defaultValueMinPrefixLength = 24
-
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	defaultValueMaxPrefixLength = 29
-
-	// Deprecated: Will be removed in May 2026.
-	deprecationWarningSummary = "Migration to new `stackit_network_area_region` resource needed"
-	// Deprecated: Will be removed in May 2026.
-	deprecationWarningDetails = "You're using deprecated features of the `stackit_network_area` resource. These will be removed in May 2026. Migrate to the new `stackit_network_area_region` resource instead."
-)
-
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                   = &networkAreaResource{}
-	_ resource.ResourceWithConfigure      = &networkAreaResource{}
-	_ resource.ResourceWithImportState    = &networkAreaResource{}
-	_ resource.ResourceWithValidateConfig = &networkAreaResource{}
-	_ resource.ResourceWithModifyPlan     = &networkAreaResource{}
+	_ resource.Resource                = &networkAreaResource{}
+	_ resource.ResourceWithConfigure   = &networkAreaResource{}
+	_ resource.ResourceWithImportState = &networkAreaResource{}
+	_ resource.ResourceWithModifyPlan  = &networkAreaResource{}
 )
 
 type Model struct {
@@ -68,41 +47,6 @@ type Model struct {
 	Name           types.String `tfsdk:"name"`
 	ProjectCount   types.Int64  `tfsdk:"project_count"`
 	Labels         types.Map    `tfsdk:"labels"`
-
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	DefaultNameservers types.List `tfsdk:"default_nameservers"`
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	MaxPrefixLength types.Int64 `tfsdk:"max_prefix_length"`
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	NetworkRanges types.List `tfsdk:"network_ranges"`
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	TransferNetwork types.String `tfsdk:"transfer_network"`
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	DefaultPrefixLength types.Int64 `tfsdk:"default_prefix_length"`
-	// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	MinPrefixLength types.Int64 `tfsdk:"min_prefix_length"`
-}
-
-// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider. LegacyMode checks if any of the deprecated fields are set which now relate to the network area region API resource.
-func (model *Model) LegacyMode() bool {
-	return !model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown() ||
-		!model.TransferNetwork.IsNull() || model.TransferNetwork.IsUnknown() ||
-		!model.DefaultNameservers.IsNull() || model.DefaultNameservers.IsUnknown() ||
-		(model.DefaultPrefixLength != types.Int64Value(int64(defaultValueDefaultPrefixLength)) && model.DefaultPrefixLength.IsUnknown()) ||
-		(model.MinPrefixLength != types.Int64Value(int64(defaultValueMinPrefixLength)) && model.MinPrefixLength.IsUnknown()) ||
-		(model.MaxPrefixLength != types.Int64Value(int64(defaultValueMaxPrefixLength)) && model.MaxPrefixLength.IsUnknown())
-}
-
-// Struct corresponding to Model.NetworkRanges[i]
-type networkRange struct {
-	Prefix         types.String `tfsdk:"prefix"`
-	NetworkRangeId types.String `tfsdk:"network_range_id"`
-}
-
-// Types corresponding to networkRanges
-var networkRangeTypes = map[string]attr.Type{
-	"prefix":           types.StringType,
-	"network_range_id": types.StringType,
 }
 
 // NewNetworkAreaResource is a helper function to simplify the provider implementation.
@@ -117,34 +61,25 @@ type networkAreaResource struct {
 }
 
 func (r *networkAreaResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	// If the resource is being created, do nothing.
-	if req.State.Raw.IsNull() {
+	var configModel Model
+	// skip initial empty configuration to avoid follow-up errors
+	if req.Config.Raw.IsNull() {
+		return
+	}
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state, plan Model
-	req.State.Get(ctx, &state)
-	req.Plan.Get(ctx, &plan)
-
-	// Check if transferNetwork was set before and is changed to a different value
-	if !plan.TransferNetwork.IsNull() && !state.TransferNetwork.IsNull() &&
-		plan.TransferNetwork.ValueString() != state.TransferNetwork.ValueString() {
-		// Trigger replace
-		resp.RequiresReplace.Append(path.Root("transfer_network"))
+	var planModel Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	// Check if no transferNetwork was set before and transferNetwork is added now
-	if !plan.TransferNetwork.IsNull() && state.TransferNetwork.IsNull() {
-		// Trigger replace
-		resp.RequiresReplace.Append(path.Root("transfer_network"))
-	}
-
-	// Check if deprecated fields were set before and are now removed
-	if !state.TransferNetwork.IsNull() && !state.NetworkRanges.IsNull() && plan.TransferNetwork.IsNull() && plan.NetworkRanges.IsNull() {
-		resp.Diagnostics.AddWarning("Deprecated fields removed",
-			fmt.Sprintf("You are removing deprecated fields from this resource. They will only be removed from the terraform state.\n"+
-				"For a complete migration, please import `stackit_network_area_region` with the ID `%s,eu01`.\n"+
-				"If you don't import the resource, you may run into issues.", state.Id.ValueString()))
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -173,26 +108,8 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 	tflog.Info(ctx, "IaaS client configured")
 }
 
-// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-func (r *networkAreaResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var resourceModel Model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &resourceModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if resourceModel.NetworkRanges.IsNull() != resourceModel.TransferNetwork.IsNull() {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network network area", "You have to either provide both the `network_ranges` and `transfer_network` fields simultaneously or none of them.")
-	}
-
-	if (resourceModel.NetworkRanges.IsNull() || resourceModel.TransferNetwork.IsNull()) && (!resourceModel.DefaultNameservers.IsNull() || !resourceModel.DefaultPrefixLength.IsNull() || !resourceModel.MinPrefixLength.IsNull() || !resourceModel.MaxPrefixLength.IsNull()) {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring network network area", "You have to provide both the `network_ranges` and `transfer_network` fields when providing one of these fields: `default_nameservers`, `default_prefix_length`, `max_prefix_length`, `min_prefix_length`")
-	}
-}
-
 // Schema defines the schema for the resource.
 func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	deprecationMsg := "Deprecated because of the IaaS API v1 -> v2 migration. Will be removed in May 2026. Use the new `stackit_network_area_region` resource instead."
 	description := "Network area resource schema.\n\n" +
 		"This resource is for SNA, not VPC, networks."
 	resp.Schema = schema.Schema{
@@ -243,82 +160,6 @@ func (r *networkAreaResource) Schema(_ context.Context, _ resource.SchemaRequest
 					int64validator.AtLeast(0),
 				},
 			},
-			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			"default_nameservers": schema.ListAttribute{
-				Description:        "List of DNS Servers/Nameservers for configuration of network area for region `eu01`.",
-				DeprecationMessage: deprecationMsg,
-				Optional:           true,
-				ElementType:        types.StringType,
-			},
-			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			"network_ranges": schema.ListNestedAttribute{
-				Description:        "List of Network ranges for configuration of network area for region `eu01`.",
-				DeprecationMessage: deprecationMsg,
-				Optional:           true,
-				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
-					listvalidator.SizeAtMost(64),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"network_range_id": schema.StringAttribute{
-							DeprecationMessage: deprecationMsg,
-							Computed:           true,
-							Validators: []validator.String{
-								validate.UUID(),
-								validate.NoSeparator(),
-							},
-						},
-						"prefix": schema.StringAttribute{
-							DeprecationMessage: deprecationMsg,
-							Description:        "Classless Inter-Domain Routing (CIDR).",
-							Required:           true,
-						},
-					},
-				},
-			},
-			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			"transfer_network": schema.StringAttribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "Classless Inter-Domain Routing (CIDR) for configuration of network area for region `eu01`.",
-				Optional:           true,
-			},
-			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			"default_prefix_length": schema.Int64Attribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "The default prefix length for networks in the network area for region `eu01`.",
-				Optional:           true,
-				Computed:           true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(24),
-					int64validator.AtMost(29),
-				},
-				Default: int64default.StaticInt64(defaultValueDefaultPrefixLength),
-			},
-			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			"max_prefix_length": schema.Int64Attribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "The maximal prefix length for networks in the network area for region `eu01`.",
-				Optional:           true,
-				Computed:           true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(24),
-					int64validator.AtMost(29),
-				},
-				Default: int64default.StaticInt64(defaultValueMaxPrefixLength),
-			},
-			// Deprecated: Will be removed in May 2026. Only kept to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			"min_prefix_length": schema.Int64Attribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "The minimal prefix length for networks in the network area for region `eu01`.",
-				Optional:           true,
-				Computed:           true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(8),
-					int64validator.AtMost(29),
-				},
-				Default: int64default.StaticInt64(defaultValueMinPrefixLength),
-			},
 			"labels": schema.MapAttribute{
 				Description: "Labels are key-value string pairs which can be attached to a resource container",
 				ElementType: types.StringType,
@@ -362,69 +203,11 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	networkAreaId := *networkArea.Id
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	// persist state - just in case anything goes wrong while creating the network area region
-	ctx = utils.SetAndLogStateFields(ctx, &resp.Diagnostics, &resp.State, map[string]any{
-		"organization_id": model.OrganizationId.ValueString(),
-		"network_area_id": networkAreaId,
-	})
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	// Map response body to schema
 	err = mapFields(ctx, networkArea, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Processing API payload: %v", err))
 		return
-	}
-
-	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	if model.LegacyMode() {
-		core.LogAndAddWarning(ctx, &resp.Diagnostics, deprecationWarningSummary, deprecationWarningDetails)
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		regionCreatePayload, err := toRegionCreatePayload(ctx, &model)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Creating API payload: %v", err))
-			return
-		}
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionCreateResp, err := r.client.DefaultAPI.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").CreateNetworkAreaRegionPayload(*regionCreatePayload).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		err = mapNetworkAreaRegionFields(ctx, networkAreaRegionCreateResp, &model) // map partial state - just in case anything goes wrong during the wait handler
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Processing API payload: %v", err))
-			return
-		}
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionResp, err := wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, "eu01").WaitWithContext(ctx)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for network area region creation", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		err = mapNetworkAreaRegionFields(ctx, networkAreaRegionResp, &model)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Processing API payload: %v", err))
-			return
-		}
-	} else {
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-		model.DefaultNameservers = types.ListNull(types.StringType)
-		model.TransferNetwork = types.StringNull()
-		model.DefaultPrefixLength = types.Int64Value(defaultValueDefaultPrefixLength)
-		model.MinPrefixLength = types.Int64Value(defaultValueMinPrefixLength)
-		model.MaxPrefixLength = types.Int64Value(defaultValueMaxPrefixLength)
 	}
 
 	// Set state to fully populated data
@@ -476,43 +259,6 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 
-	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	if model.LegacyMode() {
-		core.LogAndAddWarning(ctx, &resp.Diagnostics, deprecationWarningSummary, deprecationWarningDetails)
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionResp, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
-		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			if !(errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest)) { // TODO: iaas api returns http 400 in case network area region is not found
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
-				return
-			}
-
-			model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-			model.DefaultNameservers = types.ListNull(types.StringType)
-			model.TransferNetwork = types.StringNull()
-			model.DefaultPrefixLength = types.Int64Value(defaultValueDefaultPrefixLength)
-			model.MinPrefixLength = types.Int64Value(defaultValueMinPrefixLength)
-			model.MaxPrefixLength = types.Int64Value(defaultValueMaxPrefixLength)
-		} else {
-			// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-			err = mapNetworkAreaRegionFields(ctx, networkAreaRegionResp, &model)
-			if err != nil {
-				core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Processing API payload: %v", err))
-				return
-			}
-		}
-	} else {
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-		model.DefaultNameservers = types.ListNull(types.StringType)
-		model.TransferNetwork = types.StringNull()
-		model.DefaultPrefixLength = types.Int64Value(defaultValueDefaultPrefixLength)
-		model.MinPrefixLength = types.Int64Value(defaultValueMinPrefixLength)
-		model.MaxPrefixLength = types.Int64Value(defaultValueMaxPrefixLength)
-	}
-
 	// Set refreshed state
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
 	if resp.Diagnostics.HasError() {
@@ -537,14 +283,6 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
-
-	ranges := []networkRange{}
-	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
-		resp.Diagnostics.Append(model.NetworkRanges.ElementsAs(ctx, &ranges, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
 
 	// Retrieve values from state
 	var stateModel Model
@@ -572,65 +310,6 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Processing API payload: %v", err))
 		return
-	}
-
-	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	if model.LegacyMode() {
-		core.LogAndAddWarning(ctx, &resp.Diagnostics, deprecationWarningSummary, deprecationWarningDetails)
-
-		// Deprecated: Update network area region payload creation. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		regionUpdatePayload, err := toRegionUpdatePayload(ctx, &model)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Creating API payload: %v", err))
-			return
-		}
-
-		// Deprecated: Update network area region. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionUpdateResp, err := r.client.DefaultAPI.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").UpdateNetworkAreaRegionPayload(*regionUpdatePayload).Execute()
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
-
-		// Deprecated: Update network area region. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		err = mapNetworkAreaRegionFields(ctx, networkAreaRegionUpdateResp, &model)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Processing API payload: %v", err))
-			return
-		}
-
-		// Deprecated: Update network ranges. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		err = updateNetworkRanges(ctx, organizationId, networkAreaId, ranges, r.client.DefaultAPI)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Updating Network ranges: %v", err))
-			return
-		}
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionResp, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
-		if err != nil {
-			var oapiErr *oapierror.GenericOpenAPIError
-			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
-				return
-			}
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
-
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		err = mapNetworkAreaRegionFields(ctx, networkAreaRegionResp, &model)
-		if err != nil {
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Processing API payload: %v", err))
-			return
-		}
-	} else {
-		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-		model.DefaultNameservers = types.ListNull(types.StringType)
-		model.TransferNetwork = types.StringNull()
-		model.DefaultPrefixLength = types.Int64Value(defaultValueDefaultPrefixLength)
-		model.MinPrefixLength = types.Int64Value(defaultValueMinPrefixLength)
-		model.MaxPrefixLength = types.Int64Value(defaultValueMaxPrefixLength)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, model)...)
@@ -772,122 +451,6 @@ func mapFields(ctx context.Context, networkAreaResp *iaas.NetworkArea, model *Mo
 	return nil
 }
 
-// Deprecated: mapRegionFields maps the region configuration for eu01 to avoid a breaking change in the Terraform provider during the IaaS v1 -> v2 API migration. Will be removed in May 2026.
-func mapNetworkAreaRegionFields(ctx context.Context, networkAreaRegionResp *iaas.RegionalArea, model *Model) error {
-	if model == nil {
-		return fmt.Errorf("model input is nil")
-	}
-	if networkAreaRegionResp == nil {
-		return fmt.Errorf("response input is nil")
-	}
-
-	// map default nameservers
-	if networkAreaRegionResp.Ipv4 == nil || networkAreaRegionResp.Ipv4.DefaultNameservers == nil {
-		model.DefaultNameservers = types.ListNull(types.StringType)
-	} else {
-		respDefaultNameservers := networkAreaRegionResp.Ipv4.DefaultNameservers
-		modelDefaultNameservers, err := utils.ListValueToStringSlice(model.DefaultNameservers)
-		if err != nil {
-			return fmt.Errorf("get current network area default nameservers from model: %w", err)
-		}
-
-		reconciledDefaultNameservers := utils.ReconcileStringSlices(modelDefaultNameservers, respDefaultNameservers)
-
-		defaultNameserversTF, diags := types.ListValueFrom(ctx, types.StringType, reconciledDefaultNameservers)
-		if diags.HasError() {
-			return fmt.Errorf("map network area default nameservers: %w", core.DiagsToError(diags))
-		}
-
-		model.DefaultNameservers = defaultNameserversTF
-	}
-
-	// map network ranges
-	if networkAreaRegionResp.Ipv4 == nil || networkAreaRegionResp.Ipv4.NetworkRanges == nil {
-		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-	} else {
-		err := mapNetworkRanges(ctx, networkAreaRegionResp.Ipv4.NetworkRanges, model)
-		if err != nil {
-			return fmt.Errorf("mapping network ranges: %w", err)
-		}
-	}
-
-	// map remaining fields
-	if networkAreaRegionResp.Ipv4 != nil {
-		model.TransferNetwork = types.StringValue(networkAreaRegionResp.Ipv4.TransferNetwork)
-		model.DefaultPrefixLength = types.Int64Value(networkAreaRegionResp.Ipv4.DefaultPrefixLen)
-		model.MaxPrefixLength = types.Int64Value(networkAreaRegionResp.Ipv4.MaxPrefixLen)
-		model.MinPrefixLength = types.Int64Value(networkAreaRegionResp.Ipv4.MinPrefixLen)
-	}
-
-	return nil
-}
-
-// Deprecated: mapNetworkRanges will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only kept to circumvent breaking changes.
-func mapNetworkRanges(ctx context.Context, networkAreaRangesList []iaas.NetworkRange, model *Model) error {
-	var diags diag.Diagnostics
-
-	if networkAreaRangesList == nil {
-		return fmt.Errorf("nil network area ranges list")
-	}
-	if len(networkAreaRangesList) == 0 {
-		model.NetworkRanges = types.ListNull(types.ObjectType{AttrTypes: networkRangeTypes})
-		return nil
-	}
-
-	ranges := []networkRange{}
-	if !(model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown()) {
-		diags = model.NetworkRanges.ElementsAs(ctx, &ranges, false)
-		if diags.HasError() {
-			return fmt.Errorf("map network ranges: %w", core.DiagsToError(diags))
-		}
-	}
-
-	modelNetworkRangePrefixes := []string{}
-	for _, m := range ranges {
-		modelNetworkRangePrefixes = append(modelNetworkRangePrefixes, m.Prefix.ValueString())
-	}
-
-	apiNetworkRangePrefixes := []string{}
-	for _, n := range networkAreaRangesList {
-		apiNetworkRangePrefixes = append(apiNetworkRangePrefixes, n.Prefix)
-	}
-
-	reconciledRangePrefixes := utils.ReconcileStringSlices(modelNetworkRangePrefixes, apiNetworkRangePrefixes)
-
-	networkRangesList := []attr.Value{}
-	for i, prefix := range reconciledRangePrefixes {
-		var networkRangeId string
-		for _, networkRangeElement := range networkAreaRangesList {
-			if networkRangeElement.Prefix == prefix {
-				networkRangeId = *networkRangeElement.Id
-				break
-			}
-		}
-		networkRangeMap := map[string]attr.Value{
-			"prefix":           types.StringValue(prefix),
-			"network_range_id": types.StringValue(networkRangeId),
-		}
-
-		networkRangeTF, diags := types.ObjectValue(networkRangeTypes, networkRangeMap)
-		if diags.HasError() {
-			return fmt.Errorf("mapping index %d: %w", i, core.DiagsToError(diags))
-		}
-
-		networkRangesList = append(networkRangesList, networkRangeTF)
-	}
-
-	networkRangesTF, diags := types.ListValue(
-		types.ObjectType{AttrTypes: networkRangeTypes},
-		networkRangesList,
-	)
-	if diags.HasError() {
-		return core.DiagsToError(diags)
-	}
-
-	model.NetworkRanges = networkRangesTF
-	return nil
-}
-
 func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkAreaPayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
@@ -901,34 +464,6 @@ func toCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkArea
 	return &iaas.CreateNetworkAreaPayload{
 		Name:   model.Name.ValueString(),
 		Labels: labels,
-	}, nil
-}
-
-// Deprecated: toRegionCreatePayload will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only introduced to circumvent breaking changes.
-func toRegionCreatePayload(ctx context.Context, model *Model) (*iaas.CreateNetworkAreaRegionPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
-	}
-
-	modelDefaultNameservers, err := toDefaultNameserversPayload(ctx, model)
-	if err != nil {
-		return nil, fmt.Errorf("converting default nameservers: %w", err)
-	}
-
-	networkRangesPayload, err := toNetworkRangesPayload(ctx, model)
-	if err != nil {
-		return nil, fmt.Errorf("converting network ranges: %w", err)
-	}
-
-	return &iaas.CreateNetworkAreaRegionPayload{
-		Ipv4: &iaas.RegionalAreaIPv4{
-			DefaultNameservers: modelDefaultNameservers,
-			DefaultPrefixLen:   model.DefaultPrefixLength.ValueInt64(),
-			MaxPrefixLen:       model.MaxPrefixLength.ValueInt64(),
-			MinPrefixLen:       model.MinPrefixLength.ValueInt64(),
-			TransferNetwork:    model.TransferNetwork.ValueString(),
-			NetworkRanges:      networkRangesPayload,
-		},
 	}, nil
 }
 
@@ -946,127 +481,4 @@ func toUpdatePayload(ctx context.Context, model *Model, currentLabels types.Map)
 		Name:   conversion.StringValueToPointer(model.Name),
 		Labels: labels,
 	}, nil
-}
-
-// Deprecated: toRegionUpdatePayload will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only introduced to circumvent breaking changes.
-func toRegionUpdatePayload(ctx context.Context, model *Model) (*iaas.UpdateNetworkAreaRegionPayload, error) {
-	if model == nil {
-		return nil, fmt.Errorf("nil model")
-	}
-
-	modelDefaultNameservers, err := toDefaultNameserversPayload(ctx, model)
-	if err != nil {
-		return nil, fmt.Errorf("converting default nameservers: %w", err)
-	}
-
-	return &iaas.UpdateNetworkAreaRegionPayload{
-		Ipv4: &iaas.UpdateRegionalAreaIPv4{
-			DefaultNameservers: modelDefaultNameservers,
-			DefaultPrefixLen:   conversion.Int64ValueToPointer(model.DefaultPrefixLength),
-			MaxPrefixLen:       conversion.Int64ValueToPointer(model.MaxPrefixLength),
-			MinPrefixLen:       conversion.Int64ValueToPointer(model.MinPrefixLength),
-		},
-	}, nil
-}
-
-// Deprecated: toDefaultNameserversPayload will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only introduced to circumvent breaking changes.
-func toDefaultNameserversPayload(_ context.Context, model *Model) ([]string, error) {
-	modelDefaultNameservers := []string{}
-	for _, ns := range model.DefaultNameservers.Elements() {
-		nameserverString, ok := ns.(types.String)
-		if !ok {
-			return nil, fmt.Errorf("type assertion failed")
-		}
-		modelDefaultNameservers = append(modelDefaultNameservers, nameserverString.ValueString())
-	}
-
-	return modelDefaultNameservers, nil
-}
-
-// Deprecated: toNetworkRangesPayload will be removed in May 2026. Implementation won't be needed anymore because of the IaaS API v1 -> v2 migration. Func was only introduced to circumvent breaking changes.
-func toNetworkRangesPayload(ctx context.Context, model *Model) ([]iaas.NetworkRange, error) {
-	if model.NetworkRanges.IsNull() || model.NetworkRanges.IsUnknown() {
-		return nil, nil
-	}
-
-	networkRangesModel := []networkRange{}
-	diags := model.NetworkRanges.ElementsAs(ctx, &networkRangesModel, false)
-	if diags.HasError() {
-		return nil, core.DiagsToError(diags)
-	}
-
-	if len(networkRangesModel) == 0 {
-		return nil, nil
-	}
-
-	payload := []iaas.NetworkRange{}
-	for i := range networkRangesModel {
-		networkRangeModel := networkRangesModel[i]
-		payload = append(payload, iaas.NetworkRange{
-			Prefix: networkRangeModel.Prefix.ValueString(),
-		})
-	}
-
-	return payload, nil
-}
-
-// Deprecated: updateNetworkRanges creates and deletes network ranges so that network area ranges are the ones in the model. This was only kept to make the v1 -> v2 IaaS API migration non-breaking in the Terraform provider.
-func updateNetworkRanges(ctx context.Context, organizationId, networkAreaId string, ranges []networkRange, client iaas.DefaultAPI) error {
-	// Get network ranges current state
-	currentNetworkRangesResp, err := client.ListNetworkAreaRanges(ctx, organizationId, networkAreaId, "eu01").Execute()
-	if err != nil {
-		return fmt.Errorf("error reading network area ranges: %w", err)
-	}
-
-	type networkRangeState struct {
-		isInModel bool
-		isCreated bool
-		id        string
-	}
-
-	networkRangesState := make(map[string]*networkRangeState)
-	for _, nwRange := range ranges {
-		networkRangesState[nwRange.Prefix.ValueString()] = &networkRangeState{
-			isInModel: true,
-		}
-	}
-
-	for _, networkRange := range currentNetworkRangesResp.Items {
-		prefix := networkRange.Prefix
-		if _, ok := networkRangesState[prefix]; !ok {
-			networkRangesState[prefix] = &networkRangeState{}
-		}
-		networkRangesState[prefix].isCreated = true
-		networkRangesState[prefix].id = *networkRange.Id
-	}
-
-	// Delete network ranges
-	for prefix, state := range networkRangesState {
-		if !state.isInModel && state.isCreated {
-			err := client.DeleteNetworkAreaRange(ctx, organizationId, networkAreaId, "eu01", state.id).Execute()
-			if err != nil {
-				return fmt.Errorf("deleting network area range '%v': %w", prefix, err)
-			}
-		}
-	}
-
-	// Create network ranges
-	for prefix, state := range networkRangesState {
-		if state.isInModel && !state.isCreated {
-			payload := iaas.CreateNetworkAreaRangePayload{
-				Ipv4: []iaas.NetworkRange{
-					{
-						Prefix: prefix,
-					},
-				},
-			}
-
-			_, err := client.CreateNetworkAreaRange(ctx, organizationId, networkAreaId, "eu01").CreateNetworkAreaRangePayload(payload).Execute()
-			if err != nil {
-				return fmt.Errorf("creating network range '%v': %w", prefix, err)
-			}
-		}
-	}
-
-	return nil
 }
