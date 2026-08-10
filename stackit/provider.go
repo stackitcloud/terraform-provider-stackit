@@ -130,6 +130,7 @@ import (
 	skeKubernetesVersion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/kubernetesversions"
 	skeMachineImages "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/provideroptions/machineimages"
 	sqlServerFlexDatabase "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/database"
+	sqlServerFlexFlavors "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/flavors"
 	sqlServerFlexInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/instance"
 	sqlServerFlexUser "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/user"
 	telemetryLink "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/link"
@@ -746,6 +747,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		sqlServerFlexDatabase.NewDatabaseDataSource,
 		sqlServerFlexInstance.NewInstanceDataSource,
 		sqlServerFlexUser.NewUserDataSource,
+		sqlServerFlexFlavors.NewFlavorsDataSource,
 		serverBackupSchedule.NewScheduleDataSource,
 		serverBackupSchedule.NewSchedulesDataSource,
 		serverUpdateSchedule.NewScheduleDataSource,

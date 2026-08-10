@@ -37,12 +37,12 @@ data "stackit_postgresflex_instance" "example" {
 - `backup_schedule` (String) The schedule for on what time and how often the database backup will be created. Must be a valid cron expression using numeric minute and hour values, e.g: '0 2 * * *'.
 - `connection_info` (Attributes) The connection info for the PostgresFlex instance. (see [below for nested schema](#nestedatt--connection_info))
 - `encryption` (Attributes) (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
+- `flavor` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--flavor))
 - `flavor_id` (String)
 - `id` (String) Terraform's internal data source. ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `name` (String) Instance name.
 - `network` (Attributes) (see [below for nested schema](#nestedatt--network))
-- `replicas` (Number)
+- `replicas` (Number, Deprecated)
 - `retention_days` (Number)
 - `storage` (Attributes) (see [below for nested schema](#nestedatt--storage))
 - `version` (String)
