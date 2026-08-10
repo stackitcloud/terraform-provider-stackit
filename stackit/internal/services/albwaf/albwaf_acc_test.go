@@ -692,8 +692,10 @@ func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 			continue
 		}
 		// custom rule group transform id: "[projectId],[region],[name]"
-		name := strings.Split(rs.Primary.ID, core.Separator)[2]
-		customRuleGroupsToDestroy = append(customRuleGroupsToDestroy, name)
+		terraformId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(terraformId) == 3 {
+			customRuleGroupsToDestroy = append(customRuleGroupsToDestroy, terraformId[2])
+		}
 	}
 
 	resp, err := client.DefaultAPI.ListCustomRuleGroup(ctx, testutil.ProjectId, testutil.Region).Execute()
@@ -725,8 +727,10 @@ func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 			continue
 		}
 		// managed rule set transform id: "[projectId],[region],[name]"
-		name := strings.Split(rs.Primary.ID, core.Separator)[2]
-		managedRuleSetsToDestroy = append(managedRuleSetsToDestroy, name)
+		terraformId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(terraformId) == 3 {
+			managedRuleSetsToDestroy = append(managedRuleSetsToDestroy, terraformId[2])
+		}
 	}
 
 	resp, err := client.DefaultAPI.ListManagedRuleSets(ctx, testutil.ProjectId, testutil.Region).Execute()
@@ -758,11 +762,13 @@ func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
 			continue
 		}
 		// waf configuration transform id: "[projectId],[region],[name]"
-		name := strings.Split(rs.Primary.ID, core.Separator)[2]
-		wafConfigurationToDestroy = append(wafConfigurationToDestroy, name)
+		terraformId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(terraformId) == 3 {
+			wafConfigurationToDestroy = append(wafConfigurationToDestroy, terraformId[2])
+		}
 	}
 
-	resp, err := client.DefaultAPI.ListWAF(ctx, testutil.ProjectId, testutil.Region).Execute()
+	resp, err := client.DefaultAPI.ListWAF(ctx, testutil.ProjectId, testutil.Region).PageSize("1000").Execute()
 	if err != nil {
 		return fmt.Errorf("getting resp: %w", err)
 	}
