@@ -200,7 +200,7 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 					stringvalidator.LengthBetween(1, 32),
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
-						"must start with an alphanumeric character and contain only alphanumeric characters, spaces, and hyphens",
+						"The display name must start with an alphanumeric character and can contain only letters, numbers, spaces, and hyphens.",
 					),
 				},
 			},
