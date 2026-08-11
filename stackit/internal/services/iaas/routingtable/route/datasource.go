@@ -10,11 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -24,13 +25,17 @@ var (
 )
 
 // NewRoutingTableRouteDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTableRouteDataSource() datasource.DataSource {
-	return &routingTableRouteDataSource{}
+func NewRoutingTableRouteDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &routingTableRouteDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // routingTableRouteDataSource is the data source implementation.
 type routingTableRouteDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -51,11 +56,11 @@ func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasou
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -92,7 +97,7 @@ func (d *routingTableRouteDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	routeResp, err := d.client.DefaultAPI.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
+	routeResp, err := d.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, err.Error(), err.Error())
 		utils.LogError(

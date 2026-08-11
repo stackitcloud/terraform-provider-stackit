@@ -7,8 +7,7 @@ import (
 
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -16,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -38,13 +39,17 @@ type DataSourceModelTables struct {
 }
 
 // NewRoutingTablesDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTablesDataSource() datasource.DataSource {
-	return &routingTablesDataSource{}
+func NewRoutingTablesDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &routingTablesDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // routingTableDataSource is the data source implementation.
 type routingTablesDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -65,11 +70,11 @@ func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -135,7 +140,7 @@ func (d *routingTablesDataSource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTablesResp, err := d.client.DefaultAPI.ListRoutingTablesOfArea(ctx, organizationId, networkAreaId, region).Execute()
+	routingTablesResp, err := d.client.ListRoutingTablesOfArea(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -45,13 +46,17 @@ type DataSourceModel struct {
 }
 
 // NewImageDataSource is a helper function to simplify the provider implementation.
-func NewImageDataSource() datasource.DataSource {
-	return &imageDataSource{}
+func NewImageDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &imageDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // imageDataSource is the data source implementation.
 type imageDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -67,11 +72,11 @@ func (d *imageDataSource) Configure(ctx context.Context, req datasource.Configur
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -231,7 +236,7 @@ func (d *imageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "image_id", imageId)
 
-	imageResp, err := d.client.DefaultAPI.GetImage(ctx, projectId, region, imageId).Execute()
+	imageResp, err := d.client.GetImage(ctx, projectId, region, imageId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

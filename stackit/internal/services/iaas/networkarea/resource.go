@@ -9,6 +9,8 @@ import (
 
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
@@ -106,13 +108,17 @@ var networkRangeTypes = map[string]attr.Type{
 }
 
 // NewNetworkAreaResource is a helper function to simplify the provider implementation.
-func NewNetworkAreaResource() resource.Resource {
-	return &networkAreaResource{}
+func NewNetworkAreaResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &networkAreaResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkResource is the resource implementation.
 type networkAreaResource struct {
-	client                *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client                iaas.DefaultAPI
 	resourceManagerClient *resourcemanager.APIClient
 }
 
@@ -160,7 +166,7 @@ func (r *networkAreaResource) Configure(ctx context.Context, req resource.Config
 		return
 	}
 
-	r.client = iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -351,7 +357,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	// Create new network area
-	networkArea, err := r.client.DefaultAPI.CreateNetworkArea(ctx, organizationId).CreateNetworkAreaPayload(*payload).Execute()
+	networkArea, err := r.client.CreateNetworkArea(ctx, organizationId).CreateNetworkAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -391,7 +397,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionCreateResp, err := r.client.DefaultAPI.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").CreateNetworkAreaRegionPayload(*regionCreatePayload).Execute()
+		networkAreaRegionCreateResp, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").CreateNetworkAreaRegionPayload(*regionCreatePayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -405,7 +411,7 @@ func (r *networkAreaResource) Create(ctx context.Context, req resource.CreateReq
 		}
 
 		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionResp, err := wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, "eu01").WaitWithContext(ctx)
+		networkAreaRegionResp, err := wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, "eu01").WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error waiting for network area region creation", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -456,7 +462,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	networkAreaResp, err := r.client.DefaultAPI.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	networkAreaResp, err := r.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -481,7 +487,7 @@ func (r *networkAreaResource) Read(ctx context.Context, req resource.ReadRequest
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, deprecationWarningSummary, deprecationWarningDetails)
 
 		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionResp, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
+		networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if !(errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest)) { // TODO: iaas api returns http 400 in case network area region is not found
@@ -560,7 +566,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 	// Update existing network
-	networkAreaUpdateResp, err := r.client.DefaultAPI.PartialUpdateNetworkArea(ctx, organizationId, networkAreaId).PartialUpdateNetworkAreaPayload(*payload).Execute()
+	networkAreaUpdateResp, err := r.client.PartialUpdateNetworkArea(ctx, organizationId, networkAreaId).PartialUpdateNetworkAreaPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -586,7 +592,7 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 
 		// Deprecated: Update network area region. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionUpdateResp, err := r.client.DefaultAPI.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").UpdateNetworkAreaRegionPayload(*regionUpdatePayload).Execute()
+		networkAreaRegionUpdateResp, err := r.client.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").UpdateNetworkAreaRegionPayload(*regionUpdatePayload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -600,14 +606,14 @@ func (r *networkAreaResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 
 		// Deprecated: Update network ranges. Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		err = updateNetworkRanges(ctx, organizationId, networkAreaId, ranges, r.client.DefaultAPI)
+		err = updateNetworkRanges(ctx, organizationId, networkAreaId, ranges, r.client)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Updating Network ranges: %v", err))
 			return
 		}
 
 		// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-		networkAreaRegionResp, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
+		networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
@@ -658,7 +664,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client.DefaultAPI, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -670,7 +676,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Get all configured regions so we can delete them one by one before deleting the network area
-	regionsListResp, err := r.client.DefaultAPI.ListNetworkAreaRegions(ctx, organizationId, networkAreaId).Execute()
+	regionsListResp, err := r.client.ListNetworkAreaRegions(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -683,7 +689,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 
 	// Delete network region configurations
 	for region := range regionsListResp.Regions {
-		err = r.client.DefaultAPI.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+		err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 		if err != nil {
 			var oapiErr *oapierror.GenericOpenAPIError
 			if errors.As(err, &oapiErr) && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest) { // TODO: iaas api returns http 400 in case network area region is not found
@@ -693,7 +699,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 			return
 		}
 
-		_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, region).WaitWithContext(ctx)
+		_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Waiting for networea deletion: %v", err))
 			return
@@ -701,7 +707,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 
 	// Delete existing network area
-	err = r.client.DefaultAPI.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	err = r.client.DeleteNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
