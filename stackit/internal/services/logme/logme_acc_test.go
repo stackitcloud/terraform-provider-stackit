@@ -17,8 +17,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme/v1api/wait"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/v2api/wait"
 )
 
 var (
@@ -68,14 +68,10 @@ var testConfigVarsMax = config.Variables{
 	"params_metrics_frequency":        config.IntegerVariable(10),
 	"params_metrics_prefix":           config.StringVariable("actest"),
 	"params_monitoring_instance_id":   config.StringVariable(uuid.NewString()),
-	"params_opensearch_tls_ciphers":   config.StringVariable("TLS_DHE_RSA_WITH_AES_256_CBC_SHA,TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"),
-	"params_opensearch_tls_cipher1":   config.StringVariable("TLS_DHE_RSA_WITH_AES_256_CBC_SHA"),
-	"params_opensearch_tls_cipher2":   config.StringVariable("TLS_DHE_DSS_WITH_AES_128_CBC_SHA256"),
-	"params_opensearch_tls_protocol1": config.StringVariable("TLSv1.2"),
-	"params_opensearch_tls_protocol2": config.StringVariable("TLSv1.3"),
+	"params_opensearch_tls_ciphers":   config.ListVariable(config.StringVariable("TLS_DHE_RSA_WITH_AES_256_CBC_SHA"), config.StringVariable("TLS_DHE_DSS_WITH_AES_128_CBC_SHA256")),
+	"params_opensearch_tls_protocols": config.ListVariable(config.StringVariable("TLSv1.2"), config.StringVariable("TLSv1.3")),
 	"params_sgw_acl":                  config.StringVariable("192.168.0.0/16,192.168.0.0/24"),
-	"params_syslog1":                  config.StringVariable("syslog1.example.com:514"),
-	"params_syslog2":                  config.StringVariable("syslog2.example.com:514"),
+	"params_syslog":                   config.ListVariable(config.StringVariable("syslog1.example.com:514"), config.StringVariable("syslog2.example.com:514")),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -168,11 +164,15 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_instance.instance")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -186,6 +186,10 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credential")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -194,7 +198,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -251,16 +255,10 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["params_max_disk_threshold"])),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.metrics_frequency", testutil.ConvertConfigVariable(testConfigVarsMax["params_metrics_frequency"])),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(testConfigVarsMax["params_metrics_prefix"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_cipher1"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_cipher2"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.#", "2"),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_protocol1"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_protocol2"])),
+					testutil.CheckListAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers", testConfigVarsMax["params_opensearch_tls_ciphers"]),
+					testutil.CheckListAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols", testConfigVarsMax["params_opensearch_tls_protocols"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["params_sgw_acl"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.#", "2"),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_syslog1"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_syslog2"])),
+					testutil.CheckListAttr("stackit_logme_instance.instance", "parameters.syslog", testConfigVarsMax["params_syslog"]),
 
 					// Credential data
 					resource.TestCheckResourceAttrPair(
@@ -315,16 +313,10 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.max_disk_threshold", testutil.ConvertConfigVariable(testConfigVarsMax["params_max_disk_threshold"])),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.metrics_frequency", testutil.ConvertConfigVariable(testConfigVarsMax["params_metrics_frequency"])),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(testConfigVarsMax["params_metrics_prefix"])),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_cipher1"])),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_cipher2"])),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_protocol1"])),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_opensearch_tls_protocol2"])),
+					testutil.CheckListAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers", testConfigVarsMax["params_opensearch_tls_ciphers"]),
+					testutil.CheckListAttr("data.stackit_logme_instance.instance", "parameters.opensearch_tls_protocols", testConfigVarsMax["params_opensearch_tls_protocols"]),
 					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(testConfigVarsMax["params_sgw_acl"])),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.#", "2"),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(testConfigVarsMax["params_syslog1"])),
-					resource.TestCheckResourceAttr("data.stackit_logme_instance.instance", "parameters.syslog.1", testutil.ConvertConfigVariable(testConfigVarsMax["params_syslog2"])),
+					testutil.CheckListAttr("data.stackit_logme_instance.instance", "parameters.syslog", testConfigVarsMax["params_syslog"]),
 
 					// Credential data
 					resource.TestCheckResourceAttr("data.stackit_logme_credential.credential", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
@@ -345,11 +337,15 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_instance.instance")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -363,6 +359,10 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credential")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -371,7 +371,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -404,16 +404,10 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.max_disk_threshold", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_max_disk_threshold"])),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.metrics_frequency", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_metrics_frequency"])),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.metrics_prefix", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_metrics_prefix"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.#", "2"),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_opensearch_tls_cipher1"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers.1", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_opensearch_tls_cipher2"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.#", "2"),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_opensearch_tls_protocol1"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols.1", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_opensearch_tls_protocol2"])),
+					testutil.CheckListAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_ciphers", configVarsMaxUpdated()["params_opensearch_tls_ciphers"]),
+					testutil.CheckListAttr("stackit_logme_instance.instance", "parameters.opensearch_tls_protocols", configVarsMaxUpdated()["params_opensearch_tls_protocols"]),
 					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.sgw_acl", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_sgw_acl"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.#", "2"),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_syslog1"])),
-					resource.TestCheckResourceAttr("stackit_logme_instance.instance", "parameters.syslog.1", testutil.ConvertConfigVariable(configVarsMaxUpdated()["params_syslog2"])),
+					testutil.CheckListAttr("stackit_logme_instance.instance", "parameters.syslog", configVarsMaxUpdated()["params_syslog"]),
 				),
 			},
 			// Deletion is done by the framework implicitly
@@ -423,7 +417,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := logmeSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, true)...)
+	client, err := logmeSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -433,12 +427,12 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_logme_instance" {
 			continue
 		}
-		// instance terraform ID: "[project_id],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// instance terraform ID: "[project_id],[region],[instance_id]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -450,11 +444,11 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}

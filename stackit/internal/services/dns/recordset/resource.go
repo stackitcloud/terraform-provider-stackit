@@ -211,7 +211,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	waiterTimeout := wait.CreateRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout()
+	waiterTimeout := wait.CreateRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -347,7 +347,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	waiterTimeout := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout()
+	waiterTimeout := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -409,7 +409,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	waiterTimeout := wait.DeleteRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout()
+	waiterTimeout := wait.DeleteRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

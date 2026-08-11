@@ -16,14 +16,17 @@ SQLServer Flex instance resource schema. Must have a `region` specified in the p
 resource "stackit_sqlserverflex_instance" "example" {
   project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   name            = "example-instance"
-  acl             = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
-  backup_schedule = "00 00 * * *"
   flavor_id       = "4.16-Single"
+  backup_schedule = "0 0 * * *"
+  network = {
+    acl = ["XXX.XXX.XXX.X/XX", "XX.XXX.XX.X/XX"]
+  }
   storage = {
     class = "premium-perf2-stackit"
     size  = 5
   }
-  version = 2022
+  retention_days = 32
+  version        = "2022"
 }
 ```
 
@@ -39,8 +42,9 @@ resource "stackit_sqlserverflex_instance" "example" {
 
 - `acl` (List of String, Deprecated) The Access Control List (ACL) for the SQLServer Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *") Will be required in the future. Set a value to prevent breaking changes.
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `flavor_id` (String) The flavor ID of the SQLServer Flex instance.
+- `encryption` (Attributes) Parameter to define which key to use for storage encryption. (see [below for nested schema](#nestedatt--encryption))
+- `flavor` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String) The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.
 - `network` (Attributes) The network configuration of the instance. Will be required in the future. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--network))
 - `options` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--options))
 - `region` (String) The resource region. If not defined, the provider region is used.
@@ -54,6 +58,17 @@ resource "stackit_sqlserverflex_instance" "example" {
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`instance_id`".
 - `instance_id` (String) ID of the SQLServer Flex instance.
 - `replicas` (Number)
+
+<a id="nestedatt--encryption"></a>
+### Nested Schema for `encryption`
+
+Required:
+
+- `kek_key_id` (String) UUID of the key within the STACKIT-KMS to use for the encryption.
+- `kek_key_version` (String) Version of the key within the STACKIT-KMS to use for the encryption.
+- `kek_keyring_id` (String) UUID of the keyring where the key is located within the STACKTI-KMS.
+- `service_account` (String) Service-Account linked to the Key within the STACKIT-KMS.
+
 
 <a id="nestedatt--flavor"></a>
 ### Nested Schema for `flavor`
@@ -77,6 +92,11 @@ Optional:
 - `access_scope` (String) The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected. Possible values are: `PUBLIC`, `SNA`.
 - `acl` (List of String) List of IPV4 cidr.
 
+Read-Only:
+
+- `instance_address` (String) Address of this instance.
+- `router_address` (String) Address of the router.
+
 
 <a id="nestedatt--options"></a>
 ### Nested Schema for `options`
@@ -95,10 +115,7 @@ Read-Only:
 
 Optional:
 
-- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
-```bash
-stackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID
-``` Will be required in the future. Set a value to prevent breaking changes.
+- `class` (String) The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`. Will be required in the future. Set a value to prevent breaking changes.
 - `size` (Number) The storage size in Gigabytes. Will be required in the future. Set a value to prevent breaking changes.
 
 ## Import

@@ -69,7 +69,6 @@ resource "stackit_network_area" "example" {
 resource "stackit_network_area_region" "example" {
   organization_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
   network_area_id = stackit_network_area.example.network_area_id
-  region = "eu01"
   ipv4 = {
     transfer_network = "192.168.1.0/24"
     network_ranges = [

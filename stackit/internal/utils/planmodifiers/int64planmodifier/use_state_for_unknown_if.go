@@ -71,8 +71,8 @@ func (m useStateForUnknownIf) PlanModifyInt64(ctx context.Context, req planmodif
 	}
 }
 
-// Int64Changed sets UseStateForUnkown to true if the attribute's planned value matches the current state
-func Int64Changed(ctx context.Context, attributeName string, request planmodifier.Int64Request, response *UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
+// Int64Unchanged sets UseStateForUnkown to true if the attribute's planned value matches the current state
+func Int64Unchanged(ctx context.Context, attributeName string, request planmodifier.Int64Request, response *UseStateForUnknownFuncResponse) { // nolint:gocritic // function signature required by Terraform
 	dependencyPath := request.Path.ParentPath().AtName(attributeName)
 
 	var attributePlan types.Int64

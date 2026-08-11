@@ -27,11 +27,15 @@ resource "stackit_logme_credential" "example" {
 - `instance_id` (String) ID of the LogMe instance.
 - `project_id` (String) STACKIT Project ID to which the instance is associated.
 
+### Optional
+
+- `region` (String) The resource region. If not defined, the provider region is used.
+
 ### Read-Only
 
 - `credential_id` (String) The credential's ID.
 - `host` (String)
-- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`instance_id`,`credential_id`".
+- `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`credential_id`".
 - `password` (String, Sensitive)
 - `port` (Number)
 - `uri` (String, Sensitive)
@@ -47,6 +51,6 @@ In Terraform v1.5.0 and later, the [` + "`" + `import` + "`" + ` block](https://
 # Only use the import statement, if you want to import an existing logme credential
 import {
   to = stackit_logme_credential.import-example
-  id = "${var.project_id},${var.logme_instance_id},${var.logme_credentials_id}"
+  id = "${var.project_id},${var.region},${var.logme_instance_id},${var.logme_credentials_id}"
 }
 ```
