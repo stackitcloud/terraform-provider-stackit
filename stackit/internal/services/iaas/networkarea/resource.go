@@ -37,7 +37,6 @@ var (
 	_ resource.Resource                = &networkAreaResource{}
 	_ resource.ResourceWithConfigure   = &networkAreaResource{}
 	_ resource.ResourceWithImportState = &networkAreaResource{}
-	_ resource.ResourceWithModifyPlan  = &networkAreaResource{}
 )
 
 type Model struct {
@@ -58,29 +57,6 @@ func NewNetworkAreaResource() resource.Resource {
 type networkAreaResource struct {
 	client                *iaas.APIClient
 	resourceManagerClient *resourcemanager.APIClient
-}
-
-func (r *networkAreaResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
-	var configModel Model
-	// skip initial empty configuration to avoid follow-up errors
-	if req.Config.Raw.IsNull() {
-		return
-	}
-	resp.Diagnostics.Append(req.Config.Get(ctx, &configModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	var planModel Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &planModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, planModel)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 // Metadata returns the resource type name.
