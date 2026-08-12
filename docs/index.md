@@ -223,4 +223,5 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `telemetryrouter_custom_endpoint` (String) Custom endpoint for the Telemetry Router service
 - `token_custom_endpoint` (String) Custom endpoint for the token API, which is used to request access tokens when using the key flow
 - `use_oidc` (Boolean) Enables OIDC for Authentication. This can also be sourced from the `STACKIT_USE_OIDC` Environment Variable. Defaults to `false`.
+- `valkey_custom_endpoint` (String) Custom endpoint for the Key Value Store service
 - `vpn_custom_endpoint` (String) Custom endpoint for the VPN service
