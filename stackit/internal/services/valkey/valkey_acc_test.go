@@ -40,6 +40,7 @@ func parametersConfig(params map[string]string) string {
 		"maxmemory_samples",
 		"metrics_frequency",
 		"min_replicas_max_lag",
+		"min_replicas_to_write",
 		"syslog",
 	}
 	var parameters strings.Builder
@@ -116,7 +117,9 @@ func TestAccValkeyResource(t *testing.T) {
 					"metrics_frequency":       "10",
 					"metrics_prefix":          "prefix",
 					"min_replicas_max_lag":    "15",
+					"min_replicas_to_write":   "10",
 					"notify_keyspace_events":  "Ex",
+					"repl_backlog_size":       "1mb",
 					"syslog":                  `["syslog.example.com:123"]`,
 				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -144,7 +147,9 @@ func TestAccValkeyResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.metrics_frequency", "10"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.metrics_prefix", "prefix"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_max_lag", "15"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.min_replicas_to_write", "10"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.notify_keyspace_events", "Ex"),
+					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.repl_backlog_size", "1mb"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.syslog.#", "1"),
 					resource.TestCheckResourceAttr("stackit_valkey_instance.instance", "parameters.syslog.0", "syslog.example.com:123"),
 

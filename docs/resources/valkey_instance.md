@@ -70,10 +70,12 @@ Optional:
 - `maxmemory_policy` (String) The policy to handle the maximum memory (volatile-lru, noeviction, etc).
 - `maxmemory_samples` (Number) The maximum memory samples.
 - `metrics_frequency` (Number) The frequency in seconds at which metrics are emitted.
-- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key
+- `metrics_prefix` (String) The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.
 - `min_replicas_max_lag` (Number) The minimum replicas maximum lag.
+- `min_replicas_to_write` (Number) The amount of connected replicas that are required for the primary to accept write operations. It can be set to 0 to disable it.
 - `monitoring_instance_id` (String) The ID of the STACKIT monitoring instance.
 - `notify_keyspace_events` (String) The notify keyspace events.
+- `repl_backlog_size` (String) The replication backlog size for the cluster.
 - `sgw_acl` (String) Comma separated list of IP networks in CIDR notation which are allowed to access this instance.
 - `snapshot` (String) The snapshot configuration.
 - `syslog` (List of String) List of syslog servers to send logs to.

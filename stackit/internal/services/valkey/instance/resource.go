@@ -72,9 +72,11 @@ type parametersModel struct {
 	MaxmemorySamples      types.Int32  `tfsdk:"maxmemory_samples"`
 	MetricsFrequency      types.Int32  `tfsdk:"metrics_frequency"`
 	MetricsPrefix         types.String `tfsdk:"metrics_prefix"`
+	MinReplicasToWrite    types.Int32  `tfsdk:"min_replicas_to_write"`
 	MinReplicasMaxLag     types.Int32  `tfsdk:"min_replicas_max_lag"`
 	MonitoringInstanceId  types.String `tfsdk:"monitoring_instance_id"`
 	NotifyKeyspaceEvents  types.String `tfsdk:"notify_keyspace_events"`
+	ReplBacklogSize       types.String `tfsdk:"repl_backlog_size"`
 	Snapshot              types.String `tfsdk:"snapshot"`
 	Syslog                types.List   `tfsdk:"syslog"`
 }
@@ -95,9 +97,11 @@ var parametersTypes = map[string]attr.Type{
 	"maxmemory_samples":       basetypes.Int32Type{},
 	"metrics_frequency":       basetypes.Int32Type{},
 	"metrics_prefix":          basetypes.StringType{},
+	"min_replicas_to_write":   basetypes.Int32Type{},
 	"min_replicas_max_lag":    basetypes.Int32Type{},
 	"monitoring_instance_id":  basetypes.StringType{},
 	"notify_keyspace_events":  basetypes.StringType{},
+	"repl_backlog_size":       basetypes.StringType{},
 	"snapshot":                basetypes.StringType{},
 	"syslog":                  basetypes.ListType{ElemType: types.StringType},
 }
@@ -163,10 +167,12 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		"maxmemory_policy":        "The policy to handle the maximum memory (volatile-lru, noeviction, etc).",
 		"maxmemory_samples":       "The maximum memory samples.",
 		"metrics_frequency":       "The frequency in seconds at which metrics are emitted.",
-		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
+		"min_replicas_to_write":   "The amount of connected replicas that are required for the primary to accept write operations. It can be set to 0 to disable it.",
 		"min_replicas_max_lag":    "The minimum replicas maximum lag.",
 		"monitoring_instance_id":  "The ID of the STACKIT monitoring instance.",
 		"notify_keyspace_events":  "The notify keyspace events.",
+		"repl_backlog_size":       "The replication backlog size for the cluster.",
 		"snapshot":                "The snapshot configuration.",
 		"syslog":                  "List of syslog servers to send logs to.",
 	}
@@ -305,6 +311,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Optional:    true,
 						Computed:    true,
 					},
+					"min_replicas_to_write": schema.Int32Attribute{
+						Description: parametersDescriptions["min_replicas_to_write"],
+						Optional:    true,
+						Computed:    true,
+					},
 					"monitoring_instance_id": schema.StringAttribute{
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Optional:    true,
@@ -316,6 +327,11 @@ func (r *instanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 					},
 					"notify_keyspace_events": schema.StringAttribute{
 						Description: parametersDescriptions["notify_keyspace_events"],
+						Optional:    true,
+						Computed:    true,
+					},
+					"repl_backlog_size": schema.StringAttribute{
+						Description: parametersDescriptions["repl_backlog_size"],
 						Optional:    true,
 						Computed:    true,
 					},
@@ -710,6 +726,8 @@ func mapParameters(params map[string]any) (types.Object, error) {
 			"maxmemory_policy",
 			"maxmemory_samples",
 			"notify_keyspace_events",
+			"min_replicas_to_write",
+			"repl_backlog_size",
 		}
 		if slices.Contains(hyphenAttributes, attribute) {
 			alteredAttribute := strings.ReplaceAll(attribute, "_", "-")
@@ -857,9 +875,11 @@ func toInstanceParams(parameters *parametersModel) (*valkey.InstanceParameters, 
 	payloadParams.MaxmemorySamples = conversion.Int32ValueToPointer(parameters.MaxmemorySamples)
 	payloadParams.MetricsFrequency = conversion.Int32ValueToPointer(parameters.MetricsFrequency)
 	payloadParams.MetricsPrefix = conversion.StringValueToPointer(parameters.MetricsPrefix)
+	payloadParams.MinReplicasToWrite = conversion.Int32ValueToPointer(parameters.MinReplicasToWrite)
 	payloadParams.MinReplicasMaxLag = conversion.Int32ValueToPointer(parameters.MinReplicasMaxLag)
 	payloadParams.MonitoringInstanceId = conversion.StringValueToPointer(parameters.MonitoringInstanceId)
 	payloadParams.NotifyKeyspaceEvents = conversion.StringValueToPointer(parameters.NotifyKeyspaceEvents)
+	payloadParams.ReplBacklogSize = conversion.StringValueToPointer(parameters.ReplBacklogSize)
 	payloadParams.Snapshot = conversion.StringValueToPointer(parameters.Snapshot)
 
 	var err error

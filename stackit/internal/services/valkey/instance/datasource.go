@@ -86,10 +86,12 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"maxmemory_policy":        "The policy to handle the maximum memory (volatile-lru, noeviction, etc).",
 		"maxmemory_samples":       "The maximum memory samples.",
 		"metrics_frequency":       "The frequency in seconds at which metrics are emitted.",
-		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key",
+		"metrics_prefix":          "The prefix for the metrics. Could be useful when using Graphite monitoring to prefix the metrics with a certain value, like an API key.",
+		"min_replicas_to_write":   "The amount of connected replicas that are required for the primary to accept write operations. It can be set to 0 to disable it.",
 		"min_replicas_max_lag":    "The minimum replicas maximum lag.",
 		"monitoring_instance_id":  "The ID of the STACKIT monitoring instance.",
 		"notify_keyspace_events":  "The notify keyspace events.",
+		"repl_backlog_size":       "The replication backlog size for the cluster.",
 		"snapshot":                "The snapshot configuration.",
 		"syslog":                  "List of syslog servers to send logs to.",
 	}
@@ -195,12 +197,20 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						Description: parametersDescriptions["min_replicas_max_lag"],
 						Computed:    true,
 					},
+					"min_replicas_to_write": schema.Int32Attribute{
+						Description: parametersDescriptions["min_replicas_to_write"],
+						Computed:    true,
+					},
 					"monitoring_instance_id": schema.StringAttribute{
 						Description: parametersDescriptions["monitoring_instance_id"],
 						Computed:    true,
 					},
 					"notify_keyspace_events": schema.StringAttribute{
 						Description: parametersDescriptions["notify_keyspace_events"],
+						Computed:    true,
+					},
+					"repl_backlog_size": schema.StringAttribute{
+						Description: parametersDescriptions["repl_backlog_size"],
 						Computed:    true,
 					},
 					"snapshot": schema.StringAttribute{
