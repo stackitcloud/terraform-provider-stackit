@@ -496,6 +496,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 						GatewayApi: new(true),
 					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
+						Enabled: true,
+					},
 				},
 				Name: new("name"),
 				Access: &ske.Access{
@@ -534,7 +537,7 @@ func TestMapFields(t *testing.T) {
 						"gateway_api": types.BoolValue(true),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(false),
+						"enabled": types.BoolValue(true),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),

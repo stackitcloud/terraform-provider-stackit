@@ -754,6 +754,7 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"extensions": schema.SingleNestedAttribute{
 				Description: "A single extensions block as defined below.",
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseStateForUnknown(),
 				},
@@ -830,13 +831,13 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"gateway_api": schema.BoolAttribute{
 								Description: "Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.",
 								Optional:    true,
-								Computed:    true,
 							},
 						},
 					},
 					"application_load_balancer": schema.SingleNestedAttribute{
 						Description: "Application Load Balancer extension.",
 						Optional:    true,
+						Computed:    true,
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.",
@@ -2029,7 +2030,7 @@ func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, 
 	}
 
 	applicationLoadBalancer := applicationLoadBalancer{}
-	if ex.ApplicationLoadBalancer.IsNull() {
+	if utils.IsUndefined(ex.ApplicationLoadBalancer) {
 		applicationLoadBalancer.Enabled = types.BoolValue(false)
 	} else {
 		diags = ex.ApplicationLoadBalancer.As(ctx, &applicationLoadBalancer, basetypes.ObjectAsOptions{})
@@ -2049,11 +2050,13 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 	var diags diag.Diagnostics
 	ex := extensions{}
-	if !m.Extensions.IsNull() {
+	if !utils.IsUndefined(m.Extensions) {
 		diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return fmt.Errorf("converting extensions object: %v", diags.Errors())
 		}
+	} else {
+		m.Extensions = types.ObjectNull(extensionsTypes)
 	}
 
 	// If the user provides the extensions block with the enabled flags as false
@@ -2069,9 +2072,8 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
 	}
-	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled && applicationLoadBalancerDisabled
 
-	if skeUtils.IsEmptyExtension(cl.Extensions) && (disabledExtensions || m.Extensions.IsNull()) {
+	if skeUtils.IsEmptyExtension(cl.Extensions) && utils.IsUndefined(m.Extensions) {
 		if m.Extensions.Attributes() == nil {
 			m.Extensions = types.ObjectNull(extensionsTypes)
 		}
@@ -2154,7 +2156,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		if diags.HasError() {
 			return fmt.Errorf("creating applicationLoadBalancer: %w", core.DiagsToError(diags))
 		}
-	} else if applicationLoadBalancerDisabled && !ex.ApplicationLoadBalancer.IsNull() {
+	} else if applicationLoadBalancerDisabled && !utils.IsUndefined(ex.ApplicationLoadBalancer) {
 		applicationLoadBalancerExtension = ex.ApplicationLoadBalancer
 	}
 
