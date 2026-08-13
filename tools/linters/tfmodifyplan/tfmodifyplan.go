@@ -5,100 +5,154 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/golangci/plugin-module-register/register"
 	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
+
+	"github.com/golangci/plugin-module-register/register"
 )
 
 var Analyzer = &analysis.Analyzer{
-	Name: "tfmodifyplan",
-	Doc:  "Ensures every resource with a region field implements the ModifyPlan method.",
-	Run:  run,
+	Name:     "tfmodifyplan",
+	Doc:      "Ensures every resource with a region field implements the ModifyPlan method.",
+	Requires: []*analysis.Analyzer{inspect.Analyzer},
+	Run:      run,
 }
 
-func run(pass *analysis.Pass) (any, error) {
-	// Iterate over all parsed Go files in the package
-	for _, file := range pass.Files {
-		ast.Inspect(file, func(node ast.Node) bool {
-			// 1. Find all method declarations named "Schema"
-			fn, ok := node.(*ast.FuncDecl)
-			if !ok || fn.Name.Name != "Schema" || fn.Recv == nil || len(fn.Recv.List) == 0 {
-				return true
-			}
+const (
+	targetPkgName  = "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	targetFuncName = "AdaptRegion"
+)
 
-			// 2. Search the AST body of the Schema method for a "region" attribute key
-			hasRegionAttr := false
-			ast.Inspect(fn.Body, func(innerNode ast.Node) bool {
-				kv, ok := innerNode.(*ast.KeyValueExpr)
-				if !ok {
-					return true
+func run(pass *analysis.Pass) (interface{}, error) {
+	ins := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+
+	// structData keeps track of methods attached to a struct receiver
+	type structData struct {
+		schemaMethod     *ast.FuncDecl
+		modifyPlanMethod *ast.FuncDecl
+		isResource       bool // True if it has Create, Update, or Delete methods
+	}
+
+	resources := make(map[string]*structData)
+
+	// Filter down to only function declarations
+	nodeFilter := []ast.Node{
+		(*ast.FuncDecl)(nil),
+	}
+
+	// Pass 1: Collect and group all methods by their receiver struct
+	ins.Preorder(nodeFilter, func(n ast.Node) {
+		fn := n.(*ast.FuncDecl)
+
+		// Skip if it doesn't have a receiver (not a struct method)
+		if fn.Recv == nil || len(fn.Recv.List) == 0 {
+			return
+		}
+
+		// Extract receiver struct name
+		var recvName string
+		switch t := fn.Recv.List[0].Type.(type) {
+		case *ast.StarExpr: // Pointer receiver: *MyResource
+			if ident, ok := t.X.(*ast.Ident); ok {
+				recvName = ident.Name
+			}
+		case *ast.Ident: // Value receiver: MyResource
+			recvName = t.Name
+		}
+
+		if recvName == "" {
+			return
+		}
+
+		if resources[recvName] == nil {
+			resources[recvName] = &structData{}
+		}
+
+		// Identify the role of the method
+		switch fn.Name.Name {
+		case "Schema":
+			resources[recvName].schemaMethod = fn
+		case "ModifyPlan":
+			resources[recvName].modifyPlanMethod = fn
+		case "Create", "Update", "Delete":
+			// Data sources do not have Create/Update/Delete in the TF Plugin Framework.
+			// This heuristic guarantees we are looking at a Resource.
+			resources[recvName].isResource = true
+		}
+	})
+
+	// Pass 2: Analyze the collected data against your business logic rules
+	for recvName, data := range resources {
+		// Only analyze valid TF Resources that have a Schema method
+		if !data.isResource || data.schemaMethod == nil {
+			continue
+		}
+
+		// Check if the string "region" is defined anywhere in the Schema method
+		hasRegion := false
+		ast.Inspect(data.schemaMethod, func(n ast.Node) bool {
+			if lit, ok := n.(*ast.BasicLit); ok {
+				if lit.Kind == token.STRING && lit.Value == `"region"` {
+					hasRegion = true
+					return false // Found it, stop walking this branch
 				}
-
-				keyLit, ok := kv.Key.(*ast.BasicLit)
-				if ok && keyLit.Kind == token.STRING {
-					// String literals in the AST include their quotes, so we check both styles
-					if keyLit.Value == `"region"` || keyLit.Value == "`region`" {
-						hasRegionAttr = true
-						return false // Stop traversing this subtree, we found what we need
-					}
-				}
-				return true
-			})
-
-			if !hasRegionAttr {
-				return true
 			}
-
-			// 3. Extract the receiver's underlying type name (e.g., `*MyResource` -> `MyResource`)
-			recvExpr := fn.Recv.List[0].Type
-			if star, ok := recvExpr.(*ast.StarExpr); ok {
-				recvExpr = star.X
-			}
-
-			ident, ok := recvExpr.(*ast.Ident)
-			if !ok {
-				return true
-			}
-
-			// 4. Resolve the AST identifier to its actual type representation via TypesInfo
-			obj := pass.TypesInfo.ObjectOf(ident)
-			if obj == nil {
-				return true
-			}
-
-			named, ok := obj.Type().(*types.Named)
-			if !ok {
-				return true
-			}
-
-			ptrType := types.NewPointer(named)
-
-			// 5. Exclude Data Sources by ensuring the type implements 'Create'.
-			// (Resources have Create, Update, Delete. Data Sources only have Read).
-			if !hasMethod(named, "Create") && !hasMethod(ptrType, "Create") {
-				return true
-			}
-
-			// 6. Check if the ModifyPlan method is present on the value or pointer receiver
-			if !hasMethod(named, "ModifyPlan") && !hasMethod(ptrType, "ModifyPlan") {
-				pass.Reportf(ident.Pos(), "'%s' defines a 'region' attribute in its Schema but does not implement the ModifyPlan method", ident.Name)
-			}
-
 			return true
 		})
+
+		// If it doesn't have a region attribute, skip it.
+		if !hasRegion {
+			continue
+		}
+
+		// Has region, but no ModifyPlan method
+		if data.modifyPlanMethod == nil {
+			pass.Reportf(
+				data.schemaMethod.Pos(),
+				"Terraform resource '%s' defines a 'region' field but does not implement the ModifyPlan method.",
+				recvName,
+			)
+			continue
+		}
+
+		// Check if the specific function is called inside ModifyPlan
+		hasRequiredFuncCall := false
+		ast.Inspect(data.modifyPlanMethod, func(n ast.Node) bool {
+			if call, ok := n.(*ast.CallExpr); ok {
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					// Check if the method being called matches our target function name
+					if sel.Sel.Name == targetFuncName {
+						if ident, ok := sel.X.(*ast.Ident); ok {
+							// Use type info to resolve the identifier to its actual package
+							obj := pass.TypesInfo.Uses[ident]
+							if pkgName, ok := obj.(*types.PkgName); ok {
+								// Compare the actual import path
+								if pkgName.Imported().Path() == targetPkgName {
+									hasRequiredFuncCall = true
+									return false // Found it, stop walking this branch
+								}
+							}
+						}
+					}
+				}
+			}
+			return true
+		})
+
+		// Has ModifyPlan, but missing the required package/function call
+		if !hasRequiredFuncCall {
+			pass.Reportf(
+				data.modifyPlanMethod.Pos(),
+				"Terraform resource '%s' ModifyPlan method must call %s.%s().",
+				recvName,
+				targetPkgName,
+				targetFuncName,
+			)
+		}
 	}
 
 	return nil, nil
-}
-
-// hasMethod checks if a given type's method set contains a specific method name.
-func hasMethod(t types.Type, methodName string) bool {
-	mset := types.NewMethodSet(t)
-	for method := range mset.Methods() {
-		if method.Obj().Name() == methodName {
-			return true
-		}
-	}
-	return false
 }
 
 func init() {
