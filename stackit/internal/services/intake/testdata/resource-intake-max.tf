@@ -6,7 +6,6 @@ variable "description" {}
 variable "max_message_size_kib" {}
 variable "max_messages_per_hour" {}
 
-// Dremio Variables for Dynamic Provisioning
 variable "dremio_display_name" {}
 variable "dremio_user_email" {}
 variable "dremio_user_first_name" {}
@@ -23,7 +22,6 @@ resource "stackit_intake_runner" "example" {
   max_messages_per_hour = var.max_messages_per_hour
 }
 
-// Dynamically provision Dremio Instance for test
 resource "stackit_dremio_instance" "dremio" {
   project_id   = var.project_id
   region       = var.region
@@ -33,7 +31,6 @@ resource "stackit_dremio_instance" "dremio" {
   }
 }
 
-// Dynamically provision Dremio User for test
 resource "stackit_dremio_user" "dremio_user" {
   project_id  = var.project_id
   region      = var.region
@@ -61,7 +58,7 @@ resource "stackit_intakes" "example" {
   catalog_auth_type            = "dremio"
   catalog_namespace            = "intake"
   catalog_warehouse            = "default"
-  catalog_uri                  = stackit_dremio_instance.dremio.endpoints.catalog
-  dremio_token_endpoint        = "${stackit_dremio_instance.dremio.endpoints.ui}/oauth/token"
+  catalog_uri                  = startswith(stackit_dremio_instance.dremio.endpoints.catalog, "https://") ? stackit_dremio_instance.dremio.endpoints.catalog : "https://${stackit_dremio_instance.dremio.endpoints.catalog}"
+  dremio_token_endpoint        = startswith(stackit_dremio_instance.dremio.endpoints.ui, "https://") ? "${stackit_dremio_instance.dremio.endpoints.ui}/oauth/token" : "https://${stackit_dremio_instance.dremio.endpoints.ui}/oauth/token"
   dremio_personal_access_token = var.dremio_personal_access_token
 }

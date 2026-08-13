@@ -247,14 +247,16 @@ func TestToUpdatePayload(t *testing.T) {
 		{
 			"success",
 			&Model{
+				RunnerId:    types.StringValue("runner-id"),
 				Name:        types.StringValue("name"),
 				Description: types.StringValue("description"),
 				Labels:      types.MapValueMust(types.StringType, map[string]attr.Value{"key": types.StringValue("value")}),
 			},
 			&intake.UpdateIntakePayload{
-				DisplayName: conversion.StringValueToPointer(types.StringValue("name")),
-				Description: conversion.StringValueToPointer(types.StringValue("description")),
-				Labels:      map[string]string{"key": "value"},
+				IntakeRunnerId: "runner-id",
+				DisplayName:    conversion.StringValueToPointer(types.StringValue("name")),
+				Description:    conversion.StringValueToPointer(types.StringValue("description")),
+				Labels:         map[string]string{"key": "value"},
 			},
 			false,
 		},
@@ -287,7 +289,7 @@ func TestToUpdatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			payload, err := toUpdatePayload(context.Background(), tt.model)
+			payload, err := toUpdatePayload(context.Background(), tt.model, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("toUpdatePayload error = %v, wantErr %v", err, tt.wantErr)
 				return

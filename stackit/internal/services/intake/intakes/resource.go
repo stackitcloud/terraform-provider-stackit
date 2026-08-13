@@ -418,7 +418,7 @@ func (r *intakesResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = tflog.SetField(ctx, "intake_id", intakeId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	payload, err := toUpdatePayload(ctx, &model)
+	payload, err := toUpdatePayload(ctx, &model, &state)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating intake", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -633,21 +633,115 @@ func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakePay
 	}, nil
 }
 
+func hasCatalogChanged(model *Model, state *Model) bool {
+	if state == nil {
+		return !model.CatalogUri.IsNull() || !model.CatalogWarehouse.IsNull() || !model.CatalogNamespace.IsNull() || !model.CatalogTableName.IsNull() || !model.CatalogAuthType.IsNull() || !model.CatalogPartitioning.IsNull() || !model.CatalogPartitionBy.IsNull()
+	}
+	if !model.CatalogUri.Equal(state.CatalogUri) {
+		return true
+	}
+	if !model.CatalogWarehouse.Equal(state.CatalogWarehouse) {
+		return true
+	}
+	if !model.CatalogNamespace.Equal(state.CatalogNamespace) {
+		return true
+	}
+	if !model.CatalogTableName.Equal(state.CatalogTableName) {
+		return true
+	}
+	if !model.CatalogAuthType.Equal(state.CatalogAuthType) {
+		return true
+	}
+	if !model.CatalogPartitioning.Equal(state.CatalogPartitioning) {
+		return true
+	}
+	if !model.CatalogPartitionBy.Equal(state.CatalogPartitionBy) {
+		return true
+	}
+	if !model.DremioPAT.Equal(state.DremioPAT) {
+		return true
+	}
+	if !model.DremioTokenEndpoint.Equal(state.DremioTokenEndpoint) {
+		return true
+	}
+	return false
+}
+
 // Build UpdateIntakePayload from provider's model
-func toUpdatePayload(ctx context.Context, model *Model) (*intake.UpdateIntakePayload, error) {
+func toUpdatePayload(ctx context.Context, model *Model, state *Model) (*intake.UpdateIntakePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
 	}
 
 	payload := &intake.UpdateIntakePayload{}
-	payload.DisplayName = conversion.StringValueToPointer(model.Name)
-	payload.Description = conversion.StringValueToPointer(model.Description)
+	if !model.RunnerId.IsNull() && !model.RunnerId.IsUnknown() {
+		payload.IntakeRunnerId = model.RunnerId.ValueString()
+	}
+	if !model.Name.IsNull() && !model.Name.IsUnknown() {
+		payload.DisplayName = conversion.StringValueToPointer(model.Name)
+	}
+	if !model.Description.IsNull() && !model.Description.IsUnknown() {
+		payload.Description = conversion.StringValueToPointer(model.Description)
+	}
 
 	labels, err := utils.LabelsToPayload(ctx, model.Labels)
 	if err != nil {
 		return nil, err
 	}
 	payload.Labels = labels
+
+	if hasCatalogChanged(model, state) {
+		catalog := &intake.IntakeCatalogPatch{}
+		if !model.CatalogUri.IsNull() && !model.CatalogUri.IsUnknown() {
+			catalog.Uri = conversion.StringValueToPointer(model.CatalogUri)
+		}
+		if !model.CatalogWarehouse.IsNull() && !model.CatalogWarehouse.IsUnknown() {
+			catalog.Warehouse = conversion.StringValueToPointer(model.CatalogWarehouse)
+		}
+		if !model.CatalogNamespace.IsNull() && !model.CatalogNamespace.IsUnknown() {
+			catalog.Namespace = conversion.StringValueToPointer(model.CatalogNamespace)
+		}
+		if !model.CatalogTableName.IsNull() && !model.CatalogTableName.IsUnknown() {
+			catalog.TableName = conversion.StringValueToPointer(model.CatalogTableName)
+		}
+		if !model.CatalogPartitionBy.IsNull() && !model.CatalogPartitionBy.IsUnknown() {
+			partitionBy, err := conversion.StringListToSlice(model.CatalogPartitionBy)
+			if err != nil {
+				return nil, err
+			}
+			catalog.PartitionBy = partitionBy
+		}
+		if !model.CatalogPartitioning.IsNull() && !model.CatalogPartitioning.IsUnknown() {
+			p, err := intake.NewPartitioningUpdateTypeFromValue(model.CatalogPartitioning.ValueString())
+			if err != nil {
+				return nil, err
+			}
+			catalog.Partitioning = p
+		}
+		var auth *intake.CatalogAuthPatch
+		if !model.CatalogAuthType.IsNull() && !model.CatalogAuthType.IsUnknown() {
+			authType := model.CatalogAuthType.ValueString()
+			authTypeVal, err := intake.NewCatalogAuthTypeFromValue(authType)
+			if err != nil {
+				return nil, err
+			}
+			auth = &intake.CatalogAuthPatch{
+				Type: authTypeVal,
+			}
+			if authType == "dremio" {
+				dremioAuth := &intake.DremioAuthPatch{}
+				if !model.DremioPAT.IsNull() && !model.DremioPAT.IsUnknown() {
+					dremioAuth.PersonalAccessToken = conversion.StringValueToPointer(model.DremioPAT)
+				}
+				if !model.DremioTokenEndpoint.IsNull() && !model.DremioTokenEndpoint.IsUnknown() {
+					dremioAuth.TokenEndpoint = conversion.StringValueToPointer(model.DremioTokenEndpoint)
+				}
+				auth.Dremio = dremioAuth
+			}
+		}
+		catalog.Auth = auth
+		payload.Catalog = catalog
+	}
 
 	return payload, nil
 }

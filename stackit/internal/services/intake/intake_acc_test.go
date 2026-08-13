@@ -1,12 +1,19 @@
 package intake_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
@@ -51,7 +58,6 @@ var testIntakeRunnerConfigVarsMax = config.Variables{
 	"max_messages_per_hour": config.IntegerVariable(1100),
 }
 
-// TODO: Intakes creation acceptance tests require a valid Dremio PAT.
 var testIntakesConfigVarsMin = config.Variables{
 	"project_id":                   config.StringVariable(testutil.ProjectId),
 	"runner_name":                  config.StringVariable("tf-acc-runner-min"),
@@ -62,7 +68,7 @@ var testIntakesConfigVarsMin = config.Variables{
 	"dremio_user_email":            config.StringVariable("tf-acc-intake-min@example.com"),
 	"dremio_user_first_name":       config.StringVariable("Intake"),
 	"dremio_user_last_name":        config.StringVariable("Min"),
-	"dremio_user_name":             config.StringVariable("tf_acc_intakeminuser"),
+	"dremio_user_name":             config.StringVariable("tfAccIntakeMinUser"),
 	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
 	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
 }
@@ -79,7 +85,7 @@ var testIntakesConfigVarsMax = config.Variables{
 	"dremio_user_email":            config.StringVariable("tf-acc-test@example.com"),
 	"dremio_user_first_name":       config.StringVariable("Acc"),
 	"dremio_user_last_name":        config.StringVariable("Test"),
-	"dremio_user_name":             config.StringVariable("tf_acc_dremio_user"),
+	"dremio_user_name":             config.StringVariable("tfAccIntakeMaxUser"),
 	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
 	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
 }
@@ -98,19 +104,204 @@ func testIntakeRunnerConfigVarsMaxUpdated() config.Variables {
 	return tempConfig
 }
 
-func testIntakesConfigVarsMinUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testIntakesConfigVarsMin))
-	maps.Copy(tempConfig, testIntakesConfigVarsMin)
-	tempConfig["intake_name"] = config.StringVariable("tf-acc-intake-min-upd")
-	return tempConfig
+var testIntakesConfigVarsMinUpdatedVars = config.Variables{
+	"project_id":                   config.StringVariable(testutil.ProjectId),
+	"runner_name":                  config.StringVariable("tf-acc-runner-min"),
+	"intake_name":                  config.StringVariable("tf-acc-intake-min-upd"),
+	"max_message_size_kib":         config.IntegerVariable(1024),
+	"max_messages_per_hour":        config.IntegerVariable(1000),
+	"dremio_display_name":          config.StringVariable("tfAccDremioIntakeMin"),
+	"dremio_user_email":            config.StringVariable("tf-acc-intake-min@example.com"),
+	"dremio_user_first_name":       config.StringVariable("Intake"),
+	"dremio_user_last_name":        config.StringVariable("Min"),
+	"dremio_user_name":             config.StringVariable("tfAccIntakeMinUser"),
+	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
+	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
 }
 
-func testIntakesConfigVarsMaxUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testIntakesConfigVarsMax))
-	maps.Copy(tempConfig, testIntakesConfigVarsMax)
-	tempConfig["intake_name"] = config.StringVariable("tf-acc-intake-max-upd")
-	tempConfig["description"] = config.StringVariable("Updated full intake description")
-	return tempConfig
+var testIntakesConfigVarsMaxUpdatedVars = config.Variables{
+	"project_id":                   config.StringVariable(testutil.ProjectId),
+	"region":                       config.StringVariable(testutil.Region),
+	"runner_name":                  config.StringVariable("tf-acc-runner-for-max"),
+	"intake_name":                  config.StringVariable("tf-acc-intake-max-upd"),
+	"description":                  config.StringVariable("Updated full intake description"),
+	"max_message_size_kib":         config.IntegerVariable(1024),
+	"max_messages_per_hour":        config.IntegerVariable(1100),
+	"dremio_display_name":          config.StringVariable("tfAccDremioIntakeMax"),
+	"dremio_user_email":            config.StringVariable("tf-acc-intake-max@example.com"),
+	"dremio_user_first_name":       config.StringVariable("Intake"),
+	"dremio_user_last_name":        config.StringVariable("Max"),
+	"dremio_user_name":             config.StringVariable("tfAccIntakeMaxUser"),
+	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
+	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+}
+
+// getDremioPAT authenticates against Dremio UI API, enables PAT support key, resolves user UUID, and issues a PAT
+func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (string, error) {
+	if !strings.HasPrefix(uiEndpoint, "http://") && !strings.HasPrefix(uiEndpoint, "https://") {
+		uiEndpoint = "https://" + uiEndpoint
+	}
+	uiEndpoint = strings.TrimSuffix(uiEndpoint, "/")
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // acceptance test TLS skip
+	}
+	httpClient := &http.Client{
+		Timeout:   30 * time.Second,
+		Transport: tr,
+	}
+
+	// 1. Authenticate with retry loop for service startup readiness: POST /oauth/token
+	tokenURL := fmt.Sprintf("%s/oauth/token", uiEndpoint)
+	form := url.Values{}
+	form.Set("grant_type", "password")
+	form.Set("scope", "dremio.all")
+	form.Set("username", username)
+	form.Set("password", password)
+
+	var accessToken string
+	var lastErr error
+
+	maxRetries := 18 // 3 minutes total retry time
+	for i := 0; i < maxRetries; i++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
+		if err != nil {
+			return "", fmt.Errorf("creating login request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		resp, err := httpClient.Do(req)
+		if err == nil {
+			respBytes, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+
+			if resp.StatusCode == http.StatusOK {
+				var tokenResp struct {
+					AccessToken string `json:"access_token"`
+				}
+				if jsonErr := json.Unmarshal(respBytes, &tokenResp); jsonErr == nil && tokenResp.AccessToken != "" {
+					accessToken = tokenResp.AccessToken
+					break
+				}
+			} else {
+				lastErr = fmt.Errorf("login status %d: %s", resp.StatusCode, string(respBytes))
+			}
+		} else {
+			lastErr = err
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
+	if accessToken == "" {
+		return "", fmt.Errorf("failed to authenticate against Dremio at %s after retries: %w", tokenURL, lastErr)
+	}
+
+	// 2. Enable PAT support key: PUT /apiv2/settings/auth.personal-access-tokens.enabled
+	settingsURL := fmt.Sprintf("%s/apiv2/settings/auth.personal-access-tokens.enabled", uiEndpoint)
+	settingsBodyMap := map[string]interface{}{
+		"type":  "BOOLEAN",
+		"id":    "auth.personal-access-tokens.enabled",
+		"value": true,
+	}
+	settingsJSON, err := json.Marshal(settingsBodyMap)
+	if err != nil {
+		return "", fmt.Errorf("marshaling settings body: %w", err)
+	}
+
+	settingsReq, err := http.NewRequestWithContext(ctx, http.MethodPut, settingsURL, bytes.NewBuffer(settingsJSON))
+	if err != nil {
+		return "", fmt.Errorf("creating settings request: %w", err)
+	}
+	settingsReq.Header.Set("Authorization", "Bearer "+accessToken)
+	settingsReq.Header.Set("Content-Type", "application/json")
+
+	settingsResp, err := httpClient.Do(settingsReq)
+	if err != nil {
+		return "", fmt.Errorf("enabling PAT support key at %s: %w", settingsURL, err)
+	}
+	settingsResp.Body.Close()
+
+	// 3. Resolve user UUID: GET /api/v3/user/by-name/{username}
+	userURL := fmt.Sprintf("%s/api/v3/user/by-name/%s", uiEndpoint, url.PathEscape(username))
+	userReq, err := http.NewRequestWithContext(ctx, http.MethodGet, userURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating user lookup request: %w", err)
+	}
+	userReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	userResp, err := httpClient.Do(userReq)
+	if err != nil {
+		return "", fmt.Errorf("looking up user UUID at %s: %w", userURL, err)
+	}
+	defer userResp.Body.Close()
+
+	userBytes, err := io.ReadAll(userResp.Body)
+	if err != nil {
+		return "", fmt.Errorf("reading user response: %w", err)
+	}
+
+	if userResp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("user lookup failed with status %d: %s", userResp.StatusCode, string(userBytes))
+	}
+
+	var userObj struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(userBytes, &userObj); err != nil || userObj.ID == "" {
+		return "", fmt.Errorf("failed to parse user UUID from response: %s", string(userBytes))
+	}
+
+	// 4. Issue Personal Access Token: POST /api/v3/user/{id}/token
+	patURL := fmt.Sprintf("%s/api/v3/user/%s/token", uiEndpoint, userObj.ID)
+	patBodyMap := map[string]interface{}{
+		"label":                "acceptance-test",
+		"millisecondsToExpire": 86400000, // 24 hours
+	}
+	patBodyJSON, err := json.Marshal(patBodyMap)
+	if err != nil {
+		return "", fmt.Errorf("marshaling PAT request body: %w", err)
+	}
+
+	patReq, err := http.NewRequestWithContext(ctx, http.MethodPost, patURL, bytes.NewBuffer(patBodyJSON))
+	if err != nil {
+		return "", fmt.Errorf("creating PAT request: %w", err)
+	}
+	patReq.Header.Set("Authorization", "Bearer "+accessToken)
+	patReq.Header.Set("Content-Type", "application/json")
+
+	patResp, err := httpClient.Do(patReq)
+	if err != nil {
+		return "", fmt.Errorf("requesting PAT at %s: %w", patURL, err)
+	}
+	defer patResp.Body.Close()
+
+	patBytes, err := io.ReadAll(patResp.Body)
+	if err != nil {
+		return "", fmt.Errorf("reading PAT response: %w", err)
+	}
+
+	if patResp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("PAT creation failed with status %d: %s", patResp.StatusCode, string(patBytes))
+	}
+
+	rawToken := strings.TrimSpace(string(patBytes))
+	rawToken = strings.Trim(rawToken, `"`)
+
+	var patObj struct {
+		Token string `json:"token"`
+		PAT   string `json:"pat"`
+	}
+	if err := json.Unmarshal(patBytes, &patObj); err == nil {
+		if patObj.Token != "" {
+			return patObj.Token, nil
+		}
+		if patObj.PAT != "" {
+			return patObj.PAT, nil
+		}
+	}
+
+	return rawToken, nil
 }
 
 func TestAccIntakeRunnerMin(t *testing.T) {
@@ -286,13 +477,43 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 	})
 }
 
-// TODO: Intakes acceptance tests (TestAccIntakesMin and TestAccIntakesMax)
 func TestAccIntakesMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakesDestroy,
 		Steps: []resource.TestStep{
-			// Step 1: Create minimal intake
+			// Step 1: Provision prerequisites and dynamically acquire Dremio PAT
+			{
+				ConfigVariables: testIntakesConfigVarsMin,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + strings.Split(resourceIntakesMin, "resource \"stackit_intakes\"")[0],
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_dremio_instance.dremio", "endpoints.ui"),
+					resource.TestCheckResourceAttrSet("stackit_dremio_user.dremio_user", "user_id"),
+					func(s *terraform.State) error {
+						dremioRes, ok := s.RootModule().Resources["stackit_dremio_instance.dremio"]
+						if !ok {
+							return fmt.Errorf("could not find stackit_dremio_instance.dremio in state")
+						}
+						uiEndpoint := dremioRes.Primary.Attributes["endpoints.ui"]
+						if uiEndpoint == "" {
+							return fmt.Errorf("dremio instance endpoints.ui is empty")
+						}
+
+						username := testutil.ConvertConfigVariable(testIntakesConfigVarsMin["dremio_user_name"])
+						password := testutil.ConvertConfigVariable(testIntakesConfigVarsMin["dremio_user_password"])
+
+						pat, err := getDremioPAT(context.Background(), uiEndpoint, username, password)
+						if err != nil {
+							return fmt.Errorf("failed to obtain Dremio PAT: %w", err)
+						}
+
+						testIntakesConfigVarsMin["dremio_personal_access_token"] = config.StringVariable(pat)
+						testIntakesConfigVarsMinUpdatedVars["dremio_personal_access_token"] = config.StringVariable(pat)
+						return nil
+					},
+				),
+			},
+			// Step 2: Create minimal intake using the generated PAT
 			{
 				ConfigVariables: testIntakesConfigVarsMin,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
@@ -307,17 +528,17 @@ func TestAccIntakesMin(t *testing.T) {
 					resource.TestCheckResourceAttr(intakesResource, "region", testutil.Region),
 				),
 			},
-			// Step 2: Data source check
+			// Step 3: Data source check
 			{
 				ConfigVariables: testIntakesConfigVarsMin,
 				Config: fmt.Sprintf(`
-				%s
-				%s
-				data "stackit_intakes" "example" {
-					project_id = %s.project_id
-					intake_id  = %s.intake_id
-					region     = %s.region
-				}`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceIntakesMin, intakesResource, intakesResource, intakesResource),
+									%s
+									%s
+									data "stackit_intakes" "example" {
+										project_id = %s.project_id
+										intake_id  = %s.intake_id
+										region     = %s.region
+									}`, testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig(), resourceIntakesMin, intakesResource, intakesResource, intakesResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakesResource, "project_id", "data.stackit_intakes.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "intake_id", "data.stackit_intakes.example", "intake_id"),
@@ -328,13 +549,14 @@ func TestAccIntakesMin(t *testing.T) {
 					resource.TestCheckResourceAttrPair(intakesResource, "create_time", "data.stackit_intakes.example", "create_time"),
 				),
 			},
-			// Step 3: Import state check
+			// Step 4: Import state check
 			{
-				ConfigVariables:   testIntakesConfigVarsMin,
-				Config:            testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceIntakesMin,
-				ResourceName:      intakesResource,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ConfigVariables:         testIntakesConfigVarsMin,
+				Config:                  testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
+				ResourceName:            intakesResource,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"dremio_personal_access_token"},
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					r, ok := s.RootModule().Resources[intakesResource]
 					if !ok {
@@ -343,13 +565,13 @@ func TestAccIntakesMin(t *testing.T) {
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["intake_id"]), nil
 				},
 			},
-			// Step 4: Update check
+			// Step 5: Update check
 			{
-				ConfigVariables: testIntakesConfigVarsMinUpdated(),
-				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceIntakesMin,
+				ConfigVariables: testIntakesConfigVarsMinUpdatedVars,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMinUpdated()["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMinUpdated()["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMinUpdatedVars["project_id"])),
+					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMinUpdatedVars["intake_name"])),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 				),
 			},
@@ -357,16 +579,46 @@ func TestAccIntakesMin(t *testing.T) {
 	})
 }
 
-// TODO: Intakes acceptance tests are put on hold pending STACKIT Dremio team clarification.
 func TestAccIntakesMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakesDestroy,
 		Steps: []resource.TestStep{
-			// Step 1: Create full intake with dynamic Dremio
+			// Step 1: Provision prerequisites and dynamically acquire Dremio PAT
 			{
 				ConfigVariables: testIntakesConfigVarsMax,
-				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceIntakesMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + strings.Split(resourceIntakesMax, "resource \"stackit_intakes\"")[0],
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("stackit_dremio_instance.dremio", "endpoints.ui"),
+					resource.TestCheckResourceAttrSet("stackit_dremio_user.dremio_user", "user_id"),
+					func(s *terraform.State) error {
+						dremioRes, ok := s.RootModule().Resources["stackit_dremio_instance.dremio"]
+						if !ok {
+							return fmt.Errorf("could not find stackit_dremio_instance.dremio in state")
+						}
+						uiEndpoint := dremioRes.Primary.Attributes["endpoints.ui"]
+						if uiEndpoint == "" {
+							return fmt.Errorf("dremio instance endpoints.ui is empty")
+						}
+
+						username := testutil.ConvertConfigVariable(testIntakesConfigVarsMax["dremio_user_name"])
+						password := testutil.ConvertConfigVariable(testIntakesConfigVarsMax["dremio_user_password"])
+
+						pat, err := getDremioPAT(context.Background(), uiEndpoint, username, password)
+						if err != nil {
+							return fmt.Errorf("failed to obtain Dremio PAT: %w", err)
+						}
+
+						testIntakesConfigVarsMax["dremio_personal_access_token"] = config.StringVariable(pat)
+						testIntakesConfigVarsMaxUpdatedVars["dremio_personal_access_token"] = config.StringVariable(pat)
+						return nil
+					},
+				),
+			},
+			// Step 2: Create full intake with generated Dremio PAT
+			{
+				ConfigVariables: testIntakesConfigVarsMax,
+				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["project_id"])),
 					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["intake_name"])),
@@ -382,16 +634,16 @@ func TestAccIntakesMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet(intakesResource, "catalog_table_name"),
 				),
 			},
-			// Step 2: Data source check
+			// Step 3: Data source check
 			{
 				ConfigVariables: testIntakesConfigVarsMax,
 				Config: fmt.Sprintf(`
-				%s
-				%s
-				data "stackit_intakes" "example" {
-					project_id = %s.project_id
-					intake_id  = %s.intake_id
-				}`, testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), resourceIntakesMax, intakesResource, intakesResource),
+										%s
+										%s
+										data "stackit_intakes" "example" {
+											project_id = %s.project_id
+											intake_id  = %s.intake_id
+										}`, testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig(), resourceIntakesMax, intakesResource, intakesResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakesResource, "project_id", "data.stackit_intakes.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "intake_id", "data.stackit_intakes.example", "intake_id"),
@@ -402,10 +654,10 @@ func TestAccIntakesMax(t *testing.T) {
 					resource.TestCheckResourceAttrPair(intakesResource, "catalog_warehouse", "data.stackit_intakes.example", "catalog_warehouse"),
 				),
 			},
-			// Step 3: Import state check (ignore write-only PAT)
+			// Step 4: Import state check (ignore write-only PAT)
 			{
 				ConfigVariables:         testIntakesConfigVarsMax,
-				Config:                  testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + "\n" + resourceIntakesMax,
+				Config:                  testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				ResourceName:            intakesResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -418,18 +670,17 @@ func TestAccIntakesMax(t *testing.T) {
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["intake_id"]), nil
 				},
 			},
-			// Step 4: Update check
+			// Step 5: Update check
 			{
-				ConfigVariables: testIntakesConfigVarsMaxUpdated(),
+				ConfigVariables: testIntakesConfigVarsMaxUpdatedVars,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMaxUpdated()["intake_name"])),
-					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(testIntakesConfigVarsMaxUpdated()["description"])),
+					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMaxUpdatedVars["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(testIntakesConfigVarsMaxUpdatedVars["description"])),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 				),
-			},
-		},
+			}},
 	})
 }
 
@@ -446,7 +697,6 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_intake_runner" {
 			continue
 		}
-		// Intake internal ID: "[project_id],[region],[runner_id]"
 		runnerId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, runnerId)
 	}
@@ -491,7 +741,6 @@ func testAccCheckIntakesDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_intakes" {
 			continue
 		}
-		// Intake internal ID: "[project_id],[region],[intake_id]"
 		idParts := strings.Split(rs.Primary.ID, core.Separator)
 		if len(idParts) < 3 {
 			continue
