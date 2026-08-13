@@ -1499,7 +1499,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 			return nil, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
 		}
 		dnsEnabled := dns.Enabled.ValueBool()
-		gatewayApi := dns.GatewayApi.ValueBool()
+		gatewayApi := conversion.BoolValueToPointer(dns.GatewayApi)
 
 		zones := []string{}
 		diags = dns.Zones.ElementsAs(ctx, &zones, true)
@@ -1509,7 +1509,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		skeDNS = &ske.DNS{
 			Enabled:    dnsEnabled,
 			Zones:      zones,
-			GatewayApi: &gatewayApi,
+			GatewayApi: gatewayApi,
 		}
 	}
 
