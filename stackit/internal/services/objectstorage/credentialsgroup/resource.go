@@ -267,7 +267,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK call is hidden in readCredentialsGroups()
 
 	if !found {
 		resp.State.RemoveResource(ctx)

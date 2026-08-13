@@ -2,11 +2,8 @@ package networkarea
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -15,7 +12,6 @@ import (
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -63,7 +59,6 @@ func (d *networkAreaDataSource) Configure(ctx context.Context, req datasource.Co
 
 // Schema defines the schema for the data source.
 func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	deprecationMsg := "Deprecated because of the IaaS API v1 -> v2 migration. Will be removed in May 2026."
 	description := "Network area datasource schema. Must have a `region` specified in the provider configuration.\n\n" +
 		"This datasource is for SNA, not VPC, networks."
 	resp.Schema = schema.Schema{
@@ -103,67 +98,6 @@ func (d *networkAreaDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 				Computed:    true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(0),
-				},
-			},
-			"default_nameservers": schema.ListAttribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "List of DNS Servers/Nameservers.",
-				Computed:           true,
-				ElementType:        types.StringType,
-			},
-			"network_ranges": schema.ListNestedAttribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "List of Network ranges.",
-				Computed:           true,
-				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
-					listvalidator.SizeAtMost(64),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"network_range_id": schema.StringAttribute{
-							Computed: true,
-							Validators: []validator.String{
-								validate.UUID(),
-								validate.NoSeparator(),
-							},
-						},
-						"prefix": schema.StringAttribute{
-							Computed: true,
-						},
-					},
-				},
-			},
-			"transfer_network": schema.StringAttribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "Classless Inter-Domain Routing (CIDR).",
-				Computed:           true,
-			},
-			"default_prefix_length": schema.Int64Attribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "The default prefix length for networks in the network area.",
-				Computed:           true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(24),
-					int64validator.AtMost(29),
-				},
-			},
-			"max_prefix_length": schema.Int64Attribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "The maximal prefix length for networks in the network area.",
-				Computed:           true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(24),
-					int64validator.AtMost(29),
-				},
-			},
-			"min_prefix_length": schema.Int64Attribute{
-				DeprecationMessage: deprecationMsg,
-				Description:        "The minimal prefix length for networks in the network area.",
-				Computed:           true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(22),
-					int64validator.AtMost(29),
 				},
 			},
 			"labels": schema.MapAttribute{
@@ -212,26 +146,6 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	err = mapFields(ctx, networkAreaResp, &model)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area", fmt.Sprintf("Processing API payload: %v", err))
-		return
-	}
-
-	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	networkAreaRegionResp, err := d.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, "eu01").Execute()
-	if err != nil {
-		var oapiErr *oapierror.GenericOpenAPIError
-		ok := errors.As(err, &oapiErr)
-		if !(ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusBadRequest)) { // TODO: iaas api returns http 400 in case network area region is not found
-			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Calling API: %v", err))
-			return
-		}
-
-		networkAreaRegionResp = &iaas.RegionalArea{}
-	}
-
-	// Deprecated: Will be removed in May 2026. Only introduced to make the IaaS v1 -> v2 API migration non-breaking in the Terraform provider.
-	err = mapNetworkAreaRegionFields(ctx, networkAreaRegionResp, &model)
-	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading network area region", fmt.Sprintf("Processing API payload: %v", err))
 		return
 	}
 

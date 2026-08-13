@@ -191,6 +191,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `logme_custom_endpoint` (String) Custom endpoint for the LogMe service
 - `logs_custom_endpoint` (String) Custom endpoint for the Logs service
 - `mariadb_custom_endpoint` (String) Custom endpoint for the MariaDB service
+- `modelexperiments_custom_endpoint` (String) Custom endpoint for the AI Model Experiments service
 - `modelserving_custom_endpoint` (String) Custom endpoint for the AI Model Serving service
 - `mongodbflex_custom_endpoint` (String) Custom endpoint for the MongoDB Flex service
 - `objectstorage_custom_endpoint` (String) Custom endpoint for the Object Storage service
@@ -203,7 +204,6 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `private_key_path` (String) Path for the private RSA key used for authentication, relevant for the key flow. It takes precedence over the private key that is included in the service account key.
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
 - `redis_custom_endpoint` (String) Custom endpoint for the Redis service
-- `region` (String, Deprecated) Region will be used as the default location for regional services. Not all services require a region, some are global
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
 - `scf_custom_endpoint` (String) Custom endpoint for the Cloud Foundry (SCF) service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
