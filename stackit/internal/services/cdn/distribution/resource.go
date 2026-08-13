@@ -147,7 +147,7 @@ type distributionConfig struct {
 	Redirects            *redirectConfig `tfsdk:"redirects"`              // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
 	Regions              *[]string       `tfsdk:"regions"`                // The regions in which data will be cached
 	BlockedCountries     *[]string       `tfsdk:"blocked_countries"`      // The countries for which content will be blocked
-	BlockedIps           *[]string       `tfsdk:"blocked_ips"`            // Restricts access to your content by specifying a list of blocked IPv4 addresses.
+	BlockedIps           types.List      `tfsdk:"blocked_ips"`            // Restricts access to your content by specifying a list of blocked IPv4 addresses.
 	DefaultCacheDuration types.String    `tfsdk:"default_cache_duration"` // Sets the default cache duration for the distribution.
 	MonthlyLimitBytes    types.Int64     `tfsdk:"monthly_limit_bytes"`    // Sets the monthly limit of bandwidth in bytes.
 	Optimizer            types.Object    `tfsdk:"optimizer"`              // The optimizer configuration
@@ -726,15 +726,9 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 					},
 					"blocked_ips": schema.ListAttribute{
 						Optional:    true,
-						Computed:    true, // Required when using Default
+						Computed:    true,
 						Description: schemaDescriptions["config_blocked_ips"],
 						ElementType: types.StringType,
-						// The API returns an empty list for blocked_ips even if the field is omitted
-						// (null) in the request. Same rationale as blocked_countries (see comment above):
-						// set a Default of an empty list so the config (empty list) matches the API
-						// response (empty list) and Terraform doesn't error with
-						// "Provider produced inconsistent result after apply".
-						Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 					},
 					"default_cache_duration": schema.StringAttribute{
 						Optional:    true,
@@ -952,8 +946,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	// blockedIps
 	var blockedIps []string
-	if configModel.BlockedIps != nil {
-		blockedIps = *configModel.BlockedIps
+	if !utils.IsUndefined(configModel.BlockedIps) {
+		bipDiags := configModel.BlockedIps.ElementsAs(ctx, &blockedIps, false)
+		if bipDiags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked IPs: %v", core.DiagsToError(bipDiags)))
+			return
+		}
 	}
 
 	// tls
@@ -1831,8 +1829,11 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 
 	// blockedIps
 	var blockedIps []string
-	if configModel.BlockedIps != nil {
-		blockedIps = *configModel.BlockedIps
+	if !utils.IsUndefined(configModel.BlockedIps) {
+		diags := configModel.BlockedIps.ElementsAs(ctx, &blockedIps, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
 	}
 
 	cdnConfig := &cdnSdk.Config{
