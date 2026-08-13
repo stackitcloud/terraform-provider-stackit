@@ -755,9 +755,6 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "A single extensions block as defined below.",
 				Optional:    true,
 				Computed:    true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
 				Attributes: map[string]schema.Attribute{
 					"argus": schema.SingleNestedAttribute{
 						Description:        "A single argus block as defined below. This field is deprecated and will be removed 06 January 2026.",
@@ -2055,8 +2052,6 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		if diags.HasError() {
 			return fmt.Errorf("converting extensions object: %v", diags.Errors())
 		}
-	} else {
-		m.Extensions = types.ObjectNull(extensionsTypes)
 	}
 
 	// If the user provides the extensions block with the enabled flags as false
@@ -2071,13 +2066,6 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	aclDisabled, observabilityDisabled, dnsDisabled, applicationLoadBalancerDisabled, err := checkDisabledExtensions(ctx, &ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
-	}
-
-	if skeUtils.IsEmptyExtension(cl.Extensions) && utils.IsUndefined(m.Extensions) {
-		if m.Extensions.Attributes() == nil {
-			m.Extensions = types.ObjectNull(extensionsTypes)
-		}
-		return nil
 	}
 
 	aclExtension := types.ObjectNull(aclTypes)
