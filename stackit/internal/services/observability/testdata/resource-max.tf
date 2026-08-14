@@ -18,8 +18,7 @@ variable "traces_retention_days" {}
 variable "metrics_retention_days" {}
 variable "metrics_retention_days_5m_downsampling" {}
 variable "metrics_retention_days_1h_downsampling" {}
-variable "instance_acl_1" {}
-variable "instance_acl_2" {}
+variable "acl" {}
 variable "receiver_name" {}
 variable "auth_identity" {}
 variable "auth_password" {}
@@ -64,8 +63,7 @@ variable "logalertgroup_interval" {}
 
 variable "scrapeconfig_name" {}
 variable "scrapeconfig_metrics_path" {}
-variable "scrapeconfig_targets_url_1" {}
-variable "scrapeconfig_targets_url_2" {}
+variable "scrapeconfig_targets_url" {}
 variable "scrapeconfig_label" {}
 variable "scrapeconfig_interval" {}
 variable "scrapeconfig_limit" {}
@@ -119,7 +117,7 @@ resource "stackit_observability_instance" "instance" {
   metrics_retention_days                 = var.metrics_retention_days
   metrics_retention_days_5m_downsampling = var.metrics_retention_days_5m_downsampling
   metrics_retention_days_1h_downsampling = var.metrics_retention_days_1h_downsampling
-  acl                                    = [var.instance_acl_1, var.instance_acl_2]
+  acl                                    = var.acl
 
   // alert config
   alert_config = {
@@ -224,7 +222,7 @@ resource "stackit_observability_scrapeconfig" "scrapeconfig" {
   metrics_path = var.scrapeconfig_metrics_path
 
   targets = [{
-    urls = [var.scrapeconfig_targets_url_1, var.scrapeconfig_targets_url_2]
+    urls = var.scrapeconfig_targets_url
     labels = {
       label1 = var.scrapeconfig_label
     }

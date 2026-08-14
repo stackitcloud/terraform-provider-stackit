@@ -79,7 +79,7 @@ func (m useStateForUnknownIfFlavorUnchangedModifier) PlanModifyString(ctx contex
 		}
 	}
 
-	if planFlavor.CPU == stateFlavor.CPU && planFlavor.RAM == stateFlavor.RAM {
+	if planFlavor.CPU.Equal(stateFlavor.CPU) && planFlavor.RAM.Equal(stateFlavor.RAM) && planModel.Replicas.Equal(stateModel.Replicas) {
 		resp.PlanValue = req.StateValue
 	}
 }

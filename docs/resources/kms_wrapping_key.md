@@ -32,7 +32,7 @@ resource "stackit_kms_wrapping_key" "example" {
 - `display_name` (String) The display name to distinguish multiple wrapping keys.
 - `keyring_id` (String) The ID of the associated keyring
 - `project_id` (String) STACKIT project ID to which the keyring is associated.
-- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`.
+- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`, `hsm`.
 - `purpose` (String) The purpose for which the key will be used. Possible values are: `wrap_symmetric_key`, `wrap_asymmetric_key`.
 
 ### Optional

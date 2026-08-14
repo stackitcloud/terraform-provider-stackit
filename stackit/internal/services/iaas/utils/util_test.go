@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"reflect"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	sdkClients "github.com/stackitcloud/stackit-sdk-go/core/clients"
@@ -247,6 +249,82 @@ func TestMapLabels(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MapLabels() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadXRequestId(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name    string
+		ctx     context.Context
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "success",
+			ctx: context.WithValue(ctx, config.ContextHTTPResponse,
+				new(new(http.Response{
+					Header: http.Header{
+						wait.XRequestIDHeader: []string{"x-request-id"},
+					},
+				})),
+			),
+			want:    "x-request-id",
+			wantErr: false,
+		},
+		{
+			name: "empty header",
+			ctx: context.WithValue(ctx, config.ContextHTTPResponse,
+				new(new(http.Response{
+					Header: http.Header{},
+				})),
+			),
+			wantErr: true,
+		},
+		{
+			name: "empty x-request-id header",
+			ctx: context.WithValue(ctx, config.ContextHTTPResponse,
+				new(new(http.Response{
+					Header: http.Header{
+						wait.XRequestIDHeader: []string{},
+					},
+				})),
+			),
+			wantErr: true,
+		},
+		{
+			name: "invalid type (simple pointer)",
+			ctx: context.WithValue(ctx, config.ContextHTTPResponse,
+				new(http.Response{
+					Header: http.Header{
+						wait.XRequestIDHeader: []string{"x-request-id"},
+					},
+				}),
+			),
+			wantErr: true,
+		},
+		{
+			name:    "http response with wrong type",
+			ctx:     context.WithValue(ctx, config.ContextHTTPResponse, "response"),
+			wantErr: true,
+		},
+		{
+			name:    "no http response",
+			ctx:     ctx,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadXRequestId(tt.ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadXRequestId() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ReadXRequestId() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

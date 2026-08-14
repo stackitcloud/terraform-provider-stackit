@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
@@ -24,9 +23,10 @@ import (
 )
 
 const (
-	SKEServiceId          = "cloud.stackit.ske"
-	ModelServingServiceId = "cloud.stackit.model-serving"
-	EdgecloudServiceId    = "cloud.stackit.edge-cloud"
+	SKEServiceId              = "cloud.stackit.ske"
+	ModelServingServiceId     = "cloud.stackit.model-serving"
+	EdgecloudServiceId        = "cloud.stackit.edge-cloud"
+	ModelExperimentsServiceId = "cloud.stackit.model-experiments"
 )
 
 var (

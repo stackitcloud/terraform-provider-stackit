@@ -908,6 +908,8 @@ func (r *loadBalancerResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	ctx = core.LogResponse(ctx)
+
 	// Map response body to schema
 	err = mapFields(ctx, loadBalancer, &model, region)
 	if err != nil {
@@ -1205,12 +1207,19 @@ func toOptionsPayload(ctx context.Context, model *Model) (*loadbalancer.LoadBala
 
 	accessControlPayload := &loadbalancer.LoadbalancerOptionAccessControl{}
 	if !utils.IsUndefined(optionsModel.ACL) {
-		var aclModel []string
+		var aclModel []types.String
 		diags := optionsModel.ACL.ElementsAs(ctx, &aclModel, false)
 		if diags.HasError() {
 			return nil, fmt.Errorf("converting acl: %w", core.DiagsToError(diags))
 		}
-		accessControlPayload.AllowedSourceRanges = aclModel
+		allowedRanges := make([]string, 0, len(aclModel))
+		for _, val := range aclModel {
+			if utils.IsUndefined(val) {
+				continue
+			}
+			allowedRanges = append(allowedRanges, val.ValueString())
+		}
+		accessControlPayload.AllowedSourceRanges = allowedRanges
 	}
 
 	var observabilityPayload *loadbalancer.LoadbalancerOptionObservability

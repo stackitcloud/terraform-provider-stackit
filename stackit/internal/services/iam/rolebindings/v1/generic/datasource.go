@@ -132,7 +132,7 @@ func (r *RoleBindingDatasource[C]) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK should actually be called in the callback implementations above
 
 	// Map response body to schema
 	err = mapDatasourceFields(roleBindingResp, &model, region)

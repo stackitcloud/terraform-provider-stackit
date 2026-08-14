@@ -122,7 +122,13 @@ Using this flow is less secure since the token is long-lived. You can provide th
 
 ## Backend configuration
 
-To keep track of your terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/products/storage/object-storage).
+### S3 Backend
+
+> [!WARNING]  
+> As of now setting `use_lockfile=true` for the S3 Backend will have no effect when using STACKIT Object Storage S3 buckets.
+> If you want to make use of Terraforms state locking feature refer to the PostgreSQL backend described below.
+
+To keep track of your Terraform state, you can configure an [S3 backend](https://developer.hashicorp.com/terraform/language/settings/backends/s3) using [STACKIT Object Storage](https://docs.stackit.cloud/products/storage/object-storage).
 
 To do so, you need an Object Storage [S3 bucket](https://docs.stackit.cloud/products/storage/object-storage/basics/concepts/#buckets) and [credentials](https://docs.stackit.cloud/products/storage/object-storage/basics/concepts/#credentials) to access it. If you need to create them, check [Create and delete Object Storage buckets](https://docs.stackit.cloud/products/storage/object-storage/how-tos/create-and-manage-object-storage-buckets/) and [Create and delete Object Storage credentials](https://docs.stackit.cloud/products/storage/object-storage/how-tos/create-and-delete-object-storage-credentials/).
 
@@ -148,6 +154,10 @@ terraform {
 ```
 
 Note: AWS specific checks must be skipped as they do not work on STACKIT. For details on what those validations do, see [here](https://developer.hashicorp.com/terraform/language/settings/backends/s3#configuration).
+
+### PostgreSQL Backend
+
+See this [example](https://professional-service.git.onstackit.cloud/professional-service-best-practices/professional-service/src/branch/main/examples/terraform-pg-backend-state-locking) how to use a STACKIT PostgreSQL instance for your Terraform state with state locking.
 
 ## Opting into Beta Resources
 

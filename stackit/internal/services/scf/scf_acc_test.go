@@ -419,7 +419,8 @@ func testAccCheckScfOrganizationDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_scf_organization" {
 			continue
 		}
-		orgId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// terraform ID: "[project_id],[region],[org_id]"
+		orgId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		orgsToDestroy = append(orgsToDestroy, orgId)
 	}
 

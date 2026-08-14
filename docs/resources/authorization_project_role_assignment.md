@@ -4,14 +4,14 @@ page_title: "stackit_authorization_project_role_assignment Resource - stackit"
 subcategory: ""
 description: |-
   Project Role Assignment resource schema.
-  ~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+  ~> This resource is part of the experimental feature iam and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 ---
 
 # stackit_authorization_project_role_assignment (Resource)
 
 Project Role Assignment resource schema.
 
-~> This resource is part of the iam experiment and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
+~> This resource is part of the experimental feature iam and is likely going to undergo significant changes or be removed in the future. Use it at your own discretion.
 
 ## Example Usage
 

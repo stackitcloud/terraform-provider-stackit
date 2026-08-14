@@ -69,11 +69,18 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		"name":                 "Instance name.",
 		"acl":                  "The Access Control List (ACL) for the SQLServer Flex instance.",
 		"backup_schedule":      `The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *").`,
+		"encryption":           "Parameter to define which key to use for storage encryption.",
+		"kek_key_id":           "UUID of the key within the STACKIT-KMS to use for the encryption.",
+		"kek_keyring_id":       "UUID of the keyring where the key is located within the STACKTI-KMS.",
+		"kek_key_version":      "Version of the key within the STACKIT-KMS to use for the encryption.",
+		"service_account":      "Service-Account linked to the Key within the STACKIT-KMS.",
 		"options":              "Custom parameters for the SQLServer Flex instance.",
 		"flavor_id":            "The flavor ID of the SQLServer Flex instance.",
 		"network":              "The network configuration of the instance.",
 		"network.access_scope": "The network access scope of the instance. This feature is in private preview. Supplying this object is only permitted for enabled accounts. If your account does not have access, the request will be rejected.",
 		"network.acl":          "List of IPV4 cidr.",
+		"instance_address":     "Address of this instance.",
+		"router_address":       "Address of the router.",
 		"retention_days":       "The days (30 to 90) for how long the backup files should be stored before cleaned up.",
 		"edition":              "Edition of the MSSQL server instance.",
 		"region":               "The resource region. If not defined, the provider region is used.",
@@ -107,16 +114,40 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Computed:    true,
+				Description:        descriptions["acl"],
+				DeprecationMessage: "acl is deprecated and will be removed after February 2027. Use instead `network.acl`.",
+				ElementType:        types.StringType,
+				Computed:           true,
 			},
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
 				Computed:    true,
 			},
+			"encryption": schema.SingleNestedAttribute{
+				Description: descriptions["encryption"],
+				Computed:    true,
+				Attributes: map[string]schema.Attribute{
+					"kek_key_id": schema.StringAttribute{
+						Description: descriptions["kek_key_id"],
+						Computed:    true,
+					},
+					"kek_keyring_id": schema.StringAttribute{
+						Description: descriptions["kek_keyring_id"],
+						Computed:    true,
+					},
+					"kek_key_version": schema.StringAttribute{
+						Description: descriptions["kek_key_version"],
+						Computed:    true,
+					},
+					"service_account": schema.StringAttribute{
+						Description: descriptions["service_account"],
+						Computed:    true,
+					},
+				},
+			},
 			"flavor": schema.SingleNestedAttribute{
-				Computed: true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -149,6 +180,14 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 						ElementType: types.StringType,
 						Computed:    true,
 					},
+					"instance_address": schema.StringAttribute{
+						Description: descriptions["instance_address"],
+						Computed:    true,
+					},
+					"router_address": schema.StringAttribute{
+						Description: descriptions["router_address"],
+						Computed:    true,
+					},
 				},
 			},
 			"replicas": schema.Int32Attribute{
@@ -173,14 +212,17 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"options": schema.SingleNestedAttribute{
-				Description: descriptions["options"],
-				Computed:    true,
+				Description:        descriptions["options"],
+				DeprecationMessage: "option is deprecated and will be removed after February 2027.",
+				Computed:           true,
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						Computed: true,
+						Computed:           true,
+						DeprecationMessage: "edition is deprecated and will be removed after February 2027.",
 					},
 					"retention_days": schema.Int32Attribute{
-						Computed: true,
+						Computed:           true,
+						DeprecationMessage: "retention_days is deprecated and will be removed after February 2027. Use instead `retention_days` from root.",
 					},
 				},
 			},
@@ -241,16 +283,17 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
+	flavor := &flavorModel{}
 	flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
-		return
-	}
-	flavor := &flavorModel{
-		Id:          types.StringValue(flavorResp.Id),
-		Description: types.StringValue(flavorResp.Description),
-		CPU:         types.Int64Value(flavorResp.Cpu),
-		RAM:         types.Int64Value(flavorResp.Memory),
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+	} else if flavorResp != nil {
+		flavor = &flavorModel{
+			Id:          types.StringValue(flavorResp.Id),
+			Description: types.StringValue(flavorResp.Description),
+			CPU:         types.Int64Value(flavorResp.Cpu),
+			RAM:         types.Int64Value(flavorResp.Memory),
+		}
 	}
 
 	err = mapFields(ctx, instanceResp, &model, flavor, region)

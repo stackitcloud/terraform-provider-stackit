@@ -35,13 +35,12 @@ type EphemeralProviderData struct {
 }
 
 type ProviderData struct {
-	RoundTripper        http.RoundTripper
-	ServiceAccountEmail string
-	// Deprecated: Use DefaultRegion instead
-	Region                          string
+	RoundTripper                    http.RoundTripper
+	ServiceAccountEmail             string
 	DefaultRegion                   string
 	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
+	AlbWafCustomEndpoint            string
 	AuthorizationCustomEndpoint     string
 	CdnCustomEndpoint               string
 	DnsCustomEndpoint               string
@@ -57,6 +56,7 @@ type ProviderData struct {
 	MariaDBCustomEndpoint           string
 	MongoDBFlexCustomEndpoint       string
 	ModelServingCustomEndpoint      string
+	ModelExperimentsCustomEndpoint  string
 	ObjectStorageCustomEndpoint     string
 	ObservabilityCustomEndpoint     string
 	OpenSearchCustomEndpoint        string
@@ -86,10 +86,7 @@ type ProviderData struct {
 func (pd *ProviderData) GetRegion() string {
 	if pd.DefaultRegion != "" {
 		return pd.DefaultRegion
-	} else if pd.Region != "" {
-		return pd.Region
 	}
-	// final fallback
 	return "eu01"
 }
 

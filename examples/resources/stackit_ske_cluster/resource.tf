@@ -15,12 +15,6 @@ resource "stackit_ske_cluster" "example" {
       volume_size        = "48"
     }
   ]
-  maintenance = {
-    enable_kubernetes_version_updates    = true
-    enable_machine_image_version_updates = true
-    start                                = "01:00:00Z"
-    end                                  = "02:00:00Z"
-  }
   network = {
     control_plane = {
       access_scope = "PUBLIC"

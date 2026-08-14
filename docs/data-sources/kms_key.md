@@ -41,5 +41,5 @@ data "stackit_kms_key" "key" {
 - `display_name` (String) The display name to distinguish multiple keys
 - `id` (String) Terraform's internal resource ID. It is structured as "`project_id`,`region`,`keyring_id`,`key_id`".
 - `import_only` (Boolean) States whether versions can be created or only imported.
-- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`.
+- `protection` (String) The underlying system that is responsible for protecting the key material. Possible values are: `software`, `hsm`.
 - `purpose` (String) The purpose for which the key will be used. Possible values are: `symmetric_encrypt_decrypt`, `asymmetric_encrypt_decrypt`, `message_authentication_code`, `asymmetric_sign_verify`.

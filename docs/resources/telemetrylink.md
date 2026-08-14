@@ -14,14 +14,17 @@ TelemetryLink instance resource schema. Uses the `default_region` specified in t
 
 ```terraform
 resource "stackit_telemetrylink" "link" {
-  resource_type       = "project"
-  resource_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  region              = "eu01"
-  display_name        = "telemetrylink-example"
-  access_token        = "eyJxxx"
-  telemetry_router_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  resource_type           = "project"
+  resource_id             = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  region                  = "eu01"
+  display_name            = "telemetrylink-example"
+  access_token_wo         = "eyJxxx"
+  access_token_wo_version = 1
+  telemetry_router_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 
+# access_token is kept for backwards compatibility, but access_token_wo (see above) should be preferred
+# since it is never persisted to the Terraform state.
 resource "stackit_telemetrylink" "link2" {
   resource_type       = "project"
   resource_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -45,7 +48,11 @@ resource "stackit_telemetrylink" "link2" {
 
 ### Optional
 
-- `access_token` (String, Sensitive) The access token of the Telemetry Router instance.
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
+- `access_token` (String, Sensitive) The access token of the Telemetry Router instance. Write-only argument `access_token_wo` should be preferred.
+- `access_token_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The access token of the Telemetry Router instance. Write-only - never stored in state and never returned by the API. To rotate the token, update this value AND increment `access_token_wo_version`. Changing this field alone will NOT trigger an update.
+- `access_token_wo_version` (Number) User-managed rotation counter for `access_token_wo`. Must be incremented every time `access_token_wo` is changed. Terraform diffs this field to detect token rotations - changing `access_token_wo` alone will NOT trigger an update because it is write-only and never stored in state.
 - `description` (String) The description of the Telemetry Link resource.
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
@@ -53,7 +60,7 @@ resource "stackit_telemetrylink" "link2" {
 
 - `create_time` (String) The time the Telemetry Link was created.
 - `id` (String) Terraform's internal resource identifier. It is structured as "`resource_type`, `resource_id`,`region`".
-- `status` (String) The status of the TelemetryLink, possible values: Possible values are: `active`, `inactive`, `failed`, `reconciling`, `deleting`.
+- `status` (String, Deprecated) The status of the TelemetryLink, possible values: Possible values are: `active`, `inactive`, `failed`, `reconciling`, `deleting`.
 
 ## Import
 

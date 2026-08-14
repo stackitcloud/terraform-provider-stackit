@@ -3,9 +3,11 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api/wait"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
@@ -70,4 +72,15 @@ func MapLabels(ctx context.Context, responseLabels map[string]any, currentLabels
 	}
 
 	return labelsTF, nil
+}
+
+// ReadXRequestId returns the X-Request-Id Header from a context, where config.ContextHTTPResponse is set with **http.Response
+func ReadXRequestId(ctx context.Context) (string, error) {
+	if resp, ok := ctx.Value(config.ContextHTTPResponse).(**http.Response); ok {
+		if requestIdHeader, ok := (*resp).Header[wait.XRequestIDHeader]; ok && len(requestIdHeader) > 0 {
+			return requestIdHeader[0], nil
+		}
+		return "", fmt.Errorf("no XRequestID header found in response")
+	}
+	return "", fmt.Errorf("no response with type `**http.Response` found in context")
 }

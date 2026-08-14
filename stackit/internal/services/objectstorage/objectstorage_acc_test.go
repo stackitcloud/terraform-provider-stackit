@@ -122,7 +122,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								project_id  = stackit_objectstorage_credentials_group.credentials_group.project_id
 								credentials_group_id = stackit_objectstorage_credentials_group.credentials_group.credentials_group_id
 							}
-	
+
 							data "stackit_objectstorage_credential" "credential" {
 								project_id  = stackit_objectstorage_credential.credential.project_id
 								credentials_group_id = stackit_objectstorage_credential.credential.credentials_group_id
@@ -141,7 +141,7 @@ func TestAccObjectStorageResourceMin(t *testing.T) {
 								project_id  = stackit_objectstorage_bucket.bucket_object_lock.project_id
 								name = stackit_objectstorage_bucket.bucket_object_lock.name
 							}
-					
+
 							data "stackit_objectstorage_default_retention" "retention" {
   							bucket_name = stackit_objectstorage_bucket.bucket_object_lock.name
   							project_id  = var.project_id
@@ -330,8 +330,8 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_objectstorage_bucket" {
 			continue
 		}
-		// bucket terraform ID: "[project_id],[name]"
-		bucketName := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// bucket terraform ID: "[project_id],[region],[name]"
+		bucketName := strings.Split(rs.Primary.ID, core.Separator)[2]
 		bucketsToDestroy = append(bucketsToDestroy, bucketName)
 	}
 
@@ -360,8 +360,8 @@ func testAccCheckObjectStorageDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_objectstorage_credentials_group" {
 			continue
 		}
-		// credentials group terraform ID: "[project_id],[credentials_group_id]"
-		credentialsGroupId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// credentials group terraform ID: "[project_id],[region],[credentials_group_id]"
+		credentialsGroupId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		credentialsGroupsToDestroy = append(credentialsGroupsToDestroy, credentialsGroupId)
 	}
 

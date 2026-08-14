@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
@@ -73,16 +71,12 @@ func (d *defaultRetentionDataSource) Schema(_ context.Context, _ datasource.Sche
 				},
 			},
 			"days": schema.Int32Attribute{
-				Required:    true,
+				Computed:    true,
 				Description: descriptions["days"],
 			},
 			"mode": schema.StringAttribute{
-				Required:    true,
+				Computed:    true,
 				Description: descriptions["mode"],
-				Validators: []validator.String{
-					stringvalidator.OneOf(sdkUtils.EnumSliceToStringSlice(objectstorage.AllowedRetentionModeEnumValues)...),
-					validate.NoSeparator(),
-				},
 			},
 			"region": schema.StringAttribute{
 				Optional: true,
