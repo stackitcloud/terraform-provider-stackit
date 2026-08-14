@@ -17,8 +17,8 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
 
-	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v1api"
-	"github.com/stackitcloud/stackit-sdk-go/services/logme/v1api/wait"
+	logmeSdk "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
+	"github.com/stackitcloud/stackit-sdk-go/services/logme/v2api/wait"
 )
 
 var (
@@ -164,11 +164,15 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_instance.instance")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -182,6 +186,10 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credential")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -190,7 +198,7 @@ func TestAccLogMeMinResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -329,11 +337,15 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_instance.instance")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
 					}
-					return fmt.Sprintf("%s,%s", testutil.ProjectId, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, region, instanceId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -347,6 +359,10 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource stackit_logme_credential.credential")
 					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
 					instanceId, ok := r.Primary.Attributes["instance_id"]
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute instance_id")
@@ -355,7 +371,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("couldn't find attribute credential_id")
 					}
-					return fmt.Sprintf("%s,%s,%s", testutil.ProjectId, instanceId, credentialId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, region, instanceId, credentialId), nil
 				},
 				ImportState:       true,
 				ImportStateVerify: true,
@@ -401,7 +417,7 @@ func TestAccLogMeMaxResource(t *testing.T) {
 
 func testAccCheckLogMeDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := logmeSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, true)...)
+	client, err := logmeSdk.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.LogMeCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
@@ -411,12 +427,12 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		if rs.Type != "stackit_logme_instance" {
 			continue
 		}
-		// instance terraform ID: "[project_id],[instance_id]"
-		instanceId := strings.Split(rs.Primary.ID, core.Separator)[1]
+		// instance terraform ID: "[project_id],[region],[instance_id]"
+		instanceId := strings.Split(rs.Primary.ID, core.Separator)[2]
 		instancesToDestroy = append(instancesToDestroy, instanceId)
 	}
 
-	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId).Execute()
+	instancesResp, err := client.DefaultAPI.ListInstances(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
 		return fmt.Errorf("getting instancesResp: %w", err)
 	}
@@ -428,11 +444,11 @@ func testAccCheckLogMeDestroy(s *terraform.State) error {
 		}
 		if utils.Contains(instancesToDestroy, *instances[i].InstanceId) {
 			if !checkInstanceDeleteSuccess(&instances[i]) {
-				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, *instances[i].InstanceId).Execute()
+				err := client.DefaultAPI.DeleteInstance(ctx, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).Execute()
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: %w", *instances[i].InstanceId, err)
 				}
-				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, *instances[i].InstanceId).WaitWithContext(ctx)
+				_, err = wait.DeleteInstanceWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, *instances[i].InstanceId).WaitWithContext(ctx)
 				if err != nil {
 					return fmt.Errorf("destroying instance %s during CheckDestroy: waiting for deletion %w", *instances[i].InstanceId, err)
 				}

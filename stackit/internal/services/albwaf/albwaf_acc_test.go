@@ -664,6 +664,7 @@ func testAccCheckDestroy(s *terraform.State) error {
 	checkFunctions := []func(s *terraform.State) error{
 		testAlbWafCustomRuleGroupDestroy,
 		testAlbWafManagedRuleSetDestroy,
+		testAlbWafWafConfigurationDestroy,
 	}
 	var errs []error
 
@@ -691,8 +692,10 @@ func testAlbWafCustomRuleGroupDestroy(s *terraform.State) error {
 			continue
 		}
 		// custom rule group transform id: "[projectId],[region],[name]"
-		name := strings.Split(rs.Primary.ID, core.Separator)[2]
-		customRuleGroupsToDestroy = append(customRuleGroupsToDestroy, name)
+		terraformId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(terraformId) == 3 {
+			customRuleGroupsToDestroy = append(customRuleGroupsToDestroy, terraformId[2])
+		}
 	}
 
 	resp, err := client.DefaultAPI.ListCustomRuleGroup(ctx, testutil.ProjectId, testutil.Region).Execute()
@@ -724,8 +727,10 @@ func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 			continue
 		}
 		// managed rule set transform id: "[projectId],[region],[name]"
-		name := strings.Split(rs.Primary.ID, core.Separator)[2]
-		managedRuleSetsToDestroy = append(managedRuleSetsToDestroy, name)
+		terraformId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(terraformId) == 3 {
+			managedRuleSetsToDestroy = append(managedRuleSetsToDestroy, terraformId[2])
+		}
 	}
 
 	resp, err := client.DefaultAPI.ListManagedRuleSets(ctx, testutil.ProjectId, testutil.Region).Execute()
@@ -736,6 +741,41 @@ func testAlbWafManagedRuleSetDestroy(s *terraform.State) error {
 	for _, item := range resp.Items {
 		if utils.Contains(managedRuleSetsToDestroy, item.GetName()) {
 			_, err := client.DefaultAPI.DeleteManagedRuleSet(ctx, testutil.ProjectId, testutil.Region, item.GetName()).Execute()
+			if err != nil {
+				return fmt.Errorf("deleting policy %s during CheckDestroy: %w", item.GetName(), err)
+			}
+		}
+	}
+	return nil
+}
+
+func testAlbWafWafConfigurationDestroy(s *terraform.State) error {
+	ctx := context.Background()
+	client, err := createClient()
+	if err != nil {
+		return err
+	}
+
+	wafConfigurationToDestroy := []string{}
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "stackit_alb_waf_configuration" {
+			continue
+		}
+		// waf configuration transform id: "[projectId],[region],[name]"
+		terraformId := strings.Split(rs.Primary.ID, core.Separator)
+		if len(terraformId) == 3 {
+			wafConfigurationToDestroy = append(wafConfigurationToDestroy, terraformId[2])
+		}
+	}
+
+	resp, err := client.DefaultAPI.ListWAF(ctx, testutil.ProjectId, testutil.Region).PageSize("1000").Execute()
+	if err != nil {
+		return fmt.Errorf("getting resp: %w", err)
+	}
+
+	for _, item := range resp.Items {
+		if utils.Contains(wafConfigurationToDestroy, item.GetName()) {
+			_, err := client.DefaultAPI.DeleteWAF(ctx, testutil.ProjectId, testutil.Region, item.GetName()).Execute()
 			if err != nil {
 				return fmt.Errorf("deleting policy %s during CheckDestroy: %w", item.GetName(), err)
 			}
