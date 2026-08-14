@@ -18,16 +18,17 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/cdn v1.19.0
 	github.com/stackitcloud/stackit-sdk-go/services/certificates v1.9.0
 	github.com/stackitcloud/stackit-sdk-go/services/dns v0.21.0
-	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.4.0
+	github.com/stackitcloud/stackit-sdk-go/services/dremio v0.6.0
 	github.com/stackitcloud/stackit-sdk-go/services/edge v0.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.0
-	github.com/stackitcloud/stackit-sdk-go/services/kms v1.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/mariadb v1.1.0
+	github.com/stackitcloud/stackit-sdk-go/services/modelexperiments v0.2.0
 	github.com/stackitcloud/stackit-sdk-go/services/modelserving v0.11.0
 	github.com/stackitcloud/stackit-sdk-go/services/mongodbflex v1.12.0
 	github.com/stackitcloud/stackit-sdk-go/services/objectstorage v1.9.0
@@ -50,6 +51,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.0
 	github.com/teambition/rrule-go v1.8.2
+	go.uber.org/mock v0.6.0
 	golang.org/x/mod v0.38.0
 )
 
