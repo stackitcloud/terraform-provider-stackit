@@ -175,7 +175,7 @@ func (r *wrappingKeyResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"protection": schema.StringAttribute{
-				Description: fmt.Sprintf("The underlying system that is responsible for protecting the key material. %s", utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(kms.AllowedProtectionEnumValues)...)),
+				Description: "The underlying system that is responsible for protecting the key material.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -461,7 +461,7 @@ func toCreatePayload(model *Model) (*kms.CreateWrappingKeyPayload, error) {
 		Algorithm:   kms.WrappingAlgorithm(model.Algorithm.ValueString()),
 		Description: conversion.StringValueToPointer(model.Description),
 		DisplayName: model.DisplayName.ValueString(),
-		Protection:  kms.Protection(model.Protection.ValueString()),
+		Protection:  model.Protection.ValueString(),
 		Purpose:     kms.WrappingPurpose(model.Purpose.ValueString()),
 	}, nil
 }
