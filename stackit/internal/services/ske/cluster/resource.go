@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -430,6 +431,7 @@ var descriptions = map[string]string{
 
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	extensionApplicationLoadbalancerDefault := types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{"enabled": types.BoolValue(false)})
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
@@ -755,6 +757,13 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "A single extensions block as defined below.",
 				Optional:    true,
 				Computed:    true,
+				Default: objectdefault.StaticValue(types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": extensionApplicationLoadbalancerDefault,
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+				})),
 				Attributes: map[string]schema.Attribute{
 					"argus": schema.SingleNestedAttribute{
 						Description:        "A single argus block as defined below. This field is deprecated and will be removed 06 January 2026.",
@@ -835,10 +844,16 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 						Description: "Application Load Balancer extension.",
 						Optional:    true,
 						Computed:    true,
+						Validators: []validator.Object{
+							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+						Default: objectdefault.StaticValue(extensionApplicationLoadbalancerDefault),
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Description: "Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.",
-								Required:    true,
+								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
 							},
 						},
 					},
