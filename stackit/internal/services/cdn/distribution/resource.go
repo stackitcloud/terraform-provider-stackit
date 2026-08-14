@@ -68,9 +68,9 @@ var schemaDescriptions = map[string]string{
 	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
 	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
 	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
-	"config_blocked_ips":                           "Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution.",
-	"config_default_cache_duration":                "Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M)",
-	"config_monthly_limit_bytes":                   "Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use.",
+	"config_blocked_ips":                           "Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.",
+	"config_default_cache_duration":                "Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
+	"config_monthly_limit_bytes":                   "Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
 	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
 	"config_redirects_rule_description":            "An optional description for the redirect rule",
@@ -1502,19 +1502,8 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		return core.DiagsToError(diags)
 	}
 
-	var defaultCacheDuration types.String
-	if distribution.Config.DefaultCacheDuration.IsSet() {
-		defaultCacheDuration = types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
-	} else {
-		defaultCacheDuration = types.StringNull()
-	}
-
-	var monthlyLimitBytes types.Int64
-	if distribution.Config.MonthlyLimitBytes.IsSet() {
-		monthlyLimitBytes = types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
-	} else {
-		monthlyLimitBytes = types.Int64Null()
-	}
+	defaultCacheDuration := types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
+	monthlyLimitBytes := types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
 
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend":                backend,
