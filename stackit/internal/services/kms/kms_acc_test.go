@@ -127,7 +127,7 @@ var testConfigWrappingKeyVarsMin = config.Variables{
 	"keyring_display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"display_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"algorithm":            config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256)),
-	"protection":           config.StringVariable(string(kms.PROTECTION_SOFTWARE)),
+	"protection":           config.StringVariable("software"),
 	"purpose":              config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_SYMMETRIC_KEY)),
 }
 
@@ -147,7 +147,7 @@ var testConfigWrappingKeyVarsMax = config.Variables{
 	"keyring_display_name": config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"display_name":         config.StringVariable("tf-acc-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
 	"algorithm":            config.StringVariable(string(kms.WRAPPINGALGORITHM_RSA_2048_OAEP_SHA256)),
-	"protection":           config.StringVariable(string(kms.PROTECTION_SOFTWARE)),
+	"protection":           config.StringVariable("software"),
 	"purpose":              config.StringVariable(string(kms.WRAPPINGPURPOSE_WRAP_SYMMETRIC_KEY)),
 	"description":          config.StringVariable("kms-wrapping-key-description"),
 	"access_scope":         config.StringVariable(string(kms.ACCESSSCOPE_PUBLIC)),
