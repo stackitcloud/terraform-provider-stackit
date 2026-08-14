@@ -23,7 +23,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/git v0.14.0
 	github.com/stackitcloud/stackit-sdk-go/services/iaas v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/intake v0.11.0
-	github.com/stackitcloud/stackit-sdk-go/services/kms v1.12.0
+	github.com/stackitcloud/stackit-sdk-go/services/kms v1.13.0
 	github.com/stackitcloud/stackit-sdk-go/services/loadbalancer v1.15.0
 	github.com/stackitcloud/stackit-sdk-go/services/logme v1.1.0
 	github.com/stackitcloud/stackit-sdk-go/services/logs v0.10.0
