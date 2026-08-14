@@ -193,7 +193,7 @@ func (r *keyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				},
 			},
 			"protection": schema.StringAttribute{
-				Description: fmt.Sprintf("The underlying system that is responsible for protecting the key material. %s", utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(kms.AllowedProtectionEnumValues)...)),
+				Description: "The underlying system that is responsible for protecting the key material.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -453,7 +453,7 @@ func toCreatePayload(model *Model) (*kms.CreateKeyPayload, error) {
 	return &kms.CreateKeyPayload{
 		AccessScope: accessScope,
 		Algorithm:   kms.Algorithm(model.Algorithm.ValueString()),
-		Protection:  kms.Protection(model.Protection.ValueString()),
+		Protection:  model.Protection.ValueString(),
 		Description: conversion.StringValueToPointer(model.Description),
 		DisplayName: model.DisplayName.ValueString(),
 		ImportOnly:  conversion.BoolValueToPointer(model.ImportOnly),

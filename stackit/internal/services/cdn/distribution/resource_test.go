@@ -13,6 +13,44 @@ import (
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 )
 
+func createTestConfig(vals map[string]attr.Value) types.Object {
+	if _, ok := vals["blocked_ips"]; !ok {
+		vals["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{})
+	}
+	if _, ok := vals["default_cache_duration"]; !ok {
+		vals["default_cache_duration"] = types.StringNull()
+	}
+	if _, ok := vals["monthly_limit_bytes"]; !ok {
+		vals["monthly_limit_bytes"] = types.Int64Null()
+	}
+	return types.ObjectValueMust(configTypes, vals)
+}
+
+// configFixture builds a config Object with fully-null defaults for every
+// attribute. Callers opt in to specific values via mod funcs. Follows the
+// fixture pattern used elsewhere in the repo (see fixtureModel in
+// stackit/internal/services/telemetryrouter/accesstoken/resource_test.go).
+func configFixture(mods ...func(vals map[string]attr.Value)) types.Object {
+	vals := map[string]attr.Value{
+		"backend":                types.ObjectNull(backendTypes),
+		"regions":                types.ListNull(types.StringType),
+		"blocked_countries":      types.ListValueMust(types.StringType, []attr.Value{}),
+		"blocked_ips":            types.ListValueMust(types.StringType, []attr.Value{}),
+		"default_cache_duration": types.StringNull(),
+		"monthly_limit_bytes":    types.Int64Null(),
+		"optimizer":              types.ObjectNull(optimizerTypes),
+		"redirects":              types.ObjectNull(redirectsTypes),
+		"waf":                    types.ObjectNull(wafTypes),
+		"tls":                    types.ObjectNull(tlsTypes),
+		"strip_response_cookies": types.BoolUnknown(),
+		"forward_host_header":    types.BoolUnknown(),
+	}
+	for _, mod := range mods {
+		mod(vals)
+	}
+	return types.ObjectValueMust(configTypes, vals)
+}
+
 func TestToCreatePayload(t *testing.T) {
 	headers := map[string]attr.Value{
 		"testHeader0": types.StringValue("testHeaderValue0"),
@@ -84,7 +122,7 @@ func TestToCreatePayload(t *testing.T) {
 	}
 	redirectsAttrTypes := redirectsObjType.AttrTypes
 
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
@@ -194,7 +232,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              optimizer,
@@ -224,7 +262,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_redirects": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -283,7 +321,7 @@ func TestToCreatePayload(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture, // reusing the existing one
 					"blocked_countries":      blockedCountriesFixture,
@@ -315,7 +353,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_waf": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -344,7 +382,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_strip_response_and_cookies_forward": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -375,7 +413,7 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		"happy_path_with_tls": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
@@ -398,6 +436,87 @@ func TestToCreatePayload(t *testing.T) {
 					EnableTls10: true,
 					EnableTls11: true,
 				},
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_blocked_ips": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("1.2.3.4"),
+						types.StringValue("5.6.7.8"),
+					})
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				BlockedIps:       []string{"1.2.3.4", "5.6.7.8"},
+				Waf:              &expectedDefaultWafConfig,
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_default_cache_duration": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:              []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:     []string{"XX", "YY", "ZZ"},
+				DefaultCacheDuration: cdnSdk.PtrString("P1DT2H30M"),
+				Waf:                  &expectedDefaultWafConfig,
+				Backend: cdnSdk.CreateDistributionPayloadBackend{
+					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
+						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
+						OriginRequestHeaders: &map[string]string{"testHeader0": "testHeaderValue0", "testHeader1": "testHeaderValue1"},
+						OriginUrl:            "https://www.mycoolapp.com",
+						Type:                 "http",
+					},
+				},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_monthly_limit_bytes": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
+				})
+			}),
+			Expected: &cdnSdk.CreateDistributionPayload{
+				Regions:           []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:  []string{"XX", "YY", "ZZ"},
+				MonthlyLimitBytes: cdnSdk.PtrInt64(1073741824),
+				Waf:               &expectedDefaultWafConfig,
 				Backend: cdnSdk.CreateDistributionPayloadBackend{
 					HttpBackendCreate: &cdnSdk.HttpBackendCreate{
 						Geofencing:           &map[string][]string{"https://de.mycoolapp.com": {"DE", "FR"}},
@@ -435,7 +554,7 @@ func TestToCreatePayload(t *testing.T) {
 				// set generated ID before diffing
 				tc.Expected.IntentId = res.IntentId
 
-				diff := cmp.Diff(res, tc.Expected)
+				diff := cmp.Diff(res, tc.Expected, cmpopts.EquateEmpty())
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
@@ -472,7 +591,7 @@ func TestConvertConfig(t *testing.T) {
 	blockedCountriesFixture := types.ListValueMust(types.StringType, blockedCountries)
 	optimizer := types.ObjectValueMust(optimizerTypes, map[string]attr.Value{"enabled": types.BoolValue(true)})
 
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"optimizer":              types.ObjectNull(optimizerTypes),
@@ -587,7 +706,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              optimizer,
@@ -621,7 +740,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_tls": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
@@ -661,7 +780,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_waf": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -695,7 +814,7 @@ func TestConvertConfig(t *testing.T) {
 		},
 		"happy_path_with_redirects": {
 			Input: modelFixture(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -758,7 +877,7 @@ func TestConvertConfig(t *testing.T) {
 					"origin_request_headers": types.MapNull(types.StringType),
 					"geofencing":             types.MapNull(geofencingTypes.ElemType),
 				})
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackend,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
@@ -782,6 +901,96 @@ func TestConvertConfig(t *testing.T) {
 				},
 				Regions:          []cdnSdk.Region{"EU", "US"},
 				BlockedCountries: []string{"XX", "YY", "ZZ"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_blocked_ips": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("1.2.3.4"),
+						types.StringValue("5.6.7.8"),
+					})
+				})
+			}),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+					},
+				},
+				Regions:          []cdnSdk.Region{"EU", "US"},
+				BlockedCountries: []string{"XX", "YY", "ZZ"},
+				BlockedIps:       []string{"1.2.3.4", "5.6.7.8"},
+			},
+			IsValid: true,
+		},
+		"happy_path_with_default_cache_duration": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
+				})
+			}),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+					},
+				},
+				Regions:              []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:     []string{"XX", "YY", "ZZ"},
+				DefaultCacheDuration: *cdnSdk.NewNullableString(cdnSdk.PtrString("P1DT2H30M")),
+			},
+			IsValid: true,
+		},
+		"happy_path_with_monthly_limit_bytes": {
+			Input: modelFixture(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
+				})
+			}),
+			Expected: &cdnSdk.Config{
+				Backend: cdnSdk.ConfigBackend{
+					HttpBackend: &cdnSdk.HttpBackend{
+						OriginRequestHeaders: map[string]string{
+							"testHeader0": "testHeaderValue0",
+							"testHeader1": "testHeaderValue1",
+						},
+						OriginUrl: "https://www.mycoolapp.com",
+						Type:      "http",
+						Geofencing: map[string][]string{
+							"https://de.mycoolapp.com": {"DE", "FR"},
+						},
+					},
+				},
+				Regions:           []cdnSdk.Region{"EU", "US"},
+				BlockedCountries:  []string{"XX", "YY", "ZZ"},
+				MonthlyLimitBytes: *cdnSdk.NewNullableInt64(cdnSdk.PtrInt64(1073741824)),
 			},
 			IsValid: true,
 		},
@@ -816,7 +1025,9 @@ func TestConvertConfig(t *testing.T) {
 					cmpopts.IgnoreUnexported(
 						cdnSdk.NullableString{},
 						cdnSdk.NullableInt64{},
-					))
+					),
+					cmpopts.EquateEmpty(),
+				)
 				if diff != "" {
 					t.Fatalf("Create Payload not as expected: %s", diff)
 				}
@@ -922,7 +1133,7 @@ func TestMapFields(t *testing.T) {
 		"enable_tls_10": types.BoolValue(false),
 		"enable_tls_11": types.BoolValue(false),
 	})
-	config := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	config := createTestConfig(map[string]attr.Value{
 		"backend":                backend,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
@@ -1057,7 +1268,7 @@ func TestMapFields(t *testing.T) {
 		"origin_request_headers": types.MapNull(types.StringType),
 		"geofencing":             types.MapNull(geofencingTypes.ElemType),
 	})
-	configOld := types.ObjectValueMust(configTypes, map[string]attr.Value{
+	configOld := createTestConfig(map[string]attr.Value{
 		"backend":                bucketBackendOld,
 		"regions":                regionsFixture,
 		"blocked_countries":      blockedCountriesFixture,
@@ -1081,7 +1292,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_optimizer": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              optimizer,
@@ -1111,7 +1322,7 @@ func TestMapFields(t *testing.T) {
 					"region":                 types.StringNull(),
 					"credentials":            types.ObjectNull(backendCredentialsTypes),
 				})
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backendWithGeofencing,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -1130,7 +1341,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_redirects": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -1158,7 +1369,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_waf": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                backend,
 					"regions":                regionsFixture,
 					"optimizer":              types.ObjectNull(optimizerTypes),
@@ -1177,7 +1388,7 @@ func TestMapFields(t *testing.T) {
 		},
 		"happy_path_with_tls_and_strip_response_and_cookies_forward": {
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":           backend,
 					"regions":           regionsFixture,
 					"optimizer":         types.ObjectNull(optimizerTypes),
@@ -1249,7 +1460,7 @@ func TestMapFields(t *testing.T) {
 				m.Config = configOld
 			}),
 			Expected: expectedModel(func(m *Model) {
-				m.Config = types.ObjectValueMust(configTypes, map[string]attr.Value{
+				m.Config = createTestConfig(map[string]attr.Value{
 					"backend":                bucketBackendOld,
 					"regions":                regionsFixture,
 					"blocked_countries":      blockedCountriesFixture,
@@ -1260,6 +1471,63 @@ func TestMapFields(t *testing.T) {
 					"strip_response_cookies": types.BoolValue(false),
 					"forward_host_header":    types.BoolValue(false),
 				})
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_blocked_ips": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["tls"] = defaultTls
+					v["strip_response_cookies"] = types.BoolValue(false)
+					v["forward_host_header"] = types.BoolValue(false)
+					v["blocked_ips"] = types.ListValueMust(types.StringType, []attr.Value{
+						types.StringValue("1.2.3.4"),
+						types.StringValue("5.6.7.8"),
+					})
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.BlockedIps = []string{"1.2.3.4", "5.6.7.8"}
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_default_cache_duration": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["tls"] = defaultTls
+					v["strip_response_cookies"] = types.BoolValue(false)
+					v["forward_host_header"] = types.BoolValue(false)
+					v["default_cache_duration"] = types.StringValue("P1DT2H30M")
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.DefaultCacheDuration = *cdnSdk.NewNullableString(cdnSdk.PtrString("P1DT2H30M"))
+			}),
+			IsValid: true,
+		},
+		"happy_path_with_monthly_limit_bytes": {
+			Expected: expectedModel(func(m *Model) {
+				m.Config = configFixture(func(v map[string]attr.Value) {
+					v["backend"] = backend
+					v["regions"] = regionsFixture
+					v["blocked_countries"] = blockedCountriesFixture
+					v["waf"] = defaultWaf
+					v["tls"] = defaultTls
+					v["strip_response_cookies"] = types.BoolValue(false)
+					v["forward_host_header"] = types.BoolValue(false)
+					v["monthly_limit_bytes"] = types.Int64Value(1073741824)
+				})
+			}),
+			Input: distributionFixture(func(d *cdnSdk.Distribution) {
+				d.Config.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(cdnSdk.PtrInt64(1073741824))
 			}),
 			IsValid: true,
 		},
