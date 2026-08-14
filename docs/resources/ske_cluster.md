@@ -152,7 +152,7 @@ Required:
 <a id="nestedatt--extensions--application_load_balancer"></a>
 ### Nested Schema for `extensions.application_load_balancer`
 
-Required:
+Optional:
 
 - `enabled` (Boolean) Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.
 
