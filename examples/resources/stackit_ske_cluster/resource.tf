@@ -20,9 +20,4 @@ resource "stackit_ske_cluster" "example" {
       access_scope = "PUBLIC"
     }
   }
-  # Cluster audit log forwarding to a Telemetry Router.
-  # Private preview: only configurable for enabled accounts.
-  audit = {
-    enabled = true
-  }
 }
