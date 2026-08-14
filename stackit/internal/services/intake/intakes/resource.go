@@ -633,7 +633,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*intake.CreateIntakePay
 	}, nil
 }
 
-func hasCatalogChanged(model *Model, state *Model) bool {
+func hasCatalogChanged(model, state *Model) bool {
 	if state == nil {
 		return !model.CatalogUri.IsNull() || !model.CatalogWarehouse.IsNull() || !model.CatalogNamespace.IsNull() || !model.CatalogTableName.IsNull() || !model.CatalogAuthType.IsNull() || !model.CatalogPartitioning.IsNull() || !model.CatalogPartitionBy.IsNull()
 	}
@@ -668,7 +668,7 @@ func hasCatalogChanged(model *Model, state *Model) bool {
 }
 
 // Build UpdateIntakePayload from provider's model
-func toUpdatePayload(ctx context.Context, model *Model, state *Model) (*intake.UpdateIntakePayload, error) {
+func toUpdatePayload(ctx context.Context, model, state *Model) (*intake.UpdateIntakePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("model is nil")
 	}

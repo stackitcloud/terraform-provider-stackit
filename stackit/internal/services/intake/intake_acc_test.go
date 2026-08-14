@@ -18,6 +18,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 
 	"github.com/hashicorp/terraform-plugin-testing/config"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	intake "github.com/stackitcloud/stackit-sdk-go/services/intake/v1betaapi"
@@ -42,98 +43,104 @@ var resourceIntakesMax string
 const intakeRunnerResource = "stackit_intake_runner.example"
 const intakesResource = "stackit_intakes.example"
 
-var testIntakeRunnerConfigVarsMin = config.Variables{
-	"project_id":            config.StringVariable(testutil.ProjectId),
-	"name":                  config.StringVariable("tf-acc-runner-min"),
-	"max_message_size_kib":  config.IntegerVariable(1024),
-	"max_messages_per_hour": config.IntegerVariable(1000),
+var runnerNameMin = fmt.Sprintf("tf-acc-runner-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var runnerNameMinUpd = fmt.Sprintf("tf-acc-runner-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var runnerNameMax = fmt.Sprintf("tf-acc-runner-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var runnerNameMaxUpd = fmt.Sprintf("tf-acc-runner-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var runnerNameMaxPrereq = fmt.Sprintf("tf-acc-runner-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var intakeNameMin = fmt.Sprintf("tf-acc-intake-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var intakeNameMinUpd = fmt.Sprintf("tf-acc-intake-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var intakeNameMax = fmt.Sprintf("tf-acc-intake-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var intakeNameMaxUpd = fmt.Sprintf("tf-acc-intake-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var dremioUserMin = fmt.Sprintf("tfAcc%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+var dremioUserMax = fmt.Sprintf("tfAcc%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+
+func testIntakeRunnerConfigVarsMin() config.Variables {
+	return config.Variables{
+		"project_id":            config.StringVariable(testutil.ProjectId),
+		"name":                  config.StringVariable(runnerNameMin),
+		"max_message_size_kib":  config.IntegerVariable(1024),
+		"max_messages_per_hour": config.IntegerVariable(1000),
+	}
 }
 
-var testIntakeRunnerConfigVarsMax = config.Variables{
-	"project_id":            config.StringVariable(testutil.ProjectId),
-	"name":                  config.StringVariable("tf-acc-runner-max"),
-	"region":                config.StringVariable(testutil.Region),
-	"description":           config.StringVariable("An example runner for Intake"),
-	"max_message_size_kib":  config.IntegerVariable(1024),
-	"max_messages_per_hour": config.IntegerVariable(1100),
+func testIntakeRunnerConfigVarsMax() config.Variables {
+	return config.Variables{
+		"project_id":            config.StringVariable(testutil.ProjectId),
+		"name":                  config.StringVariable(runnerNameMax),
+		"region":                config.StringVariable(testutil.Region),
+		"description":           config.StringVariable("An example runner for Intake"),
+		"max_message_size_kib":  config.IntegerVariable(1024),
+		"max_messages_per_hour": config.IntegerVariable(1100),
+	}
 }
 
-var testIntakesConfigVarsMin = config.Variables{
-	"project_id":                   config.StringVariable(testutil.ProjectId),
-	"runner_name":                  config.StringVariable("tf-acc-runner-min"),
-	"intake_name":                  config.StringVariable("tf-acc-intake-min"),
-	"max_message_size_kib":         config.IntegerVariable(1024),
-	"max_messages_per_hour":        config.IntegerVariable(1000),
-	"dremio_display_name":          config.StringVariable("tfAccDremioIntakeMin"),
-	"dremio_user_email":            config.StringVariable("tf-acc-intake-min@example.com"),
-	"dremio_user_first_name":       config.StringVariable("Intake"),
-	"dremio_user_last_name":        config.StringVariable("Min"),
-	"dremio_user_name":             config.StringVariable("tfAccIntakeMinUser"),
-	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
-	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+func testIntakesConfigVarsMin() config.Variables {
+	return config.Variables{
+		"project_id":                   config.StringVariable(testutil.ProjectId),
+		"runner_name":                  config.StringVariable(runnerNameMin),
+		"intake_name":                  config.StringVariable(intakeNameMin),
+		"max_message_size_kib":         config.IntegerVariable(1024),
+		"max_messages_per_hour":        config.IntegerVariable(1000),
+		"dremio_display_name":          config.StringVariable(fmt.Sprintf("tfAccDremio%s", acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum))),
+		"dremio_user_email":            config.StringVariable(fmt.Sprintf("tf-acc-%s@example.com", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))),
+		"dremio_user_first_name":       config.StringVariable("Intake"),
+		"dremio_user_last_name":        config.StringVariable("Min"),
+		"dremio_user_name":             config.StringVariable(dremioUserMin),
+		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcc!@%s", acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum))),
+		"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+	}
 }
 
-var testIntakesConfigVarsMax = config.Variables{
-	"project_id":                   config.StringVariable(testutil.ProjectId),
-	"region":                       config.StringVariable(testutil.Region),
-	"runner_name":                  config.StringVariable("tf-acc-runner-for-max"),
-	"intake_name":                  config.StringVariable("tf-acc-intake-max"),
-	"description":                  config.StringVariable("An example full intake with dynamic Dremio"),
-	"max_message_size_kib":         config.IntegerVariable(1024),
-	"max_messages_per_hour":        config.IntegerVariable(1000),
-	"dremio_display_name":          config.StringVariable("tfAccDremioIntakeMax"),
-	"dremio_user_email":            config.StringVariable("tf-acc-test@example.com"),
-	"dremio_user_first_name":       config.StringVariable("Acc"),
-	"dremio_user_last_name":        config.StringVariable("Test"),
-	"dremio_user_name":             config.StringVariable("tfAccIntakeMaxUser"),
-	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
-	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+func testIntakesConfigVarsMax() config.Variables {
+	return config.Variables{
+		"project_id":                   config.StringVariable(testutil.ProjectId),
+		"region":                       config.StringVariable(testutil.Region),
+		"runner_name":                  config.StringVariable(runnerNameMaxPrereq),
+		"intake_name":                  config.StringVariable(intakeNameMax),
+		"description":                  config.StringVariable("An example full intake with dynamic Dremio"),
+		"max_message_size_kib":         config.IntegerVariable(1024),
+		"max_messages_per_hour":        config.IntegerVariable(1000),
+		"dremio_display_name":          config.StringVariable(fmt.Sprintf("tfAccDremio%s", acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum))),
+		"dremio_user_email":            config.StringVariable(fmt.Sprintf("tf-acc-%s@example.com", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))),
+		"dremio_user_first_name":       config.StringVariable("Acc"),
+		"dremio_user_last_name":        config.StringVariable("Test"),
+		"dremio_user_name":             config.StringVariable(dremioUserMax),
+		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcceptance12345!@%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))),
+		"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+	}
 }
 
 func testIntakeRunnerConfigVarsMinUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMin))
-	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMin)
-	tempConfig["name"] = config.StringVariable("tf-acc-runner-min-upd")
+	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMin()))
+	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMin())
+	tempConfig["name"] = config.StringVariable(runnerNameMinUpd)
 	return tempConfig
 }
 
 func testIntakeRunnerConfigVarsMaxUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMax))
-	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMax)
-	tempConfig["name"] = config.StringVariable("tf-acc-runner-max-upd")
+	tempConfig := make(config.Variables, len(testIntakeRunnerConfigVarsMax()))
+	maps.Copy(tempConfig, testIntakeRunnerConfigVarsMax())
+	tempConfig["name"] = config.StringVariable(runnerNameMaxUpd)
 	return tempConfig
 }
 
-var testIntakesConfigVarsMinUpdatedVars = config.Variables{
-	"project_id":                   config.StringVariable(testutil.ProjectId),
-	"runner_name":                  config.StringVariable("tf-acc-runner-min"),
-	"intake_name":                  config.StringVariable("tf-acc-intake-min-upd"),
-	"max_message_size_kib":         config.IntegerVariable(1024),
-	"max_messages_per_hour":        config.IntegerVariable(1000),
-	"dremio_display_name":          config.StringVariable("tfAccDremioIntakeMin"),
-	"dremio_user_email":            config.StringVariable("tf-acc-intake-min@example.com"),
-	"dremio_user_first_name":       config.StringVariable("Intake"),
-	"dremio_user_last_name":        config.StringVariable("Min"),
-	"dremio_user_name":             config.StringVariable("tfAccIntakeMinUser"),
-	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
-	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+func testIntakesConfigVarsMinUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testIntakesConfigVarsMin()))
+	maps.Copy(tempConfig, testIntakesConfigVarsMin())
+	tempConfig["intake_name"] = config.StringVariable(intakeNameMinUpd)
+	return tempConfig
 }
 
-var testIntakesConfigVarsMaxUpdatedVars = config.Variables{
-	"project_id":                   config.StringVariable(testutil.ProjectId),
-	"region":                       config.StringVariable(testutil.Region),
-	"runner_name":                  config.StringVariable("tf-acc-runner-for-max"),
-	"intake_name":                  config.StringVariable("tf-acc-intake-max-upd"),
-	"description":                  config.StringVariable("Updated full intake description"),
-	"max_message_size_kib":         config.IntegerVariable(1024),
-	"max_messages_per_hour":        config.IntegerVariable(1100),
-	"dremio_display_name":          config.StringVariable("tfAccDremioIntakeMax"),
-	"dremio_user_email":            config.StringVariable("tf-acc-intake-max@example.com"),
-	"dremio_user_first_name":       config.StringVariable("Intake"),
-	"dremio_user_last_name":        config.StringVariable("Max"),
-	"dremio_user_name":             config.StringVariable("tfAccIntakeMaxUser"),
-	"dremio_user_password":         config.StringVariable("TestAcceptance12345!@"),
-	"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
+func testIntakesConfigVarsMaxUpdated() config.Variables {
+	tempConfig := make(config.Variables, len(testIntakesConfigVarsMax()))
+	maps.Copy(tempConfig, testIntakesConfigVarsMax())
+	tempConfig["intake_name"] = config.StringVariable(intakeNameMaxUpd)
+	tempConfig["description"] = config.StringVariable("Updated full intake description")
+	tempConfig["max_messages_per_hour"] = config.IntegerVariable(1100)
+	tempConfig["dremio_user_email"] = config.StringVariable(fmt.Sprintf("tf-acc-%s@example.com", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum)))
+	tempConfig["dremio_user_name"] = config.StringVariable(fmt.Sprintf("tfAcc%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum)))
+	return tempConfig
 }
 
 // getDremioPAT authenticates against Dremio UI API, enables PAT support key, resolves user UUID, and issues a PAT
@@ -151,7 +158,7 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 		Transport: tr,
 	}
 
-	// 1. Authenticate with retry loop for service startup readiness: POST /oauth/token
+	// 1. authenticate with retry loop for service startup readiness POST /oauth/token
 	tokenURL := fmt.Sprintf("%s/oauth/token", uiEndpoint)
 	form := url.Values{}
 	form.Set("grant_type", "password")
@@ -173,7 +180,7 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 		resp, err := httpClient.Do(req)
 		if err == nil {
 			respBytes, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 
 			if resp.StatusCode == http.StatusOK {
 				var tokenResp struct {
@@ -197,7 +204,7 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 		return "", fmt.Errorf("failed to authenticate against Dremio at %s after retries: %w", tokenURL, lastErr)
 	}
 
-	// 2. Enable PAT support key: PUT /apiv2/settings/auth.personal-access-tokens.enabled
+	// 2. enable PAT support key PUT /apiv2/settings/auth.personal-access-tokens.enabled
 	settingsURL := fmt.Sprintf("%s/apiv2/settings/auth.personal-access-tokens.enabled", uiEndpoint)
 	settingsBodyMap := map[string]interface{}{
 		"type":  "BOOLEAN",
@@ -220,11 +227,11 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 	if err != nil {
 		return "", fmt.Errorf("enabling PAT support key at %s: %w", settingsURL, err)
 	}
-	settingsResp.Body.Close()
+	_ = settingsResp.Body.Close()
 
-	// 3. Resolve user UUID: GET /api/v3/user/by-name/{username}
+	// 3. resolve user UUID GET /api/v3/user/by-name/{username}
 	userURL := fmt.Sprintf("%s/api/v3/user/by-name/%s", uiEndpoint, url.PathEscape(username))
-	userReq, err := http.NewRequestWithContext(ctx, http.MethodGet, userURL, nil)
+	userReq, err := http.NewRequestWithContext(ctx, http.MethodGet, userURL, http.NoBody)
 	if err != nil {
 		return "", fmt.Errorf("creating user lookup request: %w", err)
 	}
@@ -234,7 +241,7 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 	if err != nil {
 		return "", fmt.Errorf("looking up user UUID at %s: %w", userURL, err)
 	}
-	defer userResp.Body.Close()
+	defer func() { _ = userResp.Body.Close() }()
 
 	userBytes, err := io.ReadAll(userResp.Body)
 	if err != nil {
@@ -252,7 +259,7 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 		return "", fmt.Errorf("failed to parse user UUID from response: %s", string(userBytes))
 	}
 
-	// 4. Issue Personal Access Token: POST /api/v3/user/{id}/token
+	// 4. issue Personal Access Token POST /api/v3/user/{id}/token
 	patURL := fmt.Sprintf("%s/api/v3/user/%s/token", uiEndpoint, userObj.ID)
 	patBodyMap := map[string]interface{}{
 		"label":                "acceptance-test",
@@ -274,7 +281,7 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 	if err != nil {
 		return "", fmt.Errorf("requesting PAT at %s: %w", patURL, err)
 	}
-	defer patResp.Body.Close()
+	defer func() { _ = patResp.Body.Close() }()
 
 	patBytes, err := io.ReadAll(patResp.Body)
 	if err != nil {
@@ -305,31 +312,33 @@ func getDremioPAT(ctx context.Context, uiEndpoint, username, password string) (s
 }
 
 func TestAccIntakeRunnerMin(t *testing.T) {
+	cfg := testIntakeRunnerConfigVarsMin()
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakeRunnerDestroy,
 		Steps: []resource.TestStep{
 			// Create the minimum runner from the HCL file
 			{
-				ConfigVariables: testIntakeRunnerConfigVarsMin,
-				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig() + resourceIntakeRunnerMin,
+				ConfigVariables: cfg,
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + resourceIntakeRunnerMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["name"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(cfg["name"])),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "runner_id"),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "description"),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "labels"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_message_size_kib"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_messages_per_hour"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(cfg["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(cfg["max_messages_per_hour"])),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
 				),
 			},
-			// Data source check: creates config that includes resource and data source
+			// Data source check
 			{
-				ConfigVariables: testIntakeRunnerConfigVarsMin,
+				ConfigVariables: cfg,
 				Config: fmt.Sprintf(`
 				%s
 				%s
@@ -339,7 +348,6 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 					region     = %s.region
 				}`, testutil.NewConfigBuilder().BuildProviderConfig(), resourceIntakeRunnerMin, intakeRunnerResource, intakeRunnerResource, intakeRunnerResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// Make sure it's correctly found resource by comparing runner_id attribute
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "project_id", "data.stackit_intake_runner.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "runner_id", "data.stackit_intake_runner.example", "runner_id"),
 					resource.TestCheckResourceAttrPair(intakeRunnerResource, "name", "data.stackit_intake_runner.example", "name"),
@@ -353,30 +361,28 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 			},
 			// Simulate terraform import
 			{
-				ConfigVariables:   testIntakeRunnerConfigVarsMin,
+				ConfigVariables:   cfg,
 				Config:            testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				ResourceName:      intakeRunnerResource,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					// Construct ID string
 					r, ok := s.RootModule().Resources[intakeRunnerResource]
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", intakeRunnerResource)
 					}
-					// ID structure: project_id, region, runner_id
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["runner_id"]), nil
 				},
 			},
-			// Update check: verifies API updated resource name without crashing
+			// Update check
 			{
 				ConfigVariables: testIntakeRunnerConfigVarsMinUpdated(),
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMinUpdated()["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMinUpdated()["name"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_message_size_kib"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMin["max_messages_per_hour"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(cfg["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(cfg["max_messages_per_hour"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.Region),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "description"),
 					resource.TestCheckNoResourceAttr(intakeRunnerResource, "labels"),
@@ -391,20 +397,22 @@ func TestAccIntakeRunnerMin(t *testing.T) {
 }
 
 func TestAccIntakeRunnerMax(t *testing.T) {
+	cfg := testIntakeRunnerConfigVarsMax()
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakeRunnerDestroy,
 		Steps: []resource.TestStep{
 			// Create the max intake runner from HCL files and verify comparison
 			{
-				ConfigVariables: testIntakeRunnerConfigVarsMax,
+				ConfigVariables: cfg,
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["name"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "description", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_message_size_kib"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_messages_per_hour"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(cfg["name"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "description", testutil.ConvertConfigVariable(cfg["description"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(cfg["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(cfg["max_messages_per_hour"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "2"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
@@ -412,11 +420,12 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["region"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.ConvertConfigVariable(cfg["region"])),
 				),
 			},
+			// Data source check
 			{
-				ConfigVariables: testIntakeRunnerConfigVarsMax,
+				ConfigVariables: cfg,
 				Config: fmt.Sprintf(`
 				%s
 				%s
@@ -438,18 +447,16 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 			},
 			// Simulate terraform import
 			{
-				ConfigVariables:   testIntakeRunnerConfigVarsMax,
+				ConfigVariables:   cfg,
 				Config:            testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				ResourceName:      intakeRunnerResource,
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					// Construct ID string
 					r, ok := s.RootModule().Resources[intakeRunnerResource]
 					if !ok {
 						return "", fmt.Errorf("couldn't find resource %s", intakeRunnerResource)
 					}
-					// ID structure: project_id, region, runner_id
 					return fmt.Sprintf("%s,%s,%s", r.Primary.Attributes["project_id"], r.Primary.Attributes["region"], r.Primary.Attributes["runner_id"]), nil
 				},
 			},
@@ -458,11 +465,11 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 				ConfigVariables: testIntakeRunnerConfigVarsMaxUpdated(),
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceIntakeRunnerMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "name", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMaxUpdated()["name"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "description", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["description"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_message_size_kib"])),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["max_messages_per_hour"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "description", testutil.ConvertConfigVariable(cfg["description"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_message_size_kib", testutil.ConvertConfigVariable(cfg["max_message_size_kib"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "max_messages_per_hour", testutil.ConvertConfigVariable(cfg["max_messages_per_hour"])),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.%", "2"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.env", "development"),
 					resource.TestCheckResourceAttr(intakeRunnerResource, "labels.created_by", "terraform-provider-stackit"),
@@ -470,7 +477,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "id"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "uri"),
 					resource.TestCheckResourceAttrSet(intakeRunnerResource, "create_time"),
-					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.ConvertConfigVariable(testIntakeRunnerConfigVarsMax["region"])),
+					resource.TestCheckResourceAttr(intakeRunnerResource, "region", testutil.ConvertConfigVariable(cfg["region"])),
 				),
 			},
 		},
@@ -478,13 +485,16 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 }
 
 func TestAccIntakesMin(t *testing.T) {
+	cfg := testIntakesConfigVarsMin()
+	cfgUpdated := testIntakesConfigVarsMinUpdated()
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakesDestroy,
 		Steps: []resource.TestStep{
 			// Step 1: Provision prerequisites and dynamically acquire Dremio PAT
 			{
-				ConfigVariables: testIntakesConfigVarsMin,
+				ConfigVariables: cfg,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + strings.Split(resourceIntakesMin, "resource \"stackit_intakes\"")[0],
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_dremio_instance.dremio", "endpoints.ui"),
@@ -499,27 +509,27 @@ func TestAccIntakesMin(t *testing.T) {
 							return fmt.Errorf("dremio instance endpoints.ui is empty")
 						}
 
-						username := testutil.ConvertConfigVariable(testIntakesConfigVarsMin["dremio_user_name"])
-						password := testutil.ConvertConfigVariable(testIntakesConfigVarsMin["dremio_user_password"])
+						username := testutil.ConvertConfigVariable(cfg["dremio_user_name"])
+						password := testutil.ConvertConfigVariable(cfg["dremio_user_password"])
 
-						pat, err := getDremioPAT(context.Background(), uiEndpoint, username, password)
+						dremioPAT, err := getDremioPAT(context.Background(), uiEndpoint, username, password)
 						if err != nil {
 							return fmt.Errorf("failed to obtain Dremio PAT: %w", err)
 						}
 
-						testIntakesConfigVarsMin["dremio_personal_access_token"] = config.StringVariable(pat)
-						testIntakesConfigVarsMinUpdatedVars["dremio_personal_access_token"] = config.StringVariable(pat)
+						cfg["dremio_personal_access_token"] = config.StringVariable(dremioPAT)
+						cfgUpdated["dremio_personal_access_token"] = config.StringVariable(dremioPAT)
 						return nil
 					},
 				),
 			},
 			// Step 2: Create minimal intake using the generated PAT
 			{
-				ConfigVariables: testIntakesConfigVarsMin,
+				ConfigVariables: cfg,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMin["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMin["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
+					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfg["intake_name"])),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 					resource.TestCheckResourceAttrSet(intakesResource, "runner_id"),
 					resource.TestCheckResourceAttrSet(intakesResource, "id"),
@@ -530,15 +540,15 @@ func TestAccIntakesMin(t *testing.T) {
 			},
 			// Step 3: Data source check
 			{
-				ConfigVariables: testIntakesConfigVarsMin,
+				ConfigVariables: cfg,
 				Config: fmt.Sprintf(`
-									%s
-									%s
-									data "stackit_intakes" "example" {
-										project_id = %s.project_id
-										intake_id  = %s.intake_id
-										region     = %s.region
-									}`, testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig(), resourceIntakesMin, intakesResource, intakesResource, intakesResource),
+				%s
+				%s
+				data "stackit_intakes" "example" {
+					project_id = %s.project_id
+					intake_id  = %s.intake_id
+					region     = %s.region
+				}`, testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig(), resourceIntakesMin, intakesResource, intakesResource, intakesResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakesResource, "project_id", "data.stackit_intakes.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "intake_id", "data.stackit_intakes.example", "intake_id"),
@@ -551,7 +561,7 @@ func TestAccIntakesMin(t *testing.T) {
 			},
 			// Step 4: Import state check
 			{
-				ConfigVariables:         testIntakesConfigVarsMin,
+				ConfigVariables:         cfg,
 				Config:                  testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
 				ResourceName:            intakesResource,
 				ImportState:             true,
@@ -567,11 +577,11 @@ func TestAccIntakesMin(t *testing.T) {
 			},
 			// Step 5: Update check
 			{
-				ConfigVariables: testIntakesConfigVarsMinUpdatedVars,
+				ConfigVariables: cfgUpdated,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMinUpdatedVars["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMinUpdatedVars["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
+					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfgUpdated["intake_name"])),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 				),
 			},
@@ -580,13 +590,16 @@ func TestAccIntakesMin(t *testing.T) {
 }
 
 func TestAccIntakesMax(t *testing.T) {
+	cfg := testIntakesConfigVarsMax()
+	cfgUpdated := testIntakesConfigVarsMaxUpdated()
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckIntakesDestroy,
 		Steps: []resource.TestStep{
 			// Step 1: Provision prerequisites and dynamically acquire Dremio PAT
 			{
-				ConfigVariables: testIntakesConfigVarsMax,
+				ConfigVariables: cfg,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + strings.Split(resourceIntakesMax, "resource \"stackit_intakes\"")[0],
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("stackit_dremio_instance.dremio", "endpoints.ui"),
@@ -601,28 +614,28 @@ func TestAccIntakesMax(t *testing.T) {
 							return fmt.Errorf("dremio instance endpoints.ui is empty")
 						}
 
-						username := testutil.ConvertConfigVariable(testIntakesConfigVarsMax["dremio_user_name"])
-						password := testutil.ConvertConfigVariable(testIntakesConfigVarsMax["dremio_user_password"])
+						username := testutil.ConvertConfigVariable(cfg["dremio_user_name"])
+						password := testutil.ConvertConfigVariable(cfg["dremio_user_password"])
 
-						pat, err := getDremioPAT(context.Background(), uiEndpoint, username, password)
+						dremioPAT, err := getDremioPAT(context.Background(), uiEndpoint, username, password)
 						if err != nil {
 							return fmt.Errorf("failed to obtain Dremio PAT: %w", err)
 						}
 
-						testIntakesConfigVarsMax["dremio_personal_access_token"] = config.StringVariable(pat)
-						testIntakesConfigVarsMaxUpdatedVars["dremio_personal_access_token"] = config.StringVariable(pat)
+						cfg["dremio_personal_access_token"] = config.StringVariable(dremioPAT)
+						cfgUpdated["dremio_personal_access_token"] = config.StringVariable(dremioPAT)
 						return nil
 					},
 				),
 			},
 			// Step 2: Create full intake with generated Dremio PAT
 			{
-				ConfigVariables: testIntakesConfigVarsMax,
+				ConfigVariables: cfg,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["intake_name"])),
-					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["description"])),
+					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
+					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfg["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(cfg["description"])),
 					resource.TestCheckResourceAttr(intakesResource, "labels.env", "development"),
 					resource.TestCheckResourceAttr(intakesResource, "labels.created_by", "terraform-provider-stackit"),
 					resource.TestCheckResourceAttr(intakesResource, "catalog_auth_type", "dremio"),
@@ -636,14 +649,14 @@ func TestAccIntakesMax(t *testing.T) {
 			},
 			// Step 3: Data source check
 			{
-				ConfigVariables: testIntakesConfigVarsMax,
+				ConfigVariables: cfg,
 				Config: fmt.Sprintf(`
-										%s
-										%s
-										data "stackit_intakes" "example" {
-											project_id = %s.project_id
-											intake_id  = %s.intake_id
-										}`, testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig(), resourceIntakesMax, intakesResource, intakesResource),
+				%s
+				%s
+				data "stackit_intakes" "example" {
+					project_id = %s.project_id
+					intake_id  = %s.intake_id
+				}`, testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig(), resourceIntakesMax, intakesResource, intakesResource),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(intakesResource, "project_id", "data.stackit_intakes.example", "project_id"),
 					resource.TestCheckResourceAttrPair(intakesResource, "intake_id", "data.stackit_intakes.example", "intake_id"),
@@ -656,7 +669,7 @@ func TestAccIntakesMax(t *testing.T) {
 			},
 			// Step 4: Import state check (ignore write-only PAT)
 			{
-				ConfigVariables:         testIntakesConfigVarsMax,
+				ConfigVariables:         cfg,
 				Config:                  testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				ResourceName:            intakesResource,
 				ImportState:             true,
@@ -672,27 +685,28 @@ func TestAccIntakesMax(t *testing.T) {
 			},
 			// Step 5: Update check
 			{
-				ConfigVariables: testIntakesConfigVarsMaxUpdatedVars,
+				ConfigVariables: cfgUpdated,
 				Config:          testutil.NewConfigBuilder().EnableBetaResources(true).Experiments(testutil.ExperimentDremio).BuildProviderConfig() + "\n" + resourceIntakesMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(testIntakesConfigVarsMax["project_id"])),
-					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(testIntakesConfigVarsMaxUpdatedVars["intake_name"])),
-					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(testIntakesConfigVarsMaxUpdatedVars["description"])),
+					resource.TestCheckResourceAttr(intakesResource, "project_id", testutil.ConvertConfigVariable(cfg["project_id"])),
+					resource.TestCheckResourceAttr(intakesResource, "name", testutil.ConvertConfigVariable(cfgUpdated["intake_name"])),
+					resource.TestCheckResourceAttr(intakesResource, "description", testutil.ConvertConfigVariable(cfgUpdated["description"])),
 					resource.TestCheckResourceAttrSet(intakesResource, "intake_id"),
 				),
-			}},
+			},
+		},
 	})
 }
 
-// testAccCheckIntakeRunnerDestroy act as independent auditor to verify destroy operation
+// testAccCheckIntakeRunnerDestroy verifies all runners are destroyed, actively deleting any leftovers
 func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
+	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IntakeCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	instancesToDestroy := []string{}
+	var instancesToDestroy []string
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_intake_runner" {
 			continue
@@ -701,42 +715,36 @@ func testAccCheckIntakeRunnerDestroy(s *terraform.State) error {
 		instancesToDestroy = append(instancesToDestroy, runnerId)
 	}
 
-	// List all resources in the project/region to see what's left
 	instancesResp, err := client.DefaultAPI.ListIntakeRunners(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
-		return fmt.Errorf("getting instancesResp: %w", err)
+		return fmt.Errorf("listing intake runners: %w", err)
 	}
 
-	// If the API returns a list of runners, check if our deleted ones are still there
-	items := instancesResp.IntakeRunners
-	for i := range items {
-		// If a runner we thought we deleted is found in the list
-		if utils.Contains(instancesToDestroy, items[i].Id) {
-			// Attempt a final delete and wait
-			err := client.DefaultAPI.DeleteIntakeRunner(ctx, testutil.ProjectId, testutil.Region, items[i].Id).Execute()
+	for i := range instancesResp.IntakeRunners {
+		if utils.Contains(instancesToDestroy, instancesResp.IntakeRunners[i].Id) {
+			err := client.DefaultAPI.DeleteIntakeRunner(ctx, testutil.ProjectId, testutil.Region, instancesResp.IntakeRunners[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("deleting runner %s during CheckDestroy: %w", items[i].Id, err)
+				return fmt.Errorf("destroying runner %s during CheckDestroy: %w", instancesResp.IntakeRunners[i].Id, err)
 			}
 
-			// Using the wait handler for destruction verification
-			_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, instancesResp.IntakeRunners[i].Id).WaitWithContext(ctx)
 			if err != nil {
-				return fmt.Errorf("deleting runner %s during CheckDestroy: waiting for deletion %w", items[i].Id, err)
+				return fmt.Errorf("destroying runner %s during CheckDestroy: waiting for deletion %w", instancesResp.IntakeRunners[i].Id, err)
 			}
 		}
 	}
 	return nil
 }
 
-// testAccCheckIntakesDestroy act as independent auditor to verify destroy operation for intakes
+// testAccCheckIntakesDestroy verifies all intakes are destroyed, actively deleting any leftovers
 func testAccCheckIntakesDestroy(s *terraform.State) error {
 	ctx := context.Background()
-	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.GitCustomEndpoint, false)...)
+	client, err := intake.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.IntakeCustomEndpoint, false)...)
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
 	}
 
-	instancesToDestroy := []string{}
+	var instancesToDestroy []string
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "stackit_intakes" {
 			continue
@@ -751,20 +759,19 @@ func testAccCheckIntakesDestroy(s *terraform.State) error {
 
 	instancesResp, err := client.DefaultAPI.ListIntakes(ctx, testutil.ProjectId, testutil.Region).Execute()
 	if err != nil {
-		return fmt.Errorf("getting instancesResp: %w", err)
+		return fmt.Errorf("listing intakes: %w", err)
 	}
 
-	items := instancesResp.Intakes
-	for i := range items {
-		if utils.Contains(instancesToDestroy, items[i].Id) {
-			err := client.DefaultAPI.DeleteIntake(ctx, testutil.ProjectId, testutil.Region, items[i].Id).Execute()
+	for i := range instancesResp.Intakes {
+		if utils.Contains(instancesToDestroy, instancesResp.Intakes[i].Id) {
+			err := client.DefaultAPI.DeleteIntake(ctx, testutil.ProjectId, testutil.Region, instancesResp.Intakes[i].Id).Execute()
 			if err != nil {
-				return fmt.Errorf("deleting intake %s during CheckDestroy: %w", items[i].Id, err)
+				return fmt.Errorf("destroying intake %s during CheckDestroy: %w", instancesResp.Intakes[i].Id, err)
 			}
 
-			_, err = wait.DeleteIntakeWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, items[i].Id).WaitWithContext(ctx)
+			_, err = wait.DeleteIntakeWaitHandler(ctx, client.DefaultAPI, testutil.ProjectId, testutil.Region, instancesResp.Intakes[i].Id).WaitWithContext(ctx)
 			if err != nil {
-				return fmt.Errorf("deleting intake %s during CheckDestroy: waiting for deletion %w", items[i].Id, err)
+				return fmt.Errorf("destroying intake %s during CheckDestroy: waiting for deletion %w", instancesResp.Intakes[i].Id, err)
 			}
 		}
 	}
