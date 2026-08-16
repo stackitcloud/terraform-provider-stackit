@@ -87,7 +87,7 @@ func testIntakesConfigVarsMin() config.Variables {
 		"dremio_user_first_name":       config.StringVariable("Intake"),
 		"dremio_user_last_name":        config.StringVariable("Min"),
 		"dremio_user_name":             config.StringVariable(dremioUserMin),
-		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcc!@%s", acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum))),
+		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcc12!@%s", acctest.RandStringFromCharSet(6, acctest.CharSetAlphaNum))),
 		"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
 	}
 }
@@ -106,7 +106,7 @@ func testIntakesConfigVarsMax() config.Variables {
 		"dremio_user_first_name":       config.StringVariable("Acc"),
 		"dremio_user_last_name":        config.StringVariable("Test"),
 		"dremio_user_name":             config.StringVariable(dremioUserMax),
-		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcceptance12345!@%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))),
+		"dremio_user_password":         config.StringVariable(fmt.Sprintf("TestAcc12!@%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))),
 		"dremio_personal_access_token": config.StringVariable("pending-dremio-pat"),
 	}
 }
@@ -125,21 +125,19 @@ func testIntakeRunnerConfigVarsMaxUpdated() config.Variables {
 	return tempConfig
 }
 
-func testIntakesConfigVarsMinUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testIntakesConfigVarsMin()))
-	maps.Copy(tempConfig, testIntakesConfigVarsMin())
+func testIntakesConfigVarsMinUpdated(base config.Variables) config.Variables {
+	tempConfig := make(config.Variables, len(base))
+	maps.Copy(tempConfig, base)
 	tempConfig["intake_name"] = config.StringVariable(intakeNameMinUpd)
 	return tempConfig
 }
 
-func testIntakesConfigVarsMaxUpdated() config.Variables {
-	tempConfig := make(config.Variables, len(testIntakesConfigVarsMax()))
-	maps.Copy(tempConfig, testIntakesConfigVarsMax())
+func testIntakesConfigVarsMaxUpdated(base config.Variables) config.Variables {
+	tempConfig := make(config.Variables, len(base))
+	maps.Copy(tempConfig, base)
 	tempConfig["intake_name"] = config.StringVariable(intakeNameMaxUpd)
 	tempConfig["description"] = config.StringVariable("Updated full intake description")
 	tempConfig["max_messages_per_hour"] = config.IntegerVariable(1100)
-	tempConfig["dremio_user_email"] = config.StringVariable(fmt.Sprintf("tf-acc-%s@example.com", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum)))
-	tempConfig["dremio_user_name"] = config.StringVariable(fmt.Sprintf("tfAcc%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum)))
 	return tempConfig
 }
 
@@ -486,7 +484,7 @@ func TestAccIntakeRunnerMax(t *testing.T) {
 
 func TestAccIntakesMin(t *testing.T) {
 	cfg := testIntakesConfigVarsMin()
-	cfgUpdated := testIntakesConfigVarsMinUpdated()
+	cfgUpdated := testIntakesConfigVarsMinUpdated(cfg)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
@@ -591,7 +589,7 @@ func TestAccIntakesMin(t *testing.T) {
 
 func TestAccIntakesMax(t *testing.T) {
 	cfg := testIntakesConfigVarsMax()
-	cfgUpdated := testIntakesConfigVarsMaxUpdated()
+	cfgUpdated := testIntakesConfigVarsMaxUpdated(cfg)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
