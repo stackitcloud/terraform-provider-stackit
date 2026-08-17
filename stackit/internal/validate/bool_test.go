@@ -1,4 +1,4 @@
-package custom_rule_group
+package validate
 
 import (
 	"context"
@@ -10,49 +10,74 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 )
 
 func TestOnlyIfBoolValidator(t *testing.T) {
 	tests := []struct {
 		description   string
 		target        types.Bool
-		expectedValue bool
+		expectedValue *bool
 		isValid       bool
 	}{
 		{
 			description:   "target true, expect true",
 			target:        types.BoolValue(true),
-			expectedValue: true,
+			expectedValue: utils.Ptr(true),
 			isValid:       true,
 		},
 		{
 			description:   "target false, expect true",
 			target:        types.BoolValue(false),
-			expectedValue: true,
+			expectedValue: utils.Ptr(true),
 			isValid:       false,
 		},
 		{
 			description:   "target false, expect false",
 			target:        types.BoolValue(false),
-			expectedValue: false,
+			expectedValue: utils.Ptr(false),
 			isValid:       true,
 		},
 		{
 			description:   "target true, expect false",
 			target:        types.BoolValue(true),
-			expectedValue: false,
+			expectedValue: utils.Ptr(false),
 			isValid:       false,
 		},
 		{
 			description:   "target unknown, expect true",
 			target:        types.BoolUnknown(),
-			expectedValue: true,
+			expectedValue: utils.Ptr(true),
 			isValid:       true,
 		},
 		{
 			description:   "target unknown, expect false",
 			target:        types.BoolUnknown(),
-			expectedValue: false,
+			expectedValue: utils.Ptr(false),
+			isValid:       true,
+		},
+		{
+			description:   "target null, expect true",
+			target:        types.BoolNull(),
+			expectedValue: utils.Ptr(true),
+			isValid:       true,
+		},
+		{
+			description:   "target null, expect false",
+			target:        types.BoolNull(),
+			expectedValue: utils.Ptr(false),
+			isValid:       true,
+		},
+		{
+			description:   "target true, expect nil",
+			target:        types.BoolValue(true),
+			expectedValue: nil,
+			isValid:       true,
+		},
+		{
+			description:   "target false, expect nil",
+			target:        types.BoolValue(false),
+			expectedValue: nil,
 			isValid:       true,
 		},
 	}
