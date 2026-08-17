@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -430,6 +431,7 @@ var descriptions = map[string]string{
 
 // Schema defines the schema for the resource.
 func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	extensionApplicationLoadbalancerDefault := types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{"enabled": types.BoolValue(false)})
 	resp.Schema = schema.Schema{
 		Description: fmt.Sprintf("%s\n%s", descriptions["main"], descriptions["node_pools_plan_note"]),
 		// Callout block: https://developer.hashicorp.com/terraform/registry/providers/docs#callouts
@@ -754,9 +756,14 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"extensions": schema.SingleNestedAttribute{
 				Description: "A single extensions block as defined below.",
 				Optional:    true,
-				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
-				},
+				Computed:    true,
+				Default: objectdefault.StaticValue(types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": extensionApplicationLoadbalancerDefault,
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+				})),
 				Attributes: map[string]schema.Attribute{
 					"argus": schema.SingleNestedAttribute{
 						Description:        "A single argus block as defined below. This field is deprecated and will be removed 06 January 2026.",
@@ -830,17 +837,23 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 							"gateway_api": schema.BoolAttribute{
 								Description: "Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.",
 								Optional:    true,
-								Computed:    true,
 							},
 						},
 					},
 					"application_load_balancer": schema.SingleNestedAttribute{
 						Description: "Application Load Balancer extension.",
 						Optional:    true,
+						Computed:    true,
+						Validators: []validator.Object{
+							objectvalidator.AlsoRequires(path.MatchRelative().AtName("enabled")),
+						},
+						Default: objectdefault.StaticValue(extensionApplicationLoadbalancerDefault),
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
-								Description: "Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected.",
-								Required:    true,
+								Description: "Enables the application load balancer extension. Note: This feature is in private preview. Enabling application load balancer extension is only possible for enabled accounts. Otherwise the request will be rejected. Default value will change to true once the private preview phase is over.",
+								Optional:    true,
+								Computed:    true,
+								Default:     booldefault.StaticBool(false),
 							},
 						},
 					},
@@ -1498,7 +1511,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 			return nil, fmt.Errorf("converting extensions.dns object: %v", diags.Errors())
 		}
 		dnsEnabled := dns.Enabled.ValueBool()
-		gatewayApi := dns.GatewayApi.ValueBool()
+		gatewayApi := conversion.BoolValueToPointer(dns.GatewayApi)
 
 		zones := []string{}
 		diags = dns.Zones.ElementsAs(ctx, &zones, true)
@@ -1508,7 +1521,7 @@ func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) 
 		skeDNS = &ske.DNS{
 			Enabled:    dnsEnabled,
 			Zones:      zones,
-			GatewayApi: &gatewayApi,
+			GatewayApi: gatewayApi,
 		}
 	}
 
@@ -2029,7 +2042,7 @@ func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, 
 	}
 
 	applicationLoadBalancer := applicationLoadBalancer{}
-	if ex.ApplicationLoadBalancer.IsNull() {
+	if utils.IsUndefined(ex.ApplicationLoadBalancer) {
 		applicationLoadBalancer.Enabled = types.BoolValue(false)
 	} else {
 		diags = ex.ApplicationLoadBalancer.As(ctx, &applicationLoadBalancer, basetypes.ObjectAsOptions{})
@@ -2049,7 +2062,7 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 
 	var diags diag.Diagnostics
 	ex := extensions{}
-	if !m.Extensions.IsNull() {
+	if !utils.IsUndefined(m.Extensions) {
 		diags := m.Extensions.As(ctx, &ex, basetypes.ObjectAsOptions{})
 		if diags.HasError() {
 			return fmt.Errorf("converting extensions object: %v", diags.Errors())
@@ -2068,14 +2081,6 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 	aclDisabled, observabilityDisabled, dnsDisabled, applicationLoadBalancerDisabled, err := checkDisabledExtensions(ctx, &ex)
 	if err != nil {
 		return fmt.Errorf("checking if extensions are disabled: %w", err)
-	}
-	disabledExtensions := aclDisabled && observabilityDisabled && dnsDisabled && applicationLoadBalancerDisabled
-
-	if skeUtils.IsEmptyExtension(cl.Extensions) && (disabledExtensions || m.Extensions.IsNull()) {
-		if m.Extensions.Attributes() == nil {
-			m.Extensions = types.ObjectNull(extensionsTypes)
-		}
-		return nil
 	}
 
 	aclExtension := types.ObjectNull(aclTypes)
@@ -2154,14 +2159,14 @@ func mapExtensions(ctx context.Context, cl *ske.Cluster, m *Model) error {
 		if diags.HasError() {
 			return fmt.Errorf("creating applicationLoadBalancer: %w", core.DiagsToError(diags))
 		}
-	} else if applicationLoadBalancerDisabled && !ex.ApplicationLoadBalancer.IsNull() {
+	} else if applicationLoadBalancerDisabled && !utils.IsUndefined(ex.ApplicationLoadBalancer) {
 		applicationLoadBalancerExtension = ex.ApplicationLoadBalancer
 	}
 
 	dnsExtension := types.ObjectNull(dnsTypes)
 	if cl.Extensions.Dns != nil {
 		enabled := types.BoolValue(cl.Extensions.Dns.Enabled)
-		gatewayApi := types.BoolValue(*cl.Extensions.Dns.GatewayApi)
+		gatewayApi := types.BoolPointerValue(cl.Extensions.Dns.GatewayApi)
 
 		zonesList, diags := types.ListValueFrom(ctx, types.StringType, cl.Extensions.Dns.Zones)
 		if diags.HasError() {

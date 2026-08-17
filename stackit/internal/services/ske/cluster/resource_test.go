@@ -342,9 +342,8 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:      nil,
-						Enabled:    true,
-						GatewayApi: new(true),
+						Zones:   nil,
+						Enabled: true,
 					},
 					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
@@ -382,7 +381,7 @@ func TestMapFields(t *testing.T) {
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(true),
 						"zones":       types.ListNull(types.StringType),
-						"gateway_api": types.BoolValue(true),
+						"gateway_api": types.BoolNull(),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
@@ -409,7 +408,7 @@ func TestMapFields(t *testing.T) {
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 					"enabled":     types.BoolValue(false),
 					"zones":       types.ListNull(types.StringType),
-					"gateway_api": types.BoolValue(false),
+					"gateway_api": types.BoolNull(),
 				}),
 				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(false),
@@ -450,7 +449,7 @@ func TestMapFields(t *testing.T) {
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
 						"enabled":     types.BoolValue(false),
 						"zones":       types.ListNull(types.StringType),
-						"gateway_api": types.BoolValue(false),
+						"gateway_api": types.BoolNull(),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(false),
@@ -497,6 +496,9 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 						GatewayApi: new(true),
 					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
+						Enabled: true,
+					},
 				},
 				Name: new("name"),
 				Access: &ske.Access{
@@ -535,7 +537,7 @@ func TestMapFields(t *testing.T) {
 						"gateway_api": types.BoolValue(true),
 					}),
 					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
-						"enabled": types.BoolValue(false),
+						"enabled": types.BoolValue(true),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -560,13 +562,19 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                    types.StringValue("pid,region,name"),
-				ProjectId:             types.StringValue("pid"),
-				Name:                  types.StringValue("name"),
-				NodePools:             types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:           types.ObjectNull(maintenanceTypes),
-				Hibernations:          types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:            types.ObjectNull(extensionsTypes),
+				Id:           types.StringValue("pid,region,name"),
+				ProjectId:    types.StringValue("pid"),
+				Name:         types.StringValue("name"),
+				NodePools:    types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:  types.ObjectNull(maintenanceTypes),
+				Hibernations: types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+				}),
 				EgressAddressRanges:   types.ListNull(types.StringType),
 				PodAddressRanges:      types.ListNull(types.StringType),
 				ServiceAccountIssuer:  types.StringNull(),
