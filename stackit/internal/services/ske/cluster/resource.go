@@ -93,6 +93,7 @@ type Model struct {
 	Network               types.Object `tfsdk:"network"`
 	Hibernations          types.List   `tfsdk:"hibernations"`
 	Extensions            types.Object `tfsdk:"extensions"`
+	Audit                 types.Object `tfsdk:"audit"`
 	EgressAddressRanges   types.List   `tfsdk:"egress_address_ranges"`
 	PodAddressRanges      types.List   `tfsdk:"pod_address_ranges"`
 	ServiceAccountIssuer  types.String `tfsdk:"service_account_issuer"`
@@ -285,6 +286,16 @@ var dnsTypes = map[string]attr.Type{
 	"gateway_api": basetypes.BoolType{},
 }
 
+// Struct corresponding to Model.Audit
+type audit struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+// Types corresponding to audit
+var auditTypes = map[string]attr.Type{
+	"enabled": basetypes.BoolType{},
+}
+
 // NewClusterResource is a helper function to simplify the provider implementation.
 func NewClusterResource() resource.Resource {
 	return &clusterResource{}
@@ -427,6 +438,8 @@ var descriptions = map[string]string{
 	"access_idp":          "Configure IDP",
 	"access_idp_enabled":  "Enable IDP integration for the cluster.",
 	"access_idp_type":     "The IDP type. Possible values: 'stackit'.",
+	"audit":               "Cluster audit log forwarding configuration.",
+	"audit_enabled":       "Enable cluster audit log forwarding to a Telemetry Router.",
 }
 
 // Schema defines the schema for the resource.
@@ -859,6 +872,22 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					},
 				},
 			},
+			"audit": schema.SingleNestedAttribute{
+				Description: descriptions["audit"],
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						Description: descriptions["audit_enabled"],
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
+					},
+				},
+			},
 			"region": schema.StringAttribute{
 				Optional: true,
 				// must be computed to allow for storing the override value from the provider
@@ -1097,6 +1126,11 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating extension API payload: %v", err))
 		return
 	}
+	audit, err := toAuditPayload(ctx, model)
+	if err != nil {
+		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating audit API payload: %v", err))
+		return
+	}
 	access, err := toAccessPayload(ctx, model)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Creating access API payload: %v", err))
@@ -1104,6 +1138,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	}
 
 	payload := ske.CreateOrUpdateClusterPayload{
+		Audit:       audit,
 		Extensions:  extensions,
 		Hibernation: hibernations,
 		Kubernetes:  *kubernetes,
@@ -1433,6 +1468,22 @@ func toHibernationsPayload(ctx context.Context, m *Model) (*ske.Hibernation, err
 	}, nil
 }
 
+func toAuditPayload(ctx context.Context, m *Model) (*ske.Audit, error) {
+	if utils.IsUndefined(m.Audit) {
+		return nil, nil
+	}
+
+	auditModel := audit{}
+	diags := m.Audit.As(ctx, &auditModel, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		return nil, fmt.Errorf("converting audit object: %v", diags.Errors())
+	}
+
+	return &ske.Audit{
+		Enabled: auditModel.Enabled.ValueBool(),
+	}, nil
+}
+
 func toExtensionsPayload(ctx context.Context, m *Model) (*ske.Extension, error) {
 	if m.Extensions.IsNull() || m.Extensions.IsUnknown() {
 		return nil, nil
@@ -1692,6 +1743,10 @@ func mapFields(ctx context.Context, cl *ske.Cluster, m *Model, region string) er
 	err = mapHibernations(cl, m)
 	if err != nil {
 		return fmt.Errorf("map hibernations: %w", err)
+	}
+	err = mapAudit(cl, m)
+	if err != nil {
+		return fmt.Errorf("map audit: %w", err)
 	}
 	err = mapExtensions(ctx, cl, m)
 	if err != nil {
@@ -1999,6 +2054,25 @@ func getMaintenanceTimes(ctx context.Context, cl *ske.Cluster, m *Model) (startT
 	}
 
 	return startTime, endTime, nil
+}
+
+func mapAudit(cl *ske.Cluster, m *Model) error {
+	// A missing audit block only occurs in regions where the feature is
+	// unavailable; normalize it to null there.
+	if cl.Audit == nil {
+		m.Audit = types.ObjectNull(auditTypes)
+		return nil
+	}
+
+	auditValues := map[string]attr.Value{
+		"enabled": types.BoolValue(cl.Audit.Enabled),
+	}
+	auditObject, diags := types.ObjectValue(auditTypes, auditValues)
+	if diags.HasError() {
+		return fmt.Errorf("creating audit object: %w", core.DiagsToError(diags))
+	}
+	m.Audit = auditObject
+	return nil
 }
 
 func checkDisabledExtensions(ctx context.Context, ex *extensions) (aclDisabled, observabilityDisabled, dnsDisabled, applicationLoadBalancerDisabled bool, err error) {
