@@ -39,6 +39,7 @@ variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "network_control_plane_access_scope" {}
 variable "access_idp_enabled" {}
+variable "audit_enabled" {}
 
 resource "stackit_ske_cluster" "cluster" {
   project_id = var.project_id
@@ -110,6 +111,9 @@ resource "stackit_ske_cluster" "cluster" {
       enabled = var.access_idp_enabled
       type    = "stackit"
     }
+  }
+  audit = {
+    enabled = var.audit_enabled
   }
 }
 
