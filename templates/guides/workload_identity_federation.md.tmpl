@@ -49,7 +49,7 @@ Using a hypothetical pipeline named `terraform-ado-oidc` inside the project 'htt
     - Via Pipeline: Add a script step echo $(System.CollectionId) to print it during a run.
 - **Assertions**:
   - **aud**->equals->api://AzureADTokenExchange # Mandatory value
-  - **sub**->equals->sc://myorg/project-abc/stackit-service-connection # This is the service connection that is being used to authenticate with STACKIT.
+  - **sub**->equals->sc://MyOrg/Project-ABC/MyStackitServiceConnectionName # This is the service connection that is being used to authenticate with STACKIT.
 
 > Note: This is just an example, you can use more or less fine-grained assertions.
 
@@ -170,7 +170,7 @@ jobs:
 
       - task: StackitAuthenticate@1
         inputs:
-          serviceConnection: "My STACKIT Connection (WIF)"
+          serviceConnection: "MyStackitServiceConnectionName"
         displayName: "Authenticate with STACKIT (WIF)"
 
       - task: TerraformInstaller@1
