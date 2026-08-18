@@ -54,6 +54,7 @@ resource "stackit_telemetrylink" "link2" {
 - `access_token_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The access token of the Telemetry Router instance. Write-only - never stored in state and never returned by the API. To rotate the token, update this value AND increment `access_token_wo_version`. Changing this field alone will NOT trigger an update.
 - `access_token_wo_version` (Number) User-managed rotation counter for `access_token_wo`. Must be incremented every time `access_token_wo` is changed. Terraform diffs this field to detect token rotations - changing `access_token_wo` alone will NOT trigger an update because it is write-only and never stored in state.
 - `description` (String) The description of the Telemetry Link resource.
+- `enabled` (Boolean) Whether the Telemetry Link is enabled or not.
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 
 ### Read-Only
