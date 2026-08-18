@@ -812,6 +812,12 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		})
 	}
 
+	for i, factory := range dataSources {
+		dataSources[i] = func() datasource.DataSource {
+			return core.WrapDataSource(factory())
+		}
+	}
+
 	return dataSources
 }
 
@@ -931,6 +937,12 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		resources = append(resources, func() resource.Resource {
 			return r(p.clientFactory)
 		})
+	}
+
+	for i, factory := range resources {
+		resources[i] = func() resource.Resource {
+			return core.WrapResource(factory())
+		}
 	}
 
 	return resources
