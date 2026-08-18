@@ -18,6 +18,7 @@ import (
 	sdkauth "github.com/stackitcloud/stackit-sdk-go/core/auth"
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
+	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
@@ -45,7 +46,6 @@ import (
 	iaasImage "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/image"
 	iaasImageV2 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/imagev2"
 	iaasKeyPair "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/keypair"
-	machineType "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/machinetype"
 	iaasNetwork "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/network"
 	iaasNetworkArea "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarea"
 	iaasNetworkAreaRegion "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/networkarearegion"
@@ -722,7 +722,6 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		logsInstance.NewLogsInstanceDataSource,
 		logsAccessToken.NewLogsAccessTokenDataSource,
 		logAlertGroup.NewLogAlertGroupDataSource,
-		machineType.NewMachineTypeDataSource,
 		mariaDBInstance.NewInstanceDataSource,
 		mariaDBCredential.NewCredentialDataSource,
 		mongoDBFlexInstance.NewInstanceDataSource,
@@ -803,6 +802,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		iaasVolume.NewVolumeDataSource,
+		machineType.NewMachineTypeDataSource,
 	}
 
 	// won't be needed after refactoring is completed

@@ -44,8 +44,8 @@ type DataSourceModel struct {
 }
 
 // NewMachineTypeDataSource instantiates the data source
-func NewMachineTypeDataSource() datasource.DataSource {
-	return &machineTypeDataSource{}
+func NewMachineTypeDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &machineTypeDataSource{clientFactory: clientFactory}
 }
 
 type machineTypeDataSource struct {
@@ -76,7 +76,7 @@ func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	tflog.Info(ctx, "IAAS client configured")
+	core.LogInfo(ctx, "IAAS client configured")
 }
 
 func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
