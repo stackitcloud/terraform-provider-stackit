@@ -246,7 +246,7 @@ func (r *customRuleGroupResource) Schema(_ context.Context, _ resource.SchemaReq
 									Optional:    true,
 									Computed:    true,
 									Validators: []validator.String{
-										OnlyAllowedIfBoolEquals(path.MatchRelative().AtParent().AtName("log"), true),
+										validate.OnlyAllowedIfBoolEquals(path.MatchRelative().AtParent().AtName("log"), sdkUtils.Ptr(true)),
 									},
 								},
 								"severity": schema.StringAttribute{
