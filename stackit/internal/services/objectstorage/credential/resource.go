@@ -67,7 +67,7 @@ type credentialResource struct {
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
-func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic,tfmodifyplan // function signature required by Terraform // adaptRegion is called in modifyPlanRegion function
 	r.modifyPlanRegion(ctx, &req, resp)
 	if resp.Diagnostics.HasError() {
 		return
