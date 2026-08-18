@@ -20,6 +20,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 	testCustomEndpoint = "https://iaas-custom-endpoint.api.stackit.cloud"
 )
 
-func TestConfigureClient(t *testing.T) {
+func TestDefaultClientFactoryNewIaaSV2Client(t *testing.T) {
 	/* mock authentication by setting service account token env variable */
 	os.Clearenv()
 	err := os.Setenv(sdkClients.ServiceAccountToken, "mock-val")
@@ -42,7 +43,7 @@ func TestConfigureClient(t *testing.T) {
 		name     string
 		args     args
 		wantErr  bool
-		expected *iaas.APIClient
+		expected iaas.DefaultAPI
 	}{
 		{
 			name: "default endpoint",
@@ -51,14 +52,14 @@ func TestConfigureClient(t *testing.T) {
 					Version: testVersion,
 				},
 			},
-			expected: func() *iaas.APIClient {
+			expected: func() iaas.DefaultAPI {
 				apiClient, err := iaas.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 				)
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
-				return apiClient
+				return apiClient.DefaultAPI
 			}(),
 			wantErr: false,
 		},
@@ -70,7 +71,7 @@ func TestConfigureClient(t *testing.T) {
 					IaaSCustomEndpoint: testCustomEndpoint,
 				},
 			},
-			expected: func() *iaas.APIClient {
+			expected: func() iaas.DefaultAPI {
 				apiClient, err := iaas.NewAPIClient(
 					utils.UserAgentConfigOption(testVersion),
 					config.WithEndpoint(testCustomEndpoint),
@@ -78,7 +79,7 @@ func TestConfigureClient(t *testing.T) {
 				if err != nil {
 					t.Errorf("error configuring client: %v", err)
 				}
-				return apiClient
+				return apiClient.DefaultAPI
 			}(),
 			wantErr: false,
 		},
@@ -88,13 +89,13 @@ func TestConfigureClient(t *testing.T) {
 			ctx := context.Background()
 			diags := diag.Diagnostics{}
 
-			actual := ConfigureClient(ctx, tt.args.providerData, &diags)
+			actual := (&clientutils.DefaultClientFactory{}).NewIaaSV2Client(ctx, tt.args.providerData, &diags)
 			if diags.HasError() != tt.wantErr {
-				t.Errorf("ConfigureClient() error = %v, want %v", diags.HasError(), tt.wantErr)
+				t.Errorf("NewIaaSV2Client() error = %v, want %v", diags.HasError(), tt.wantErr)
 			}
 
 			if !reflect.DeepEqual(actual, tt.expected) {
-				t.Errorf("ConfigureClient() = %v, want %v", actual, tt.expected)
+				t.Errorf("NewIaaSV2Client() = %v, want %v", actual, tt.expected)
 			}
 		})
 	}
