@@ -2,12 +2,13 @@ package unittest
 
 import (
 	_ "embed"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
@@ -36,19 +37,27 @@ func TestVolumeResource(t *testing.T) {
 		return vars
 	}
 
+	var deleted bool
 	mockClient := iaas.DefaultAPIServiceMock{
-		CreateVolumeExecuteMock: utils.Ptr(func(r iaas.ApiCreateVolumeRequest) (*iaas.Volume, error) {
+		CreateVolumeExecuteMock: utils.Ptr(func(_ iaas.ApiCreateVolumeRequest) (*iaas.Volume, error) {
 			return &iaas.Volume{
 				Id: new(volumeId),
 			}, nil
 		}),
-		GetVolumeExecuteMock: utils.Ptr(func(r iaas.ApiGetVolumeRequest) (*iaas.Volume, error) {
+		GetVolumeExecuteMock: utils.Ptr(func(_ iaas.ApiGetVolumeRequest) (*iaas.Volume, error) {
+			if deleted {
+				return nil, oapierror.NewError(http.StatusNotFound, "volume not found")
+			}
 			return &iaas.Volume{
 				Id:               new(volumeId),
 				Status:           new("AVAILABLE"),
 				Size:             new(int64(64)),
 				AvailabilityZone: "eu01-1",
 			}, nil
+		}),
+		DeleteVolumeExecuteMock: utils.Ptr(func(_ iaas.ApiDeleteVolumeRequest) error {
+			deleted = true
+			return nil
 		}),
 	}
 
@@ -60,15 +69,6 @@ func TestVolumeResource(t *testing.T) {
 			{
 				Config:          tfConfig,
 				ConfigVariables: variables(),
-			},
-			{
-				Config:          tfConfig,
-				ConfigVariables: variables(),
-				Check: func(s *terraform.State) error {
-					// Clear the root module resources so the auto-destroy finds nothing
-					s.RootModule().Resources = make(map[string]*terraform.ResourceState)
-					return nil
-				},
 			},
 		},
 	})

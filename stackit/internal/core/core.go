@@ -120,6 +120,46 @@ func DiagsToError(diags diag.Diagnostics) error {
 	return fmt.Errorf("%s", strings.Join(diagsStrings, ";"))
 }
 
+// LogTrace logs a trace-level message.
+func LogTrace(ctx context.Context, msg string, additionalFields ...map[string]interface{}) {
+	additionalFields = append(additionalFields, map[string]interface{}{
+		"x-trace-id": runtime.GetTraceId(ctx),
+	})
+	tflog.Trace(ctx, msg, additionalFields...)
+}
+
+// LogDebug logs a debug-level message.
+func LogDebug(ctx context.Context, msg string, additionalFields ...map[string]interface{}) {
+	additionalFields = append(additionalFields, map[string]interface{}{
+		"x-trace-id": runtime.GetTraceId(ctx),
+	})
+	tflog.Debug(ctx, msg, additionalFields...)
+}
+
+// LogInfo logs an info-level message.
+func LogInfo(ctx context.Context, msg string, additionalFields ...map[string]interface{}) {
+	additionalFields = append(additionalFields, map[string]interface{}{
+		"x-trace-id": runtime.GetTraceId(ctx),
+	})
+	tflog.Info(ctx, msg, additionalFields...)
+}
+
+// LogWarn logs a warning-level message.
+func LogWarn(ctx context.Context, msg string, additionalFields ...map[string]interface{}) {
+	additionalFields = append(additionalFields, map[string]interface{}{
+		"x-trace-id": runtime.GetTraceId(ctx),
+	})
+	tflog.Warn(ctx, msg, additionalFields...)
+}
+
+// LogError logs an error-level message.
+func LogError(ctx context.Context, msg string, additionalFields ...map[string]interface{}) {
+	additionalFields = append(additionalFields, map[string]interface{}{
+		"x-trace-id": runtime.GetTraceId(ctx),
+	})
+	tflog.Error(ctx, msg, additionalFields...)
+}
+
 // LogAndAddError Logs the error and adds it to the diags
 func LogAndAddError(ctx context.Context, diags *diag.Diagnostics, summary, detail string) {
 	if traceId := runtime.GetTraceId(ctx); traceId != "" {

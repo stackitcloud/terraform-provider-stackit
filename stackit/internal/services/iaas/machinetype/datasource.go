@@ -44,8 +44,8 @@ type DataSourceModel struct {
 }
 
 // NewMachineTypeDataSource instantiates the data source
-func NewMachineTypeDataSource() datasource.DataSource {
-	return &machineTypeDataSource{}
+func NewMachineTypeDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &machineTypeDataSource{clientFactory: clientFactory}
 }
 
 type machineTypeDataSource struct {
@@ -76,7 +76,7 @@ func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	tflog.Info(ctx, "IAAS client configured")
+	core.LogInfo(ctx, "IAAS client configured")
 }
 
 func (d *machineTypeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -158,7 +158,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	region := d.providerData.GetRegionWithOverride(model.Region)
 	sortAscending := model.SortAscending.ValueBool()
 
-	ctx = core.InitProviderContext(ctx)
+	//ctx = core.InitProviderContext(ctx)
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
@@ -183,7 +183,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	//ctx = core.LogResponse(ctx)
 
 	if len(apiResp.Items) == 0 {
 		core.LogAndAddWarning(ctx, &resp.Diagnostics, "No machine types found", "No matching machine types.")
@@ -211,7 +211,7 @@ func (d *machineTypeDataSource) Read(ctx context.Context, req datasource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "Successfully read machine type")
+	core.LogInfo(ctx, "Successfully read machine type")
 }
 
 func mapDataSourceFields(ctx context.Context, machineType *iaas.MachineType, model *DataSourceModel, region string) error {
