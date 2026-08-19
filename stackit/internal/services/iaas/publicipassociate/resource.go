@@ -9,8 +9,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -50,7 +48,7 @@ func NewPublicIpAssociateResource() resource.Resource {
 
 // publicIpAssociateResource is the resource implementation.
 type publicIpAssociateResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -91,21 +89,17 @@ func (r *publicIpAssociateResource) ModifyPlan(ctx context.Context, req resource
 
 // Configure adds the provider configured client to the resource.
 func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same public IP or for the same network interface.",
 		"Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.")
 
-	r.client = apiClient
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -213,7 +207,7 @@ func (r *publicIpAssociateResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 	// Update existing public IP
-	updatedPublicIp, err := r.client.DefaultAPI.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error associating public IP to network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -254,7 +248,7 @@ func (r *publicIpAssociateResource) Read(ctx context.Context, req resource.ReadR
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	publicIpResp, err := r.client.DefaultAPI.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
+	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -313,7 +307,7 @@ func (r *publicIpAssociateResource) Delete(ctx context.Context, req resource.Del
 		NetworkInterface: *iaas.NewNullableString(nil),
 	}
 
-	_, err := r.client.DefaultAPI.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	_, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

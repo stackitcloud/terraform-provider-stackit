@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	gitUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/git/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -34,12 +31,12 @@ func NewGitDataSource() datasource.DataSource {
 
 // gitDataSource is the datasource implementation.
 type gitDataSource struct {
-	client *git.APIClient
+	client git.DefaultAPI
 }
 
 // Configure sets up the API client for the git instance resource.
 func (g *gitDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -49,11 +46,8 @@ func (g *gitDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 		return
 	}
 
-	apiClient := gitUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	g.client = apiClient
+	g.client = clients.GitV1BetaClient
+
 	tflog.Info(ctx, "git client configured")
 }
 
@@ -140,7 +134,7 @@ func (g *gitDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	instanceId := model.InstanceId.ValueString()
 
 	// Read the current git instance via id
-	gitInstanceResp, err := g.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	gitInstanceResp, err := g.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

@@ -17,9 +17,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	serverUpdateUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverupdate/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -46,7 +45,7 @@ func NewServerUpdateEnableResource() resource.Resource {
 
 // serverUpdateEnableResource is the resource implementation.
 type serverUpdateEnableResource struct {
-	client       *serverupdate.APIClient
+	client       serverupdate.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -87,17 +86,14 @@ func (r *serverUpdateEnableResource) Metadata(_ context.Context, req resource.Me
 
 // Configure adds the provider configured client to the resource.
 func (r *serverUpdateEnableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverUpdateUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ServerUpdateV2Client
+
 	tflog.Info(ctx, "Server update client configured")
 }
 
@@ -189,7 +185,7 @@ func (r *serverUpdateEnableResource) Create(ctx context.Context, req resource.Cr
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverupdate.EnableServiceResourcePayload{}).Execute()
+	err := r.client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverupdate.EnableServiceResourcePayload{}).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -201,7 +197,7 @@ func (r *serverUpdateEnableResource) Create(ctx context.Context, req resource.Cr
 		tflog.Info(ctx, "Server update is already enabled for this server. Please check duplicate resources.")
 	}
 
-	serviceResp, err := r.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server update enable", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -243,7 +239,7 @@ func (r *serverUpdateEnableResource) Read(ctx context.Context, req resource.Read
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	serviceResp, err := r.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -297,7 +293,7 @@ func (r *serverUpdateEnableResource) Delete(ctx context.Context, req resource.De
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DisableServiceResource(ctx, projectId, serverId, region).Execute()
+	err := r.client.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

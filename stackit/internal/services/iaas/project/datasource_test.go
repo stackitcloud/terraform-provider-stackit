@@ -33,12 +33,13 @@ func TestMapDataSourceFields(t *testing.T) {
 				ProjectId: types.StringValue(projectId),
 			},
 			input: &iaas.Project{
-				Id: projectId,
+				Id:     projectId,
+				Status: "CREATED",
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),
 				ProjectId: types.StringValue(projectId),
-				Status:    types.StringValue(""),
+				Status:    types.StringValue("CREATED"),
 			},
 			isValid: true,
 		},
@@ -75,13 +76,14 @@ func TestMapDataSourceFields(t *testing.T) {
 				AreaId: iaas.AreaId{
 					StaticAreaID: iaas.STATICAREAID_PUBLIC.Ptr(),
 				},
-				Id: projectId,
+				Id:     projectId,
+				Status: "CREATED",
 			},
 			expected: &DatasourceModel{
 				Id:        types.StringValue(projectId),
 				ProjectId: types.StringValue(projectId),
 				AreaId:    types.StringValue("PUBLIC"),
-				Status:    types.StringValue(""),
+				Status:    types.StringValue("CREATED"),
 			},
 			isValid: true,
 		},

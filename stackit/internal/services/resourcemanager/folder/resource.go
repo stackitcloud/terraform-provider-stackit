@@ -27,7 +27,7 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -66,7 +66,7 @@ func NewFolderResource() resource.Resource {
 
 // folderResource is the resource implementation.
 type folderResource struct {
-	client *resourcemanager.APIClient
+	client resourcemanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -76,16 +76,12 @@ func (r *folderResource) Metadata(_ context.Context, req resource.MetadataReques
 
 // Configure adds the provider configured client to the resource.
 func (r *folderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ResourceManagerClient
 
 	tflog.Info(ctx, "Resource Manager client configured")
 }
@@ -207,7 +203,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	folderCreateResp, err := r.client.DefaultAPI.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
+	folderCreateResp, err := r.client.CreateFolder(ctx).CreateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -231,7 +227,7 @@ func (r *folderResource) Create(ctx context.Context, req resource.CreateRequest,
 		// continue
 	}
 
-	folderGetResponse, err := r.client.DefaultAPI.GetFolderDetails(ctx, folderCreateResp.ContainerId).Execute()
+	folderGetResponse, err := r.client.GetFolderDetails(ctx, folderCreateResp.ContainerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -268,7 +264,7 @@ func (r *folderResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "folder_name", folderName)
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
@@ -318,7 +314,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 	// Update existing folder
-	_, err = r.client.DefaultAPI.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateFolder(ctx, containerId).PartialUpdateFolderPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -327,7 +323,7 @@ func (r *folderResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Fetch updated folder
-	folderResp, err := r.client.DefaultAPI.GetFolderDetails(ctx, containerId).Execute()
+	folderResp, err := r.client.GetFolderDetails(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating folder", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
@@ -363,7 +359,7 @@ func (r *folderResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing folder
-	err := r.client.DefaultAPI.DeleteFolder(ctx, containerId).Execute()
+	err := r.client.DeleteFolder(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

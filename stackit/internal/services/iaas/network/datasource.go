@@ -6,8 +6,6 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -16,7 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -60,7 +59,7 @@ func NewNetworkDataSource() datasource.DataSource {
 
 // networkDataSource is the data source implementation.
 type networkDataSource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -70,17 +69,14 @@ func (d *networkDataSource) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *networkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -238,7 +234,7 @@ func (d *networkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 
-	networkResp, err := d.client.DefaultAPI.GetNetwork(ctx, projectId, region, networkId).Execute()
+	networkResp, err := d.client.GetNetwork(ctx, projectId, region, networkId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

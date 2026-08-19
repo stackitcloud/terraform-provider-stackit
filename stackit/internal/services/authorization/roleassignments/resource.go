@@ -19,7 +19,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	authorizationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/utils"
@@ -67,7 +66,7 @@ func NewRoleAssignmentResources() []func() resource.Resource {
 
 // roleAssignmentResource is the resource implementation.
 type roleAssignmentResource struct {
-	authorizationClient *authorization.APIClient
+	authorizationClient authorization.DefaultAPI
 	apiName             string
 }
 
@@ -78,7 +77,7 @@ func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.Metada
 
 // Configure adds the provider configured client to the resource.
 func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -88,11 +87,8 @@ func (r *roleAssignmentResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	apiClient := authorizationUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.authorizationClient = apiClient
+	r.authorizationClient = clients.AuthorizationV2Client
+
 	tflog.Info(ctx, fmt.Sprintf("Resource Manager %s Role Assignment client configured", r.apiName))
 }
 
@@ -192,7 +188,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	unlock := authorizationUtils.LockAssignment(lockKey)
 	defer unlock()
 
-	listMemberResp, err := r.authorizationClient.DefaultAPI.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listMemberResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error listing current resource members", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -210,7 +206,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	createResp, err := r.authorizationClient.DefaultAPI.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
+	createResp, err := r.authorizationClient.AddMembers(ctx, model.ResourceId.ValueString()).AddMembersPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, fmt.Sprintf("Error creating %s role assignment", r.apiName), fmt.Sprintf("Calling API: %v", err))
 		return
@@ -257,7 +253,7 @@ func (r *roleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "resource_type", r.apiName)
 	ctx = tflog.SetField(ctx, "resource_id", model.ResourceId.ValueString())
 
-	listResp, err := r.authorizationClient.DefaultAPI.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
+	listResp, err := r.authorizationClient.ListMembers(ctx, r.apiName, model.ResourceId.ValueString()).Subject(model.Subject.ValueString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading authorizations", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -316,7 +312,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	}
 
 	// Delete existing project role assignment
-	_, err := r.authorizationClient.DefaultAPI.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
+	_, err := r.authorizationClient.RemoveMembers(ctx, model.ResourceId.ValueString()).RemoveMembersPayload(payload).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

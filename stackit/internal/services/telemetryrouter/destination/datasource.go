@@ -20,9 +20,8 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetryrouter/utils"
+
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -114,7 +113,7 @@ var datasourceS3Types = map[string]attr.Type{
 }
 
 type telemetryRouterDestinationDataSource struct {
-	client       *telemetryrouter.APIClient
+	client       telemetryrouter.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -123,17 +122,14 @@ func (d *telemetryRouterDestinationDataSource) Metadata(_ context.Context, req d
 }
 
 func (d *telemetryRouterDestinationDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	d.providerData = providerData
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.TelemetryRouterV1Client
+
 	tflog.Info(ctx, "TelemetryRouter client configured")
 }
 
@@ -297,7 +293,7 @@ func (d *telemetryRouterDestinationDataSource) Read(ctx context.Context, req dat
 	ctx = tflog.SetField(ctx, "instance_id", instanceID)
 	ctx = tflog.SetField(ctx, "destination_id", destinationID)
 
-	destinationResponse, err := d.client.DefaultAPI.GetDestination(ctx, projectID, region, instanceID, destinationID).Execute()
+	destinationResponse, err := d.client.GetDestination(ctx, projectID, region, instanceID, destinationID).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

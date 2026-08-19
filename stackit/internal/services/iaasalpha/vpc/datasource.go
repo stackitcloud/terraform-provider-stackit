@@ -16,10 +16,8 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -41,7 +39,7 @@ func NewVPCDatasource() datasource.DataSource {
 
 // vpcDatasource is the datasource implementation.
 type vpcDatasource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 // Metadata returns the datasource type name.
@@ -51,17 +49,14 @@ func (r *vpcDatasource) Metadata(_ context.Context, req datasource.MetadataReque
 
 // Configure adds the provider configured client to the datasource.
 func (r *vpcDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc", core.Resource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.client = clients.IaaSv2AlphaClient
 
-	r.client = iaasAlphaUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,7 +139,7 @@ func (r *vpcDatasource) Read(ctx context.Context, req datasource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 
-	vpcResp, err := r.client.DefaultAPI.GetVPC(ctx, projectId, vpcId).Execute()
+	vpcResp, err := r.client.GetVPC(ctx, projectId, vpcId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

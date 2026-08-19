@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -53,7 +52,7 @@ func NewDatabaseResource() resource.Resource {
 
 // databaseResource is the resource implementation.
 type databaseResource struct {
-	client       *postgresflex.APIClient
+	client       postgresflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -95,16 +94,14 @@ func (r *databaseResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *databaseResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.PostgresflexV3Client
+
 	tflog.Info(ctx, "Postgres Flex database client configured")
 }
 
@@ -224,7 +221,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 			http.StatusLocked,
 		},
 	}
-	databaseResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, config)
+	databaseResp, err := utils.RetryRequest(ctx, r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -238,7 +235,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	ctx = tflog.SetField(ctx, "database_id", databaseResp.Id)
 
-	database, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseResp.Id).Execute()
+	database, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseResp.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating database", fmt.Sprintf("Getting database details after creation: %v", err))
 		return
@@ -291,7 +288,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	databaseResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	databaseResp, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -366,7 +363,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 			http.StatusLocked,
 		},
 	}
-	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.PartialUpdateDatabase(ctx, projectId, region, instanceId, databaseId).PartialUpdateDatabasePayload(*payload).Execute, config)
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.PartialUpdateDatabase(ctx, projectId, region, instanceId, databaseId).PartialUpdateDatabasePayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -374,7 +371,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	database, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	database, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating database", fmt.Sprintf("Getting database details after update: %v", err))
 		return
@@ -436,7 +433,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 			http.StatusLocked,
 		},
 	}
-	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute, config)
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DeleteDatabase(ctx, projectId, region, instanceId, databaseId).Execute, config)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)

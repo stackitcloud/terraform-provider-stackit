@@ -23,7 +23,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	automationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/automation/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -86,7 +85,7 @@ func NewVolumeAutomationResource() resource.Resource {
 
 // volumeAutomationResource is the resource implementation.
 type volumeAutomationResource struct {
-	client       *automation.APIClient
+	client       automation.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -127,7 +126,7 @@ func (r *volumeAutomationResource) Metadata(_ context.Context, req resource.Meta
 
 // Configure adds the provider configured client to the resource.
 func (r *volumeAutomationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -137,12 +136,9 @@ func (r *volumeAutomationResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	apiClient := automationUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	r.providerData = providerData
-	r.client = apiClient
+	r.client = clients.AutomationV1Client
+
 	tflog.Info(ctx, "Volume automation client configured.")
 }
 
@@ -257,7 +253,7 @@ func (r *volumeAutomationResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	automationResp, err := r.client.DefaultAPI.CreateVolumeAutomation(ctx, projectId, region).CreateVolumeAutomationPayload(*payload).Execute()
+	automationResp, err := r.client.CreateVolumeAutomation(ctx, projectId, region).CreateVolumeAutomationPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume automation", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -298,7 +294,7 @@ func (r *volumeAutomationResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "automation_id", automationId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	automationResp, err := r.client.DefaultAPI.GetVolumeAutomation(ctx, projectId, region, automationId).Execute()
+	automationResp, err := r.client.GetVolumeAutomation(ctx, projectId, region, automationId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -359,7 +355,7 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	// Workaround: The input field is an open object where we don't know all keys. If some input fields where removed,
 	// we can't set them here to null. For this reason we do one update with updateMask "input", to overwrite the whole input object.
 	// Setting it to '*' would cause issue when the API gets new fields in the future and is therefore no option.
-	_, err = r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
+	_, err = r.client.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
 		PartialUpdateVolumeAutomationPayload(*payload).
 		UpdateMask("input").
 		Execute()
@@ -371,7 +367,7 @@ func (r *volumeAutomationResource) Update(ctx context.Context, req resource.Upda
 	ctx = core.LogResponse(ctx)
 
 	// Workaround: Updates all other fields accordingly, which were not already update with the previous update.
-	automationResp, err := r.client.DefaultAPI.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
+	automationResp, err := r.client.PartialUpdateVolumeAutomation(ctx, projectId, region, automationId).
 		PartialUpdateVolumeAutomationPayload(*payload).
 		Execute()
 	if err != nil {
@@ -413,7 +409,7 @@ func (r *volumeAutomationResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "automation_id", automationId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DeleteVolumeAutomation(ctx, projectId, region, automationId).Execute()
+	err := r.client.DeleteVolumeAutomation(ctx, projectId, region, automationId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return

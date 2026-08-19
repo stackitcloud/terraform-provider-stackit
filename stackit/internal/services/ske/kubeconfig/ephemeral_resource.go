@@ -45,7 +45,7 @@ func (e *kubeconfigEphemeralResource) Metadata(_ context.Context, req ephemeral.
 
 // Configure adds the provider configured client to the resource.
 func (e *kubeconfigEphemeralResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
-	ephemeralProviderData, ok := conversion.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	ephemeralProviderData, ok := core.ParseEphemeralProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}

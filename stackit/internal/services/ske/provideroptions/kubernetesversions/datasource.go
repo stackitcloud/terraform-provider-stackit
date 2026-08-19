@@ -16,9 +16,7 @@ import (
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -47,7 +45,7 @@ func NewKubernetesVersionsDataSource() datasource.DataSource {
 }
 
 type kubernetesVersionsDataSource struct {
-	client       *ske.APIClient
+	client       ske.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -57,16 +55,13 @@ func (d *kubernetesVersionsDataSource) Metadata(_ context.Context, req datasourc
 }
 
 func (d *kubernetesVersionsDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = skeUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.SkeV2Client
 
 	tflog.Info(ctx, "SKE options client configured")
 }
@@ -131,7 +126,7 @@ func (d *kubernetesVersionsDataSource) Read(ctx context.Context, req datasource.
 	ctx = core.InitProviderContext(ctx)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	listProviderOptionsReq := d.client.DefaultAPI.ListProviderOptions(ctx, region)
+	listProviderOptionsReq := d.client.ListProviderOptions(ctx, region)
 
 	if !utils.IsUndefined(model.VersionState) {
 		listProviderOptionsReq = listProviderOptionsReq.VersionState(
