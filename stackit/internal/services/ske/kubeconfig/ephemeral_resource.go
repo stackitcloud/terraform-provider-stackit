@@ -100,12 +100,12 @@ func (e *kubeconfigEphemeralResource) Schema(_ context.Context, _ ephemeral.Sche
 				},
 			},
 			"expiration": schema.Int64Attribute{
-				Description: "Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `14400` (4h). " +
+				Description: "Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `15552000` (6months). " +
 					"API defaults to `3600` (1h).",
 				Optional: true,
 				Validators: []validator.Int64{
 					int64validator.AtLeast(600),
-					int64validator.AtMost(14400),
+					int64validator.AtMost(15552000),
 				},
 			},
 			"region": schema.StringAttribute{

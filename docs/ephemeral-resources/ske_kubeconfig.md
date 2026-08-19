@@ -50,7 +50,7 @@ provider "kubernetes" {
 
 ### Optional
 
-- `expiration` (Number) Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `14400` (4h). API defaults to `3600` (1h).
+- `expiration` (Number) Expiration time of the kubeconfig in seconds. Must be between `600` (10m) and `15552000` (6months). API defaults to `3600` (1h).
 - `region` (String) The resource region. If not defined, the provider region is used.
 
 ### Read-Only
