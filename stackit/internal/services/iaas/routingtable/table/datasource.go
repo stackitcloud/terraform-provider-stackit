@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
@@ -29,13 +29,17 @@ var (
 )
 
 // NewRoutingTableDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTableDataSource() datasource.DataSource {
-	return &routingTableDataSource{}
+func NewRoutingTableDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &routingTableDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // routingTableDataSource is the data source implementation.
 type routingTableDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -56,11 +60,11 @@ func (d *routingTableDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -95,7 +99,7 @@ func (d *routingTableDataSource) Read(ctx context.Context, req datasource.ReadRe
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	routingTableResp, err := d.client.DefaultAPI.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
+	routingTableResp, err := d.client.GetRoutingTableOfArea(ctx, organizationId, networkAreaId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

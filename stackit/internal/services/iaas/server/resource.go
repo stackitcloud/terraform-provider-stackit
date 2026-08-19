@@ -12,6 +12,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -114,13 +116,17 @@ var agentTypes = map[string]attr.Type{
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
-func NewServerResource() resource.Resource {
-	return &serverResource{}
+func NewServerResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &serverResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // serverResource is the resource implementation.
 type serverResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -208,11 +214,11 @@ func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRe
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -541,7 +547,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Create new server
 
-	server, err := r.client.DefaultAPI.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
+	server, err := r.client.CreateServer(ctx, projectId, region).CreateServerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -564,14 +570,14 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	_, err = wait.CreateServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
+	_, err = wait.CreateServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
 	}
 
 	// Get Server with details
-	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	server, err = serverReq.Execute()
 	if err != nil {
@@ -585,7 +591,7 @@ func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
+	if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("update server state: %v", err))
 		return
 	}
@@ -724,7 +730,7 @@ func (r *serverResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
-	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	serverResp, err := serverReq.Execute()
 	if err != nil {
@@ -765,7 +771,7 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 
 	var updatedServer *iaas.Server
 	// Update existing server
-	updatedServer, err = r.client.DefaultAPI.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
+	updatedServer, err = r.client.UpdateServer(ctx, projectId, region, serverId).UpdateServerPayload(*payload).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -776,12 +782,12 @@ func (r *serverResource) updateServerAttributes(ctx context.Context, model, stat
 		payload := iaas.ResizeServerPayload{
 			MachineType: *modelMachineType,
 		}
-		err := r.client.DefaultAPI.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
+		err := r.client.ResizeServer(ctx, projectId, region, serverId).ResizeServerPayload(payload).Execute()
 		if err != nil {
 			return nil, fmt.Errorf("resizing the server, calling API: %w", err)
 		}
 
-		_, err = wait.ResizeServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
+		_, err = wait.ResizeServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("server resize waiting: %w", err)
 		}
@@ -822,7 +828,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 		server *iaas.Server
 		err    error
 	)
-	if server, err = r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
+	if server, err = r.client.GetServer(ctx, projectId, region, serverId).Execute(); err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error retrieving server state", fmt.Sprintf("Getting server state: %v", err))
 	}
 
@@ -837,13 +843,13 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 		ctx = core.LogResponse(ctx)
 
-		if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
+		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
 	} else {
 		// potentially unfreeze first and update afterwards
-		if err := updateServerStatus(ctx, r.client.DefaultAPI, server.Status, &model, region); err != nil {
+		if err := updateServerStatus(ctx, r.client, server.Status, &model, region); err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server", err.Error())
 			return
 		}
@@ -858,7 +864,7 @@ func (r *serverResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Re-fetch the server data, to get the details values.
-	serverReq := r.client.DefaultAPI.GetServer(ctx, projectId, region, serverId)
+	serverReq := r.client.GetServer(ctx, projectId, region, serverId)
 	serverReq = serverReq.Details(true)
 	updatedServer, err := serverReq.Execute()
 	if err != nil {
@@ -901,7 +907,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 
 	// Delete existing server
-	err := r.client.DefaultAPI.DeleteServer(ctx, projectId, region, serverId).Execute()
+	err := r.client.DeleteServer(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -914,7 +920,7 @@ func (r *serverResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteServerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, serverId).WaitWithContext(ctx)
+	_, err = wait.DeleteServerWaitHandler(ctx, r.client, projectId, region, serverId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting server", fmt.Sprintf("server deletion waiting: %v", err))
 		return

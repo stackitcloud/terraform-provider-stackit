@@ -9,6 +9,8 @@ import (
 
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -19,8 +21,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
-
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -68,13 +68,17 @@ type networkRangeModel struct {
 }
 
 // NewNetworkAreaRegionResource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRegionResource() resource.Resource {
-	return &networkAreaRegionResource{}
+func NewNetworkAreaRegionResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &networkAreaRegionResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkAreaRegionResource is the resource implementation.
 type networkAreaRegionResource struct {
-	client                *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client                iaas.DefaultAPI
 	resourceManagerClient *resourcemanager.APIClient
 	providerData          core.ProviderData
 }
@@ -122,7 +126,7 @@ func (r *networkAreaRegionResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	r.client = iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -282,7 +286,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create new network area region configuration
-	networkAreaRegion, err := r.client.DefaultAPI.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
+	networkAreaRegion, err := r.client.CreateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -298,7 +302,7 @@ func (r *networkAreaRegionResource) Create(ctx context.Context, req resource.Cre
 	})
 
 	// wait for creation of network area region to complete
-	_, err = wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, region).WaitWithContext(ctx)
+	_, err = wait.CreateNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server", fmt.Sprintf("server creation waiting: %v", err))
 		return
@@ -341,7 +345,7 @@ func (r *networkAreaRegionResource) Read(ctx context.Context, req resource.ReadR
 
 	ctx = core.InitProviderContext(ctx)
 
-	networkAreaRegionResp, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	networkAreaRegionResp, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -402,7 +406,7 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Update existing network area region configuration
-	_, err = r.client.DefaultAPI.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).UpdateNetworkAreaRegionPayload(*payload).Execute()
+	_, err = r.client.UpdateNetworkAreaRegion(ctx, organizationId, networkAreaId, region).UpdateNetworkAreaRegionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -410,13 +414,13 @@ func (r *networkAreaRegionResource) Update(ctx context.Context, req resource.Upd
 
 	ctx = core.LogResponse(ctx)
 
-	err = updateIpv4NetworkRanges(ctx, organizationId, networkAreaId, model.Ipv4.NetworkRanges, r.client.DefaultAPI, region)
+	err = updateIpv4NetworkRanges(ctx, organizationId, networkAreaId, model.Ipv4.NetworkRanges, r.client, region)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Updating Network ranges: %v", err))
 		return
 	}
 
-	updatedNetworkAreaRegion, err := r.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	updatedNetworkAreaRegion, err := r.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area region", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -453,14 +457,14 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 
 	ctx = core.InitProviderContext(ctx)
 
-	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client.DefaultAPI, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return
 	}
 
 	// Delete network area region configuration
-	err = r.client.DefaultAPI.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	err = r.client.DeleteNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -472,7 +476,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client.DefaultAPI, organizationId, networkAreaId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteNetworkAreaRegionWaitHandler(ctx, r.client, organizationId, networkAreaId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("network area deletion waiting: %v", err))
 		return

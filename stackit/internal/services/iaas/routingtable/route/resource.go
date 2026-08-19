@@ -10,8 +10,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -22,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
@@ -39,13 +40,17 @@ var (
 )
 
 // NewRoutingTableRouteResource is a helper function to simplify the provider implementation.
-func NewRoutingTableRouteResource() resource.Resource {
-	return &routeResource{}
+func NewRoutingTableRouteResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &routeResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // routeResource is the resource implementation.
 type routeResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -67,11 +72,11 @@ func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureReq
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "IaaS alpha client configured")
 }
 
@@ -267,7 +272,7 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	routeResp, err := r.client.DefaultAPI.AddRoutesToRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).AddRoutesToRoutingTablePayload(*payload).Execute()
+	routeResp, err := r.client.AddRoutesToRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId).AddRoutesToRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -319,7 +324,7 @@ func (r *routeResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	routeResp, err := r.client.DefaultAPI.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
+	routeResp, err := r.client.GetRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -387,7 +392,7 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	route, err := r.client.DefaultAPI.UpdateRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).UpdateRouteOfRoutingTablePayload(*payload).Execute()
+	route, err := r.client.UpdateRouteOfRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).UpdateRouteOfRoutingTablePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating routing table route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -434,7 +439,7 @@ func (r *routeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing routing table route
-	err := r.client.DefaultAPI.DeleteRouteFromRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
+	err := r.client.DeleteRouteFromRoutingTable(ctx, organizationId, networkAreaId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -20,6 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -29,13 +30,17 @@ var (
 )
 
 // NewNetworkDataSource is a helper function to simplify the provider implementation.
-func NewNetworkAreaDataSource() datasource.DataSource {
-	return &networkAreaDataSource{}
+func NewNetworkAreaDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &networkAreaDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkDataSource is the data source implementation.
 type networkAreaDataSource struct {
-	client *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client iaas.DefaultAPI
 }
 
 // Metadata returns the data source type name.
@@ -49,11 +54,11 @@ func (d *networkAreaDataSource) Configure(ctx context.Context, req datasource.Co
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -125,7 +130,7 @@ func (d *networkAreaDataSource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	networkAreaResp, err := d.client.DefaultAPI.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
+	networkAreaResp, err := d.client.GetNetworkArea(ctx, organizationId, networkAreaId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -45,13 +46,17 @@ type Model struct {
 }
 
 // NewPublicIpResource is a helper function to simplify the provider implementation.
-func NewPublicIpResource() resource.Resource {
-	return &publicIpResource{}
+func NewPublicIpResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &publicIpResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // publicIpResource is the resource implementation.
 type publicIpResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -98,11 +103,11 @@ func (r *publicIpResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -205,7 +210,7 @@ func (r *publicIpResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Create new public IP
 
-	publicIp, err := r.client.DefaultAPI.CreatePublicIP(ctx, projectId, region).CreatePublicIPPayload(*payload).Execute()
+	publicIp, err := r.client.CreatePublicIP(ctx, projectId, region).CreatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating public IP", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -253,7 +258,7 @@ func (r *publicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
-	publicIpResp, err := r.client.DefaultAPI.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
+	publicIpResp, err := r.client.GetPublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -315,7 +320,7 @@ func (r *publicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing public IP
-	updatedPublicIp, err := r.client.DefaultAPI.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
+	updatedPublicIp, err := r.client.UpdatePublicIP(ctx, projectId, region, publicIpId).UpdatePublicIPPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating public IP", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -357,7 +362,7 @@ func (r *publicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "public_ip_id", publicIpId)
 
 	// Delete existing publicIp
-	err := r.client.DefaultAPI.DeletePublicIP(ctx, projectId, region, publicIpId).Execute()
+	err := r.client.DeletePublicIP(ctx, projectId, region, publicIpId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

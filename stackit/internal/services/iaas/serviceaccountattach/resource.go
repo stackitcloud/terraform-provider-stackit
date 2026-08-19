@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,6 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -43,13 +43,17 @@ type Model struct {
 }
 
 // NewServiceAccountAttachResource is a helper function to simplify the provider implementation.
-func NewServiceAccountAttachResource() resource.Resource {
-	return &serviceAccountAttachResource{}
+func NewServiceAccountAttachResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &serviceAccountAttachResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // serviceAccountAttachResource is the resource implementation.
 type serviceAccountAttachResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -96,11 +100,11 @@ func (r *serviceAccountAttachResource) Configure(ctx context.Context, req resour
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -182,7 +186,7 @@ func (r *serviceAccountAttachResource) Create(ctx context.Context, req resource.
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
 	// Create new service account attachment
-	_, err := r.client.DefaultAPI.AddServiceAccountToServer(ctx, projectId, region, serverId, serviceAccountEmail).Execute()
+	_, err := r.client.AddServiceAccountToServer(ctx, projectId, region, serverId, serviceAccountEmail).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching service account to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -222,7 +226,7 @@ func (r *serviceAccountAttachResource) Read(ctx context.Context, req resource.Re
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "service_account_email", serviceAccountEmail)
 
-	serviceAccounts, err := r.client.DefaultAPI.ListServerServiceAccounts(ctx, projectId, region, serverId).Execute()
+	serviceAccounts, err := r.client.ListServerServiceAccounts(ctx, projectId, region, serverId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -290,7 +294,7 @@ func (r *serviceAccountAttachResource) Delete(ctx context.Context, req resource.
 	ctx = tflog.SetField(ctx, "service_account_email", service_accountId)
 
 	// Remove service_account from server
-	_, err := r.client.DefaultAPI.RemoveServiceAccountFromServer(ctx, projectId, region, serverId, service_accountId).Execute()
+	_, err := r.client.RemoveServiceAccountFromServer(ctx, projectId, region, serverId, service_accountId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

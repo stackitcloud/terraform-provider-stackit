@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -71,13 +72,17 @@ type NexthopModelV1 struct {
 }
 
 // NewNetworkAreaRouteResource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRouteResource() resource.Resource {
-	return &networkAreaRouteResource{}
+func NewNetworkAreaRouteResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &networkAreaRouteResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkResource is the resource implementation.
 type networkAreaRouteResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -124,11 +129,11 @@ func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -355,7 +360,7 @@ func (r *networkAreaRouteResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network area route
-	routes, err := r.client.DefaultAPI.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRoutePayload(*payload).Execute()
+	routes, err := r.client.CreateNetworkAreaRoute(ctx, organizationId, networkAreaId, region).CreateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network area route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -420,7 +425,7 @@ func (r *networkAreaRouteResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
-	networkAreaRouteResp, err := r.client.DefaultAPI.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
+	networkAreaRouteResp, err := r.client.GetNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -471,7 +476,7 @@ func (r *networkAreaRouteResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "network_area_route_id", networkAreaRouteId)
 
 	// Delete existing network
-	err := r.client.DefaultAPI.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
+	err := r.client.DeleteNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -523,7 +528,7 @@ func (r *networkAreaRouteResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network area route
-	networkAreaRouteResp, err := r.client.DefaultAPI.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
+	networkAreaRouteResp, err := r.client.UpdateNetworkAreaRoute(ctx, organizationId, networkAreaId, region, networkAreaRouteId).UpdateNetworkAreaRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network area route", fmt.Sprintf("Calling API: %v", err))
 		return

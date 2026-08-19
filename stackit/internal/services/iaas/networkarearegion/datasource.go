@@ -7,16 +7,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -28,13 +29,17 @@ var (
 )
 
 // NewNetworkAreaRegionDataSource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRegionDataSource() datasource.DataSource {
-	return &networkAreaRegionDataSource{}
+func NewNetworkAreaRegionDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &networkAreaRegionDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkAreaRegionDataSource is the data source implementation.
 type networkAreaRegionDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -50,11 +55,11 @@ func (d *networkAreaRegionDataSource) Configure(ctx context.Context, req datasou
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -163,7 +168,7 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 
 	ctx = core.InitProviderContext(ctx)
 
-	networkAreaRegionResp, err := d.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
+	networkAreaRegionResp, err := d.client.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "Reading network area region", fmt.Sprintf("Region configuration for %q for network area %q does not exist.", region, networkAreaId), nil)
 		resp.State.RemoveResource(ctx)

@@ -7,7 +7,7 @@ import (
 	"regexp"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -28,12 +28,16 @@ var (
 	_ datasource.DataSourceWithConfigure = &affinityGroupDatasource{}
 )
 
-func NewAffinityGroupDatasource() datasource.DataSource {
-	return &affinityGroupDatasource{}
+func NewAffinityGroupDatasource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &affinityGroupDatasource{
+		clientFactory: clientFactory,
+	}
 }
 
 type affinityGroupDatasource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,11 +48,11 @@ func (d *affinityGroupDatasource) Configure(ctx context.Context, req datasource.
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -133,7 +137,7 @@ func (d *affinityGroupDatasource) Read(ctx context.Context, req datasource.ReadR
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "affinity_group_id", affinityGroupId)
 
-	affinityGroupResp, err := d.client.DefaultAPI.GetAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
+	affinityGroupResp, err := d.client.GetAffinityGroup(ctx, projectId, region, affinityGroupId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

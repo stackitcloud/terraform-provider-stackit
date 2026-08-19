@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -56,13 +57,17 @@ type Model struct {
 }
 
 // NewNetworkInterfaceResource is a helper function to simplify the provider implementation.
-func NewNetworkInterfaceResource() resource.Resource {
-	return &networkInterfaceResource{}
+func NewNetworkInterfaceResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &networkInterfaceResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkResource is the resource implementation.
 type networkInterfaceResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -122,11 +127,11 @@ func (r *networkInterfaceResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -299,7 +304,7 @@ func (r *networkInterfaceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create new network interface
-	networkInterface, err := r.client.DefaultAPI.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
+	networkInterface, err := r.client.CreateNic(ctx, projectId, region, networkId).CreateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -351,7 +356,7 @@ func (r *networkInterfaceResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := r.client.DefaultAPI.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := r.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -415,7 +420,7 @@ func (r *networkInterfaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 	// Update existing network
-	nicResp, err := r.client.DefaultAPI.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
+	nicResp, err := r.client.UpdateNic(ctx, projectId, region, networkId, networkInterfaceId).UpdateNicPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating network interface", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -459,7 +464,7 @@ func (r *networkInterfaceResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
 	// Delete existing network interface
-	err := r.client.DefaultAPI.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	err := r.client.DeleteNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

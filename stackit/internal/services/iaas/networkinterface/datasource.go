@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -26,13 +26,17 @@ var (
 )
 
 // NewNetworkInterfaceDataSource is a helper function to simplify the provider implementation.
-func NewNetworkInterfaceDataSource() datasource.DataSource {
-	return &networkInterfaceDataSource{}
+func NewNetworkInterfaceDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
+	return &networkInterfaceDataSource{
+		clientFactory: clientFactory,
+	}
 }
 
 // networkInterfaceDataSource is the data source implementation.
 type networkInterfaceDataSource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -48,11 +52,11 @@ func (d *networkInterfaceDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
+	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	d.client = apiClient
+
 	tflog.Info(ctx, "IaaS client configured")
 }
 
@@ -162,7 +166,7 @@ func (d *networkInterfaceDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "network_id", networkId)
 	ctx = tflog.SetField(ctx, "network_interface_id", networkInterfaceId)
 
-	networkInterfaceResp, err := d.client.DefaultAPI.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
+	networkInterfaceResp, err := d.client.GetNic(ctx, projectId, region, networkId, networkInterfaceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

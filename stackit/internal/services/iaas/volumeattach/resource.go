@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
@@ -44,13 +45,17 @@ type Model struct {
 }
 
 // NewVolumeAttachResource is a helper function to simplify the provider implementation.
-func NewVolumeAttachResource() resource.Resource {
-	return &volumeAttachResource{}
+func NewVolumeAttachResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &volumeAttachResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // volumeAttachResource is the resource implementation.
 type volumeAttachResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -97,11 +102,11 @@ func (r *volumeAttachResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -191,7 +196,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 	payload := iaas.AddVolumeToServerPayload{
 		DeleteOnTermination: new(false),
 	}
-	_, err := r.client.DefaultAPI.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
+	_, err := r.client.AddVolumeToServer(ctx, projectId, region, serverId, volumeId).AddVolumeToServerPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -214,7 +219,7 @@ func (r *volumeAttachResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
 		return
 	}
-	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(ctx)
+	_, err = wait.ProjectRequestWaitHandler(ctx, r.client, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("volume attachment waiting: %v", err))
 		return
@@ -252,7 +257,7 @@ func (r *volumeAttachResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
-	_, err := r.client.DefaultAPI.GetAttachedVolume(ctx, projectId, region, serverId, volumeId).Execute()
+	_, err := r.client.GetAttachedVolume(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -305,7 +310,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "volume_id", volumeId)
 
 	// Remove volume from server
-	err := r.client.DefaultAPI.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
+	err := r.client.RemoveVolumeFromServer(ctx, projectId, region, serverId, volumeId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -322,7 +327,7 @@ func (r *volumeAttachResource) Delete(ctx context.Context, req resource.DeleteRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error attaching volume to server", fmt.Sprintf("Reading x-request-ID: %v", err))
 		return
 	}
-	_, err = wait.ProjectRequestWaitHandler(ctx, r.client.DefaultAPI, projectId, region, requestId).WaitWithContext(ctx)
+	_, err = wait.ProjectRequestWaitHandler(ctx, r.client, projectId, region, requestId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error removing volume from server", fmt.Sprintf("volume removal waiting: %v", err))
 		return

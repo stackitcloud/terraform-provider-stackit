@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -98,13 +98,17 @@ var protocolTypes = map[string]attr.Type{
 }
 
 // NewSecurityGroupRuleResource is a helper function to simplify the provider implementation.
-func NewSecurityGroupRuleResource() resource.Resource {
-	return &securityGroupRuleResource{}
+func NewSecurityGroupRuleResource(clientFactory clientutils.ClientFactory) resource.Resource {
+	return &securityGroupRuleResource{
+		clientFactory: clientFactory,
+	}
 }
 
 // securityGroupRuleResource is the resource implementation.
 type securityGroupRuleResource struct {
-	client       *iaas.APIClient
+	clientFactory clientutils.ClientFactory
+
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -151,11 +155,11 @@ func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -482,7 +486,7 @@ func (r *securityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Create new security group rule
-	securityGroupRule, err := r.client.DefaultAPI.CreateSecurityGroupRule(ctx, projectId, region, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
+	securityGroupRule, err := r.client.CreateSecurityGroupRule(ctx, projectId, region, securityGroupId).CreateSecurityGroupRulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating security group rule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -532,7 +536,7 @@ func (r *securityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 	ctx = tflog.SetField(ctx, "security_group_id", securityGroupId)
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
-	securityGroupRuleResp, err := r.client.DefaultAPI.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	securityGroupRuleResp, err := r.client.GetSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -589,7 +593,7 @@ func (r *securityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 	ctx = tflog.SetField(ctx, "security_group_rule_id", securityGroupRuleId)
 
 	// Delete existing security group rule
-	err := r.client.DefaultAPI.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
+	err := r.client.DeleteSecurityGroupRule(ctx, projectId, region, securityGroupId, securityGroupRuleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
