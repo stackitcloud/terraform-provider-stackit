@@ -137,7 +137,7 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testCustomRuleGroupMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), customRuleGroupMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "region", testutil.Region),
@@ -169,7 +169,7 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 					  name  = stackit_alb_waf_custom_rule_group.custom_rule_group.name
 					}
 					`,
-					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), customRuleGroupMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "project_id", testutil.ProjectId),
@@ -220,7 +220,7 @@ func TestAccCustomRuleGroupMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testCustomRuleGroupMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), customRuleGroupMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_alb_waf_custom_rule_group.custom_rule_group", plancheck.ResourceActionReplace),
@@ -258,7 +258,7 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testCustomRuleGroupMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), customRuleGroupMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "region", testutil.Region),
@@ -295,7 +295,7 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 					  name  = stackit_alb_waf_custom_rule_group.custom_rule_group.name
 					}
 					`,
-					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), customRuleGroupMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_custom_rule_group.custom_rule_group", "project_id", testutil.ProjectId),
@@ -351,7 +351,7 @@ func TestAccCustomRuleGroupMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testCustomRuleGroupMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), customRuleGroupMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), customRuleGroupMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_alb_waf_custom_rule_group.custom_rule_group", plancheck.ResourceActionUpdate),
@@ -393,7 +393,7 @@ func TestAccManagedRuleSet(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testManagedRuleSet,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), managedRuleSetConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), managedRuleSetConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "region", testutil.Region),
@@ -414,7 +414,7 @@ func TestAccManagedRuleSet(t *testing.T) {
 					  name  = stackit_alb_waf_managed_rule_set.managed_rule_set.name
 					}
 					`,
-					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), managedRuleSetConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), managedRuleSetConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_managed_rule_set.managed_rule_set", "project_id", testutil.ProjectId),
@@ -448,7 +448,7 @@ func TestAccManagedRuleSet(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testManagedRuleSetUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), managedRuleSetConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), managedRuleSetConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_alb_waf_managed_rule_set.managed_rule_set", plancheck.ResourceActionReplace),
@@ -475,7 +475,7 @@ func TestAccWafConfigurationMin(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMin,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), wafMinConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "project_id", testutil.ProjectId),
 					resource.TestCheckResourceAttr("stackit_alb_waf_configuration.waf_instance", "region", testutil.Region),
@@ -494,7 +494,7 @@ func TestAccWafConfigurationMin(t *testing.T) {
 					  name  = stackit_alb_waf_configuration.waf_instance.name
 					}
 					`,
-					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMinConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), wafMinConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.stackit_alb_waf_configuration.waf", "project_id", testutil.ProjectId),
@@ -527,7 +527,7 @@ func TestAccWafConfigurationMin(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsMinUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMinConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), wafMinConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_alb_waf_configuration.waf_instance", plancheck.ResourceActionReplace),
@@ -553,7 +553,7 @@ func TestAccWafConfigurationMax(t *testing.T) {
 			// Creation
 			{
 				ConfigVariables: testConfigVarsMax,
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), wafMaxConfig),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("stackit_alb_waf_managed_rule_set.managed_rule_set", "name", testutil.ConvertConfigVariable(testConfigVarsMax["rule_set_name"])),
 					resource.TestCheckResourceAttr("stackit_alb_waf_custom_rule_group.custom_rule_group", "name", testutil.ConvertConfigVariable(testConfigVarsMax["custom_rule_group_name"])),
@@ -588,7 +588,7 @@ func TestAccWafConfigurationMax(t *testing.T) {
 					  name  = stackit_alb_waf_configuration.waf_instance.name
 					}
 					`,
-					testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMaxConfig,
+					testutil.NewConfigBuilder().BuildProviderConfig(), wafMaxConfig,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(
@@ -629,7 +629,7 @@ func TestAccWafConfigurationMax(t *testing.T) {
 			// Update
 			{
 				ConfigVariables: testConfigVarsMaxUpdated(),
-				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().EnableBetaResources(true).BuildProviderConfig(), wafMaxConfig),
+				Config:          fmt.Sprintf("%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), wafMaxConfig),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_alb_waf_configuration.waf_instance", plancheck.ResourceActionReplace),
