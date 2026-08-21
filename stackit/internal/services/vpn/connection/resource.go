@@ -68,7 +68,8 @@ type PeeringConfigModel struct {
 }
 
 type BGPTunnelConfigModel struct {
-	RemoteAsn types.Int64 `tfsdk:"remote_asn"`
+	RemoteAsn       types.Int64  `tfsdk:"remote_asn"`
+	InboundFilterId types.String `tfsdk:"inbound_filter_id"`
 }
 
 type TunnelModel struct {
@@ -242,7 +243,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							},
 						},
 						"integrity_algorithms": schema.ListAttribute{
-							Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Description: fmt.Sprintf("Integrity algorithms for Phase 1. %s `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
 							Required:    true,
 							ElementType: types.StringType,
 							Validators: []validator.List{
@@ -286,7 +287,7 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							},
 						},
 						"integrity_algorithms": schema.ListAttribute{
-							Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
+							Description: fmt.Sprintf("Integrity algorithms for Phase 2. %s `sha1` is deprecated and may be removed in a future API version; prefer `sha2_256`, `sha2_384`, or `sha2_512`.", tfutils.FormatPossibleValues(integrityAlgorithmValues...)),
 							Required:    true,
 							ElementType: types.StringType,
 							Validators: []validator.List{
@@ -351,6 +352,14 @@ func (r *vpnConnectionResource) Schema(_ context.Context, _ resource.SchemaReque
 							Required:    true,
 							Validators: []validator.Int64{
 								int64validator.Between(64512, 4294967294),
+							},
+						},
+						"inbound_filter_id": schema.StringAttribute{
+							Description: "UUID of a `stackit_vpn_bgp_filter` to apply for inbound route filtering on this tunnel's BGP peering session. If omitted, no inbound filtering is applied.",
+							Optional:    true,
+							Validators: []validator.String{
+								validate.UUID(),
+								validate.NoSeparator(),
 							},
 						},
 					},
@@ -543,6 +552,10 @@ func (r *vpnConnectionResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	if modelUsesDeprecatedSha1IntegrityAlgorithm(&planModel) {
+		resp.Diagnostics.AddWarning("Deprecated integrity algorithm", "`sha1` is deprecated for `integrity_algorithms` and may be removed in a future API version. Use `sha2_256`, `sha2_384`, or `sha2_512` instead.")
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := planModel.ProjectID.ValueString()
@@ -653,6 +666,10 @@ func (r *vpnConnectionResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	if modelUsesDeprecatedSha1IntegrityAlgorithm(&planModel) {
+		resp.Diagnostics.AddWarning("Deprecated integrity algorithm", "`sha1` is deprecated for `integrity_algorithms` and may be removed in a future API version. Use `sha2_256`, `sha2_384`, or `sha2_512` instead.")
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := planModel.ProjectID.ValueString()
@@ -761,6 +778,19 @@ func toCreatePayload(ctx context.Context, planModel, configModel *Model) (*vpn.C
 	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, configModel.Tunnel1)
 	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, configModel.Tunnel2)
 
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing.
+	// On create there is no prior state to compare against - either the value is set, or it's left
+	// untouched (omitted from the payload).
+	setInboundFilterId := func(planTunnelModel *TunnelModel, bgpPayload *vpn.BGPTunnelConfig) {
+		if bgpPayload == nil || planTunnelModel.Bgp == nil || tfutils.IsUndefined(planTunnelModel.Bgp.InboundFilterId) {
+			return
+		}
+		bgpPayload.SetInboundFilterId(planTunnelModel.Bgp.InboundFilterId.ValueString())
+	}
+
+	setInboundFilterId(planModel.Tunnel1, payload.Tunnel1.Bgp)
+	setInboundFilterId(planModel.Tunnel2, payload.Tunnel2.Bgp)
+
 	return payload, nil
 }
 
@@ -806,6 +836,26 @@ func toUpdatePayload(ctx context.Context, planModel, stateModel, configModel *Mo
 
 	payload.Tunnel1.PreSharedKey = getPresharedKey(planModel.Tunnel1, stateModel.Tunnel1, configModel.Tunnel1)
 	payload.Tunnel2.PreSharedKey = getPresharedKey(planModel.Tunnel2, stateModel.Tunnel2, configModel.Tunnel2)
+
+	// inline function to allow re-using the logic for tunnel1 & tunnel2 without being too confusing.
+	// inbound_filter_id is nullable server-side: if the plan has a value, send it; if the plan has no
+	// value but state previously had one, the user removed it - send an explicit null to clear it;
+	// otherwise it was never set, so leave the payload field untouched (omitted).
+	setInboundFilterId := func(planTunnelModel, stateTunnelModel *TunnelModel, bgpPayload *vpn.BGPTunnelConfig) {
+		if bgpPayload == nil {
+			return
+		}
+		if planTunnelModel.Bgp != nil && !tfutils.IsUndefined(planTunnelModel.Bgp.InboundFilterId) {
+			bgpPayload.SetInboundFilterId(planTunnelModel.Bgp.InboundFilterId.ValueString())
+			return
+		}
+		if stateTunnelModel.Bgp != nil && !tfutils.IsUndefined(stateTunnelModel.Bgp.InboundFilterId) {
+			bgpPayload.SetInboundFilterIdNil()
+		}
+	}
+
+	setInboundFilterId(planModel.Tunnel1, stateModel.Tunnel1, payload.Tunnel1.Bgp)
+	setInboundFilterId(planModel.Tunnel2, stateModel.Tunnel2, payload.Tunnel2.Bgp)
 
 	return payload, nil
 }
@@ -912,6 +962,33 @@ func toTunnelPayload(tunnel *TunnelModel) (*vpn.TunnelConfiguration, error) {
 	}
 
 	return config, nil
+}
+
+// modelUsesDeprecatedSha1IntegrityAlgorithm reports whether any tunnel/phase in the model still
+// configures the deprecated `sha1` integrity algorithm. `sha1` remains supported by the API but
+// should be avoided in favor of `sha2_256`, `sha2_384`, or `sha2_512`.
+func modelUsesDeprecatedSha1IntegrityAlgorithm(model *Model) bool {
+	usesSha1 := func(algorithms types.List) bool {
+		if tfutils.IsUndefined(algorithms) {
+			return false
+		}
+		for _, el := range algorithms.Elements() {
+			if s, ok := el.(types.String); ok && s.ValueString() == string(vpn.PHASEINTEGRITYALGORITHMSINNER_SHA1) {
+				return true
+			}
+		}
+		return false
+	}
+
+	tunnelUsesSha1 := func(tunnel *TunnelModel) bool {
+		if tunnel == nil {
+			return false
+		}
+		return (tunnel.Phase1 != nil && usesSha1(tunnel.Phase1.IntegrityAlgorithms)) ||
+			(tunnel.Phase2 != nil && usesSha1(tunnel.Phase2.IntegrityAlgorithms))
+	}
+
+	return tunnelUsesSha1(model.Tunnel1) || tunnelUsesSha1(model.Tunnel2)
 }
 
 func toBasePhasePayload(phaseModel *BasePhaseModel, phasePayload BasePhasePayload) error {
@@ -1082,8 +1159,10 @@ func mapTunnel(ctx context.Context, apiTunnel *vpn.TunnelConfiguration, tfTunnel
 
 	tfTunnel.Bgp = nil
 	if apiTunnel.Bgp != nil {
+		inboundFilterId, _ := apiTunnel.Bgp.GetInboundFilterIdOk()
 		tfTunnel.Bgp = &BGPTunnelConfigModel{
-			RemoteAsn: types.Int64Value(apiTunnel.Bgp.RemoteAsn),
+			RemoteAsn:       types.Int64Value(apiTunnel.Bgp.RemoteAsn),
+			InboundFilterId: types.StringPointerValue(inboundFilterId),
 		}
 	}
 

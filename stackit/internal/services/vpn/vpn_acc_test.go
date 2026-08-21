@@ -34,6 +34,12 @@ var connectionMinConfig string
 //go:embed testdata/connection-max.tf
 var connectionMaxConfig string
 
+//go:embed testdata/bgp-filter.tf
+var bgpFilterConfig string
+
+//go:embed testdata/bgp-filter-rule.tf
+var bgpFilterRuleConfig string
+
 var gatewayMinVars = config.Variables{
 	"project_id":   config.StringVariable(testutil.ProjectId),
 	"display_name": config.StringVariable("vpn-gw-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha)),
@@ -63,6 +69,7 @@ var gatewayMaxVars = config.Variables{
 	"override_advertised_routes": config.ListVariable(config.StringVariable("10.0.0.0/16"), config.StringVariable("192.168.0.0/24")),
 	"label_key":                  config.StringVariable("env"),
 	"label_value":                config.StringVariable("test"),
+	"network_config_prefix":      config.StringVariable("10.20.0.0/28"),
 }
 
 var gatewayMaxVarsUpdated = func() config.Variables {
@@ -143,6 +150,39 @@ var connectionMaxVarsPskRotated = func() config.Variables {
 	rotated["tunnel2_psk"] = config.StringVariable("Super.Secret_Rotated_$hared3Key_2!")
 	rotated["tunnel2_psk_version"] = config.IntegerVariable(2)
 	return rotated
+}()
+
+var bgpFilterVars = func() config.Variables {
+	vars := make(config.Variables, len(gatewayMinVars)+1)
+	maps.Copy(vars, gatewayMinVars)
+	vars["filter_display_name"] = config.StringVariable("vpn-bgp-filter-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+	return vars
+}()
+
+var bgpFilterVarsUpdated = func() config.Variables {
+	updated := make(config.Variables, len(bgpFilterVars))
+	maps.Copy(updated, bgpFilterVars)
+	updated["filter_display_name"] = config.StringVariable("vpn-bgp-filter-acc-test-updated-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlpha))
+	return updated
+}()
+
+var bgpFilterRuleVars = func() config.Variables {
+	vars := make(config.Variables, len(bgpFilterVars)+4)
+	maps.Copy(vars, bgpFilterVars)
+	vars["rule_action"] = config.StringVariable("PERMIT")
+	vars["rule_peer"] = config.StringVariable("192.0.2.1")
+	vars["rule_prefix"] = config.StringVariable("10.0.0.0/16")
+	vars["rule_local_preference"] = config.IntegerVariable(150)
+	return vars
+}()
+
+var bgpFilterRuleVarsUpdated = func() config.Variables {
+	updated := make(config.Variables, len(bgpFilterRuleVars))
+	maps.Copy(updated, bgpFilterRuleVars)
+	// keep action=PERMIT so local_preference is not silently ignored/dropped server-side
+	updated["rule_prefix"] = config.StringVariable("172.16.0.0/12")
+	updated["rule_local_preference"] = config.IntegerVariable(200)
+	return updated
 }()
 
 func TestAccVpnGatewayResourceMin(t *testing.T) {
@@ -286,6 +326,8 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVars["local_asn"])),
 					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix.0", testutil.ConvertConfigVariable(gatewayMaxVars["network_config_prefix"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "network_config.routing_table_id"),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
@@ -313,6 +355,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVars["local_asn"])),
 					testutil.CheckListAttr("data.stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVars["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVars["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVars["label_value"])),
+					resource.TestCheckResourceAttr("data.stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix.0", testutil.ConvertConfigVariable(gatewayMaxVars["network_config_prefix"])),
 
 					resource.TestCheckResourceAttrSet("data.stackit_vpn_gateway.gateway", "gateway_id"),
 
@@ -367,6 +410,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["local_asn"])),
 					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVarsUpdated["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels."+testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_key"]), testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["label_value"])),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix.0", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated["network_config_prefix"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
@@ -385,6 +429,7 @@ func TestAccVpnGatewayResourceMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "bgp.local_asn", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["local_asn"])),
 					testutil.CheckListAttr("stackit_vpn_gateway.gateway", "bgp.override_advertised_routes", gatewayMaxVarsUpdated2["override_advertised_routes"]),
 					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "labels.#", "0"),
+					resource.TestCheckResourceAttr("stackit_vpn_gateway.gateway", "network_config.predefined_network_prefix.0", testutil.ConvertConfigVariable(gatewayMaxVarsUpdated2["network_config_prefix"])),
 					resource.TestCheckResourceAttrSet("stackit_vpn_gateway.gateway", "gateway_id"),
 				),
 			},
@@ -866,6 +911,164 @@ func TestAccVpnConnectionResourceMax(t *testing.T) {
 	})
 }
 
+func TestAccVpnBgpFilterResource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckVpnResourcesDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: bgpFilterVars,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, bgpFilterConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter.filter", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter.filter", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter.filter", "display_name", testutil.ConvertConfigVariable(bgpFilterVars["filter_display_name"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_bgp_filter.filter", "filter_id"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: bgpFilterVars,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+						%s
+
+						data "stackit_vpn_bgp_filter" "filter" {
+							project_id = stackit_vpn_bgp_filter.filter.project_id
+							gateway_id = stackit_vpn_bgp_filter.filter.gateway_id
+							filter_id  = stackit_vpn_bgp_filter.filter.filter_id
+						}
+						`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, bgpFilterConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_vpn_bgp_filter.filter", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("data.stackit_vpn_bgp_filter.filter", "display_name", testutil.ConvertConfigVariable(bgpFilterVars["filter_display_name"])),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_bgp_filter.filter", "region", "stackit_vpn_bgp_filter.filter", "region"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_bgp_filter.filter", "filter_id", "stackit_vpn_bgp_filter.filter", "filter_id"),
+				),
+			},
+			// Update
+			{
+				ConfigVariables: bgpFilterVarsUpdated,
+				Config:          fmt.Sprintf("%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, bgpFilterConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter.filter", "display_name", testutil.ConvertConfigVariable(bgpFilterVarsUpdated["filter_display_name"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_bgp_filter.filter", "filter_id"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: bgpFilterVars,
+				ResourceName:    "stackit_vpn_bgp_filter.filter",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_vpn_bgp_filter.filter"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_vpn_bgp_filter.filter")
+					}
+					gatewayId, ok := r.Primary.Attributes["gateway_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute gateway_id")
+					}
+					filterId, ok := r.Primary.Attributes["filter_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute filter_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", testutil.ProjectId, testutil.Region, gatewayId, filterId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccVpnBgpFilterRuleResource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckVpnResourcesDestroy,
+		Steps: []resource.TestStep{
+			// Creation
+			{
+				ConfigVariables: bgpFilterRuleVars,
+				Config:          fmt.Sprintf("%s\n%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, bgpFilterConfig, bgpFilterRuleConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "project_id", testutil.ProjectId),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "region", testutil.Region),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "action", testutil.ConvertConfigVariable(bgpFilterRuleVars["rule_action"])),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "match.peer", testutil.ConvertConfigVariable(bgpFilterRuleVars["rule_peer"])),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "match.prefixes.0", testutil.ConvertConfigVariable(bgpFilterRuleVars["rule_prefix"])),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "set.local_preference", testutil.ConvertConfigVariable(bgpFilterRuleVars["rule_local_preference"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_bgp_filter_rule.rule", "rule_id"),
+					resource.TestCheckResourceAttrSet("stackit_vpn_bgp_filter_rule.rule", "sequence"),
+				),
+			},
+			// Data source
+			{
+				ConfigVariables: bgpFilterRuleVars,
+				Config: fmt.Sprintf(`
+						%s
+						%s
+						%s
+						%s
+
+						data "stackit_vpn_bgp_filter_rule" "rule" {
+							project_id = stackit_vpn_bgp_filter_rule.rule.project_id
+							gateway_id = stackit_vpn_bgp_filter_rule.rule.gateway_id
+							filter_id  = stackit_vpn_bgp_filter_rule.rule.filter_id
+							rule_id    = stackit_vpn_bgp_filter_rule.rule.rule_id
+						}
+						`,
+					testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, bgpFilterConfig, bgpFilterRuleConfig,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.stackit_vpn_bgp_filter_rule.rule", "action", testutil.ConvertConfigVariable(bgpFilterRuleVars["rule_action"])),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_bgp_filter_rule.rule", "rule_id", "stackit_vpn_bgp_filter_rule.rule", "rule_id"),
+					resource.TestCheckResourceAttrPair("data.stackit_vpn_bgp_filter_rule.rule", "sequence", "stackit_vpn_bgp_filter_rule.rule", "sequence"),
+				),
+			},
+			// Update
+			{
+				ConfigVariables: bgpFilterRuleVarsUpdated,
+				Config:          fmt.Sprintf("%s\n%s\n%s\n%s", testutil.NewConfigBuilder().BuildProviderConfig(), gatewayMinConfig, bgpFilterConfig, bgpFilterRuleConfig),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "match.prefixes.0", testutil.ConvertConfigVariable(bgpFilterRuleVarsUpdated["rule_prefix"])),
+					resource.TestCheckResourceAttr("stackit_vpn_bgp_filter_rule.rule", "set.local_preference", testutil.ConvertConfigVariable(bgpFilterRuleVarsUpdated["rule_local_preference"])),
+					resource.TestCheckResourceAttrSet("stackit_vpn_bgp_filter_rule.rule", "rule_id"),
+				),
+			},
+			// Import
+			{
+				ConfigVariables: bgpFilterRuleVars,
+				ResourceName:    "stackit_vpn_bgp_filter_rule.rule",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_vpn_bgp_filter_rule.rule"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_vpn_bgp_filter_rule.rule")
+					}
+					gatewayId, ok := r.Primary.Attributes["gateway_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute gateway_id")
+					}
+					filterId, ok := r.Primary.Attributes["filter_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute filter_id")
+					}
+					ruleId, ok := r.Primary.Attributes["rule_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute rule_id")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s,%s", testutil.ProjectId, testutil.Region, gatewayId, filterId, ruleId), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	client, err := vpn.NewAPIClient(testutil.NewConfigBuilder().BuildClientOptions(testutil.VpnCustomEndpoint, false)...)
@@ -885,8 +1088,8 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 			} else if attrId, ok := rs.Primary.Attributes["gateway_id"]; ok && attrId != "" {
 				gatewayId = attrId
 			}
-		case "stackit_vpn_connection":
-			// connection terraform ID: "[project_id],[region],[gateway_id],[connection_id]"
+		case "stackit_vpn_connection", "stackit_vpn_bgp_filter", "stackit_vpn_bgp_filter_rule":
+			// connection/BGP filter/BGP filter rule terraform ID: "[project_id],[region],[gateway_id],...]"
 			parts := strings.Split(rs.Primary.ID, core.Separator)
 			if len(parts) > 2 {
 				gatewayId = parts[2]
@@ -932,6 +1135,43 @@ func testAccCheckVpnResourcesDestroy(s *terraform.State) error {
 					continue
 				}
 				return fmt.Errorf("destroying connection %s during CheckDestroy: %w", *conn.Id, err)
+			}
+		}
+
+		// BGP filters (and their rules) must be deleted before the gateway, and while no connection
+		// still references them via tunnel bgp.inbound_filter_id (handled above).
+		filtersResp, err := client.DefaultAPI.ListGatewayBGPFilters(ctx, testutil.ProjectId, testutil.Region, *gateway.Id).Execute()
+		if err != nil {
+			return fmt.Errorf("listing BGP filters for gateway %s during CheckDestroy: %w", *gateway.Id, err)
+		}
+		for _, filter := range filtersResp.BgpFilters {
+			if filter.Id == nil {
+				continue
+			}
+
+			rulesResp, err := client.DefaultAPI.ListGatewayBGPFilterRules(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *filter.Id).Execute()
+			if err != nil {
+				return fmt.Errorf("listing BGP filter rules for filter %s during CheckDestroy: %w", *filter.Id, err)
+			}
+			for _, rule := range rulesResp.Rules {
+				if rule.Id == nil {
+					continue
+				}
+				err := client.DefaultAPI.DeleteGatewayBGPFilterRule(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *filter.Id, *rule.Id).Execute()
+				if err != nil {
+					if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+						continue
+					}
+					return fmt.Errorf("destroying BGP filter rule %s during CheckDestroy: %w", *rule.Id, err)
+				}
+			}
+
+			err = client.DefaultAPI.DeleteGatewayBGPFilter(ctx, testutil.ProjectId, testutil.Region, *gateway.Id, *filter.Id).Execute()
+			if err != nil {
+				if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && (oapiErr.StatusCode == http.StatusNotFound || oapiErr.StatusCode == http.StatusGone) {
+					continue
+				}
+				return fmt.Errorf("destroying BGP filter %s during CheckDestroy: %w", *filter.Id, err)
 			}
 		}
 

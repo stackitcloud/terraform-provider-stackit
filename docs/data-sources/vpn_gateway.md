@@ -34,6 +34,7 @@ data "stackit_vpn_gateway" "example" {
 - `display_name` (String) A user-friendly name for the VPN gateway.
 - `id` (String) Terraform's internal resource identifier. Structured as "`project_id`,`region`,`gateway_id`".
 - `labels` (Map of String) Map of custom labels (key-value string pairs).
+- `network_config` (Attributes) Network configuration for the VPN gateway. (see [below for nested schema](#nestedatt--network_config))
 - `plan_id` (String) The service plan identifier (e.g. `p500`). For guidance on finding available plans, see [List available service plans](https://docs.stackit.cloud/products/network/connectivity-hybrid-multi-cloud/vpn/getting-started/gateway-create/#list-available-service-plans).
 - `region` (String) STACKIT region name the resource is located in. If not defined, the provider region is used.
 - `routing_type` (String) Routing architecture. Possible values are: `POLICY_BASED`, `ROUTE_BASED`, `BGP_ROUTE_BASED`.
@@ -54,3 +55,12 @@ Read-Only:
 
 - `local_asn` (Number) Local ASN for BGP (private ASN range, 64512-4294967294).
 - `override_advertised_routes` (List of String) List of IPv4 CIDRs to advertise via BGP. If omitted, SNA network ranges are advertised.
+
+
+<a id="nestedatt--network_config"></a>
+### Nested Schema for `network_config`
+
+Read-Only:
+
+- `predefined_network_prefix` (List of String) The IPv4 network prefix (CIDR notation) allocated for the VPN gateway. Must have a prefix length of /28 or larger. Cannot be changed after the gateway is created.
+- `routing_table_id` (String) Custom routing table ID for the VPN gateway. If omitted, a default routing table is assigned.
