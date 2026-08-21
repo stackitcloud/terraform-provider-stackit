@@ -69,6 +69,7 @@ import (
 	iaasAlphaVpcRoutingTable "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcroutingtable"
 	iaasAlphaVpcStaticRoute "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/vpcroutingtable/staticroute"
 	iamRoleBindingsV1 "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iam/rolebindings/v1"
+	intakes "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/intakes"
 	intakeRunner "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/intake/runner"
 	kmsKey "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/key"
 	kmsKeyRing "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/kms/keyring"
@@ -716,6 +717,7 @@ func (p *Provider) DataSources(_ context.Context) []func() datasource.DataSource
 		iaasRoutingTableRoutes.NewRoutingTableRoutesDataSource,
 		iaasSecurityGroupRule.NewSecurityGroupRuleDataSource,
 		intakeRunner.NewRunnerDataSource,
+		intakes.NewIntakesDataSource,
 		kmsKey.NewKeyDataSource,
 		kmsKeyRing.NewKeyRingDataSource,
 		kmsWrappingKey.NewWrappingKeyDataSource,
@@ -836,6 +838,7 @@ func (p *Provider) Resources(_ context.Context) []func() resource.Resource {
 		iaasRoutingTable.NewRoutingTableResource,
 		iaasRoutingTableRoute.NewRoutingTableRouteResource,
 		intakeRunner.NewRunnerResource,
+		intakes.NewIntakesResource,
 		kmsKey.NewKeyResource,
 		kmsKeyRing.NewKeyRingResource,
 		kmsWrappingKey.NewWrappingKeyResource,
