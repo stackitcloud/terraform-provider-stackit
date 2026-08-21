@@ -39,6 +39,7 @@ type DataSourceModel struct {
 	TelemetryRouterID types.String `tfsdk:"telemetry_router_id"`
 	CreateTime        types.String `tfsdk:"create_time"`
 	Status            types.String `tfsdk:"status"`
+	Enabled           types.Bool   `tfsdk:"enabled"`
 }
 
 type telemetryLinkDataSource struct {
@@ -114,6 +115,10 @@ func (d *telemetryLinkDataSource) Schema(_ context.Context, _ datasource.SchemaR
 				Description:        schemaDescriptions["status"],
 				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
 				Computed:           true,
+			},
+			"enabled": schema.BoolAttribute{
+				Description: schemaDescriptions["enabled"],
+				Computed:    true,
 			},
 		},
 	}
@@ -197,6 +202,7 @@ func mapDataSourceFields(_ context.Context, link *telemetrylink.TelemetryLinkRes
 	model.TelemetryRouterID = types.StringValue(link.TelemetryRouterId)
 	model.CreateTime = types.StringValue(link.CreateTime.Format(time.RFC3339))
 	model.Status = types.StringValue(string(link.Status))
+	model.Enabled = types.BoolValue(link.Enabled)
 
 	return nil
 }
