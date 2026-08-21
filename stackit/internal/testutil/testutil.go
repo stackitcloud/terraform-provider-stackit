@@ -157,6 +157,7 @@ const (
 	ExperimentIAM           Experiment = "iam"
 	ExperimentDremio        Experiment = "dremio"
 	ExperimentVPC           Experiment = "vpc"
+	ExperimentSKE           Experiment = "ske"
 )
 
 type customEndpointConfig struct {

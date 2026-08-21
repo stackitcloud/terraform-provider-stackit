@@ -348,7 +348,7 @@ func TestToUpdatePayload(t *testing.T) {
 			expected: &modelexperiments.PartialUpdateInstanceTokenPayload{
 				Name:        new("name"),
 				Description: new("desc"),
-				Labels:      &map[string]string{"key": "value"},
+				Labels:      &map[string]*string{"key": new("value")},
 			},
 			isValid: true,
 		},

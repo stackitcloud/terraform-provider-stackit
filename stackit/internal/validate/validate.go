@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/teambition/rrule-go"
 
@@ -394,6 +395,42 @@ func IsLowercased() *Validator {
 					val,
 				))
 				return
+			}
+		},
+	}
+}
+
+// OnlyAllowedIfBoolEquals returns a Validator that prevents this string attribute
+// from being set if the target bool attribute does not equal the specified value.
+// If value is nil, no validation is performed.
+func OnlyAllowedIfBoolEquals(target path.Expression, value *bool) *Validator {
+	description := "the attribute can only be set if the boolean is set to the provided value"
+
+	return &Validator{
+		description: description,
+		validate: func(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+			expression := req.PathExpression.Merge(target)
+
+			matchedPaths, diags := req.Config.PathMatches(ctx, expression)
+			resp.Diagnostics.Append(diags...)
+
+			for _, targetPath := range matchedPaths {
+				var targetBool types.Bool
+				diags := req.Config.GetAttribute(ctx, targetPath, &targetBool)
+				resp.Diagnostics.Append(diags...)
+
+				// nothing to validate against: no expected value given or target not set in the config
+				if resp.Diagnostics.HasError() || value == nil || targetBool.IsNull() || targetBool.IsUnknown() {
+					return
+				}
+
+				if targetBool.ValueBool() != *value {
+					resp.Diagnostics.AddAttributeError(
+						req.Path,
+						"Attribute can not be set",
+						fmt.Sprintf("This attribute can only be configured when %q is set to %t.", targetPath.String(), *value),
+					)
+				}
 			}
 		},
 	}

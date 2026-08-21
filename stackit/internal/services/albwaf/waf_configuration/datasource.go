@@ -18,7 +18,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	albwafUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -44,11 +43,6 @@ func (d *wafDatasource) Configure(ctx context.Context, req datasource.ConfigureR
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_alb_waf_configuration", core.Datasource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	d.client = albwafUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -58,7 +52,7 @@ func (d *wafDatasource) Configure(ctx context.Context, req datasource.ConfigureR
 
 func (d *wafDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring), core.Resource),
+		Description: fmt.Sprintf("ALB WAF Custom Rule Group resource schema. %s", core.ResourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
