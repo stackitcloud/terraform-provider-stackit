@@ -216,6 +216,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `service_account_key` (String) Service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_key_path` (String) Path for the service account key used for authentication. If set, the key flow will be used to authenticate all operations.
 - `service_account_token` (String, Deprecated) Token used for authentication. If set, the token flow will be used to authenticate all operations.
+- `service_connection_id` (String) The ID of the Azure DevOps pipeline service connection. For use when authenticating as a Service Account using OpenID Connect.
 - `service_enablement_custom_endpoint` (String) Custom endpoint for the Service Enablement API
 - `sfs_custom_endpoint` (String) Custom endpoint for the Stackit Filestorage API
 - `ske_custom_endpoint` (String) Custom endpoint for the Kubernetes Engine (SKE) service
