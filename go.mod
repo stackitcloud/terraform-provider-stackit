@@ -48,7 +48,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex v1.16.1
 	github.com/stackitcloud/stackit-sdk-go/services/telemetrylink v0.4.0
 	github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter v0.4.0
-	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.14.1-0.20260728105652-71775a9e99ee // TODO(vpn-sdk-pin): re-pin to tagged release once stackitcloud/stackit-sdk-go#9324 merges
+	github.com/stackitcloud/stackit-sdk-go/services/vpn v0.15.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/mod v0.38.0
 )
