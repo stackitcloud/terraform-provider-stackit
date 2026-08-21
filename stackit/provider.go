@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -108,6 +109,7 @@ import (
 	redisInstance "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/instance"
 	resourceManagerFolder "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/folder"
 	resourceManagerProject "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/project"
+	runCommandAction "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/runcommand/command"
 	scfOrganization "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organization"
 	scfOrganizationmanager "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/organizationmanager"
 	scfPlatform "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/platform"
@@ -148,6 +150,7 @@ import (
 // Ensure the implementation satisfies the expected interfaces
 var (
 	_ provider.Provider                       = &Provider{}
+	_ provider.ProviderWithActions            = &Provider{}
 	_ provider.ProviderWithEphemeralResources = &Provider{}
 )
 
@@ -213,6 +216,7 @@ type providerModel struct {
 	ResourceManagerCustomEndpoint   types.String `tfsdk:"resourcemanager_custom_endpoint"`
 	ScfCustomEndpoint               types.String `tfsdk:"scf_custom_endpoint"`
 	SecretsManagerCustomEndpoint    types.String `tfsdk:"secretsmanager_custom_endpoint"`
+	RunCommandCustomEndpoint        types.String `tfsdk:"run_command_custom_endpoint"`
 	ServerBackupCustomEndpoint      types.String `tfsdk:"server_backup_custom_endpoint"`
 	ServerUpdateCustomEndpoint      types.String `tfsdk:"server_update_custom_endpoint"`
 	ServiceAccountCustomEndpoint    types.String `tfsdk:"service_account_custom_endpoint"`
@@ -272,6 +276,7 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 		"opensearch_custom_endpoint":           "Custom endpoint for the OpenSearch service",
 		"postgresflex_custom_endpoint":         "Custom endpoint for the PostgresFlex service",
 		"redis_custom_endpoint":                "Custom endpoint for the Redis service",
+		"run_command_custom_endpoint":          "Custom endpoint for the Run Command service",
 		"server_backup_custom_endpoint":        "Custom endpoint for the Server Backup service",
 		"server_update_custom_endpoint":        "Custom endpoint for the Server Update service",
 		"service_account_custom_endpoint":      "Custom endpoint for the Service Account service",
@@ -477,6 +482,10 @@ func (p *Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *pro
 				Optional:    true,
 				Description: descriptions["ske_custom_endpoint"],
 			},
+			"run_command_custom_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: descriptions["run_command_custom_endpoint"],
+			},
 			"server_backup_custom_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: descriptions["server_backup_custom_endpoint"],
@@ -591,6 +600,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { providerData.ResourceManagerCustomEndpoint = v })
 	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { providerData.ScfCustomEndpoint = v })
 	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { providerData.SecretsManagerCustomEndpoint = v })
+	setStringField(providerConfig.RunCommandCustomEndpoint, func(v string) { providerData.RunCommandCustomEndpoint = v })
 	setStringField(providerConfig.ServerBackupCustomEndpoint, func(v string) { providerData.ServerBackupCustomEndpoint = v })
 	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { providerData.ServerUpdateCustomEndpoint = v })
 	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
@@ -665,6 +675,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	resp.DataSourceData = providerData
 	resp.ResourceData = providerData
+	resp.ActionData = providerData
 
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
 	var ephemeralProviderData core.EphemeralProviderData
@@ -911,5 +922,12 @@ func (p *Provider) EphemeralResources(_ context.Context) []func() ephemeral.Ephe
 	return []func() ephemeral.EphemeralResource{
 		access_token.NewAccessTokenEphemeralResource,
 		skeKubeconfig.NewKubeconfigEphemeralResource,
+	}
+}
+
+// Actions defines the actions implemented in the provider.
+func (p *Provider) Actions(_ context.Context) []func() action.Action {
+	return []func() action.Action{
+		runCommandAction.NewRunCommandAction,
 	}
 }

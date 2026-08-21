@@ -38,6 +38,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/services/rabbitmq v1.1.1
 	github.com/stackitcloud/stackit-sdk-go/services/redis v1.1.1
 	github.com/stackitcloud/stackit-sdk-go/services/resourcemanager v0.24.0
+	github.com/stackitcloud/stackit-sdk-go/services/runcommand v1.9.2
 	github.com/stackitcloud/stackit-sdk-go/services/scf v0.10.0
 	github.com/stackitcloud/stackit-sdk-go/services/secretsmanager v0.18.1
 	github.com/stackitcloud/stackit-sdk-go/services/serverbackup v1.7.0
@@ -111,3 +112,5 @@ require (
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/stackitcloud/stackit-sdk-go/services/runcommand => ../stackit-sdk-go/services/runcommand

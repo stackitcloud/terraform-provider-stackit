@@ -205,6 +205,7 @@ See this [example](https://professional-service.git.onstackit.cloud/professional
 - `rabbitmq_custom_endpoint` (String) Custom endpoint for the RabbitMQ service
 - `redis_custom_endpoint` (String) Custom endpoint for the Redis service
 - `resourcemanager_custom_endpoint` (String) Custom endpoint for the Resource Manager service
+- `run_command_custom_endpoint` (String) Custom endpoint for the Run Command service
 - `scf_custom_endpoint` (String) Custom endpoint for the Cloud Foundry (SCF) service
 - `secretsmanager_custom_endpoint` (String) Custom endpoint for the Secrets Manager service
 - `server_backup_custom_endpoint` (String) Custom endpoint for the Server Backup service
