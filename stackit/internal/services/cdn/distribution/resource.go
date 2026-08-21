@@ -68,6 +68,9 @@ var schemaDescriptions = map[string]string{
 	"config_backend_origin_request_headers":        "The configured type http origin request headers for the backend",
 	"config_backend_geofencing":                    "The configured type http to configure countries where content is allowed. A map of URLs to a list of countries",
 	"config_blocked_countries":                     "The configured countries where distribution of content is blocked",
+	"config_blocked_ips":                           "Restricts access to your content by specifying a list of blocked IPv4 addresses. This feature enhances security and privacy by preventing these addresses from accessing your distribution. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state; to clear it explicitly, set it to an empty list.",
+	"config_default_cache_duration":                "Sets the default cache duration for the distribution. The default cache duration is applied when a 'Cache-Control' header is not presented in the origin's response. We use ISO8601 duration format for cache duration (e.g. P1DT2H30M). Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
+	"config_monthly_limit_bytes":                   "Sets the monthly limit of bandwidth in bytes that the pullzone is allowed to use. Note: once a value is set, removing the attribute from your configuration will retain the last known value in state.",
 	"config_redirects":                             "A wrapper for a list of redirect rules that allows for redirect settings on a distribution",
 	"config_redirects_rules":                       "A list of redirect rules. The order of rules matters for evaluation",
 	"config_redirects_rule_description":            "An optional description for the redirect rule",
@@ -144,6 +147,9 @@ type distributionConfig struct {
 	Redirects            *redirectConfig `tfsdk:"redirects"`              // A wrapper for a list of redirect rules that allows for redirect settings on a distribution
 	Regions              *[]string       `tfsdk:"regions"`                // The regions in which data will be cached
 	BlockedCountries     *[]string       `tfsdk:"blocked_countries"`      // The countries for which content will be blocked
+	BlockedIps           types.List      `tfsdk:"blocked_ips"`            // Restricts access to your content by specifying a list of blocked IPv4 addresses.
+	DefaultCacheDuration types.String    `tfsdk:"default_cache_duration"` // Sets the default cache duration for the distribution.
+	MonthlyLimitBytes    types.Int64     `tfsdk:"monthly_limit_bytes"`    // Sets the monthly limit of bandwidth in bytes.
 	Optimizer            types.Object    `tfsdk:"optimizer"`              // The optimizer configuration
 	Waf                  types.Object    `tfsdk:"waf"`                    // The WAF configuration
 	Tls                  types.Object    `tfsdk:"tls"`                    // The TLS configuration
@@ -194,9 +200,12 @@ type backendCredentials struct {
 }
 
 var configTypes = map[string]attr.Type{
-	"backend":           types.ObjectType{AttrTypes: backendTypes},
-	"regions":           types.ListType{ElemType: types.StringType},
-	"blocked_countries": types.ListType{ElemType: types.StringType},
+	"backend":                types.ObjectType{AttrTypes: backendTypes},
+	"regions":                types.ListType{ElemType: types.StringType},
+	"blocked_countries":      types.ListType{ElemType: types.StringType},
+	"blocked_ips":            types.ListType{ElemType: types.StringType},
+	"default_cache_duration": types.StringType,
+	"monthly_limit_bytes":    types.Int64Type,
 	"optimizer": types.ObjectType{
 		AttrTypes: optimizerTypes,
 	},
@@ -325,7 +334,7 @@ func (r *distributionResource) Metadata(_ context.Context, req resource.Metadata
 	resp.TypeName = req.ProviderTypeName + "_cdn_distribution"
 }
 
-func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) { //nolint:tfmodifyplan // false positive - cdn api has a 'regions' array field to define in which regions content to be cached
 	backendOptions := []string{"http", "bucket"}
 	statusCode := []int32{301, 302, 303, 307, 308}
 	resp.Schema = schema.Schema{
@@ -505,7 +514,8 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 													},
 												},
 											},
-										}},
+										},
+									},
 								},
 							},
 						},
@@ -672,7 +682,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 							"region": schema.StringAttribute{
 								Optional:    true,
 								Description: schemaDescriptions["config_backend_region"],
-								Validators:  []validator.String{stringvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Validators:  []validator.String{stringvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("bucket_url"))},
 							},
 							"credentials": schema.SingleNestedAttribute{
 								Optional:    true,
@@ -690,7 +700,7 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 										Description: schemaDescriptions["config_backend_credentials_access_key_id"],
 									},
 								},
-								Validators: []validator.Object{objectvalidator.AlsoRequires((path.MatchRelative().AtParent().AtName("bucket_url")))},
+								Validators: []validator.Object{objectvalidator.AlsoRequires(path.MatchRelative().AtParent().AtName("bucket_url"))},
 							},
 						},
 					},
@@ -713,6 +723,22 @@ func (r *distributionResource) Schema(_ context.Context, _ resource.SchemaReques
 						// blocked_countries = []. This ensures the config (empty list) matches the
 						// API response (empty list).
 						Default: listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
+					},
+					"blocked_ips": schema.ListAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_blocked_ips"],
+						ElementType: types.StringType,
+					},
+					"default_cache_duration": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_default_cache_duration"],
+					},
+					"monthly_limit_bytes": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: schemaDescriptions["config_monthly_limit_bytes"],
 					},
 				},
 			},
@@ -918,6 +944,16 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		blockedCountries = tempBlockedCountries
 	}
 
+	// blockedIps
+	var blockedIps []string
+	if !utils.IsUndefined(configModel.BlockedIps) {
+		bipDiags := configModel.BlockedIps.ElementsAs(ctx, &blockedIps, false)
+		if bipDiags.HasError() {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Blocked IPs: %v", core.DiagsToError(bipDiags)))
+			return
+		}
+	}
+
 	// tls
 	var tls *cdnSdk.TlsConfigPatch
 	if !utils.IsUndefined(configModel.Tls) {
@@ -981,6 +1017,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		Backend:          configPatchBackend,
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
+		BlockedIps:       blockedIps,
 		Redirects:        redirectsConfig,
 		Tls:              tls,
 	}
@@ -992,6 +1029,12 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 	// stripResponseCookies
 	if !utils.IsUndefined(configModel.StripResponseCookies) {
 		configPatch.StripResponseCookies = configModel.StripResponseCookies.ValueBoolPointer()
+	}
+	if !utils.IsUndefined(configModel.DefaultCacheDuration) {
+		configPatch.DefaultCacheDuration = *cdnSdk.NewNullableString(conversion.StringValueToPointer(configModel.DefaultCacheDuration))
+	}
+	if !utils.IsUndefined(configModel.MonthlyLimitBytes) {
+		configPatch.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(conversion.Int64ValueToPointer(configModel.MonthlyLimitBytes))
 	}
 
 	configPatch.Waf = &cdnSdk.WafConfigPatch{
@@ -1084,7 +1127,7 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
@@ -1446,10 +1489,29 @@ func mapFields(ctx context.Context, distribution *cdnSdk.Distribution, model *Mo
 		return core.DiagsToError(diagWaf)
 	}
 
+	// blockedIps
+	var blockedIps []attr.Value
+	if distribution.Config.BlockedIps != nil {
+		for _, ip := range distribution.Config.BlockedIps {
+			blockedIps = append(blockedIps, types.StringValue(ip))
+		}
+	}
+
+	modelBlockedIps, diags := types.ListValue(types.StringType, blockedIps)
+	if diags.HasError() {
+		return core.DiagsToError(diags)
+	}
+
+	defaultCacheDuration := types.StringPointerValue(distribution.Config.DefaultCacheDuration.Get())
+	monthlyLimitBytes := types.Int64PointerValue(distribution.Config.MonthlyLimitBytes.Get())
+
 	cfg, diags := types.ObjectValue(configTypes, map[string]attr.Value{
 		"backend":                backend,
 		"regions":                modelRegions,
 		"blocked_countries":      modelBlockedCountries,
+		"blocked_ips":            modelBlockedIps,
+		"default_cache_duration": defaultCacheDuration,
+		"monthly_limit_bytes":    monthlyLimitBytes,
 		"optimizer":              optimizerVal,
 		"redirects":              redirectsVal,
 		"waf":                    wafVal,
@@ -1572,6 +1634,7 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 		Regions:          cfg.Regions,
 		Backend:          *backend,
 		BlockedCountries: cfg.BlockedCountries,
+		BlockedIps:       cfg.BlockedIps,
 		Optimizer:        optimizer,
 		Redirects:        cfg.Redirects,
 		Waf:              wafPayload,
@@ -1583,6 +1646,12 @@ func toCreatePayload(ctx context.Context, model *Model) (*cdnSdk.CreateDistribut
 	}
 	if !utils.IsUndefined(rawConfig.StripResponseCookies) {
 		payload.StripResponseCookies = rawConfig.StripResponseCookies.ValueBoolPointer()
+	}
+	if !utils.IsUndefined(rawConfig.DefaultCacheDuration) {
+		payload.DefaultCacheDuration = conversion.StringValueToPointer(rawConfig.DefaultCacheDuration)
+	}
+	if !utils.IsUndefined(rawConfig.MonthlyLimitBytes) {
+		payload.MonthlyLimitBytes = conversion.Int64ValueToPointer(rawConfig.MonthlyLimitBytes)
 	}
 
 	return payload, nil
@@ -1747,12 +1816,30 @@ func convertConfig(ctx context.Context, model *Model) (*cdnSdk.Config, error) {
 		}
 	}
 
+	// blockedIps
+	var blockedIps []string
+	if !utils.IsUndefined(configModel.BlockedIps) {
+		diags := configModel.BlockedIps.ElementsAs(ctx, &blockedIps, false)
+		if diags.HasError() {
+			return nil, core.DiagsToError(diags)
+		}
+	}
+
 	cdnConfig := &cdnSdk.Config{
 		Backend:          cdnSdk.ConfigBackend{},
 		Regions:          regions,
 		BlockedCountries: blockedCountries,
+		BlockedIps:       blockedIps,
 		Redirects:        redirectsConfig,
 		Tls:              tls,
+	}
+
+	if !utils.IsUndefined(configModel.DefaultCacheDuration) {
+		cdnConfig.DefaultCacheDuration = *cdnSdk.NewNullableString(conversion.StringValueToPointer(configModel.DefaultCacheDuration))
+	}
+
+	if !utils.IsUndefined(configModel.MonthlyLimitBytes) {
+		cdnConfig.MonthlyLimitBytes = *cdnSdk.NewNullableInt64(conversion.Int64ValueToPointer(configModel.MonthlyLimitBytes))
 	}
 
 	if !utils.IsUndefined(configModel.Waf) {

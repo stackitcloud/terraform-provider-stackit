@@ -50,6 +50,23 @@ func ToOptStringMap(tfMap map[string]attr.Value) (*map[string]string, error) { /
 	return labelsPointer, nil
 }
 
+func ToOptStringPointerMap(tfMap map[string]attr.Value) (*map[string]*string, error) { //nolint: gocritic //pointer needed to map optional fields
+	labels := make(map[string]*string, len(tfMap))
+	for l, v := range tfMap {
+		valueString, ok := v.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("error converting map value: expected to string, got %v", v)
+		}
+		labels[l] = valueString.ValueStringPointer()
+	}
+
+	labelsPointer := &labels
+	if len(labels) == 0 {
+		labelsPointer = nil
+	}
+	return labelsPointer, nil
+}
+
 func ToTerraformStringMap(ctx context.Context, m map[string]string) (basetypes.MapValue, error) {
 	labels := make(map[string]attr.Value, len(m))
 	for l, v := range m {

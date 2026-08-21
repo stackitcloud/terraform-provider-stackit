@@ -433,6 +433,16 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	// The config model - this has to be used because Terraform doesn't include write-only field values in the
+	// plan and state models - for security measures. Write-only values should be only kept in the config model
+	// so that they never end up in the state (or plan).
+	var configModel Model
+	diags = req.Config.Get(ctx, &configModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = core.InitProviderContext(ctx)
 
 	projectId := model.ProjectId.ValueString()
@@ -450,7 +460,7 @@ func (r *volumeResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Generate API request body from model
-	payload, err := toCreatePayload(ctx, &model, source)
+	payload, err := toCreatePayload(ctx, &model, &configModel, source)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating volume", fmt.Sprintf("Creating API payload: %v", err))
 		return
@@ -753,9 +763,12 @@ func mapFields(ctx context.Context, volumeResp *iaas.Volume, model *Model, regio
 	return nil
 }
 
-func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*iaas.CreateVolumePayload, error) {
+func toCreatePayload(ctx context.Context, model, configModel *Model, source *sourceModel) (*iaas.CreateVolumePayload, error) {
 	if model == nil {
 		return nil, fmt.Errorf("nil model")
+	}
+	if configModel == nil {
+		return nil, fmt.Errorf("nil config model")
 	}
 
 	labels, err := conversion.ToStringInterfaceMap(ctx, model.Labels)
@@ -782,12 +795,19 @@ func toCreatePayload(ctx context.Context, model *Model, source *sourceModel) (*i
 		Source:           sourcePayload,
 	}
 
-	if model.EncryptionParameters != nil {
+	if model.EncryptionParameters != nil && configModel.EncryptionParameters != nil {
+		// Terraform keeps the write-only field values in the config model - and they shouldn't leave this config model
+		// to make sure they don't end up being stored in the state. In the plan model the write-only field values are just
+		// empty. That's why write-only field values must be read from the config model. Everything else comes from the
+		// plan model.
 		var keyPayload *string
-		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnly) {
-			keyPayload = conversion.StringValueToPointer(model.EncryptionParameters.KeyPayloadBase64WriteOnly)
-		} else if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
+		if !utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64) {
+			// handle the legacy fallback logic
 			keyPayload = conversion.StringValueToPointer(model.EncryptionParameters.KeyPayloadBase64)
+		} else if !utils.IsUndefined(configModel.EncryptionParameters.KeyPayloadBase64WriteOnly) &&
+			!utils.IsUndefined(model.EncryptionParameters.KeyPayloadBase64WriteOnlyVersion) {
+			// the user is using the write-only field
+			keyPayload = conversion.StringValueToPointer(configModel.EncryptionParameters.KeyPayloadBase64WriteOnly)
 		}
 
 		payload.EncryptionParameters = &iaas.VolumeEncryptionParameter{

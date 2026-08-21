@@ -186,32 +186,39 @@ func TestMapFields(t *testing.T) {
 }
 
 func TestToCreatePayload(t *testing.T) {
+	type args struct {
+		planModel   *Model
+		configModel *Model
+		source      *sourceModel
+	}
 	tests := []struct {
 		description string
-		input       *Model
-		source      *sourceModel
+		args        args
 		expected    *iaas.CreateVolumePayload
 		isValid     bool
 	}{
 		{
 			description: "no volume encryption",
-			input: &Model{
-				Name:             types.StringValue("name"),
-				AvailabilityZone: types.StringValue("zone"),
-				Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
-					"key": types.StringValue("value"),
-				}),
-				Description:      types.StringValue("desc"),
-				PerformanceClass: types.StringValue("class"),
-				Size:             types.Int64Value(1),
-				Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
-					"type": types.StringNull(),
-					"id":   types.StringNull(),
-				}),
-			},
-			source: &sourceModel{
-				Type: types.StringValue("volume"),
-				Id:   types.StringValue("id"),
+			args: args{
+				planModel: &Model{
+					Name:             types.StringValue("name"),
+					AvailabilityZone: types.StringValue("zone"),
+					Labels: types.MapValueMust(types.StringType, map[string]attr.Value{
+						"key": types.StringValue("value"),
+					}),
+					Description:      types.StringValue("desc"),
+					PerformanceClass: types.StringValue("class"),
+					Size:             types.Int64Value(1),
+					Source: types.ObjectValueMust(sourceTypes, map[string]attr.Value{
+						"type": types.StringNull(),
+						"id":   types.StringNull(),
+					}),
+				},
+				configModel: &Model{},
+				source: &sourceModel{
+					Type: types.StringValue("volume"),
+					Id:   types.StringValue("id"),
+				},
 			},
 			expected: &iaas.CreateVolumePayload{
 				Name:             new("name"),
@@ -231,19 +238,24 @@ func TestToCreatePayload(t *testing.T) {
 		},
 		{
 			description: "with volume encryption without key payload",
-			input: &Model{
-				Labels: types.MapNull(types.StringType),
-				EncryptionParameters: &encryptionParametersModel{
-					KekKeyId:         types.StringValue("kek-key-id"),
-					KekKeyVersion:    types.Int64Value(int64(1)),
-					KekKeyringId:     types.StringValue("kek-keyring-id"),
-					KeyPayloadBase64: types.StringNull(),
-					ServiceAccount:   types.StringValue("test-sa@sa.stackit.cloud"),
+			args: args{
+				planModel: &Model{
+					Labels: types.MapNull(types.StringType),
+					EncryptionParameters: &encryptionParametersModel{
+						KekKeyId:         types.StringValue("kek-key-id"),
+						KekKeyVersion:    types.Int64Value(int64(1)),
+						KekKeyringId:     types.StringValue("kek-keyring-id"),
+						KeyPayloadBase64: types.StringNull(),
+						ServiceAccount:   types.StringValue("test-sa@sa.stackit.cloud"),
+					},
 				},
-			},
-			source: &sourceModel{
-				Type: types.StringValue("volume"),
-				Id:   types.StringValue("id"),
+				configModel: &Model{
+					EncryptionParameters: &encryptionParametersModel{},
+				},
+				source: &sourceModel{
+					Type: types.StringValue("volume"),
+					Id:   types.StringValue("id"),
+				},
 			},
 			expected: &iaas.CreateVolumePayload{
 				Source: &iaas.VolumeSource{
@@ -263,20 +275,25 @@ func TestToCreatePayload(t *testing.T) {
 			isValid: true,
 		},
 		{
-			description: "with volume encryption including key payload",
-			input: &Model{
-				Labels: types.MapNull(types.StringType),
-				EncryptionParameters: &encryptionParametersModel{
-					KekKeyId:         types.StringValue("kek-key-id"),
-					KekKeyVersion:    types.Int64Value(int64(1)),
-					KekKeyringId:     types.StringValue("kek-keyring-id"),
-					KeyPayloadBase64: types.StringValue("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="), // The quick brown fox jumps over 13 lazy dogs.
-					ServiceAccount:   types.StringValue("test-sa@sa.stackit.cloud"),
+			description: "with volume encryption including key payload via legacy field",
+			args: args{
+				planModel: &Model{
+					Labels: types.MapNull(types.StringType),
+					EncryptionParameters: &encryptionParametersModel{
+						KekKeyId:         types.StringValue("kek-key-id"),
+						KekKeyVersion:    types.Int64Value(int64(1)),
+						KekKeyringId:     types.StringValue("kek-keyring-id"),
+						KeyPayloadBase64: types.StringValue("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="), // The quick brown fox jumps over 13 lazy dogs.
+						ServiceAccount:   types.StringValue("test-sa@sa.stackit.cloud"),
+					},
 				},
-			},
-			source: &sourceModel{
-				Type: types.StringValue("volume"),
-				Id:   types.StringValue("id"),
+				configModel: &Model{
+					EncryptionParameters: &encryptionParametersModel{},
+				},
+				source: &sourceModel{
+					Type: types.StringValue("volume"),
+					Id:   types.StringValue("id"),
+				},
 			},
 			expected: &iaas.CreateVolumePayload{
 				Source: &iaas.VolumeSource{
@@ -295,10 +312,157 @@ func TestToCreatePayload(t *testing.T) {
 			},
 			isValid: true,
 		},
+		{
+			description: "with volume encryption including key payload via legacy field which takes precedence over write-only field",
+			args: args{
+				planModel: &Model{
+					Labels: types.MapNull(types.StringType),
+					EncryptionParameters: &encryptionParametersModel{
+						KekKeyId:                         types.StringValue("kek-key-id"),
+						KekKeyVersion:                    types.Int64Value(int64(1)),
+						KekKeyringId:                     types.StringValue("kek-keyring-id"),
+						KeyPayloadBase64:                 types.StringValue("bGVnYWN5LWtleS1wYXlsb2Fk"),
+						KeyPayloadBase64WriteOnly:        types.StringNull(),
+						KeyPayloadBase64WriteOnlyVersion: types.Int64Value(1),
+						ServiceAccount:                   types.StringValue("test-sa@sa.stackit.cloud"),
+					},
+				},
+				configModel: &Model{
+					EncryptionParameters: &encryptionParametersModel{
+						KeyPayloadBase64WriteOnly: types.StringValue("d3JpdGUtb25seS1rZXktcGF5bG9hZA=="),
+					},
+				},
+				source: &sourceModel{
+					Type: types.StringValue("volume"),
+					Id:   types.StringValue("id"),
+				},
+			},
+			expected: &iaas.CreateVolumePayload{
+				Source: &iaas.VolumeSource{
+					Type: "volume",
+					Id:   "id",
+				},
+				Labels: map[string]any{},
+				EncryptionParameters: &iaas.VolumeEncryptionParameter{
+					KekKeyId:       "kek-key-id",
+					KekKeyVersion:  int64(1),
+					KekKeyringId:   "kek-keyring-id",
+					KekProjectId:   nil,
+					KeyPayload:     new("bGVnYWN5LWtleS1wYXlsb2Fk"),
+					ServiceAccount: "test-sa@sa.stackit.cloud",
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "with volume encryption including key payload via write-only field together with write-only version",
+			args: args{
+				planModel: &Model{
+					Labels: types.MapNull(types.StringType),
+					EncryptionParameters: &encryptionParametersModel{
+						KekKeyId:                         types.StringValue("kek-key-id"),
+						KekKeyVersion:                    types.Int64Value(int64(1)),
+						KekKeyringId:                     types.StringValue("kek-keyring-id"),
+						KeyPayloadBase64:                 types.StringNull(),
+						KeyPayloadBase64WriteOnly:        types.StringNull(),
+						KeyPayloadBase64WriteOnlyVersion: types.Int64Value(1),
+						ServiceAccount:                   types.StringValue("test-sa@sa.stackit.cloud"),
+					},
+				},
+				configModel: &Model{
+					EncryptionParameters: &encryptionParametersModel{
+						KeyPayloadBase64WriteOnly: types.StringValue("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="), // The quick brown fox jumps over 13 lazy dogs.
+					},
+				},
+				source: &sourceModel{
+					Type: types.StringValue("volume"),
+					Id:   types.StringValue("id"),
+				},
+			},
+			expected: &iaas.CreateVolumePayload{
+				Source: &iaas.VolumeSource{
+					Type: "volume",
+					Id:   "id",
+				},
+				Labels: map[string]any{},
+				EncryptionParameters: &iaas.VolumeEncryptionParameter{
+					KekKeyId:       "kek-key-id",
+					KekKeyVersion:  int64(1),
+					KekKeyringId:   "kek-keyring-id",
+					KekProjectId:   nil,
+					KeyPayload:     new("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="),
+					ServiceAccount: "test-sa@sa.stackit.cloud",
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "with volume encryption including key payload via write-only field but write-only version not set",
+			args: args{
+				planModel: &Model{
+					Labels: types.MapNull(types.StringType),
+					EncryptionParameters: &encryptionParametersModel{
+						KekKeyId:                         types.StringValue("kek-key-id"),
+						KekKeyVersion:                    types.Int64Value(int64(1)),
+						KekKeyringId:                     types.StringValue("kek-keyring-id"),
+						KeyPayloadBase64:                 types.StringNull(),
+						KeyPayloadBase64WriteOnly:        types.StringNull(),
+						KeyPayloadBase64WriteOnlyVersion: types.Int64Null(),
+						ServiceAccount:                   types.StringValue("test-sa@sa.stackit.cloud"),
+					},
+				},
+				configModel: &Model{
+					EncryptionParameters: &encryptionParametersModel{
+						KeyPayloadBase64WriteOnly: types.StringValue("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4="), // The quick brown fox jumps over 13 lazy dogs.
+					},
+				},
+				source: &sourceModel{
+					Type: types.StringValue("volume"),
+					Id:   types.StringValue("id"),
+				},
+			},
+			expected: &iaas.CreateVolumePayload{
+				Source: &iaas.VolumeSource{
+					Type: "volume",
+					Id:   "id",
+				},
+				Labels: map[string]any{},
+				EncryptionParameters: &iaas.VolumeEncryptionParameter{
+					KekKeyId:      "kek-key-id",
+					KekKeyVersion: int64(1),
+					KekKeyringId:  "kek-keyring-id",
+					KekProjectId:  nil,
+					// must be nil because the write-only version is not set
+					KeyPayload:     nil,
+					ServiceAccount: "test-sa@sa.stackit.cloud",
+				},
+			},
+			isValid: true,
+		},
+		{
+			description: "plan model is nil",
+			args: args{
+				planModel:   nil,
+				configModel: &Model{},
+				source:      &sourceModel{},
+			},
+			expected: nil,
+			isValid:  false,
+		},
+		{
+			description: "config model is nil",
+			args: args{
+				planModel:   &Model{},
+				configModel: nil,
+				source:      &sourceModel{},
+			},
+			expected: nil,
+			isValid:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
-			output, err := toCreatePayload(context.Background(), tt.input, tt.source)
+			output, err := toCreatePayload(context.Background(), tt.args.planModel, tt.args.configModel, tt.args.source)
 			if !tt.isValid && err == nil {
 				t.Fatalf("Should have failed")
 			}

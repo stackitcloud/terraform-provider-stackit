@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -195,6 +196,13 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 			"display_name": schema.StringAttribute{
 				Description: schemaDescriptions["display_name"],
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9 \-]*$`),
+						"The display name must start with an alphanumeric character and can contain only letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"region": schema.StringAttribute{
 				Description: schemaDescriptions["region"],
@@ -208,6 +216,13 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 			"description": schema.StringAttribute{
 				Description: schemaDescriptions["description"],
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtMost(1024),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9 \-]*)?$`),
+						"The description must start with an alphanumeric character and can only contain letters, numbers, spaces, and hyphens.",
+					),
+				},
 			},
 			"filter": schema.SingleNestedAttribute{
 				Description: schemaDescriptions["filter"],
@@ -255,8 +270,9 @@ func (r *telemetryRouterInstanceResource) Schema(_ context.Context, _ resource.S
 				Computed:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: schemaDescriptions["status"],
-				Computed:    true,
+				Description:        schemaDescriptions["status"],
+				DeprecationMessage: "status is deprecated and will be removed after February 2027.",
+				Computed:           true,
 			},
 		},
 	}

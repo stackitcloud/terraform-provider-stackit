@@ -161,12 +161,16 @@ func (d *networkAreaRegionDataSource) Read(ctx context.Context, req datasource.R
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 	ctx = tflog.SetField(ctx, "region", region)
 
+	ctx = core.InitProviderContext(ctx)
+
 	networkAreaRegionResp, err := d.client.DefaultAPI.GetNetworkAreaRegion(ctx, organizationId, networkAreaId, region).Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "Reading network area region", fmt.Sprintf("Region configuration for %q for network area %q does not exist.", region, networkAreaId), nil)
 		resp.State.RemoveResource(ctx)
 		return
 	}
+
+	ctx = core.LogResponse(ctx)
 
 	// Map response body to schema
 	err = mapFields(ctx, networkAreaRegionResp, &model, region)

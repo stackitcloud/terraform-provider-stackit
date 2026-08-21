@@ -10,8 +10,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/stackitcloud/stackit-sdk-go/core/utils"
 	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
 	"github.com/stackitcloud/stackit-sdk-go/services/ske/v2api/wait"
@@ -78,6 +82,8 @@ var testConfigVarsMax = config.Variables{
 	"ext_acl_allowed_cidr1":                            config.StringVariable("10.0.100.0/24"),
 	"ext_observability_enabled":                        config.StringVariable("false"),
 	"ext_dns_enabled":                                  config.StringVariable("true"),
+	"ext_dns_gateway_api":                              config.StringVariable("true"),
+	"ext_application_load_balancer_enabled":            config.StringVariable("true"),
 	"nodepool_hibernations1_start":                     config.StringVariable("0 18 * * *"),
 	"nodepool_hibernations1_end":                       config.StringVariable("59 23 * * *"),
 	"nodepool_hibernations1_timezone":                  config.StringVariable("Europe/Berlin"),
@@ -94,6 +100,7 @@ var testConfigVarsMax = config.Variables{
 	"dns_name":                                         config.StringVariable("acc-" + acctest.RandStringFromCharSet(6, acctest.CharSetAlpha) + ".runs.onstackit.cloud"),
 	"network_control_plane_access_scope":               config.StringVariable("PUBLIC"),
 	"access_idp_enabled":                               config.BoolVariable(true),
+	"audit_enabled":                                    config.BoolVariable(true),
 }
 
 var testConfigDatasource = config.Variables{
@@ -113,19 +120,23 @@ func configVarsMaxUpdated() config.Variables {
 	updatedConfig["nodepool_os_version_min"] = config.StringVariable(skeProviderOptions.GetUpdateMachineVersion())
 	updatedConfig["maintenance_end"] = config.StringVariable("03:03:03+00:00")
 	updatedConfig["access_idp_enabled"] = config.BoolVariable(false)
+	updatedConfig["ext_application_load_balancer_enabled"] = config.BoolVariable(false)
+	updatedConfig["audit_enabled"] = config.BoolVariable(false)
 
 	return updatedConfig
 }
 
 func TestAccSKEMin(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		ProtoV6ProviderFactories: testutil.TestEphemeralAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -162,11 +173,21 @@ func TestAccSKEMin(t *testing.T) {
 					// Access: resource-min does not define an access block, we expect idp: { enabled: false, type: stackit } here because of the default
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", "false"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
+
+					// Audit: resource-min does not define an audit block, we expect enabled: false here because of the default
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "audit.enabled", "false"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.example",
+						tfjsonpath.New("data"),
+						knownvalue.NotNull(),
+					),
+				},
 			},
 			// 2) Data source
 			{
-				Config:          resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: testConfigVarsMin,
 				Check: resource.ComposeAggregateTestCheckFunc(
 
@@ -191,6 +212,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "maintenance.end", testutil.ConvertConfigVariable(testConfigVarsMax["maintenance_end"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "region"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(testConfigVarsMin["network_control_plane_access_scope"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "audit.enabled", "false"),
 				),
 			},
 			// 3) Import cluster
@@ -219,7 +241,7 @@ func TestAccSKEMin(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version
 			{
-				Config:          resourceMin,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMin,
 				ConfigVariables: configVarsMinUpdated(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -247,6 +269,7 @@ func TestAccSKEMin(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "region", testutil.ConvertConfigVariable(configVarsMinUpdated()["region"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_cluster.cluster", "kubernetes_version_used"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "network.control_plane.access_scope", testutil.ConvertConfigVariable(configVarsMinUpdated()["network_control_plane_access_scope"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "audit.enabled", "false"),
 
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
@@ -266,13 +289,15 @@ func TestAccSKEMin(t *testing.T) {
 
 func TestAccSKEMax(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		ProtoV6ProviderFactories: testutil.TestEphemeralAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccCheckSKEDestroy,
 		Steps: []resource.TestStep{
-
 			// 1) Creation
 			{
-				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// cluster data
@@ -306,8 +331,10 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_allowed_cidr1"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.observability.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_observability_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.gateway_api", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_gateway_api"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(testConfigVarsMax["dns_name"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.application_load_balancer.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_application_load_balancer_enabled"])),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", testutil.ConvertConfigVariable(testConfigVarsMax["nodepool_hibernations1_start"])),
@@ -333,6 +360,9 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
 
+					// Audit
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "audit.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["audit_enabled"])),
+
 					// Kubeconfig
 					resource.TestCheckResourceAttrPair(
 						"stackit_ske_kubeconfig.kubeconfig", "project_id",
@@ -347,10 +377,17 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_kubeconfig.kubeconfig", "refresh_before", testutil.ConvertConfigVariable(testConfigVarsMax["refresh_before"])),
 					resource.TestCheckResourceAttrSet("stackit_ske_kubeconfig.kubeconfig", "expires_at"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.example",
+						tfjsonpath.New("data"),
+						knownvalue.NotNull(),
+					),
+				},
 			},
 			// 2) Data source
 			{
-				Config:          resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: testConfigVarsMax,
 				Check: resource.ComposeAggregateTestCheckFunc(
 
@@ -386,8 +423,10 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(testConfigVarsMax["ext_acl_allowed_cidr1"])),
 					// no check for observability, as it was disabled in the setup
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_enabled"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.gateway_api", testutil.ConvertConfigVariable(testConfigVarsMax["ext_dns_gateway_api"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(testConfigVarsMax["dns_name"])),
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "extensions.application_load_balancer.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["ext_application_load_balancer_enabled"])),
 
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "hibernations.0.start", testutil.ConvertConfigVariable(testConfigVarsMax["nodepool_hibernations1_start"])),
@@ -410,6 +449,9 @@ func TestAccSKEMax(t *testing.T) {
 					// Access
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
+
+					// Audit
+					resource.TestCheckResourceAttr("data.stackit_ske_cluster.cluster", "audit.enabled", testutil.ConvertConfigVariable(testConfigVarsMax["audit_enabled"])),
 				),
 			},
 			// 3) Import cluster
@@ -438,7 +480,7 @@ func TestAccSKEMax(t *testing.T) {
 			},
 			// 4) Update kubernetes version, OS version and maintenance end, downgrade of kubernetes version, set access.idp.enabled to false
 			{
-				Config:          resourceMax,
+				Config:          testutil.NewConfigBuilder().Experiments(testutil.ExperimentSKE).BuildProviderConfig() + "\n" + resourceMax,
 				ConfigVariables: configVarsMaxUpdated(),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -477,8 +519,10 @@ func TestAccSKEMax(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.acl.allowed_cidrs.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_acl_allowed_cidr1"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.observability.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_observability_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_dns_enabled"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.gateway_api", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_dns_gateway_api"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.dns.zones.0", testutil.ConvertConfigVariable(configVarsMaxUpdated()["dns_name"])),
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "extensions.application_load_balancer.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["ext_application_load_balancer_enabled"])),
 
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.#", "1"),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "hibernations.0.start", testutil.ConvertConfigVariable(configVarsMaxUpdated()["nodepool_hibernations1_start"])),
@@ -501,6 +545,9 @@ func TestAccSKEMax(t *testing.T) {
 					// Access
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["access_idp_enabled"])),
 					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "access.idp.type", "stackit"),
+
+					// Audit: updated from true to false
+					resource.TestCheckResourceAttr("stackit_ske_cluster.cluster", "audit.enabled", testutil.ConvertConfigVariable(configVarsMaxUpdated()["audit_enabled"])),
 				),
 			},
 			// Deletion is done by the framework implicitly

@@ -114,9 +114,10 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"acl": schema.ListAttribute{
-				Description: descriptions["acl"],
-				ElementType: types.StringType,
-				Computed:    true,
+				Description:        descriptions["acl"],
+				DeprecationMessage: "acl is deprecated and will be removed after February 2027. Use instead `network.acl`.",
+				ElementType:        types.StringType,
+				Computed:           true,
 			},
 			"backup_schedule": schema.StringAttribute{
 				Description: descriptions["backup_schedule"],
@@ -145,7 +146,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Computed: true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -210,14 +212,17 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"options": schema.SingleNestedAttribute{
-				Description: descriptions["options"],
-				Computed:    true,
+				Description:        descriptions["options"],
+				DeprecationMessage: "option is deprecated and will be removed after February 2027.",
+				Computed:           true,
 				Attributes: map[string]schema.Attribute{
 					"edition": schema.StringAttribute{
-						Computed: true,
+						Computed:           true,
+						DeprecationMessage: "edition is deprecated and will be removed after February 2027.",
 					},
 					"retention_days": schema.Int32Attribute{
-						Computed: true,
+						Computed:           true,
+						DeprecationMessage: "retention_days is deprecated and will be removed after February 2027. Use instead `retention_days` from root.",
 					},
 				},
 			},
@@ -278,16 +283,17 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 	}
 
+	flavor := &flavorModel{}
 	flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor: %v", err))
-		return
-	}
-	flavor := &flavorModel{
-		Id:          types.StringValue(flavorResp.Id),
-		Description: types.StringValue(flavorResp.Description),
-		CPU:         types.Int64Value(flavorResp.Cpu),
-		RAM:         types.Int64Value(flavorResp.Memory),
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+	} else if flavorResp != nil {
+		flavor = &flavorModel{
+			Id:          types.StringValue(flavorResp.Id),
+			Description: types.StringValue(flavorResp.Description),
+			CPU:         types.Int64Value(flavorResp.Cpu),
+			RAM:         types.Int64Value(flavorResp.Memory),
+		}
 	}
 
 	err = mapFields(ctx, instanceResp, &model, flavor, region)

@@ -256,7 +256,7 @@ func (r *vpcNetworkRangeResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := wait.CreateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -396,7 +396,7 @@ func (r *vpcNetworkRangeResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := wait.UpdateVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -468,7 +468,7 @@ func (r *vpcNetworkRangeResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := wait.DeleteVPCNetworkRangeWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -682,7 +682,7 @@ func toCreatePayload(ctx context.Context, model *SharedModel) (*iaas.CreateVPCNe
 		return nil, fmt.Errorf("converting model nameservers: %w", err)
 	}
 
-	return &iaas.CreateVPCNetworkRangePayload{
+	payload := iaas.NetworkRangeIPv4RequestAsCreateVPCNetworkRangePayload(&iaas.NetworkRangeIPv4Request{
 		DefaultPrefixLen: conversion.Int64ValueToPointer(model.DefaultPrefixLength),
 		Description:      model.Description.ValueStringPointer(),
 		IpVersion:        iaas.NetworkRangeIPv4RequestIpVersion(model.IpVersion.ValueString()),
@@ -691,7 +691,8 @@ func toCreatePayload(ctx context.Context, model *SharedModel) (*iaas.CreateVPCNe
 		MinPrefixLen:     conversion.Int64ValueToPointer(model.MinPrefixLength),
 		Nameservers:      modelNameservers,
 		Prefix:           model.Prefix.ValueString(),
-	}, nil
+	})
+	return &payload, nil
 }
 
 func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels types.Map) (*iaas.UpdateVPCNetworkRangePayload, error) {
@@ -709,7 +710,7 @@ func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels type
 		return nil, fmt.Errorf("converting model nameservers: %w", err)
 	}
 
-	return &iaas.UpdateVPCNetworkRangePayload{
+	payload := iaas.V1UpdateVPCNetworkRangeIPv4AsUpdateVPCNetworkRangePayload(&iaas.V1UpdateVPCNetworkRangeIPv4{
 		DefaultPrefixLen: model.DefaultPrefixLength.ValueInt64Pointer(),
 		Description:      model.Description.ValueStringPointer(),
 		IpVersion:        iaas.V1UpdateVPCNetworkRangeIPv4IpVersion(model.IpVersion.ValueString()),
@@ -717,5 +718,6 @@ func toUpdatePayload(ctx context.Context, model *SharedModel, currentLabels type
 		MaxPrefixLen:     model.MaxPrefixLength.ValueInt64Pointer(),
 		MinPrefixLen:     model.MinPrefixLength.ValueInt64Pointer(),
 		Nameservers:      modelNameservers,
-	}, nil
+	})
+	return &payload, nil
 }

@@ -1,0 +1,19 @@
+version: v2.12.2
+plugins:
+  - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
+    import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tfacl'
+    path: ./tools
+  - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
+    import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tfctxinit'
+    path: ./tools
+  - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
+    import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tflogresponse'
+    path: ./tools
+  - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
+    import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tfwriteid'
+    path: ./tools
+  - module: 'github.com/stackitcloud/terraform-provider-stackit/tools'
+    import: 'github.com/stackitcloud/terraform-provider-stackit/tools/linters/tfmodifyplan'
+    path: ./tools
+    # WARNING: when working with custom linting rules make sure to clear your cache when linting: 
+    # golangci-lint cache clean && make lint

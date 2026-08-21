@@ -34,6 +34,7 @@ data "stackit_ske_cluster" "example" {
 ### Read-Only
 
 - `access` (Attributes) Configure access to the cluster (see [below for nested schema](#nestedatt--access))
+- `audit` (Attributes) Cluster audit log forwarding configuration. (see [below for nested schema](#nestedatt--audit))
 - `egress_address_ranges` (List of String) The outgoing network ranges (in CIDR notation) of traffic originating from workload on the cluster.
 - `extensions` (Attributes) A single extensions block as defined below (see [below for nested schema](#nestedatt--extensions))
 - `hibernations` (Attributes List) One or more hibernation block as defined below. (see [below for nested schema](#nestedatt--hibernations))
@@ -63,12 +64,21 @@ Read-Only:
 
 
 
+<a id="nestedatt--audit"></a>
+### Nested Schema for `audit`
+
+Read-Only:
+
+- `enabled` (Boolean) Enable cluster audit log forwarding to a Telemetry Router.
+
+
 <a id="nestedatt--extensions"></a>
 ### Nested Schema for `extensions`
 
 Read-Only:
 
 - `acl` (Attributes) Cluster access control configuration (see [below for nested schema](#nestedatt--extensions--acl))
+- `application_load_balancer` (Attributes) Application Load Balancer extension. (see [below for nested schema](#nestedatt--extensions--application_load_balancer))
 - `argus` (Attributes, Deprecated) A single argus block as defined below. This field is deprecated and will be removed 06 January 2026. (see [below for nested schema](#nestedatt--extensions--argus))
 - `dns` (Attributes) DNS extension configuration (see [below for nested schema](#nestedatt--extensions--dns))
 - `observability` (Attributes) A single observability block as defined below. (see [below for nested schema](#nestedatt--extensions--observability))
@@ -80,6 +90,14 @@ Read-Only:
 
 - `allowed_cidrs` (List of String) Specify a list of CIDRs to whitelist
 - `enabled` (Boolean) Is ACL enabled?
+
+
+<a id="nestedatt--extensions--application_load_balancer"></a>
+### Nested Schema for `extensions.application_load_balancer`
+
+Read-Only:
+
+- `enabled` (Boolean) Enables the application load balancer extension.
 
 
 <a id="nestedatt--extensions--argus"></a>
@@ -97,6 +115,7 @@ Read-Only:
 Read-Only:
 
 - `enabled` (Boolean) Flag to enable/disable DNS extensions
+- `gateway_api` (Boolean) Enables Gateway API support for ExternalDNS. The CRDs must be installed by the user. Once installed, ExternalDNS will be configured at the next cluster reconcile.
 - `zones` (List of String) Specify a list of domain filters for externalDNS (e.g., `foo.runs.onstackit.cloud`)
 
 

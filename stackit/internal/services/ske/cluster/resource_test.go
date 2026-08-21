@@ -80,7 +80,11 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   []string{"foo.onstackit.cloud"},
+						Zones:      []string{"foo.onstackit.cloud"},
+						Enabled:    true,
+						GatewayApi: new(true),
+					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
 					},
 				},
@@ -274,6 +278,10 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("foo.onstackit.cloud"),
 						}),
+						"gateway_api": types.BoolValue(true),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
 					}),
 				}),
 				Region: types.StringValue(testRegion),
@@ -337,6 +345,9 @@ func TestMapFields(t *testing.T) {
 						Zones:   nil,
 						Enabled: true,
 					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
+						Enabled: true,
+					},
 				},
 				Name: new("name"),
 				Access: &ske.Access{
@@ -368,8 +379,12 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringValue(""),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolNull(),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
-						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -391,8 +406,12 @@ func TestMapFields(t *testing.T) {
 					"instance_id": types.StringNull(),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+					"enabled":     types.BoolValue(false),
+					"zones":       types.ListNull(types.StringType),
+					"gateway_api": types.BoolNull(),
+				}),
+				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 					"enabled": types.BoolValue(false),
-					"zones":   types.ListNull(types.StringType),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -428,8 +447,12 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringNull(),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(false),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolNull(),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(false),
-						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -453,8 +476,12 @@ func TestMapFields(t *testing.T) {
 					"instance_id": types.StringValue("id"),
 				}),
 				"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
-					"enabled": types.BoolValue(true),
-					"zones":   types.ListNull(types.StringType),
+					"enabled":     types.BoolValue(true),
+					"zones":       types.ListNull(types.StringType),
+					"gateway_api": types.BoolValue(true),
+				}),
+				"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+					"enabled": types.BoolValue(false),
 				}),
 			}),
 			types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
@@ -465,7 +492,11 @@ func TestMapFields(t *testing.T) {
 						Enabled:      true,
 					},
 					Dns: &ske.DNS{
-						Zones:   nil,
+						Zones:      nil,
+						Enabled:    true,
+						GatewayApi: new(true),
+					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
 					},
 				},
@@ -501,8 +532,12 @@ func TestMapFields(t *testing.T) {
 						"instance_id": types.StringValue("id"),
 					}),
 					"dns": types.ObjectValueMust(dnsTypes, map[string]attr.Value{
+						"enabled":     types.BoolValue(true),
+						"zones":       types.ListNull(types.StringType),
+						"gateway_api": types.BoolValue(true),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
 						"enabled": types.BoolValue(true),
-						"zones":   types.ListNull(types.StringType),
 					}),
 				}),
 				KubernetesVersionUsed: types.StringValue(""),
@@ -527,13 +562,19 @@ func TestMapFields(t *testing.T) {
 			},
 			testRegion,
 			Model{
-				Id:                    types.StringValue("pid,region,name"),
-				ProjectId:             types.StringValue("pid"),
-				Name:                  types.StringValue("name"),
-				NodePools:             types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
-				Maintenance:           types.ObjectNull(maintenanceTypes),
-				Hibernations:          types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
-				Extensions:            types.ObjectNull(extensionsTypes),
+				Id:           types.StringValue("pid,region,name"),
+				ProjectId:    types.StringValue("pid"),
+				Name:         types.StringValue("name"),
+				NodePools:    types.ListNull(types.ObjectType{AttrTypes: nodePoolTypes}),
+				Maintenance:  types.ObjectNull(maintenanceTypes),
+				Hibernations: types.ListNull(types.ObjectType{AttrTypes: hibernationTypes}),
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+				}),
 				EgressAddressRanges:   types.ListNull(types.StringType),
 				PodAddressRanges:      types.ListNull(types.StringType),
 				ServiceAccountIssuer:  types.StringNull(),
@@ -595,7 +636,11 @@ func TestMapFields(t *testing.T) {
 						Enabled:    true,
 					},
 					Dns: &ske.DNS{
-						Zones:   []string{"zone1"},
+						Zones:      []string{"zone1"},
+						Enabled:    true,
+						GatewayApi: new(true),
+					},
+					ApplicationLoadBalancer: &ske.ApplicationLoadBalancer{
 						Enabled: true,
 					},
 				},
@@ -755,6 +800,10 @@ func TestMapFields(t *testing.T) {
 						"zones": types.ListValueMust(types.StringType, []attr.Value{
 							types.StringValue("zone1"),
 						}),
+						"gateway_api": types.BoolValue(true),
+					}),
+					"application_load_balancer": types.ObjectValueMust(applicationLoadBalancerTypes, map[string]attr.Value{
+						"enabled": types.BoolValue(true),
 					}),
 				}),
 				Region: types.StringValue(testRegion),
@@ -796,6 +845,9 @@ func TestMapFields(t *testing.T) {
 				t.Fatalf("Should not have failed: %v", err)
 			}
 			if tt.isValid {
+				if tt.expected.Audit.Attributes() == nil {
+					tt.expected.Audit = types.ObjectNull(auditTypes)
+				}
 				diff := cmp.Diff(state, &tt.expected)
 				if diff != "" {
 					t.Fatalf("Data does not match: %s", diff)
@@ -2401,6 +2453,60 @@ func TestToNetworkPayload(t *testing.T) {
 	}
 }
 
+func TestToAuditPayload(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		input types.Object
+		want  *ske.Audit
+	}{
+		{
+			name:  "null audit",
+			input: types.ObjectNull(auditTypes),
+			want:  nil,
+		},
+		{
+			name:  "unknown audit",
+			input: types.ObjectUnknown(auditTypes),
+			want:  nil,
+		},
+		{
+			name: "audit enabled",
+			input: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(true),
+			}),
+			want: &ske.Audit{
+				Enabled: true,
+			},
+		},
+		{
+			name: "audit disabled",
+			input: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+			want: &ske.Audit{
+				Enabled: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Model{
+				Audit: tt.input,
+			}
+			got, err := toAuditPayload(t.Context(), m)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestVerifySystemComponentNodepools(t *testing.T) {
 	tests := []struct {
 		description string
@@ -2618,10 +2724,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus and observability null",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectNull(argusTypes),
-					"observability": types.ObjectNull(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2630,10 +2737,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus and observability unknown",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectUnknown(argusTypes),
-					"observability": types.ObjectUnknown(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectUnknown(argusTypes),
+					"observability":             types.ObjectUnknown(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2649,6 +2757,7 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
 					}),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2657,10 +2766,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus null and observability unknown",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectNull(argusTypes),
-					"observability": types.ObjectUnknown(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectUnknown(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2675,7 +2785,8 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
-					"observability": types.ObjectNull(observabilityTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2690,7 +2801,8 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":           types.BoolValue(true),
 						"argus_instance_id": types.StringValue("aid"),
 					}),
-					"observability": types.ObjectUnknown(observabilityTypes),
+					"observability":             types.ObjectUnknown(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2709,6 +2821,7 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
 					}),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: true,
@@ -2717,10 +2830,11 @@ func TestValidateConfig(t *testing.T) {
 			name: "argus unknown observability null",
 			model: &Model{
 				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
-					"acl":           types.ObjectNull(aclTypes),
-					"dns":           types.ObjectNull(dnsTypes),
-					"argus":         types.ObjectUnknown(argusTypes),
-					"observability": types.ObjectNull(observabilityTypes),
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectUnknown(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2736,6 +2850,20 @@ func TestValidateConfig(t *testing.T) {
 						"enabled":     types.BoolValue(true),
 						"instance_id": types.StringValue("aid"),
 					}),
+					"application_load_balancer": types.ObjectNull(applicationLoadBalancerTypes),
+				}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "application_load_balancer unknown",
+			model: &Model{
+				Extensions: types.ObjectValueMust(extensionsTypes, map[string]attr.Value{
+					"acl":                       types.ObjectNull(aclTypes),
+					"dns":                       types.ObjectNull(dnsTypes),
+					"argus":                     types.ObjectNull(argusTypes),
+					"observability":             types.ObjectNull(observabilityTypes),
+					"application_load_balancer": types.ObjectUnknown(applicationLoadBalancerTypes),
 				}),
 			},
 			wantErr: false,
@@ -2749,6 +2877,71 @@ func TestValidateConfig(t *testing.T) {
 			validateConfig(ctx, &diags, tt.model)
 			if diags.HasError() != tt.wantErr {
 				t.Errorf("validateConfig() = %v, want %v", diags.HasError(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMapAudit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		input      *ske.Audit
+		stateAudit types.Object
+		want       types.Object
+	}{
+		{
+			name:       "nil audit",
+			input:      nil,
+			stateAudit: types.ObjectNull(auditTypes),
+			want:       types.ObjectNull(auditTypes),
+		},
+		{
+			name: "audit enabled",
+			input: &ske.Audit{
+				Enabled: true,
+			},
+			stateAudit: types.ObjectNull(auditTypes),
+			want: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(true),
+			}),
+		},
+		{
+			name: "audit disabled echoed by API",
+			input: &ske.Audit{
+				Enabled: false,
+			},
+			stateAudit: types.ObjectNull(auditTypes),
+			want: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+		},
+		{
+			name:  "null when API omits audit despite state value",
+			input: nil,
+			stateAudit: types.ObjectValueMust(auditTypes, map[string]attr.Value{
+				"enabled": types.BoolValue(false),
+			}),
+			want: types.ObjectNull(auditTypes),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := &Model{
+				Audit: tt.stateAudit,
+			}
+			cluster := &ske.Cluster{
+				Audit: tt.input,
+			}
+
+			err := mapAudit(cluster, m)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tt.want, m.Audit); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

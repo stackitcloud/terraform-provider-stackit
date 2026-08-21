@@ -20,7 +20,9 @@ variable "nodepool_volume_type" {}
 variable "ext_acl_enabled" {}
 variable "ext_acl_allowed_cidr1" {}
 variable "ext_observability_enabled" {}
+variable "ext_application_load_balancer_enabled" {}
 variable "ext_dns_enabled" {}
+variable "ext_dns_gateway_api" {}
 variable "nodepool_hibernations1_start" {}
 variable "nodepool_hibernations1_end" {}
 variable "nodepool_hibernations1_timezone" {}
@@ -37,6 +39,7 @@ variable "dns_zone_name" {}
 variable "dns_name" {}
 variable "network_control_plane_access_scope" {}
 variable "access_idp_enabled" {}
+variable "audit_enabled" {}
 
 resource "stackit_ske_cluster" "cluster" {
   project_id = var.project_id
@@ -77,8 +80,12 @@ resource "stackit_ske_cluster" "cluster" {
       enabled = var.ext_observability_enabled
     }
     dns = {
-      enabled = var.ext_dns_enabled
-      zones   = [stackit_dns_zone.dns-zone.dns_name]
+      enabled     = var.ext_dns_enabled
+      zones       = [stackit_dns_zone.dns-zone.dns_name]
+      gateway_api = var.ext_dns_gateway_api
+    }
+    application_load_balancer = {
+      enabled = var.ext_application_load_balancer_enabled
     }
   }
   hibernations = [{
@@ -105,6 +112,9 @@ resource "stackit_ske_cluster" "cluster" {
       type    = "stackit"
     }
   }
+  audit = {
+    enabled = var.audit_enabled
+  }
 }
 
 resource "stackit_ske_kubeconfig" "kubeconfig" {
@@ -113,6 +123,7 @@ resource "stackit_ske_kubeconfig" "kubeconfig" {
   expiration     = var.expiration
   refresh        = var.refresh
   refresh_before = var.refresh_before
+  region         = var.region
 }
 
 data "stackit_ske_cluster" "cluster" {
@@ -127,3 +138,17 @@ resource "stackit_dns_zone" "dns-zone" {
   dns_name   = var.dns_name
 }
 
+ephemeral "stackit_ske_kubeconfig" "ephemeral_kubeconfig" {
+  project_id = var.project_id
+  # cluster_name is unknown during the plan phase because stackit_ske_cluster.cluster.id is computed.
+  # This forces Terraform to defer the Open call until the Apply phase, after the cluster is ready.
+  cluster_name = stackit_ske_cluster.cluster.id != "" ? stackit_ske_cluster.cluster.name : ""
+  expiration   = var.expiration
+  region       = var.region
+}
+
+provider "echo" {
+  data = ephemeral.stackit_ske_kubeconfig.ephemeral_kubeconfig.kube_config
+}
+
+resource "echo" "example" {}

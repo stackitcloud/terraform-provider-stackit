@@ -41,4 +41,4 @@ data "stackit_telemetryrouter_access_token" "accessToken" {
 - `display_name` (String) The displayed name of the access token
 - `expiration_time` (String) The date and time an access token will expire at (inclusively)
 - `id` (String) Terraform's internal resource identifier. It is structured as "`project_id`,`region`,`instance_id`,`access_token_id`".
-- `status` (String) The status of the access token. Possible values are: `active`, `expired`, `deleting`.
+- `status` (String, Deprecated) The status of the access token. Possible values are: `active`, `expired`, `deleting`.

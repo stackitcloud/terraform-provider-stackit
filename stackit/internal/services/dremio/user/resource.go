@@ -24,11 +24,11 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi"
+	dremioSdk "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi"
 
 	dremioUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dremio/utils"
 
-	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1alphaapi/wait"
+	dremioWaiter "github.com/stackitcloud/stackit-sdk-go/services/dremio/v1betaapi/wait"
 )
 
 var (
@@ -243,7 +243,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	waiterTimeout := dremioWaiter.CreateDremioUserWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := dremioWaiter.CreateDremioUserWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -376,7 +376,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	waiterTimeout := dremioWaiter.DeleteDremioUserWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout()
+	waiterTimeout := dremioWaiter.DeleteDremioUserWaitHandler(ctx, r.client.DefaultAPI, "", "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

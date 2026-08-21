@@ -187,7 +187,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthAtMost(8192),
+					stringvalidator.LengthAtMost(65536),
 				},
 			},
 			"public_key": schema.StringAttribute{
@@ -197,7 +197,7 @@ The example below creates the supporting infrastructure using the STACKIT Terraf
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthAtMost(8192),
+					stringvalidator.LengthAtMost(65536),
 				},
 			},
 		},

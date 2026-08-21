@@ -67,7 +67,7 @@ type credentialResource struct {
 }
 
 // ModifyPlan implements resource.ResourceWithModifyPlan.
-func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
+func (r *credentialResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic,tfmodifyplan // function signature required by Terraform // adaptRegion is called in modifyPlanRegion function
 	r.modifyPlanRegion(ctx, &req, resp)
 	if resp.Diagnostics.HasError() {
 		return
@@ -381,7 +381,7 @@ func (r *credentialResource) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	ctx = core.LogResponse(ctx)
+	ctx = core.LogResponse(ctx) //nolint:tflogresponse // false positive - SDK call is actually done inside readCredentials()
 
 	if !found {
 		resp.State.RemoveResource(ctx)

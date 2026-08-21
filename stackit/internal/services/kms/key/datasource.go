@@ -109,7 +109,7 @@ func (k *keyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 				},
 			},
 			"protection": schema.StringAttribute{
-				Description: fmt.Sprintf("The underlying system that is responsible for protecting the key material. %s", utils.FormatPossibleValues(sdkUtils.EnumSliceToStringSlice(kms.AllowedProtectionEnumValues)...)),
+				Description: "The underlying system that is responsible for protecting the key material.",
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),

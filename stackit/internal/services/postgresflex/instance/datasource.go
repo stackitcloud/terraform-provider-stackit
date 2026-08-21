@@ -137,7 +137,8 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Computed:    true,
 			},
 			"flavor": schema.SingleNestedAttribute{
-				Computed: true,
+				Computed:           true,
+				DeprecationMessage: "flavor is deprecated and will be removed after February 2027. Use instead `flavor_id`. You can list available flavors using the datasource `stackit_postgresflex_flavors`..",
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
 						Computed: true,
@@ -178,8 +179,9 @@ func (r *instanceDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				},
 			},
 			"replicas": schema.Int32Attribute{
-				Description: descriptions["replicas"],
-				Computed:    true,
+				Description:        descriptions["replicas"],
+				DeprecationMessage: "replicas is deprecated and will be removed after February 2027. Use instead `flavor_id` and choose a flavor with your wanted replica configuration. You can list available flavors using the datasource `stackit_postgresflex_flavors`.",
+				Computed:           true,
 			},
 			"retention_days": schema.Int32Attribute{
 				Description: descriptions["retention_days"],
@@ -264,18 +266,18 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
+	flavor := &flavorModel{}
 	flavorResp, err := getFlavor(ctx, r.client.DefaultAPI, projectId, region, instanceResp.FlavorId)
 	if err != nil {
-		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
-		return
-	}
-
-	flavor := &flavorModel{
-		Id:          types.StringValue(flavorResp.Id),
-		Description: types.StringValue(flavorResp.Description),
-		CPU:         types.Int64Value(flavorResp.Cpu),
-		RAM:         types.Int64Value(flavorResp.Memory),
-		NodeType:    types.StringValue(flavorResp.NodeType),
+		core.LogAndAddWarning(ctx, &resp.Diagnostics, "Flavor not populated", fmt.Sprintf("Finding flavor %q: %v", instanceResp.FlavorId, err))
+	} else if flavorResp != nil {
+		flavor = &flavorModel{
+			Id:          types.StringValue(flavorResp.Id),
+			Description: types.StringValue(flavorResp.Description),
+			CPU:         types.Int64Value(flavorResp.Cpu),
+			RAM:         types.Int64Value(flavorResp.Memory),
+			NodeType:    types.StringValue(flavorResp.NodeType),
+		}
 	}
 
 	err = mapFields(ctx, instanceResp, &model, flavor, region)

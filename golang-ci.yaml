@@ -9,6 +9,11 @@ run:
 linters:
   # https://golangci-lint.run/usage/linters/
   enable:
+    - tfacl # custom local linter
+    - tfctxinit # custom local linter
+    - tflogresponse # custom local linter
+    - tfwriteid # custom local linter
+    - tfmodifyplan # custom local linter
     - bodyclose
     - depguard
     - errorlint
@@ -25,6 +30,22 @@ linters:
     - noctx # false positive: finds errors with http.NewRequest that dont make sense
     - unparam # false positives
   settings:
+    custom:
+      tfacl:
+        type: module
+        description: "A custom local linter"
+      tfctxinit:
+        type: module
+        description: "A custom local linter"
+      tflogresponse:
+        type: module
+        description: "A custom local linter"
+      tfwriteid:
+        type: module
+        description: "A custom local linter"
+      tfmodifyplan:
+        type: module
+        description: "A custom local linter"
     depguard:
       rules:
         main:

@@ -29,12 +29,13 @@ var (
 	resourceMinConfig string
 )
 var testConfigVarsMin = config.Variables{
-	"project_id": config.StringVariable(testutil.ProjectId),
-	"name":       config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
-	"replicas":   config.IntegerVariable(1),
-	"flavor_id":  config.StringVariable("4.16-Single"),
-	"username":   config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
-	"role":       config.StringVariable("##STACKIT_LoginManager##"),
+	"project_id":    config.StringVariable(testutil.ProjectId),
+	"name":          config.StringVariable(fmt.Sprintf("tf-acc-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum))),
+	"replicas":      config.IntegerVariable(1),
+	"flavor_id":     config.StringVariable("4.16-Single"),
+	"username":      config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
+	"role":          config.StringVariable("##STACKIT_LoginManager##"),
+	"database_name": config.StringVariable(fmt.Sprintf("tf-acc-db-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
 }
 
 var testConfigVarsMax = config.Variables{
@@ -52,6 +53,9 @@ var testConfigVarsMax = config.Variables{
 	"username":        config.StringVariable(fmt.Sprintf("tf-acc-user-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
 	"role":            config.StringVariable("##STACKIT_LoginManager##"),
 	"region":          config.StringVariable(testutil.Region),
+	"database_name":   config.StringVariable(fmt.Sprintf("tf-acc-db-%s", acctest.RandStringFromCharSet(7, acctest.CharSetAlpha))),
+	"collation":       config.StringVariable("SQL_Latin1_General_CP1_CI_AS"),
+	"compatibility":   config.IntegerVariable(160),
 }
 
 func configVarsMinUpdated() config.Variables {
@@ -65,6 +69,7 @@ func configVarsMaxUpdated() config.Variables {
 	temp["backup_schedule"] = config.StringVariable("0 12 * * *")
 	temp["acl1"] = config.StringVariable("192.168.2.0/16")
 	temp["retention_days"] = config.IntegerVariable(40)
+	temp["collation"] = config.StringVariable("Latin1_General_100_CI_AS_SC")
 	return temp
 }
 
@@ -106,6 +111,18 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "user_id"),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "password"),
+					// Database
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_database.database", "project_id",
+						"stackit_sqlserverflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_database.database", "instance_id",
+						"stackit_sqlserverflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "name", testutil.ConvertConfigVariable(testConfigVarsMin["database_name"])),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "owner", testutil.ConvertConfigVariable(testConfigVarsMin["username"])),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_database.database", "database_id"),
 				),
 			},
 			// data source
@@ -148,6 +165,19 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "username", testutil.ConvertConfigVariable(testConfigVarsMin["username"])),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.#", "1"),
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.0", testutil.ConvertConfigVariable(testConfigVarsMin["role"])),
+
+					// Database
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sqlserverflex_database.database", "project_id",
+						"data.stackit_sqlserverflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"data.stackit_sqlserverflex_database.database", "instance_id",
+						"data.stackit_sqlserverflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "name", testutil.ConvertConfigVariable(testConfigVarsMin["database_name"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "owner", testutil.ConvertConfigVariable(testConfigVarsMin["username"])),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_database.database", "database_id"),
 				),
 			},
 			// Import
@@ -205,6 +235,36 @@ func TestAccSQLServerFlexMinResource(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"password"},
+			},
+			{
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMinConfig,
+				ResourceName:    "stackit_sqlserverflex_database.database",
+				ConfigVariables: testConfigVarsMin,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_sqlserverflex_database.database"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_database.database")
+					}
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			// Update
 			{
@@ -280,6 +340,20 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "user_id"),
 					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_user.user", "password"),
+					// Database
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_database.database", "project_id",
+						"stackit_sqlserverflex_instance.instance", "project_id",
+					),
+					resource.TestCheckResourceAttrPair(
+						"stackit_sqlserverflex_database.database", "instance_id",
+						"stackit_sqlserverflex_instance.instance", "instance_id",
+					),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "name", testutil.ConvertConfigVariable(testConfigVarsMax["database_name"])),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "owner", testutil.ConvertConfigVariable(testConfigVarsMax["username"])),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "collation", testutil.ConvertConfigVariable(testConfigVarsMax["collation"])),
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "compatibility", testutil.ConvertConfigVariable(testConfigVarsMax["compatibility"])),
+					resource.TestCheckResourceAttrSet("stackit_sqlserverflex_database.database", "database_id"),
 				),
 			},
 			// data source
@@ -322,6 +396,14 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_user.user", "roles.0", testutil.ConvertConfigVariable(testConfigVarsMax["role"])),
 					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "host"),
 					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_user.user", "port"),
+
+					// Database data
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "project_id", testutil.ConvertConfigVariable(testConfigVarsMax["project_id"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "name", testutil.ConvertConfigVariable(testConfigVarsMax["database_name"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "owner", testutil.ConvertConfigVariable(testConfigVarsMax["username"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "collation", testutil.ConvertConfigVariable(testConfigVarsMax["collation"])),
+					resource.TestCheckResourceAttr("data.stackit_sqlserverflex_database.database", "compatibility", testutil.ConvertConfigVariable(testConfigVarsMax["compatibility"])),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_database.database", "database_id"),
 				),
 			},
 			// Import
@@ -383,6 +465,36 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"password"},
 			},
+			{
+				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
+				ResourceName:    "stackit_sqlserverflex_database.database",
+				ConfigVariables: testConfigVarsMax,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					r, ok := s.RootModule().Resources["stackit_sqlserverflex_database.database"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find resource stackit_sqlserverflex_database.database")
+					}
+					projectId, ok := r.Primary.Attributes["project_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute project_id")
+					}
+					region, ok := r.Primary.Attributes["region"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute region")
+					}
+					instanceId, ok := r.Primary.Attributes["instance_id"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute instance_id")
+					}
+					name, ok := r.Primary.Attributes["name"]
+					if !ok {
+						return "", fmt.Errorf("couldn't find attribute name")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", projectId, region, instanceId, name), nil
+				},
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Update
 			{
 				Config:          testutil.NewConfigBuilder().BuildProviderConfig() + "\n" + resourceMaxConfig,
@@ -391,6 +503,7 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction("stackit_sqlserverflex_instance.instance", plancheck.ResourceActionUpdate),
 						plancheck.ExpectResourceAction("stackit_sqlserverflex_user.user", plancheck.ResourceActionNoop),
+						plancheck.ExpectResourceAction("stackit_sqlserverflex_database.database", plancheck.ResourceActionReplace),
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -411,9 +524,44 @@ func TestAccSQLServerFlexMaxResource(t *testing.T) {
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "version", testutil.ConvertConfigVariable(configVarsMaxUpdated()["server_version"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "retention_days", testutil.ConvertConfigVariable(configVarsMaxUpdated()["retention_days"])),
 					resource.TestCheckResourceAttr("stackit_sqlserverflex_instance.instance", "backup_schedule", testutil.ConvertConfigVariable(configVarsMaxUpdated()["backup_schedule"])),
+					// Database data
+					resource.TestCheckResourceAttr("stackit_sqlserverflex_database.database", "collation", testutil.ConvertConfigVariable(configVarsMaxUpdated()["collation"])),
 				),
 			},
 			// Deletion is done by the framework implicitly
+		},
+	})
+}
+
+func TestAccSqlServerFlexFlavorsDatasource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testutil.TestAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				ConfigVariables: config.Variables{
+					"project_id": config.StringVariable(testutil.ProjectId),
+				},
+				Config: fmt.Sprintf(`
+				%s
+
+				variable "project_id" {}
+
+				data "stackit_sqlserverflex_flavors" "datasource" {
+					project_id = var.project_id
+				}`, testutil.NewConfigBuilder().BuildProviderConfig()),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.id"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.description"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.cpu"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.memory"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.min_gb"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.max_gb"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.node_type"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.storage_classes.0.class"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.storage_classes.0.max_io_per_sec"),
+					resource.TestCheckResourceAttrSet("data.stackit_sqlserverflex_flavors.datasource", "flavors.0.storage_classes.0.max_through_in_mb"),
+				),
+			},
 		},
 	})
 }

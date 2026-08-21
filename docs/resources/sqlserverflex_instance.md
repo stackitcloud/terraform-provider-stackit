@@ -43,8 +43,8 @@ resource "stackit_sqlserverflex_instance" "example" {
 - `acl` (List of String, Deprecated) The Access Control List (ACL) for the SQLServer Flex instance.
 - `backup_schedule` (String) The backup schedule. Should follow the cron scheduling system format (e.g. "0 0 * * *") Will be required in the future. Set a value to prevent breaking changes.
 - `encryption` (Attributes) Parameter to define which key to use for storage encryption. (see [below for nested schema](#nestedatt--encryption))
-- `flavor` (Attributes) (see [below for nested schema](#nestedatt--flavor))
-- `flavor_id` (String) The flavor ID of the SQLServer Flex instance.
+- `flavor` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--flavor))
+- `flavor_id` (String) The flavor ID of the SQLServer Flex instance. Can only be set when `flavor` and `replicas` are not set. You can list available flavors using the datasource `stackit_sqlserverflex_flavors`.
 - `network` (Attributes) The network configuration of the instance. Will be required in the future. Set a value to prevent breaking changes. (see [below for nested schema](#nestedatt--network))
 - `options` (Attributes, Deprecated) (see [below for nested schema](#nestedatt--options))
 - `region` (String) The resource region. If not defined, the provider region is used.
@@ -115,10 +115,7 @@ Read-Only:
 
 Optional:
 
-- `class` (String) The storage class. You can list available storage classes using the [STACKIT CLI](https://github.com/stackitcloud/stackit-cli):
-```bash
-stackit beta sqlserverflex options --storages --flavor-id FLAVOR_ID
-``` Will be required in the future. Set a value to prevent breaking changes.
+- `class` (String) The storage class. You can list available storage classes for a the according flavors using the datasource `stackit_sqlserverflex_flavors`. Will be required in the future. Set a value to prevent breaking changes.
 - `size` (Number) The storage size in Gigabytes. Will be required in the future. Set a value to prevent breaking changes.
 
 ## Import

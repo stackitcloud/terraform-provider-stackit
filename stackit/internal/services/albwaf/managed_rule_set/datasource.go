@@ -11,14 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
-	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1betaapi"
+	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -44,11 +42,6 @@ func (d *managedRuleSetDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_alb_waf_managed_rule_set", core.Datasource)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	apiClient := utils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -63,7 +56,7 @@ func (d *managedRuleSetDataSource) Metadata(_ context.Context, req datasource.Me
 
 func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: features.AddBetaDescription(fmt.Sprintf("ALB WAF Managed Rule Set DataSource schema. %s", core.DatasourceRegionFallbackDocstring), core.Datasource),
+		Description: fmt.Sprintf("ALB WAF Managed Rule Set DataSource schema. %s", core.DatasourceRegionFallbackDocstring),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: descriptions["id"],
@@ -99,21 +92,6 @@ func (d *managedRuleSetDataSource) Schema(_ context.Context, _ datasource.Schema
 			"version": schema.StringAttribute{
 				Description: descriptions["version"],
 				Computed:    true,
-			},
-			"usage": schema.SingleNestedAttribute{
-				Description: descriptions["usage"],
-				Computed:    true,
-				Attributes: map[string]schema.Attribute{
-					"count": schema.Int32Attribute{
-						Description: descriptions["usage_count"],
-						Computed:    true,
-					},
-					"items": schema.ListAttribute{
-						Description: descriptions["usage_items"],
-						Computed:    true,
-						ElementType: types.StringType,
-					},
-				},
 			},
 			"groups": schema.MapNestedAttribute{
 				Description: descriptions["groups"],
