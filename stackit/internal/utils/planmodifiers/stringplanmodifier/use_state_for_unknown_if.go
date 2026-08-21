@@ -99,7 +99,6 @@ func StringUnchanged(attributePath path.Path) UseStateForUnknownIfFunc { // noli
 func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
 	return func(ctx context.Context, req planmodifier.StringRequest, resp *UseStateForUnknownFuncResponse) {
 		exprs := req.PathExpression.MergeExpressions(paths...)
-		allUnchanged := true
 		for _, expr := range exprs {
 			matched, diags := req.Config.PathMatches(ctx, expr)
 			resp.Diagnostics.Append(diags...)
@@ -121,11 +120,11 @@ func UnchangedPaths(paths ...path.Expression) UseStateForUnknownIfFunc {
 				}
 
 				if !stateValue.Equal(planValue) {
-					allUnchanged = false
+					resp.UseStateForUnknown = false
 					return
 				}
 			}
 		}
-		resp.UseStateForUnknown = allUnchanged
+		resp.UseStateForUnknown = true
 	}
 }
