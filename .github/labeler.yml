@@ -1,0 +1,72 @@
+# access
+"domain:Access":
+- changed-files:
+  - any-glob-to-any-file:
+    - "stackit/internal/services/alb/*"
+    - "stackit/internal/services/albwaf/*"
+    - "stackit/internal/services/cdn/*"
+    - "stackit/internal/services/certificates/*"
+    - "stackit/internal/services/loadbalancer/*"
+    - "stackit/internal/services/vpn/*"
+# runtimes
+"domain:Runtimes":
+- changed-files:
+  - any-glob-to-any-file:
+    - "stackit/internal/services/ske/*"
+    - "stackit/internal/services/scf/*"
+    - "stackit/internal/services/edge/*"
+# support
+# no support domain sdk modules available yet
+# central services
+"domain:CentralServices":
+- changed-files:
+  - any-glob-to-any-file:
+    - "stackit/internal/services/dns/*"
+    - "stackit/internal/services/git/*"
+    - "stackit/internal/services/intake/*"
+    - "stackit/internal/services/kms/*"
+    - "stackit/internal/services/kms/*"
+    - "stackit/internal/services/logs/*"
+    - "stackit/internal/services/modelserving/*"
+    - "stackit/internal/services/observability/*"
+    - "stackit/internal/services/rabbitmq/*"
+    - "stackit/internal/services/redis/*"
+    - "stackit/internal/services/opensearch/*"
+    - "stackit/internal/services/logme/*"
+    - "stackit/internal/services/telemetryrouter/*"
+    - "stackit/internal/services/telemetrylink/*"
+    - "stackit/internal/services/secretsmanager/*"
+    - "stackit/internal/services/dremio/*"
+    - "stackit/internal/services/modelexperiments/*"
+    - "stackit/internal/services/ufw/*"
+    - "stackit/internal/services/workflows/*"
+    - "stackit/internal/services/valkey/*"
+# databases
+"domain:Databases":
+- changed-files:
+  - any-glob-to-any-file:
+    - "stackit/internal/services/mongodbflex/*"
+    - "stackit/internal/services/mariadb/*"
+    - "stackit/internal/services/sqlserverflex/*"
+    - "stackit/internal/services/postgresflex/*"
+# IaaS
+"domain:IaaS":
+- changed-files:
+  - any-glob-to-any-file:
+    - "stackit/internal/services/iaas/*"
+    - "stackit/internal/services/objectstorage/*"
+    - "stackit/internal/services/runcommand/*"
+    - "stackit/internal/services/serverbackup/*"
+    - "stackit/internal/services/serverupdate/*"
+    - "stackit/internal/services/sfs/*"
+    - "stackit/internal/services/automation/*"
+# core platform
+"domain:CorePlatform":
+- changed-files:
+  - any-glob-to-any-file:
+    - "stackit/internal/services/auditlog/*"
+    - "stackit/internal/services/authorization/*"
+    - "stackit/internal/services/iam/*"
+    - "stackit/internal/services/resourcemanager/*"
+    - "stackit/internal/services/serviceaccount/*"
+    - "stackit/internal/services/serviceenablement/*"
