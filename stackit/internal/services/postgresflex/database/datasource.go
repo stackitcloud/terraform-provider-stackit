@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -33,7 +30,7 @@ func NewDatabaseDataSource() datasource.DataSource {
 
 // databaseDataSource is the data source implementation.
 type databaseDataSource struct {
-	client       *postgresflex.APIClient
+	client       postgresflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -45,16 +42,14 @@ func (r *databaseDataSource) Metadata(_ context.Context, req datasource.Metadata
 // Configure adds the provider configured client to the data source.
 func (r *databaseDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.PostgresflexV3Client
+
 	tflog.Info(ctx, "Postgres Flex database client configured")
 }
 
@@ -145,7 +140,7 @@ func (r *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	databaseResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
+	databaseResp, err := r.client.GetDatabase(ctx, projectId, region, instanceId, databaseId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

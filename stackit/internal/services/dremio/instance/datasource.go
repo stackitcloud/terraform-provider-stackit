@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -81,7 +80,7 @@ func (d *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 // provider-defined DataSource type. It is separately executed for each
 // ReadDataSource RPC.
 func (d *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -326,7 +325,7 @@ func (d *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := d.client.DefaultAPI.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := d.client.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

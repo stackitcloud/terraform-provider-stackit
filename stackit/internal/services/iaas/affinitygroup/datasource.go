@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -28,30 +25,23 @@ var (
 	_ datasource.DataSourceWithConfigure = &affinityGroupDatasource{}
 )
 
-func NewAffinityGroupDatasource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &affinityGroupDatasource{
-		clientFactory: clientFactory,
-	}
+func NewAffinityGroupDatasource() datasource.DataSource {
+	return &affinityGroupDatasource{}
 }
 
 type affinityGroupDatasource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
 func (d *affinityGroupDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

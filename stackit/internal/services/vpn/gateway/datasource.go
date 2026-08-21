@@ -16,9 +16,7 @@ import (
 	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -28,7 +26,7 @@ var (
 )
 
 type vpnGatewayDataSource struct {
-	client       *vpn.APIClient
+	client       vpn.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -37,16 +35,14 @@ func NewVPNGatewayDataSource() datasource.DataSource {
 }
 
 func (d *vpnGatewayDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = utils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.VpnV1Client
+
 	tflog.Info(ctx, "VPN client configured")
 }
 
@@ -150,7 +146,7 @@ func (d *vpnGatewayDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 
-	gatewayResponse, err := d.client.DefaultAPI.GetGateway(ctx, projectId, region, gatewayId).Execute()
+	gatewayResponse, err := d.client.GetGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)

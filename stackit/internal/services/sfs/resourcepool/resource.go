@@ -25,10 +25,9 @@ import (
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api/wait"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -74,7 +73,7 @@ func NewResourcePoolResource() resource.Resource {
 
 // resourcePoolResource is the resource implementation.
 type resourcePoolResource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -114,22 +113,19 @@ func (r *resourcePoolResource) Metadata(_ context.Context, req resource.Metadata
 
 // Configure adds the provider configured client to the resource.
 func (r *resourcePoolResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_resource_pool", core.Resource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -270,7 +266,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Create new resourcepool
-	resourcePool, err := r.client.DefaultAPI.CreateResourcePool(ctx, projectId, region).
+	resourcePool, err := r.client.CreateResourcePool(ctx, projectId, region).
 		CreateResourcePoolPayload(*payload).
 		Execute()
 	if err != nil {
@@ -295,7 +291,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	response, err := wait.CreateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *resourcePool.ResourcePool.Id).
+	response, err := wait.CreateResourcePoolWaitHandler(ctx, r.client, projectId, region, *resourcePool.ResourcePool.Id).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool creation waiting: %v", err))
@@ -310,7 +306,7 @@ func (r *resourcePoolResource) Create(ctx context.Context, req resource.CreateRe
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", "response did not contain an ID")
 		return
 	}
-	getResponse, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, *response.ResourcePool.Id).Execute()
+	getResponse, err := r.client.GetResourcePool(ctx, projectId, region, *response.ResourcePool.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
 		return
@@ -354,7 +350,7 @@ func (r *resourcePoolResource) Read(ctx context.Context, req resource.ReadReques
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.DefaultAPI.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
+	response, err := r.client.GetResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		if openapiError, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok {
 			if openapiError.StatusCode == http.StatusNotFound || openapiError.StatusCode == http.StatusGone {
@@ -415,7 +411,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	response, err := r.client.DefaultAPI.UpdateResourcePool(ctx, projectId, region, resourcePoolId).
+	response, err := r.client.UpdateResourcePool(ctx, projectId, region, resourcePoolId).
 		UpdateResourcePoolPayload(*payload).
 		Execute()
 	if err != nil {
@@ -440,7 +436,7 @@ func (r *resourcePoolResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
+	getResponse, err := wait.UpdateResourcePoolWaitHandler(ctx, r.client, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating resource pool", fmt.Sprintf("resource pool get: %v", err))
 		return
@@ -478,7 +474,7 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing resource pool
-	_, err := r.client.DefaultAPI.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
+	_, err := r.client.DeleteResourcePool(ctx, projectId, region, resourcePoolId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -493,7 +489,7 @@ func (r *resourcePoolResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = core.LogResponse(ctx)
 
 	// only delete, if no error occurred
-	_, err = wait.DeleteResourcePoolWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId).WaitWithContext(ctx)
+	_, err = wait.DeleteResourcePoolWaitHandler(ctx, r.client, projectId, region, resourcePoolId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting resource pool", fmt.Sprintf("resource pool deletion waiting: %v", err))
 		return

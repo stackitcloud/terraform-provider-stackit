@@ -13,10 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	edgeutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/edgecloud/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -49,25 +47,22 @@ func NewPlansDataSource() datasource.DataSource {
 
 // plansDataSource is the datasource implementation.
 type plansDataSource struct {
-	client *edge.APIClient
+	client edge.DefaultAPI
 }
 
 // Configure sets up the API client for the Edge Cloud plans data source.
 func (d *plansDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
-		return
 	}
+
+	d.client = clients.EdgeV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &providerData, &resp.Diagnostics, "stackit_edgecloud_plans", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	d.client = edgeutils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 	tflog.Info(ctx, "edge cloud client configured")
 }
 
@@ -141,7 +136,7 @@ func (d *plansDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
 	// Fetch all Plans for the project
-	plansResp, err := d.client.DefaultAPI.ListPlansProject(ctx, projectId).Execute()
+	plansResp, err := d.client.ListPlansProject(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

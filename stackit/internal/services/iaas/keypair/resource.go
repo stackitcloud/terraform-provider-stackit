@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -40,16 +39,12 @@ type Model struct {
 }
 
 // NewKeyPairResource is a helper function to simplify the provider implementation.
-func NewKeyPairResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &keyPairResource{
-		clientFactory: clientFactory,
-	}
+func NewKeyPairResource() resource.Resource {
+	return &keyPairResource{}
 }
 
 // keyPairResource is the resource implementation.
 type keyPairResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client iaas.DefaultAPI
 }
 
@@ -60,15 +55,12 @@ func (r *keyPairResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *keyPairResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

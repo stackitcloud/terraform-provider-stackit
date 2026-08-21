@@ -10,8 +10,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -40,16 +38,12 @@ var (
 )
 
 // NewRoutingTableRouteResource is a helper function to simplify the provider implementation.
-func NewRoutingTableRouteResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &routeResource{
-		clientFactory: clientFactory,
-	}
+func NewRoutingTableRouteResource() resource.Resource {
+	return &routeResource{}
 }
 
 // routeResource is the resource implementation.
 type routeResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -62,17 +56,15 @@ func (r *routeResource) Metadata(_ context.Context, req resource.MetadataRequest
 // Configure adds the provider configured client to the resource.
 func (r *routeResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Resource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -69,7 +69,7 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -195,7 +195,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	// Create new user
-	userResp, err := r.client.DefaultAPI.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
+	userResp, err := r.client.CreateUser(ctx, projectId, instanceId).CreateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -251,7 +251,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
+	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -306,7 +306,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	// Update existing user
-	err = r.client.DefaultAPI.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
+	err = r.client.UpdateUser(ctx, projectId, instanceId, userId).UpdateUserPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
@@ -314,7 +314,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	user, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
+	user, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API to get user's current state: %v", err))
 		return
@@ -359,7 +359,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
 	// Delete existing user
-	err := r.client.DefaultAPI.DeleteUser(ctx, projectId, instanceId, userId).Execute()
+	err := r.client.DeleteUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

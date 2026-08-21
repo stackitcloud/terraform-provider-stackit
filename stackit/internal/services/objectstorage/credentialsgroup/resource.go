@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -50,7 +47,7 @@ func NewCredentialsGroupResource() resource.Resource {
 
 // credentialsGroupResource is the resource implementation.
 type credentialsGroupResource struct {
-	client       *objectstorage.APIClient
+	client       objectstorage.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -91,17 +88,14 @@ func (r *credentialsGroupResource) Metadata(_ context.Context, req resource.Meta
 
 // Configure adds the provider configured client to the resource.
 func (r *credentialsGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ObjectStorageV2Client
+
 	tflog.Info(ctx, "ObjectStorage credentials group client configured")
 }
 
@@ -192,14 +186,14 @@ func (r *credentialsGroupResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
+	err := enableProject(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
 
 	// Create new credentials group
-	got, err := r.client.DefaultAPI.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
+	got, err := r.client.CreateCredentialsGroup(ctx, projectId, region).CreateCredentialsGroupPayload(createCredentialsGroupPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating credentials group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -260,7 +254,7 @@ func (r *credentialsGroupResource) Read(ctx context.Context, req resource.ReadRe
 	ctx = tflog.SetField(ctx, "credentials_group_id", credentialsGroupId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	found, err := readCredentialsGroups(ctx, &model, region, r.client.DefaultAPI)
+	found, err := readCredentialsGroups(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading credentialsGroup", fmt.Sprintf("getting credential group from list of credentials groups: %v", err))
 		return
@@ -310,7 +304,7 @@ func (r *credentialsGroupResource) Delete(ctx context.Context, req resource.Dele
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing credentials group
-	_, err := r.client.DefaultAPI.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
+	_, err := r.client.DeleteCredentialsGroup(ctx, projectId, region, credentialsGroupId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

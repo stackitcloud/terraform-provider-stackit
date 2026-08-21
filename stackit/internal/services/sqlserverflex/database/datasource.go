@@ -11,13 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	sdk "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -31,7 +29,7 @@ func NewDatabaseDataSource() datasource.DataSource {
 }
 
 type databaseDataSource struct {
-	client       *sdk.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -57,17 +55,14 @@ func (d *databaseDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *databaseDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.SqlServerFlexV3Client
+
 	tflog.Info(ctx, "SqlserverFlex client configured")
 }
 
@@ -154,7 +149,7 @@ func (d *databaseDataSource) Read(ctx context.Context, req datasource.ReadReques
 		"name":        model.Name,
 	})
 
-	apiResp, err := d.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, name).Execute()
+	apiResp, err := d.client.GetDatabase(ctx, projectId, region, instanceId, name).Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "read SqlserverFlex database",
 			fmt.Sprintf("database with name %q does not exist in instance %q", name, instanceId),

@@ -11,12 +11,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -70,7 +67,7 @@ func NewUserResource() resource.Resource {
 
 // userResource is the resource implementation.
 type userResource struct {
-	client       *postgresflex.APIClient
+	client       postgresflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -112,16 +109,14 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 // Configure adds the provider configured client to the resource.
 func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.PostgresflexV3Client
+
 	tflog.Info(ctx, "Postgres Flex user client configured")
 }
 
@@ -279,7 +274,7 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 			http.StatusLocked,
 		},
 	}
-	userResp, err := utils.RetryRequest(ctx, r.client.DefaultAPI.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, config)
+	userResp, err := utils.RetryRequest(ctx, r.client.CreateUser(ctx, projectId, region, instanceId).CreateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -303,13 +298,13 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	getResp, err := wait.CreateUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
+	getResp, err := wait.CreateUserWaitHandler(ctx, r.client, projectId, region, instanceId, userResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		return
 	}
 
 	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
 		return
@@ -362,7 +357,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	recordSetResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	recordSetResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -375,7 +370,7 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	ctx = core.LogResponse(ctx)
 
 	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
 		return
@@ -462,7 +457,7 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			http.StatusLocked,
 		},
 	}
-	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.PartialUpdateUser(ctx, projectId, region, instanceId, userId).PartialUpdateUserPayload(*payload).Execute, config)
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.PartialUpdateUser(ctx, projectId, region, instanceId, userId).PartialUpdateUserPayload(*payload).Execute, config)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", err.Error())
 		return
@@ -470,14 +465,14 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, region, instanceId, userId).Execute()
+	userResp, err := r.client.GetUser(ctx, projectId, region, instanceId, userId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating user", fmt.Sprintf("Calling API: %v", err))
 		return
 	}
 
 	// Deprecated: Legacy mode needed during deprecation period to retrieve all v2 values. Can be removed after February 2027
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating user", fmt.Sprintf("Calling get instance API: %v", err))
 		return
@@ -540,7 +535,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			http.StatusLocked,
 		},
 	}
-	err = utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, config)
+	err = utils.RetryRequestWithoutResponse(ctx, r.client.DeleteUser(ctx, projectId, region, instanceId, userId).Execute, config)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -552,7 +547,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteUserWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId, userId).WaitWithContext(ctx)
+	_, err = wait.DeleteUserWaitHandler(ctx, r.client, projectId, region, instanceId, userId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting user", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

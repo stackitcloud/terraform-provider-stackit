@@ -9,9 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -49,16 +46,12 @@ type DatasourceModel struct {
 }
 
 // NewVolumeDataSource is a helper function to simplify the provider implementation.
-func NewVolumeDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &volumeDataSource{
-		clientFactory: clientFactory,
-	}
+func NewVolumeDataSource() datasource.DataSource {
+	return &volumeDataSource{}
 }
 
 // volumeDataSource is the data source implementation.
 type volumeDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -69,16 +62,13 @@ func (d *volumeDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 }
 
 func (d *volumeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

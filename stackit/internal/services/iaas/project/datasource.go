@@ -11,11 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/stackitcloud/stackit-sdk-go/services/iaas" //nolint:staticcheck // TODO: will be done within STACKITTPR-713
+	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -44,20 +42,17 @@ func NewProjectDataSource() datasource.DataSource {
 
 // projectDatasource is the data source implementation.
 type projectDataSource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 func (d *projectDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := iaasUtils.ConfigureClientLegacy(ctx, &providerData, &resp.Diagnostics) //nolint:staticcheck // TODO: will be done within STACKITTPR-713
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.IaaSv2Client
+
 	tflog.Info(ctx, "iaas client configured")
 }
 
@@ -138,7 +133,7 @@ func (d *projectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 
-	projectResp, err := d.client.GetProjectDetailsExecute(ctx, projectId) //nolint:staticcheck // TODO: will be done within STACKITTPR-713
+	projectResp, err := d.client.GetProjectDetails(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -180,8 +175,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 	var projectId string
 	if model.ProjectId.ValueString() != "" {
 		projectId = model.ProjectId.ValueString()
-	} else if projectResp.Id != nil {
-		projectId = *projectResp.Id
+	} else if projectResp.Id != "" {
+		projectId = projectResp.Id
 	} else {
 		return fmt.Errorf("project id is not present")
 	}
@@ -212,8 +207,8 @@ func mapDataSourceFields(projectResp *iaas.Project, model *DatasourceModel) erro
 
 	model.AreaId = areaId
 	model.InternetAccess = types.BoolPointerValue(projectResp.InternetAccess)
-	model.State = types.StringPointerValue(projectResp.Status)
-	model.Status = types.StringPointerValue(projectResp.Status)
+	model.State = types.StringValue(projectResp.Status)
+	model.Status = types.StringValue(projectResp.Status)
 	model.CreatedAt = createdAt
 	model.UpdatedAt = updatedAt
 	return nil

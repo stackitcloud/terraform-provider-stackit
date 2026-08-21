@@ -7,8 +7,6 @@ import (
 
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -18,7 +16,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -39,16 +36,12 @@ type DataSourceModelTables struct {
 }
 
 // NewRoutingTablesDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTablesDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &routingTablesDataSource{
-		clientFactory: clientFactory,
-	}
+func NewRoutingTablesDataSource() datasource.DataSource {
+	return &routingTablesDataSource{}
 }
 
 // routingTableDataSource is the data source implementation.
 type routingTablesDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -59,18 +52,15 @@ func (d *routingTablesDataSource) Metadata(_ context.Context, req datasource.Met
 }
 
 func (d *routingTablesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_tables", core.Datasource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_tables", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

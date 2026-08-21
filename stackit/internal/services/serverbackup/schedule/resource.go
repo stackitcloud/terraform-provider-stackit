@@ -13,8 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
-	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,7 +23,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -68,7 +65,7 @@ func NewScheduleResource() resource.Resource {
 
 // scheduleResource is the resource implementation.
 type scheduleResource struct {
-	client       *serverbackup.APIClient
+	client       serverbackup.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -110,16 +107,14 @@ func (r *scheduleResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Configure adds the provider configured client to the resource.
 func (r *scheduleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverbackupUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ServerBackupV2Client
+
 	tflog.Info(ctx, "Server backup client configured.")
 }
 
@@ -269,7 +264,7 @@ func (r *scheduleResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	scheduleResp, err := r.client.DefaultAPI.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.CreateBackupSchedule(ctx, projectId, serverId, region).CreateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -319,7 +314,7 @@ func (r *scheduleResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	scheduleResp, err := r.client.DefaultAPI.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
+	scheduleResp, err := r.client.GetBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -376,7 +371,7 @@ func (r *scheduleResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	scheduleResp, err := r.client.DefaultAPI.UpdateBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).UpdateBackupSchedulePayload(*payload).Execute()
+	scheduleResp, err := r.client.UpdateBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).UpdateBackupSchedulePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating server backup schedule", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -419,7 +414,7 @@ func (r *scheduleResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "backup_schedule_id", backupScheduleId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
+	err := r.client.DeleteBackupSchedule(ctx, projectId, serverId, region, strconv.FormatInt(int64(backupScheduleId), 10)).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -528,7 +523,7 @@ func (r *scheduleResource) enableBackupsService(ctx context.Context, model *Mode
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Enabling server backup service")
-	request := r.client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).
+	request := r.client.EnableServiceResource(ctx, projectId, serverId, region).
 		EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{})
 
 	if err := request.Execute(); err != nil {
@@ -553,7 +548,7 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 	region := r.providerData.GetRegionWithOverride(model.Region)
 
 	tflog.Debug(ctx, "Checking for existing backups")
-	backups, err := r.client.DefaultAPI.ListBackups(ctx, projectId, serverId, region).Execute()
+	backups, err := r.client.ListBackups(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("list backups: %w", err)
 	}
@@ -562,7 +557,7 @@ func (r *scheduleResource) disableBackupsService(ctx context.Context, model *Mod
 		return nil
 	}
 
-	err = r.client.DefaultAPI.DisableServiceResource(ctx, projectId, serverId, region).Execute()
+	err = r.client.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		return fmt.Errorf("disable server backup service: %w", err)
 	}

@@ -14,9 +14,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	authorizationUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/authorization/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -48,23 +46,17 @@ func NewCustomRoleDataSources() []func() datasource.DataSource {
 // customRoleDataSource is the datasource implementation.
 type customRoleDataSource struct {
 	resourceType string
-	client       *authorization.APIClient
+	client       authorization.DefaultAPI
 }
 
 // Configure sets up the API client for the authorization customrole resource.
 func (d *customRoleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := authorizationUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	d.client = apiClient
+	d.client = clients.AuthorizationV2Client
 
 	tflog.Info(ctx, "authorization client configured")
 }
@@ -132,7 +124,7 @@ func (d *customRoleDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "resource_id", resourceId)
 	ctx = tflog.SetField(ctx, "role_id", roleId)
 
-	roleResp, err := d.client.DefaultAPI.GetRole(ctx, d.resourceType, resourceId, roleId).Execute()
+	roleResp, err := d.client.GetRole(ctx, d.resourceType, resourceId, roleId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 

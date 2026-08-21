@@ -395,7 +395,7 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -1022,7 +1022,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId).CreateInstancePayload(*createPayload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId).CreateInstancePayload(*createPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -1040,7 +1040,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, instanceId, projectId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -1066,7 +1066,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating ACL: %v", err))
 		return
 	}
-	aclList, err := r.client.DefaultAPI.ListACL(ctx, instanceId, projectId).Execute()
+	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
@@ -1185,7 +1185,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, instanceId, projectId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -1216,7 +1216,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	aclListResp, err := r.client.DefaultAPI.ListACL(ctx, instanceId, projectId).Execute()
+	aclListResp, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return
@@ -1245,7 +1245,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	// There are some plans which does not offer to set or get the metrics retention e.g. like Observability-Metrics-Endpoint-100k-EU01
 	if plan.GetTotalMetricSamples() != 0 {
-		metricsRetentionResp, err := r.client.DefaultAPI.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+		metricsRetentionResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get metrics retention: %v", err))
 			return
@@ -1266,7 +1266,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	// There are some plans which does not offer storage e.g. like Observability-Metrics-Endpoint-100k-EU01
 	if plan.GetLogsStorage() != 0 && plan.GetTracesStorage() != 0 {
-		logsRetentionResp, err := r.client.DefaultAPI.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+		logsRetentionResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
 			return
@@ -1284,7 +1284,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 			return
 		}
 
-		tracesRetentionResp, err := r.client.DefaultAPI.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+		tracesRetentionResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get logs retention: %v", err))
 			return
@@ -1305,7 +1305,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	// There are plans where no alert matchers and receivers are present e.g. like Observability-Metrics-Endpoint-100k-EU01
 	if plan.GetAlertMatchers() != 0 && plan.GetAlertReceivers() != 0 {
-		alertConfigResp, err := r.client.DefaultAPI.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+		alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API to get alert config: %v", err))
 			return
@@ -1388,7 +1388,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	// This check is required, because when values should be updated, that needs to be updated via a different endpoint, the waiter will run into a timeout
 	if !cmp.Equal(previousStatePayload, payload) {
 		// Update existing instance
-		_, err = r.client.DefaultAPI.UpdateInstance(ctx, instanceId, projectId).UpdateInstancePayload(*payload).Execute()
+		_, err = r.client.UpdateInstance(ctx, instanceId, projectId).UpdateInstancePayload(*payload).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -1396,13 +1396,13 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 		ctx = core.LogResponse(ctx)
 
-		instance, err = wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, instanceId, projectId).WaitWithContext(ctx)
+		instance, err = wait.UpdateInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 			return
 		}
 	} else {
-		instance, err = r.client.DefaultAPI.GetInstance(ctx, instanceId, projectId).Execute()
+		instance, err = r.client.GetInstance(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance read: %v", err))
 			return
@@ -1426,7 +1426,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Updating ACL: %v", err))
 		return
 	}
-	aclList, err := r.client.DefaultAPI.ListACL(ctx, instanceId, projectId).Execute()
+	aclList, err := r.client.ListACL(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API to list ACL data: %v", err))
 		return
@@ -1538,7 +1538,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	instanceId := model.InstanceId.ValueString()
 
 	// Delete existing instance
-	_, err := r.client.DefaultAPI.DeleteInstance(ctx, instanceId, projectId).Execute()
+	_, err := r.client.DeleteInstance(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -1551,7 +1551,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, instanceId, projectId).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, instanceId, projectId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return
@@ -2597,13 +2597,13 @@ func (r *instanceResource) getAlertConfigs(ctx context.Context, alertConfig *ale
 	}
 
 	if alertConfigPayload != nil {
-		_, err = r.client.DefaultAPI.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
+		_, err = r.client.UpdateAlertConfigs(ctx, instanceId, projectId).UpdateAlertConfigsPayload(*alertConfigPayload).Execute()
 		if err != nil {
 			return fmt.Errorf("setting alert config: %w", err)
 		}
 	}
 
-	alertConfigResp, err := r.client.DefaultAPI.GetAlertConfigs(ctx, instanceId, projectId).Execute()
+	alertConfigResp, err := r.client.GetAlertConfigs(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("calling API to get alert config: %w", err)
 	}
@@ -2621,7 +2621,7 @@ func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model)
 	instanceId := model.InstanceId.ValueString()
 
 	if tracesRetentionDays != nil {
-		tracesResp, err := r.client.DefaultAPI.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+		tracesResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			return fmt.Errorf("getting traces retention policy: %w", err)
 		}
@@ -2630,13 +2630,13 @@ func (r *instanceResource) getTracesRetention(ctx context.Context, model *Model)
 		}
 
 		retentionDays := fmt.Sprintf("%dh", *tracesRetentionDays*24)
-		_, err = r.client.DefaultAPI.UpdateTracesConfigs(ctx, instanceId, projectId).UpdateTracesConfigsPayload(observabilitySdk.UpdateTracesConfigsPayload{Retention: retentionDays}).Execute()
+		_, err = r.client.UpdateTracesConfigs(ctx, instanceId, projectId).UpdateTracesConfigsPayload(observabilitySdk.UpdateTracesConfigsPayload{Retention: retentionDays}).Execute()
 		if err != nil {
 			return fmt.Errorf("setting traces retention policy: %w", err)
 		}
 	}
 
-	tracesResp, err := r.client.DefaultAPI.GetTracesConfigs(ctx, instanceId, projectId).Execute()
+	tracesResp, err := r.client.GetTracesConfigs(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting traces retention policy: %w", err)
 	}
@@ -2655,7 +2655,7 @@ func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) e
 	instanceId := model.InstanceId.ValueString()
 
 	if logsRetentionDays != nil {
-		logsResp, err := r.client.DefaultAPI.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+		logsResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			return fmt.Errorf("getting logs retention policy: %w", err)
 		}
@@ -2664,13 +2664,13 @@ func (r *instanceResource) getLogsRetention(ctx context.Context, model *Model) e
 		}
 
 		retentionDays := fmt.Sprintf("%dh", *logsRetentionDays*24)
-		_, err = r.client.DefaultAPI.UpdateLogsConfigs(ctx, instanceId, projectId).UpdateLogsConfigsPayload(observabilitySdk.UpdateLogsConfigsPayload{Retention: retentionDays}).Execute()
+		_, err = r.client.UpdateLogsConfigs(ctx, instanceId, projectId).UpdateLogsConfigsPayload(observabilitySdk.UpdateLogsConfigsPayload{Retention: retentionDays}).Execute()
 		if err != nil {
 			return fmt.Errorf("setting logs retention policy: %w", err)
 		}
 	}
 
-	logsResp, err := r.client.DefaultAPI.GetLogsConfigs(ctx, instanceId, projectId).Execute()
+	logsResp, err := r.client.GetLogsConfigs(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting logs retention policy: %w", err)
 	}
@@ -2693,7 +2693,7 @@ func (r *instanceResource) getMetricsRetention(ctx context.Context, model *Model
 	// If any of the metrics retention days are set, set the metrics retention policy
 	if metricsRetentionDays != nil || metricsRetentionDays5mDownsampling != nil || metricsRetentionDays1hDownsampling != nil {
 		// Need to get the metrics retention policy because update endpoint is a PUT and we need to send all fields
-		metricsResp, err := r.client.DefaultAPI.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+		metricsResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 		if err != nil {
 			return fmt.Errorf("getting metrics retention policy: %w", err)
 		}
@@ -2702,14 +2702,14 @@ func (r *instanceResource) getMetricsRetention(ctx context.Context, model *Model
 		if err != nil {
 			return fmt.Errorf("building metrics retention policy payload: %w", err)
 		}
-		_, err = r.client.DefaultAPI.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
+		_, err = r.client.UpdateMetricsStorageRetention(ctx, instanceId, projectId).UpdateMetricsStorageRetentionPayload(*metricsRetentionPayload).Execute()
 		if err != nil {
 			return fmt.Errorf("setting metrics retention policy: %w", err)
 		}
 	}
 
 	// Get metrics retention policy after update
-	metricsResp, err := r.client.DefaultAPI.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
+	metricsResp, err := r.client.GetMetricsStorageRetention(ctx, instanceId, projectId).Execute()
 	if err != nil {
 		return fmt.Errorf("getting metrics retention policy: %w", err)
 	}

@@ -14,9 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	postgresflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/postgresflex/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -52,7 +51,7 @@ type storageClass struct {
 }
 
 type flavors struct {
-	client       *postgresflex.APIClient
+	client       postgresflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -65,17 +64,14 @@ func (f *flavors) Metadata(_ context.Context, req datasource.MetadataRequest, re
 }
 
 func (f *flavors) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	f.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := postgresflexUtils.ConfigureClient(ctx, &f.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	f.client = apiClient
+	f.providerData = providerData
+	f.client = clients.PostgresflexV3Client
+
 	tflog.Info(ctx, "Postgres Flex flavors client configured")
 }
 
@@ -190,7 +186,7 @@ func (f *flavors) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	ctx = core.InitProviderContext(ctx)
 
 	const pageSize int64 = 100
-	flavorsResp, err := f.client.DefaultAPI.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
+	flavorsResp, err := f.client.ListFlavors(ctx, projectId, region).Size(pageSize).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Reading flavors", fmt.Sprintf("Calling ListFlavors: %v", err))
 		return

@@ -11,9 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -30,7 +29,7 @@ func NewComplianceLockDataSource() datasource.DataSource {
 
 // compliancelockDataSource is the data source implementation.
 type compliancelockDataSource struct {
-	client       *objectstorage.APIClient
+	client       objectstorage.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -41,17 +40,14 @@ func (d *compliancelockDataSource) Metadata(_ context.Context, req datasource.Me
 
 // Configure adds the provider configured client to the data source.
 func (d *compliancelockDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := objectstorageUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.ObjectStorageV2Client
+
 	tflog.Info(ctx, "ObjectStorage compliance lock client configured")
 }
 
@@ -110,7 +106,7 @@ func (d *compliancelockDataSource) Read(ctx context.Context, req datasource.Read
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := d.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := d.client.GetComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

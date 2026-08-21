@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	serverbackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,7 +30,7 @@ func NewSchedulesDataSource() datasource.DataSource {
 
 // schedulesDataSource is the data source implementation.
 type schedulesDataSource struct {
-	client       *serverbackup.APIClient
+	client       serverbackup.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -44,18 +41,14 @@ func (r *schedulesDataSource) Metadata(_ context.Context, req datasource.Metadat
 
 // Configure adds the provider configured client to the data source.
 func (r *schedulesDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverbackupUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.ServerBackupV2Client
 
-	r.client = apiClient
 	tflog.Info(ctx, "Server backup client configured")
 }
 
@@ -167,7 +160,7 @@ func (r *schedulesDataSource) Read(ctx context.Context, req datasource.ReadReque
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	schedules, err := r.client.DefaultAPI.ListBackupSchedules(ctx, projectId, serverId, region).Execute()
+	schedules, err := r.client.ListBackupSchedules(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	observabilityUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/observability/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -45,7 +44,7 @@ func (d *scrapeConfigDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 func (d *scrapeConfigDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -198,7 +197,7 @@ func (d *scrapeConfigDataSource) Read(ctx context.Context, req datasource.ReadRe
 	instanceId := model.InstanceId.ValueString()
 	scName := model.Name.ValueString()
 
-	scResp, err := d.client.DefaultAPI.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
+	scResp, err := d.client.GetScrapeConfig(ctx, instanceId, scName, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

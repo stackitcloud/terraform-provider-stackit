@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 
-	mongodbflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/utils"
 	stringplanmodifierCustom "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -115,7 +114,7 @@ func NewInstanceResource() resource.Resource {
 
 // instanceResource is the resource implementation.
 type instanceResource struct {
-	client       *mongodbflex.APIClient
+	client       mongodbflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -126,17 +125,14 @@ func (r *instanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 // Configure adds the provider configured client to the resource.
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.MongoDbFlexV2Client
+
 	tflog.Info(ctx, "MongoDB Flex instance client configured")
 }
 
@@ -386,7 +382,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor, region)
+		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -417,7 +413,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 	// Create new instance
-	createResp, err := r.client.DefaultAPI.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
+	createResp, err := r.client.CreateInstance(ctx, projectId, region).CreateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -442,7 +438,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
+	waitResp, err := wait.CreateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -466,7 +462,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	backupScheduleOptions, err := r.client.DefaultAPI.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
 		return
@@ -536,7 +532,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		}
 	}
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId, region).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -598,7 +594,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		err := loadFlavorId(ctx, r.client.DefaultAPI, &model, flavor, region)
+		err := loadFlavorId(ctx, r.client, &model, flavor, region)
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Loading flavor ID: %v", err))
 			return
@@ -629,7 +625,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	// Update existing instance
-	_, err = r.client.DefaultAPI.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
+	_, err = r.client.PartialUpdateInstance(ctx, projectId, instanceId, region).PartialUpdateInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", err.Error())
 		return
@@ -637,7 +633,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -655,7 +651,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Creating API payload: %v", err))
 		return
 	}
-	backupScheduleOptions, err := r.client.DefaultAPI.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
+	backupScheduleOptions, err := r.client.UpdateBackupSchedule(ctx, projectId, instanceId, region).UpdateBackupSchedulePayload(*backupScheduleOptionsPayload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Updating options: %v", err))
 		return
@@ -695,7 +691,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
 	// Delete existing instance
-	err := r.client.DefaultAPI.DeleteInstance(ctx, projectId, instanceId, region).Execute()
+	err := r.client.DeleteInstance(ctx, projectId, instanceId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -708,7 +704,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client.DefaultAPI, projectId, instanceId, region).WaitWithContext(ctx)
+	_, err = wait.DeleteInstanceWaitHandler(ctx, r.client, projectId, instanceId, region).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting instance", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

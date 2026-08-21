@@ -37,7 +37,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	albUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/alb/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -332,7 +331,7 @@ func NewApplicationLoadBalancerResource() resource.Resource {
 
 // applicationLoadBalancerResource is the resource implementation.
 type applicationLoadBalancerResource struct {
-	client       *albSdk.APIClient
+	client       albSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -373,17 +372,14 @@ func (r *applicationLoadBalancerResource) ModifyPlan(ctx context.Context, req re
 
 // Configure adds the provider configured client to the resource.
 func (r *applicationLoadBalancerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := albUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.AlbV2Client
+
 	tflog.Info(ctx, "Application Load Balancer client configured")
 }
 
@@ -1165,7 +1161,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 	}
 
 	// Create a new Application Load Balancer
-	createResp, err := r.client.DefaultAPI.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
+	createResp, err := r.client.CreateLoadBalancer(ctx, projectId, region).CreateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Calling API for create: %v", errStr))
@@ -1183,7 +1179,7 @@ func (r *applicationLoadBalancerResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *createResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Application Load Balancer", fmt.Sprintf("Application Load Balancer creation waiting: %v", err))
 		return
@@ -1222,7 +1218,7 @@ func (r *applicationLoadBalancerResource) Read(ctx context.Context, req resource
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	lbResp, err := r.client.DefaultAPI.GetLoadBalancer(ctx, projectId, region, name).Execute()
+	lbResp, err := r.client.GetLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -1290,7 +1286,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 	}
 
 	// Update target pool
-	updateResp, err := r.client.DefaultAPI.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
+	updateResp, err := r.client.UpdateLoadBalancer(ctx, projectId, region, name).UpdateLoadBalancerPayload(*payload).Execute()
 	if err != nil {
 		errStr := utils.PrettyApiErr(ctx, &resp.Diagnostics, err)
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Calling API for update: %v", errStr))
@@ -1299,7 +1295,7 @@ func (r *applicationLoadBalancerResource) Update(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateOrUpdateLoadbalancerWaitHandler(ctx, r.client, projectId, region, *updateResp.Name).SetTimeout(90 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Application Load Balancer", fmt.Sprintf("Application Load Balancer update waiting: %v", err))
 		return
@@ -1341,7 +1337,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete Application Load Balancer
-	_, err := r.client.DefaultAPI.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
+	_, err := r.client.DeleteLoadBalancer(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -1355,7 +1351,7 @@ func (r *applicationLoadBalancerResource) Delete(ctx context.Context, req resour
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
+	_, err = wait.DeleteLoadbalancerWaitHandler(ctx, r.client, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Application Load Balancer", fmt.Sprintf("Application Load Balancer deleting waiting: %v", err))
 		return

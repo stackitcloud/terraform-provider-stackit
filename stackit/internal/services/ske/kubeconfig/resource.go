@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -61,7 +59,7 @@ func NewKubeconfigResource() resource.Resource {
 
 // kubeconfigResource is the resource implementation.
 type kubeconfigResource struct {
-	client       *ske.APIClient
+	client       ske.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -72,17 +70,14 @@ func (r *kubeconfigResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Configure adds the provider configured client to the resource.
 func (r *kubeconfigResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := skeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.SkeV2Client
+
 	tflog.Info(ctx, "SKE kubeconfig client configured")
 }
 
@@ -314,7 +309,7 @@ func (r *kubeconfigResource) Read(ctx context.Context, req resource.ReadRequest,
 	ctx = tflog.SetField(ctx, "kube_config_id", kubeconfigUUID)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	cluster, err := r.client.DefaultAPI.GetCluster(ctx, projectId, region, clusterName).Execute()
+	cluster, err := r.client.GetCluster(ctx, projectId, region, clusterName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -379,7 +374,7 @@ func (r *kubeconfigResource) createKubeconfig(ctx context.Context, model *Model)
 		return fmt.Errorf("creating API payload: %w", err)
 	}
 	// Create new kubeconfig
-	kubeconfigResp, err := r.client.DefaultAPI.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
+	kubeconfigResp, err := r.client.CreateKubeconfig(ctx, model.ProjectId.ValueString(), model.Region.ValueString(), model.ClusterName.ValueString()).CreateKubeconfigPayload(*payload).Execute()
 	if err != nil {
 		return fmt.Errorf("calling API: %w", err)
 	}

@@ -9,10 +9,7 @@ import (
 
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -51,18 +48,14 @@ type Model struct {
 }
 
 // NewNetworkAreaResource is a helper function to simplify the provider implementation.
-func NewNetworkAreaResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &networkAreaResource{
-		clientFactory: clientFactory,
-	}
+func NewNetworkAreaResource() resource.Resource {
+	return &networkAreaResource{}
 }
 
 // networkResource is the resource implementation.
 type networkAreaResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client                iaas.DefaultAPI
-	resourceManagerClient *resourcemanager.APIClient
+	resourceManagerClient resourcemanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -72,20 +65,13 @@ func (r *networkAreaResource) Metadata(_ context.Context, req resource.MetadataR
 
 // Configure adds the provider configured client to the resource.
 func (r *networkAreaResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	r.resourceManagerClient = resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.client = clients.IaaSv2Client
+	r.resourceManagerClient = clients.ResourceManagerClient
 
 	tflog.Info(ctx, "IaaS client configured")
 }
@@ -319,7 +305,7 @@ func (r *networkAreaResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "organization_id", organizationId)
 	ctx = tflog.SetField(ctx, "network_area_id", networkAreaId)
 
-	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

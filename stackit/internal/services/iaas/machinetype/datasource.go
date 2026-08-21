@@ -9,8 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -20,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -49,8 +46,6 @@ func NewMachineTypeDataSource() datasource.DataSource {
 }
 
 type machineTypeDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -60,18 +55,15 @@ func (d *machineTypeDataSource) Metadata(_ context.Context, req datasource.Metad
 }
 
 func (d *machineTypeDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_machine_type", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}

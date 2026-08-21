@@ -27,9 +27,7 @@ import (
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/vpn/utils"
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -85,7 +83,7 @@ var schemaDescriptions = map[string]string{
 }
 
 type gatewayResource struct {
-	client       *vpn.APIClient
+	client       vpn.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -95,16 +93,14 @@ func NewGatewayResource() resource.Resource {
 
 func (r *gatewayResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.VpnV1Client
+
 	tflog.Info(ctx, "VPN client configured")
 }
 
@@ -321,7 +317,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateGateway(ctx, projectId, region).CreateGatewayPayload(*payload).Execute()
+	createResp, err := r.client.CreateGateway(ctx, projectId, region).CreateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -344,7 +340,7 @@ func (r *gatewayResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, region, gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating VPN gateway", fmt.Sprintf("Gateway creation waiting: %v", err))
 		return
@@ -381,7 +377,7 @@ func (r *gatewayResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	gatewayResp, err := r.client.DefaultAPI.GetGateway(ctx, projectId, region, gatewayId).Execute()
+	gatewayResp, err := r.client.GetGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -431,7 +427,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	_, err = r.client.DefaultAPI.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute()
+	_, err = r.client.UpdateGateway(ctx, projectId, region, gatewayId).UpdateGatewayPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", err.Error())
 		return
@@ -439,7 +435,7 @@ func (r *gatewayResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, region, gatewayId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating VPN gateway", fmt.Sprintf("Gateway update waiting: %v", err))
 		return
@@ -476,7 +472,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "gateway_id", gatewayId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DeleteGateway(ctx, projectId, region, gatewayId).Execute()
+	err := r.client.DeleteGateway(ctx, projectId, region, gatewayId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -484,7 +480,7 @@ func (r *gatewayResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client.DefaultAPI, projectId, region, gatewayId).WaitWithContext(ctx)
+	_, err = wait.DeleteGatewayWaitHandler(ctx, r.client, projectId, region, gatewayId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting VPN gateway", fmt.Sprintf("Gateway deletion waiting: %v", err))
 		return

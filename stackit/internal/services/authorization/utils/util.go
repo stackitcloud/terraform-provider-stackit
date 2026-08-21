@@ -1,36 +1,9 @@
 package utils
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
-
-// ConfigureClient configures an API-Client to communicate with the authorization API
-func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *authorization.APIClient {
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(providerData.RoundTripper),
-		utils.UserAgentConfigOption(providerData.Version),
-	}
-	if providerData.AuthorizationCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.AuthorizationCustomEndpoint))
-	}
-	apiClient, err := authorization.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
-		return nil
-	}
-
-	return apiClient
-}
 
 // TypeConverter converts objects with equal JSON tags
 func TypeConverter[R any](data any) (*R, error) {

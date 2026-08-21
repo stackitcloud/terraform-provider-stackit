@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -53,7 +52,7 @@ func (r *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 
 // Configure adds the provider configured client to the data source.
 func (r *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -144,7 +143,7 @@ func (r *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	userResp, err := r.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId).Execute()
+	userResp, err := r.client.GetUser(ctx, projectId, instanceId, userId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

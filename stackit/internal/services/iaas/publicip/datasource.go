@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -26,16 +23,12 @@ var (
 )
 
 // NewPublicIpDataSource is a helper function to simplify the provider implementation.
-func NewPublicIpDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &publicIpDataSource{
-		clientFactory: clientFactory,
-	}
+func NewPublicIpDataSource() datasource.DataSource {
+	return &publicIpDataSource{}
 }
 
 // publicIpDataSource is the data source implementation.
 type publicIpDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -46,16 +39,13 @@ func (d *publicIpDataSource) Metadata(_ context.Context, req datasource.Metadata
 }
 
 func (d *publicIpDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

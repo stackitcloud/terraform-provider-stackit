@@ -25,7 +25,6 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	dnsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/dns/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -65,7 +64,7 @@ func NewRecordSetResource() resource.Resource {
 
 // recordSetResource is the resource implementation.
 type recordSetResource struct {
-	client *dns.APIClient
+	client dns.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -75,16 +74,13 @@ func (r *recordSetResource) Metadata(_ context.Context, req resource.MetadataReq
 
 // Configure adds the provider configured client to the resource.
 func (r *recordSetResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := dnsUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.DnsV1Client
+
 	tflog.Info(ctx, "DNS record set client configured")
 }
 
@@ -211,7 +207,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	waiterTimeout := wait.CreateRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.CreateRecordSetWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -234,7 +230,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 	// Create new recordset
-	recordSetResp, err := r.client.DefaultAPI.CreateRecordSet(ctx, projectId, zoneId).CreateRecordSetPayload(*payload).Execute()
+	recordSetResp, err := r.client.CreateRecordSet(ctx, projectId, zoneId).CreateRecordSetPayload(*payload).Execute()
 	if err != nil || recordSetResp.Rrset.Id == "" {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -252,7 +248,7 @@ func (r *recordSetResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client.DefaultAPI, projectId, zoneId, recordSetResp.Rrset.Id).WaitWithContext(ctx)
+	waitResp, err := wait.CreateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetResp.Rrset.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating record set", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -304,7 +300,7 @@ func (r *recordSetResource) Read(ctx context.Context, req resource.ReadRequest, 
 	ctx = tflog.SetField(ctx, "zone_id", zoneId)
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
+	recordSetResp, err := r.client.GetRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -347,7 +343,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	waiterTimeout := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -372,7 +368,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	// Update recordset
-	_, err = r.client.DefaultAPI.PartialUpdateRecordSet(ctx, projectId, zoneId, recordSetId).PartialUpdateRecordSetPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateRecordSet(ctx, projectId, zoneId, recordSetId).PartialUpdateRecordSetPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", err.Error())
 		return
@@ -380,7 +376,7 @@ func (r *recordSetResource) Update(ctx context.Context, req resource.UpdateReque
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client.DefaultAPI, projectId, zoneId, recordSetId).WaitWithContext(ctx)
+	waitResp, err := wait.PartialUpdateRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating record set", fmt.Sprintf("Instance update waiting: %v", err))
 		return
@@ -409,7 +405,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	waiterTimeout := wait.DeleteRecordSetWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := wait.DeleteRecordSetWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -428,7 +424,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 	ctx = tflog.SetField(ctx, "record_set_id", recordSetId)
 
 	// Delete existing record set
-	_, err := r.client.DefaultAPI.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
+	_, err := r.client.DeleteRecordSet(ctx, projectId, zoneId, recordSetId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -440,7 +436,7 @@ func (r *recordSetResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client.DefaultAPI, projectId, zoneId, recordSetId).WaitWithContext(ctx)
+	_, err = wait.DeleteRecordSetWaitHandler(ctx, r.client, projectId, zoneId, recordSetId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting record set", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

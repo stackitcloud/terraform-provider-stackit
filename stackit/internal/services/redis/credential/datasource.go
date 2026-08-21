@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	redisUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/redis/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -48,7 +45,7 @@ func NewCredentialDataSource() datasource.DataSource {
 
 // credentialDataSource is the data source implementation.
 type credentialDataSource struct {
-	client       *redis.APIClient
+	client       redis.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -59,17 +56,14 @@ func (r *credentialDataSource) Metadata(_ context.Context, req datasource.Metada
 
 // Configure adds the provider configured client to the data source.
 func (r *credentialDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := redisUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.RedisV2Client
+
 	tflog.Info(ctx, "Redis credential client configured")
 }
 
@@ -171,7 +165,7 @@ func (r *credentialDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "credential_id", credentialId)
 
-	recordSetResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
+	recordSetResp, err := r.client.GetCredentials(ctx, projectId, region, instanceId, credentialId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

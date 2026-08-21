@@ -97,7 +97,7 @@ func (a *alertGroupResource) Metadata(_ context.Context, req resource.MetadataRe
 
 // Configure adds the provider configured client to the resource.
 func (a *alertGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}

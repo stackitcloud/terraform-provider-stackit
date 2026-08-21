@@ -20,7 +20,6 @@ import (
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/scf/v1api/wait"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -77,7 +76,7 @@ var descriptions = map[string]string{
 
 func (s *scfOrganizationResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	var ok bool
-	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	s.providerData, ok = core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}

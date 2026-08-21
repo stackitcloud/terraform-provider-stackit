@@ -94,10 +94,11 @@ func (r *observabilityCredentialResource) ModifyPlan(ctx context.Context, req re
 // Configure adds the provider configured client to the resource.
 func (r *observabilityCredentialResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+	r.providerData = providerData
 
 	apiClient := loadbalancerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
@@ -206,7 +207,7 @@ func (r *observabilityCredentialResource) Create(ctx context.Context, req resour
 	}
 
 	// Create new observability credentials
-	createResp, err := r.client.DefaultAPI.CreateCredentials(ctx, projectId, region).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
+	createResp, err := r.client.CreateCredentials(ctx, projectId, region).CreateCredentialsPayload(*payload).XRequestID(uuid.NewString()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating observability credential", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -258,7 +259,7 @@ func (r *observabilityCredentialResource) Read(ctx context.Context, req resource
 	}
 
 	// Get credentials
-	credResp, err := r.client.DefaultAPI.GetCredentials(ctx, projectId, region, credentialsRef).Execute()
+	credResp, err := r.client.GetCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -311,7 +312,7 @@ func (r *observabilityCredentialResource) Delete(ctx context.Context, req resour
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete credentials
-	_, err := r.client.DefaultAPI.DeleteCredentials(ctx, projectId, region, credentialsRef).Execute()
+	_, err := r.client.DeleteCredentials(ctx, projectId, region, credentialsRef).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

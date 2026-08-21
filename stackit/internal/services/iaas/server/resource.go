@@ -12,8 +12,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -116,16 +114,12 @@ var agentTypes = map[string]attr.Type{
 }
 
 // NewServerResource is a helper function to simplify the provider implementation.
-func NewServerResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &serverResource{
-		clientFactory: clientFactory,
-	}
+func NewServerResource() resource.Resource {
+	return &serverResource{}
 }
 
 // serverResource is the resource implementation.
 type serverResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -208,16 +202,13 @@ func (r *serverResource) ConfigValidators(_ context.Context) []resource.ConfigVa
 
 // Configure adds the provider configured client to the resource.
 func (r *serverResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

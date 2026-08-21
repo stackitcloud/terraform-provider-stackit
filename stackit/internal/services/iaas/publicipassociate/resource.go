@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -43,16 +42,12 @@ type Model struct {
 }
 
 // NewPublicIpAssociateResource is a helper function to simplify the provider implementation.
-func NewPublicIpAssociateResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &publicIpAssociateResource{
-		clientFactory: clientFactory,
-	}
+func NewPublicIpAssociateResource() resource.Resource {
+	return &publicIpAssociateResource{}
 }
 
 // publicIpAssociateResource is the resource implementation.
 type publicIpAssociateResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -94,16 +89,13 @@ func (r *publicIpAssociateResource) ModifyPlan(ctx context.Context, req resource
 
 // Configure adds the provider configured client to the resource.
 func (r *publicIpAssociateResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	core.LogAndAddWarning(ctx, &resp.Diagnostics, "The `stackit_public_ip_associate` resource should not be used together with the `stackit_public_ip` resource for the same public IP or for the same network interface.",
 		"Using both resources together for the same public IP or network interface WILL lead to conflicts, as they both have control of the public IP and network interface association.")

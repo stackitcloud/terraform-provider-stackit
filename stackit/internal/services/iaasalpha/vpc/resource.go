@@ -23,7 +23,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -57,7 +56,7 @@ func NewVPCResource() resource.Resource {
 
 // networkResource is the resource implementation.
 type vpcResource struct {
-	client *iaas.APIClient
+	client iaas.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -67,17 +66,14 @@ func (r *vpcResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 
 // Configure adds the provider configured client to the resource.
 func (r *vpcResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc", core.Resource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.client = clients.IaaSv2AlphaClient
 
-	r.client = iaasAlphaUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &providerData, features.VpcExperiment, "stackit_vpc", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -175,7 +171,7 @@ func (r *vpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	// Create new vpc
-	vpc, err := r.client.DefaultAPI.CreateVPC(ctx, projectId).CreateVPCPayload(*payload).Execute()
+	vpc, err := r.client.CreateVPC(ctx, projectId).CreateVPCPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating vpc", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -241,7 +237,7 @@ func (r *vpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 
-	vpcResp, err := r.client.DefaultAPI.GetVPC(ctx, projectId, vpcId).Execute()
+	vpcResp, err := r.client.GetVPC(ctx, projectId, vpcId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -307,7 +303,7 @@ func (r *vpcResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 	// Update existing network
-	vpcResp, err := r.client.DefaultAPI.PartialUpdateVPC(ctx, projectId, vpcId).PartialUpdateVPCPayload(*payload).Execute()
+	vpcResp, err := r.client.PartialUpdateVPC(ctx, projectId, vpcId).PartialUpdateVPCPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -355,7 +351,7 @@ func (r *vpcResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	ctx = tflog.SetField(ctx, "vpc_id", vpcId)
 
 	// Delete existing vpc
-	err := r.client.DefaultAPI.DeleteVPC(ctx, projectId, vpcId).Execute()
+	err := r.client.DeleteVPC(ctx, projectId, vpcId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)

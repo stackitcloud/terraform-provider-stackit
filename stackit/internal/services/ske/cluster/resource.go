@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	serviceenablementUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceenablement/utils"
 	skeUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/ske/utils"
 	stringplanmodifierUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/planmodifiers/stringplanmodifier"
 
@@ -303,8 +302,8 @@ func NewClusterResource() resource.Resource {
 
 // clusterResource is the resource implementation.
 type clusterResource struct {
-	skeClient        *ske.APIClient
-	enablementClient *serviceenablement.APIClient
+	skeClient        ske.DefaultAPI
+	enablementClient serviceenablement.DefaultAPI
 	providerData     core.ProviderData
 }
 
@@ -407,22 +406,15 @@ func (r *clusterResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *clusterResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	skeClient := skeUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	serviceEnablementClient := serviceenablementUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.skeClient = skeClient
-	r.enablementClient = serviceEnablementClient
+	r.providerData = providerData
+	r.skeClient = clients.SkeV2Client
+	r.enablementClient = clients.ServiceEnablementV2Client
+
 	tflog.Info(ctx, "SKE cluster clients configured")
 }
 
@@ -986,13 +978,13 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// If SKE functionality is not enabled, enable it
-	err := r.enablementClient.DefaultAPI.EnableServiceRegional(ctx, region, projectId, utils.SKEServiceId).Execute()
+	err := r.enablementClient.EnableServiceRegional(ctx, region, projectId, utils.SKEServiceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Calling API to enable SKE: %v", err))
 		return
 	}
 
-	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient.DefaultAPI, region, projectId, utils.SKEServiceId).WaitWithContext(ctx)
+	_, err = enablementWait.EnableServiceWaitHandler(ctx, r.enablementClient, region, projectId, utils.SKEServiceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating cluster", fmt.Sprintf("Wait for SKE enablement: %v", err))
 		return
@@ -1046,7 +1038,7 @@ func sortK8sVersions(versions []ske.KubernetesVersion) {
 // The k8s versions are sorted descending order, i.e. the latest versions (including previews)
 // are listed first
 func (r *clusterResource) loadAvailableVersions(ctx context.Context, region string) ([]ske.KubernetesVersion, []ske.MachineImage, error) {
-	res, err := r.skeClient.DefaultAPI.ListProviderOptions(ctx, region).Execute()
+	res, err := r.skeClient.ListProviderOptions(ctx, region).Execute()
 	if err != nil {
 		return nil, nil, fmt.Errorf("calling API: %w", err)
 	}
@@ -1147,7 +1139,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 		Nodepools:   nodePools,
 		Access:      access,
 	}
-	_, err = r.skeClient.DefaultAPI.CreateOrUpdateCluster(ctx, projectId, region, name).CreateOrUpdateClusterPayload(payload).Execute()
+	_, err = r.skeClient.CreateOrUpdateCluster(ctx, projectId, region, name).CreateOrUpdateClusterPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -1159,7 +1151,7 @@ func (r *clusterResource) createOrUpdateCluster(ctx context.Context, diags *diag
 	// Call tflog.Info here, to log the information of the updated context
 	tflog.Info(ctx, "Triggered create/update cluster")
 
-	waitResp, err := skeWait.CreateClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
+	waitResp, err := skeWait.CreateClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, diags, "Error creating/updating cluster", fmt.Sprintf("Cluster creation waiting: %v", err))
 		return
@@ -2507,7 +2499,7 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	clResp, err := r.skeClient.DefaultAPI.GetCluster(ctx, projectId, region, name).Execute()
+	clResp, err := r.skeClient.GetCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -2557,7 +2549,7 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.skeClient.DefaultAPI, &model)
+	currentKubernetesVersion, currentMachineImages := getCurrentVersions(ctx, r.skeClient, &model)
 
 	r.createOrUpdateCluster(ctx, &resp.Diagnostics, &model, availableKubernetesVersions, availableMachines, currentKubernetesVersion, currentMachineImages)
 	if resp.Diagnostics.HasError() {
@@ -2588,7 +2580,7 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "name", name)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := r.skeClient.DefaultAPI.DeleteCluster(ctx, projectId, region, name).Execute()
+	_, err := r.skeClient.DeleteCluster(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -2601,7 +2593,7 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient.DefaultAPI, projectId, region, name).WaitWithContext(ctx)
+	_, err = skeWait.DeleteClusterWaitHandler(ctx, r.skeClient, projectId, region, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting cluster", fmt.Sprintf("Cluster deletion waiting: %v", err))
 		return

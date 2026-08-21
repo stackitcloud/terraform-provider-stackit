@@ -16,8 +16,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/config"
 	"github.com/stackitcloud/stackit-sdk-go/core/oidcadapters"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/access_token"
@@ -155,8 +153,9 @@ var (
 
 // Provider is the provider implementation.
 type Provider struct {
-	version       string
-	clientFactory clientutils.ClientFactory
+	version string
+
+	clientFactory core.ClientFactory
 }
 
 // New is a helper function to simplify provider server and testing implementation.
@@ -164,12 +163,12 @@ func New(version string) func() provider.Provider {
 	return func() provider.Provider {
 		return &Provider{
 			version:       version,
-			clientFactory: &clientutils.DefaultClientFactory{},
+			clientFactory: nil, // nil means the default client factory will be used later
 		}
 	}
 }
 
-func NewTestProvider(version string, clientFactory clientutils.ClientFactory) func() provider.Provider {
+func NewTestProvider(version string, clientFactory core.ClientFactory) func() provider.Provider {
 	return func() provider.Provider {
 		return &Provider{
 			version:       version,
@@ -543,6 +542,7 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	// Configure SDK client
 	sdkConfig := &config.Configuration{}
 	var providerData core.ProviderData
+	var customEndpointConfig core.CustomEndpointConfig
 
 	// Helper function to set a string field if it's known and not null
 	setStringField := func(v basetypes.StringValue, setter func(string)) {
@@ -576,44 +576,44 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 	setStringField(providerConfig.DefaultRegion, func(v string) { providerData.DefaultRegion = v })
 	setBoolField(providerConfig.EnableBetaResources, func(v bool) { providerData.EnableBetaResources = v })
 
-	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { providerData.ALBCertificatesCustomEndpoint = v })
-	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { providerData.ALBCustomEndpoint = v })
-	setStringField(providerConfig.AlbWafCustomEndpoint, func(v string) { providerData.AlbWafCustomEndpoint = v })
-	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { providerData.AuthorizationCustomEndpoint = v })
-	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { providerData.CdnCustomEndpoint = v })
-	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { providerData.DnsCustomEndpoint = v })
-	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { providerData.DremioCustomEndpoint = v })
-	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { providerData.EdgeCloudCustomEndpoint = v })
-	setStringField(providerConfig.GitCustomEndpoint, func(v string) { providerData.GitCustomEndpoint = v })
-	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { providerData.IaaSCustomEndpoint = v })
-	setStringField(providerConfig.IntakeCustomEndpoint, func(v string) { providerData.IntakeCustomEndpoint = v })
-	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { providerData.KMSCustomEndpoint = v })
-	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { providerData.LoadBalancerCustomEndpoint = v })
-	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { providerData.LogMeCustomEndpoint = v })
-	setStringField(providerConfig.LogsCustomEndpoint, func(v string) { providerData.LogsCustomEndpoint = v })
-	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { providerData.MariaDBCustomEndpoint = v })
-	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { providerData.ModelServingCustomEndpoint = v })
-	setStringField(providerConfig.ModelExperimentsCustomEndpoint, func(v string) { providerData.ModelExperimentsCustomEndpoint = v })
-	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { providerData.MongoDBFlexCustomEndpoint = v })
-	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { providerData.ObjectStorageCustomEndpoint = v })
-	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { providerData.ObservabilityCustomEndpoint = v })
-	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { providerData.OpenSearchCustomEndpoint = v })
-	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { providerData.PostgresFlexCustomEndpoint = v })
-	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { providerData.RabbitMQCustomEndpoint = v })
-	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { providerData.RedisCustomEndpoint = v })
-	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { providerData.ResourceManagerCustomEndpoint = v })
-	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { providerData.ScfCustomEndpoint = v })
-	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { providerData.SecretsManagerCustomEndpoint = v })
-	setStringField(providerConfig.ServerBackupCustomEndpoint, func(v string) { providerData.ServerBackupCustomEndpoint = v })
-	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { providerData.ServerUpdateCustomEndpoint = v })
-	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { providerData.ServiceAccountCustomEndpoint = v })
-	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { providerData.ServiceEnablementCustomEndpoint = v })
-	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { providerData.SfsCustomEndpoint = v })
-	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { providerData.SKECustomEndpoint = v })
-	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { providerData.SQLServerFlexCustomEndpoint = v })
-	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { providerData.TelemetryRouterCustomEndpoint = v })
-	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { providerData.TelemetryLinkCustomEndpoint = v })
-	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { providerData.VpnCustomEndpoint = v })
+	setStringField(providerConfig.ALBCertificatesCustomEndpoint, func(v string) { customEndpointConfig.ALBCertificatesCustomEndpoint = v })
+	setStringField(providerConfig.ALBCustomEndpoint, func(v string) { customEndpointConfig.ALBCustomEndpoint = v })
+	setStringField(providerConfig.AlbWafCustomEndpoint, func(v string) { customEndpointConfig.AlbWafCustomEndpoint = v })
+	setStringField(providerConfig.AuthorizationCustomEndpoint, func(v string) { customEndpointConfig.AuthorizationCustomEndpoint = v })
+	setStringField(providerConfig.CdnCustomEndpoint, func(v string) { customEndpointConfig.CdnCustomEndpoint = v })
+	setStringField(providerConfig.DnsCustomEndpoint, func(v string) { customEndpointConfig.DnsCustomEndpoint = v })
+	setStringField(providerConfig.DremioCustomEndpoint, func(v string) { customEndpointConfig.DremioCustomEndpoint = v })
+	setStringField(providerConfig.EdgeCloudCustomEndpoint, func(v string) { customEndpointConfig.EdgeCloudCustomEndpoint = v })
+	setStringField(providerConfig.GitCustomEndpoint, func(v string) { customEndpointConfig.GitCustomEndpoint = v })
+	setStringField(providerConfig.IaaSCustomEndpoint, func(v string) { customEndpointConfig.IaaSCustomEndpoint = v })
+	setStringField(providerConfig.IntakeCustomEndpoint, func(v string) { customEndpointConfig.IntakeCustomEndpoint = v })
+	setStringField(providerConfig.KmsCustomEndpoint, func(v string) { customEndpointConfig.KMSCustomEndpoint = v })
+	setStringField(providerConfig.LoadBalancerCustomEndpoint, func(v string) { customEndpointConfig.LoadBalancerCustomEndpoint = v })
+	setStringField(providerConfig.LogMeCustomEndpoint, func(v string) { customEndpointConfig.LogMeCustomEndpoint = v })
+	setStringField(providerConfig.LogsCustomEndpoint, func(v string) { customEndpointConfig.LogsCustomEndpoint = v })
+	setStringField(providerConfig.MariaDBCustomEndpoint, func(v string) { customEndpointConfig.MariaDBCustomEndpoint = v })
+	setStringField(providerConfig.ModelServingCustomEndpoint, func(v string) { customEndpointConfig.ModelServingCustomEndpoint = v })
+	setStringField(providerConfig.ModelExperimentsCustomEndpoint, func(v string) { customEndpointConfig.ModelExperimentsCustomEndpoint = v })
+	setStringField(providerConfig.MongoDBFlexCustomEndpoint, func(v string) { customEndpointConfig.MongoDBFlexCustomEndpoint = v })
+	setStringField(providerConfig.ObjectStorageCustomEndpoint, func(v string) { customEndpointConfig.ObjectStorageCustomEndpoint = v })
+	setStringField(providerConfig.ObservabilityCustomEndpoint, func(v string) { customEndpointConfig.ObservabilityCustomEndpoint = v })
+	setStringField(providerConfig.OpenSearchCustomEndpoint, func(v string) { customEndpointConfig.OpenSearchCustomEndpoint = v })
+	setStringField(providerConfig.PostgresFlexCustomEndpoint, func(v string) { customEndpointConfig.PostgresFlexCustomEndpoint = v })
+	setStringField(providerConfig.RabbitMQCustomEndpoint, func(v string) { customEndpointConfig.RabbitMQCustomEndpoint = v })
+	setStringField(providerConfig.RedisCustomEndpoint, func(v string) { customEndpointConfig.RedisCustomEndpoint = v })
+	setStringField(providerConfig.ResourceManagerCustomEndpoint, func(v string) { customEndpointConfig.ResourceManagerCustomEndpoint = v })
+	setStringField(providerConfig.ScfCustomEndpoint, func(v string) { customEndpointConfig.ScfCustomEndpoint = v })
+	setStringField(providerConfig.SecretsManagerCustomEndpoint, func(v string) { customEndpointConfig.SecretsManagerCustomEndpoint = v })
+	setStringField(providerConfig.ServerBackupCustomEndpoint, func(v string) { customEndpointConfig.ServerBackupCustomEndpoint = v })
+	setStringField(providerConfig.ServerUpdateCustomEndpoint, func(v string) { customEndpointConfig.ServerUpdateCustomEndpoint = v })
+	setStringField(providerConfig.ServiceAccountCustomEndpoint, func(v string) { customEndpointConfig.ServiceAccountCustomEndpoint = v })
+	setStringField(providerConfig.ServiceEnablementCustomEndpoint, func(v string) { customEndpointConfig.ServiceEnablementCustomEndpoint = v })
+	setStringField(providerConfig.SfsCustomEndpoint, func(v string) { customEndpointConfig.SfsCustomEndpoint = v })
+	setStringField(providerConfig.SkeCustomEndpoint, func(v string) { customEndpointConfig.SKECustomEndpoint = v })
+	setStringField(providerConfig.SqlServerFlexCustomEndpoint, func(v string) { customEndpointConfig.SQLServerFlexCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryRouterCustomEndpoint, func(v string) { customEndpointConfig.TelemetryRouterCustomEndpoint = v })
+	setStringField(providerConfig.TelemetryLinkCustomEndpoint, func(v string) { customEndpointConfig.TelemetryLinkCustomEndpoint = v })
+	setStringField(providerConfig.VpnCustomEndpoint, func(v string) { customEndpointConfig.VpnCustomEndpoint = v })
 
 	if !(providerConfig.Experiments.IsUnknown() || providerConfig.Experiments.IsNull()) {
 		var experimentValues []string
@@ -622,6 +622,25 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up experiments: %v", diags.Errors()))
 		}
 		providerData.Experiments = experimentValues
+	}
+
+	// when a client factory was injected for mocking - stop right here
+	if p.clientFactory != nil {
+		providerDataInternal, err := core.NewProviderDataInternal(providerData, p.clientFactory)
+		if err != nil {
+			core.LogAndAddError(ctx, &resp.Diagnostics, "Error configuring provider", fmt.Sprintf("Setting up provider data: %v", err))
+			return
+		}
+
+		resp.DataSourceData = providerDataInternal
+		resp.ResourceData = providerDataInternal
+
+		// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
+		var ephemeralProviderData core.EphemeralProviderData
+		ephemeralProviderData.ProviderData = providerData
+		resp.EphemeralResourceData = ephemeralProviderData
+
+		return
 	}
 
 	// Workload Identity Federation via provided OIDC Token
@@ -672,12 +691,16 @@ func (p *Provider) Configure(ctx context.Context, req provider.ConfigureRequest,
 
 	// Make round tripper and custom endpoints available during DataSource and Resource
 	// type Configure methods.
-	providerData.RoundTripper = roundTripper
+	clientFactory := core.DefaultClientFactory{
+		RoundTripper:    roundTripper,
+		UserAgent:       fmt.Sprintf("stackit-terraform-provider/%s", p.version),
+		CustomEndpoints: customEndpointConfig,
+	}
 
-	providerData.Version = p.version
+	providerDataInternal, err := core.NewProviderDataInternal(providerData, &clientFactory)
 
-	resp.DataSourceData = providerData
-	resp.ResourceData = providerData
+	resp.DataSourceData = providerDataInternal
+	resp.ResourceData = providerDataInternal
 
 	// Copy service account, private key credentials and custom-token endpoint to support ephemeral access token generation
 	var ephemeralProviderData core.EphemeralProviderData

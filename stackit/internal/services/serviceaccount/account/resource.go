@@ -25,7 +25,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -53,21 +52,18 @@ func NewServiceAccountResource() resource.Resource {
 
 // serviceAccountResource implements the resource interface for service accounts.
 type serviceAccountResource struct {
-	client *serviceaccount.APIClient
+	client serviceaccount.DefaultAPI
 }
 
 // Configure sets up the API client for the service account resource.
 func (r *serviceAccountResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ServiceAccountV2Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -157,7 +153,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 	}
 
 	// Create the new service account via the API client.
-	serviceAccountResp, err := r.client.DefaultAPI.CreateServiceAccount(ctx, projectId).CreateServiceAccountPayload(*payload).Execute()
+	serviceAccountResp, err := r.client.CreateServiceAccount(ctx, projectId).CreateServiceAccountPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating service account", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -201,7 +197,7 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	projectId := model.ProjectId.ValueString()
 
 	// Fetch the list of service accounts from the API.
-	listSaResp, err := r.client.DefaultAPI.ListServiceAccounts(ctx, projectId).Execute()
+	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -263,7 +259,7 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "service_account_name", serviceAccountName)
 
 	// Call API to delete the existing service account.
-	err := r.client.DefaultAPI.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
+	err := r.client.DeleteServiceAccount(ctx, projectId, serviceAccountEmail).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

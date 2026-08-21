@@ -16,11 +16,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	sdk "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	sqlserverflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sqlserverflex/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -39,7 +39,7 @@ func NewDatabaseResource() resource.Resource {
 }
 
 type databaseResource struct {
-	client       *sdk.APIClient
+	client       sqlserverflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -53,16 +53,13 @@ func (r *databaseResource) Metadata(_ context.Context, req resource.MetadataRequ
 }
 
 func (r *databaseResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	apiClient := sqlserverflexUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+
+	r.providerData = providerData
+	r.client = clients.SqlServerFlexV3Client
 }
 
 func (r *databaseResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { // nolint:gocritic // function signature required by Terraform
@@ -204,7 +201,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 
 	// Workaround: The database creation will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the database API is temporarily unavailable. Usually this is only for 1-2 seconds.
-	_, err = utils.RetryRequest(ctx, r.client.DefaultAPI.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
+	_, err = utils.RetryRequest(ctx, r.client.CreateDatabase(ctx, projectId, region, instanceId).CreateDatabasePayload(*payload).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", err.Error())
 		return
@@ -222,7 +219,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	apiResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, model.Name.ValueString()).Execute()
+	apiResp, err := r.client.GetDatabase(ctx, projectId, region, instanceId, model.Name.ValueString()).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading database after creation", err.Error())
 		return
@@ -265,7 +262,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	ctx = core.InitProviderContext(ctx)
 
-	apiResp, err := r.client.DefaultAPI.GetDatabase(ctx, projectId, region, instanceId, name).Execute()
+	apiResp, err := r.client.GetDatabase(ctx, projectId, region, instanceId, name).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -318,7 +315,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Workaround: The database deletion will be tried 5 times. In some cases the instance might be
 	// in maintenance mode and the database API is temporarily unavailable. Usually this is only for 1-2 seconds.
-	err := utils.RetryRequestWithoutResponse(ctx, r.client.DefaultAPI.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute, sqlserverflexUtils.RetryConfig)
+	err := utils.RetryRequestWithoutResponse(ctx, r.client.DeleteDatabase(ctx, projectId, region, instanceId, name).Execute, sqlserverflexUtils.RetryConfig)
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			return

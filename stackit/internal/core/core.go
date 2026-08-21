@@ -11,6 +11,39 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/runtime"
+	alb "github.com/stackitcloud/stackit-sdk-go/services/alb/v2api"
+	albwaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
+	authorization "github.com/stackitcloud/stackit-sdk-go/services/authorization/v2api"
+	cdn "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
+	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
+	dns "github.com/stackitcloud/stackit-sdk-go/services/dns/v1api"
+	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
+	git "github.com/stackitcloud/stackit-sdk-go/services/git/v1betaapi"
+	iaasv2alpha "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
+	iaasv2 "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
+	kms "github.com/stackitcloud/stackit-sdk-go/services/kms/v1api"
+	logme "github.com/stackitcloud/stackit-sdk-go/services/logme/v2api"
+	logs "github.com/stackitcloud/stackit-sdk-go/services/logs/v1api"
+	mariadb "github.com/stackitcloud/stackit-sdk-go/services/mariadb/v2api"
+	modelexperiments "github.com/stackitcloud/stackit-sdk-go/services/modelexperiments/v1api"
+	modelserving "github.com/stackitcloud/stackit-sdk-go/services/modelserving/v1api"
+	mongodbflex "github.com/stackitcloud/stackit-sdk-go/services/mongodbflex/v2api"
+	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
+	opensearch "github.com/stackitcloud/stackit-sdk-go/services/opensearch/v2api"
+	postgresflex "github.com/stackitcloud/stackit-sdk-go/services/postgresflex/v3api"
+	rabbitmq "github.com/stackitcloud/stackit-sdk-go/services/rabbitmq/v2api"
+	redis "github.com/stackitcloud/stackit-sdk-go/services/redis/v2api"
+	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
+	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
+	serverupdate "github.com/stackitcloud/stackit-sdk-go/services/serverupdate/v2api"
+	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
+	serviceenablement "github.com/stackitcloud/stackit-sdk-go/services/serviceenablement/v2api"
+	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske/v2api"
+	sqlserverflex "github.com/stackitcloud/stackit-sdk-go/services/sqlserverflex/v3api"
+	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
+	telemetryrouter "github.com/stackitcloud/stackit-sdk-go/services/telemetryrouter/v1api"
+	vpn "github.com/stackitcloud/stackit-sdk-go/services/vpn/v1api"
 )
 
 type ResourceType string
@@ -34,10 +67,7 @@ type EphemeralProviderData struct {
 	ProviderData
 }
 
-type ProviderData struct {
-	RoundTripper                    http.RoundTripper
-	ServiceAccountEmail             string
-	DefaultRegion                   string
+type CustomEndpointConfig struct {
 	ALBCertificatesCustomEndpoint   string
 	ALBCustomEndpoint               string
 	AlbWafCustomEndpoint            string
@@ -76,10 +106,105 @@ type ProviderData struct {
 	TelemetryLinkCustomEndpoint     string
 	TelemetryRouterCustomEndpoint   string
 	VpnCustomEndpoint               string
-	EnableBetaResources             bool
-	Experiments                     []string
+}
 
-	Version string // version of the STACKIT Terraform provider
+func NewProviderDataInternal(providerData ProviderData, clientFactory ClientFactory) (providerDataInternal, error) {
+	clients, err := initClientCollection(clientFactory)
+	if err != nil {
+		return providerDataInternal{}, err
+	}
+
+	return providerDataInternal{
+		clients:      *clients,
+		providerData: providerData,
+	}, nil
+}
+
+type providerDataInternal struct {
+	// providerData is the public provider data
+	providerData ProviderData
+	clients      clientCollection
+}
+
+type clientCollection struct {
+	IaaSv2Client              iaasv2.DefaultAPI
+	IaaSv2AlphaClient         iaasv2alpha.DefaultAPI
+	ResourceManagerClient     resourcemanager.DefaultAPI
+	ModelExperimentsV1Client  modelexperiments.DefaultAPI
+	EdgeV1Client              edge.DefaultAPI
+	DnsV1Client               dns.DefaultAPI
+	CdnV1Client               cdn.DefaultAPI
+	ServerBackupV2Client      serverbackup.DefaultAPI
+	AlbCertificatesV2Client   certSdk.DefaultAPI
+	ServiceEnablementV2Client serviceenablement.DefaultAPI
+	AlbWafV1CLient            albwaf.DefaultAPI
+	LogsV1Client              logs.DefaultAPI
+	VpnV1Client               vpn.DefaultAPI
+	AuthorizationV2Client     authorization.DefaultAPI
+	PostgresflexV3Client      postgresflex.DefaultAPI
+	AlbV2Client               alb.DefaultAPI
+	SkeV2Client               ske.DefaultAPI
+	SqlServerFlexV3Client     sqlserverflex.DefaultAPI
+	ModelservingV1Client      modelserving.DefaultAPI
+	LogmeV2Client             logme.DefaultAPI
+	OpensearchV2Client        opensearch.DefaultAPI
+	GitV1BetaClient           git.DefaultAPI
+	RedisV2Client             redis.DefaultAPI
+	TelemetryRouterV1Client   telemetryrouter.DefaultAPI
+	TelemetryLinkV1Client     telemetrylink.DefaultAPI
+	ServerUpdateV2Client      serverupdate.DefaultAPI
+	KmsV1Client               kms.DefaultAPI
+	SfsV1Client               sfs.DefaultAPI
+	ServiceAccountV2Client    serviceaccount.DefaultAPI
+	RabbitMqV2Client          rabbitmq.DefaultAPI
+	MongoDbFlexV2Client       mongodbflex.DefaultAPI
+	ObjectStorageV2Client     objectstorage.DefaultAPI
+	MariadbV2Client           mariadb.DefaultAPI
+}
+
+func parseInternalProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (providerDataInternal, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return providerDataInternal{}, false
+	}
+
+	stackitProviderDataInternal, ok := providerData.(providerDataInternal)
+	if !ok {
+		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
+		return providerDataInternal{}, false
+	}
+	return stackitProviderDataInternal, true
+}
+
+func ParseProviderData(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, clientCollection, bool) {
+	// Prevent panic if the provider has not been configured.
+	if providerData == nil {
+		return ProviderData{}, clientCollection{}, false
+	}
+
+	stackitProviderDataInternal, ok := providerData.(providerDataInternal)
+	if !ok {
+		LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Expected configure type core.providerDataInternal, got %T", providerData))
+		return ProviderData{}, clientCollection{}, false
+	}
+	return stackitProviderDataInternal.providerData, stackitProviderDataInternal.clients, true
+}
+
+func ParseProviderDataLeg(ctx context.Context, providerData any, diags *diag.Diagnostics) (ProviderData, bool) {
+	providerDataInternal, ok := parseInternalProviderData(ctx, providerData, diags)
+	return providerDataInternal.providerData, ok
+}
+
+func ParseClients(ctx context.Context, providerData any, diags *diag.Diagnostics) (clientCollection, bool) {
+	providerDataInternal, ok := parseInternalProviderData(ctx, providerData, diags)
+	return providerDataInternal.clients, ok
+}
+
+type ProviderData struct {
+	ServiceAccountEmail string
+	DefaultRegion       string
+	EnableBetaResources bool
+	Experiments         []string
 }
 
 // GetRegion returns the effective region for the provider, falling back to the deprecated _region_ attribute

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/google/uuid"
@@ -69,7 +68,7 @@ func NewProjectResource() resource.Resource {
 
 // projectResource is the resource implementation.
 type projectResource struct {
-	client *resourcemanager.APIClient
+	client resourcemanager.DefaultAPI
 }
 
 // Metadata returns the resource type name.
@@ -79,16 +78,13 @@ func (r *projectResource) Metadata(_ context.Context, req resource.MetadataReque
 
 // Configure adds the provider configured client to the resource.
 func (r *projectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := resourcemanagerUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ResourceManagerClient
+
 	tflog.Info(ctx, "Resource Manager project client configured")
 }
 
@@ -209,7 +205,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	// Create new project
-	createResp, err := r.client.DefaultAPI.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
+	createResp, err := r.client.CreateProject(ctx).CreateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -227,7 +223,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// If the request has not been processed yet and the containerId doesn't exist,
 	// the waiter will fail with authentication error, so wait some time before checking the creation
-	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client.DefaultAPI, createResp.ContainerId).WaitWithContext(ctx)
+	waitResp, err := wait.CreateProjectWaitHandler(ctx, r.client, createResp.ContainerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating project", fmt.Sprintf("Instance creation waiting: %v", err))
 		return
@@ -267,7 +263,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
-	projectResp, err := r.client.DefaultAPI.GetProject(ctx, containerId).Execute()
+	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusForbidden {
@@ -317,7 +313,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 	// Update existing project
-	_, err = r.client.DefaultAPI.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
+	_, err = r.client.PartialUpdateProject(ctx, containerId).PartialUpdateProjectPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -326,7 +322,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	ctx = core.LogResponse(ctx)
 
 	// Fetch updated project
-	projectResp, err := r.client.DefaultAPI.GetProject(ctx, containerId).Execute()
+	projectResp, err := r.client.GetProject(ctx, containerId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating project", fmt.Sprintf("Calling API for updated data: %v", err))
 		return
@@ -362,7 +358,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	ctx = tflog.SetField(ctx, "container_id", containerId)
 
 	// Delete existing project
-	err := r.client.DefaultAPI.DeleteProject(ctx, containerId).Execute()
+	err := r.client.DeleteProject(ctx, containerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -375,7 +371,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteProjectWaitHandler(ctx, r.client.DefaultAPI, containerId).WaitWithContext(ctx)
+	_, err = wait.DeleteProjectWaitHandler(ctx, r.client, containerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting project", fmt.Sprintf("Instance deletion waiting: %v", err))
 		return

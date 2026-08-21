@@ -6,9 +6,6 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,7 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
@@ -55,16 +53,12 @@ type DataSourceModel struct {
 }
 
 // NewNetworkDataSource is a helper function to simplify the provider implementation.
-func NewNetworkDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &networkDataSource{
-		clientFactory: clientFactory,
-	}
+func NewNetworkDataSource() datasource.DataSource {
+	return &networkDataSource{}
 }
 
 // networkDataSource is the data source implementation.
 type networkDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -75,16 +69,13 @@ func (d *networkDataSource) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *networkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "IaaS client configured")
 }

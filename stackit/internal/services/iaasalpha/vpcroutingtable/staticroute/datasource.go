@@ -15,10 +15,8 @@ import (
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -37,7 +35,7 @@ func NewStaticRouteDatasource() datasource.DataSource {
 }
 
 type staticRouteDatasource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -46,22 +44,19 @@ func (r *staticRouteDatasource) Metadata(_ context.Context, req datasource.Metad
 }
 
 func (r *staticRouteDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table_static_route", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "IaaS v2alpha client configured")
 }
 
@@ -162,7 +157,7 @@ func (r *staticRouteDatasource) Read(ctx context.Context, req datasource.ReadReq
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	route, err := r.client.DefaultAPI.GetVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).Execute()
+	route, err := r.client.GetVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		utils.LogError(ctx, &resp.Diagnostics, err, "Error reading vpc static route", fmt.Sprintf("Calling API: %v", err),
 			map[int]string{

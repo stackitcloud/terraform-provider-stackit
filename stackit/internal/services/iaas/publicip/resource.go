@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
@@ -46,16 +45,12 @@ type Model struct {
 }
 
 // NewPublicIpResource is a helper function to simplify the provider implementation.
-func NewPublicIpResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &publicIpResource{
-		clientFactory: clientFactory,
-	}
+func NewPublicIpResource() resource.Resource {
+	return &publicIpResource{}
 }
 
 // publicIpResource is the resource implementation.
 type publicIpResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -98,15 +93,13 @@ func (r *publicIpResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 // Configure adds the provider configured client to the resource.
 func (r *publicIpResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

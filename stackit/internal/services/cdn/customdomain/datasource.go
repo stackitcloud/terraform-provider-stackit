@@ -6,8 +6,6 @@ import (
 
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -33,7 +31,7 @@ var certificateDataSourceTypes = map[string]attr.Type{
 }
 
 type customDomainDataSource struct {
-	client *cdnSdk.APIClient
+	client cdnSdk.DefaultAPI
 }
 
 func NewCustomDomainDataSource() datasource.DataSource {
@@ -51,7 +49,7 @@ type customDomainDataSourceModel struct {
 }
 
 func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -61,11 +59,8 @@ func (d *customDomainDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.CdnV1Client
+
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -135,7 +130,7 @@ func (r *customDomainDataSource) Read(ctx context.Context, req datasource.ReadRe
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	customDomainResp, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
+	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

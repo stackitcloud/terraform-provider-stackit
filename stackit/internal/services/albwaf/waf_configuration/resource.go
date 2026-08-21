@@ -20,7 +20,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	albwafUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
@@ -56,7 +55,7 @@ type ItemsModel struct {
 }
 
 type wafResource struct {
-	client       *albWaf.APIClient
+	client       albWaf.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -103,19 +102,19 @@ func (r *wafResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanReq
 
 func (r *wafResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.AlbWafV1CLient
+
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_configuration", core.Resource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	apiClient := albwafUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+
 	tflog.Info(ctx, "albwaf client configured")
 }
 
@@ -229,7 +228,7 @@ func (r *wafResource) Create(ctx context.Context, req resource.CreateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Configuration", fmt.Sprint("Creating API payload: %w", err))
 		return
 	}
-	createResp, err := r.client.DefaultAPI.CreateWAF(ctx, projectId, region).CreateWAFPayload(*payload).Execute()
+	createResp, err := r.client.CreateWAF(ctx, projectId, region).CreateWAFPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Configuration", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -275,7 +274,7 @@ func (r *wafResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	_, err := r.client.DefaultAPI.DeleteWAF(ctx, projectId, region, name).Execute()
+	_, err := r.client.DeleteWAF(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting ALB WAF Configuration", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -306,7 +305,7 @@ func (r *wafResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	response, err := r.client.DefaultAPI.GetWAF(ctx, projectId, region, name).Execute()
+	response, err := r.client.GetWAF(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -361,7 +360,7 @@ func (r *wafResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Configuration", fmt.Sprint("Creating API payload: %w", err))
 		return
 	}
-	updateResp, err := r.client.DefaultAPI.UpdateWAF(ctx, projectId, region, name).UpdateWAFPayload(*payload).Execute()
+	updateResp, err := r.client.UpdateWAF(ctx, projectId, region, name).UpdateWAFPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Configuration", fmt.Sprintf("Calling API: %v", err))
 		return

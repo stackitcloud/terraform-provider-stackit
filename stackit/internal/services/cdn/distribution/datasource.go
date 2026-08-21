@@ -7,7 +7,6 @@ import (
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -57,7 +56,7 @@ var dataSourceConfigTypes = map[string]attr.Type{
 }
 
 type distributionDataSource struct {
-	client *cdnSdk.APIClient
+	client cdnSdk.DefaultAPI
 }
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -70,7 +69,7 @@ func NewDistributionDataSource() datasource.DataSource {
 }
 
 func (d *distributionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -80,11 +79,8 @@ func (d *distributionDataSource) Configure(ctx context.Context, req datasource.C
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.client = clients.CdnV1Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -397,7 +393,7 @@ func (r *distributionDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	projectId := model.ProjectId.ValueString()
 	distributionId := model.DistributionId.ValueString()
-	distributionResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
+	distributionResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

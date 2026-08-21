@@ -9,10 +9,6 @@ import (
 
 	resourcemanager "github.com/stackitcloud/stackit-sdk-go/services/resourcemanager/v0api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
-	resourcemanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/resourcemanager/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -68,18 +64,14 @@ type networkRangeModel struct {
 }
 
 // NewNetworkAreaRegionResource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRegionResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &networkAreaRegionResource{
-		clientFactory: clientFactory,
-	}
+func NewNetworkAreaRegionResource() resource.Resource {
+	return &networkAreaRegionResource{}
 }
 
 // networkAreaRegionResource is the resource implementation.
 type networkAreaRegionResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client                iaas.DefaultAPI
-	resourceManagerClient *resourcemanager.APIClient
+	resourceManagerClient resourcemanager.DefaultAPI
 	providerData          core.ProviderData
 }
 
@@ -120,21 +112,14 @@ func (r *networkAreaRegionResource) ModifyPlan(ctx context.Context, req resource
 
 // Configure adds the provider configured client to the resource.
 func (r *networkAreaRegionResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	r.resourceManagerClient = resourcemanagerUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
+	r.resourceManagerClient = clients.ResourceManagerClient
 
 	tflog.Info(ctx, "iaas client configured")
 }
@@ -457,7 +442,7 @@ func (r *networkAreaRegionResource) Delete(ctx context.Context, req resource.Del
 
 	ctx = core.InitProviderContext(ctx)
 
-	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient.DefaultAPI, organizationId, networkAreaId).WaitWithContext(ctx)
+	_, err := wait.ReadyForNetworkAreaDeletionWaitHandler(ctx, r.client, r.resourceManagerClient, organizationId, networkAreaId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting network area region", fmt.Sprintf("Network area ready for deletion waiting: %v", err))
 		return

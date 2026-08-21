@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	secretsmanagerUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/secretsmanager/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -43,7 +42,7 @@ func (r *instanceDataSource) Metadata(_ context.Context, req datasource.Metadata
 
 // Configure adds the provider configured client to the data source.
 func (r *instanceDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -146,7 +145,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.DefaultAPI.GetInstance(ctx, projectId, instanceId).Execute()
+	instanceResp, err := r.client.GetInstance(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,
@@ -164,7 +163,7 @@ func (r *instanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	ctx = core.LogResponse(ctx)
 
-	aclList, err := r.client.DefaultAPI.ListACLs(ctx, projectId, instanceId).Execute()
+	aclList, err := r.client.ListACLs(ctx, projectId, instanceId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading instance", fmt.Sprintf("Calling API for ACL data: %v", err))
 		return

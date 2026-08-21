@@ -16,10 +16,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -29,7 +27,7 @@ var (
 )
 
 type customRuleGroupDataSource struct {
-	client       *albWaf.APIClient
+	client       albWaf.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -38,22 +36,19 @@ func NewCustomRuleGroupDataSource() datasource.DataSource {
 }
 
 func (r *customRuleGroupDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.AlbWafV1CLient
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_custom_rule_group", core.Resource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "ALB WAF client configured")
 }
 
@@ -192,7 +187,7 @@ func (r *customRuleGroupDataSource) Read(ctx context.Context, req datasource.Rea
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	customRuleGroupResp, err := r.client.DefaultAPI.GetCustomRuleGroup(ctx, projectId, region, name).Execute()
+	customRuleGroupResp, err := r.client.GetCustomRuleGroup(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

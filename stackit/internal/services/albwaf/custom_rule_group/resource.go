@@ -27,7 +27,6 @@ import (
 
 	sdkUtils "github.com/stackitcloud/stackit-sdk-go/core/utils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
@@ -118,7 +117,7 @@ var variableType = map[string]attr.Type{
 }
 
 type customRuleGroupResource struct {
-	client       *albWaf.APIClient
+	client       albWaf.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -128,21 +127,19 @@ func NewCustomRuleGroupResource() resource.Resource {
 
 func (r *customRuleGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.AlbWafV1CLient
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_custom_rule_group", core.Resource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "ALB WAF client configured")
 }
 
@@ -405,7 +402,7 @@ func (r *customRuleGroupResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateCustomRuleGroup(ctx, projectId, region).CreateCustomRuleGroupPayload(*payload).Execute()
+	createResp, err := r.client.CreateCustomRuleGroup(ctx, projectId, region).CreateCustomRuleGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Custom Rule Group", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -459,7 +456,7 @@ func (r *customRuleGroupResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	updateResp, err := r.client.DefaultAPI.UpdateCustomRuleGroup(ctx, projectId, region, customRuleGroupName).UpdateCustomRuleGroupPayload(*payload).Execute()
+	updateResp, err := r.client.UpdateCustomRuleGroup(ctx, projectId, region, customRuleGroupName).UpdateCustomRuleGroupPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating ALB WAF Custom Rule Group", fmt.Sprintf("Calling API update endpoint: %v", err))
 		return
@@ -500,7 +497,7 @@ func (r *customRuleGroupResource) Read(ctx context.Context, req resource.ReadReq
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	customRuleGroupResp, err := r.client.DefaultAPI.GetCustomRuleGroup(ctx, projectId, region, name).Execute()
+	customRuleGroupResp, err := r.client.GetCustomRuleGroup(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -544,7 +541,7 @@ func (r *customRuleGroupResource) Delete(ctx context.Context, req resource.Delet
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	_, err := r.client.DefaultAPI.DeleteCustomRuleGroup(ctx, projectId, region, name).Execute()
+	_, err := r.client.DeleteCustomRuleGroup(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

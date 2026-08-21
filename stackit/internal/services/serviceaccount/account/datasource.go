@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	serviceaccount "github.com/stackitcloud/stackit-sdk-go/services/serviceaccount/v2api"
+
+	serviceaccountUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serviceaccount/utils"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -31,21 +30,18 @@ func NewServiceAccountDataSource() datasource.DataSource {
 
 // serviceAccountDataSource is the datasource implementation for service accounts.
 type serviceAccountDataSource struct {
-	client *serviceaccount.APIClient
+	client serviceaccount.DefaultAPI
 }
 
 // Configure initializes the serviceAccountDataSource with the provided provider data.
 func (r *serviceAccountDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	_, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serviceaccountUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.ServiceAccountV2Client
+
 	tflog.Info(ctx, "Service Account client configured")
 }
 
@@ -115,7 +111,7 @@ func (r *serviceAccountDataSource) Read(ctx context.Context, req datasource.Read
 	projectId := model.ProjectId.ValueString()
 
 	// Call the API to list service accounts in the specified project
-	listSaResp, err := r.client.DefaultAPI.ListServiceAccounts(ctx, projectId).Execute()
+	listSaResp, err := r.client.ListServiceAccounts(ctx, projectId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

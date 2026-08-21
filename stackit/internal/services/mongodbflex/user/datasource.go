@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	mongodbflexUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/mongodbflex/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -47,7 +44,7 @@ func NewUserDataSource() datasource.DataSource {
 
 // userDataSource is the data source implementation.
 type userDataSource struct {
-	client       *mongodbflex.APIClient
+	client       mongodbflex.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -58,17 +55,14 @@ func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 
 // Configure adds the provider configured client to the data source.
 func (d *userDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := mongodbflexUtils.ConfigureClient(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.MongoDbFlexV2Client
+
 	tflog.Info(ctx, "MongoDB Flex user client configured")
 }
 
@@ -159,7 +153,7 @@ func (d *userDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 	ctx = tflog.SetField(ctx, "user_id", userId)
 
-	recordSetResp, err := d.client.DefaultAPI.GetUser(ctx, projectId, instanceId, userId, region).Execute()
+	recordSetResp, err := d.client.GetUser(ctx, projectId, instanceId, userId, region).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

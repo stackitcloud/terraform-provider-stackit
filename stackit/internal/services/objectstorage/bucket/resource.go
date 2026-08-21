@@ -10,9 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -55,7 +52,7 @@ func NewBucketResource() resource.Resource {
 
 // bucketResource is the resource implementation.
 type bucketResource struct {
-	client       *objectstorage.APIClient
+	client       objectstorage.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -102,17 +99,14 @@ func (r *bucketResource) Metadata(_ context.Context, req resource.MetadataReques
 
 // Configure adds the provider configured client to the resource.
 func (r *bucketResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ObjectStorageV2Client
+
 	tflog.Info(ctx, "ObjectStorage bucket client configured")
 }
 
@@ -211,14 +205,14 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Handle project init
-	err := enableProject(ctx, &model, region, r.client.DefaultAPI)
+	err := enableProject(ctx, &model, region, r.client)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Enabling object storage project before creation: %v", err))
 		return
 	}
 
 	// Create new bucket
-	_, err = r.client.DefaultAPI.CreateBucket(ctx, projectId, region, bucketName).ObjectLockEnabled(model.ObjectLock.ValueBool()).Execute()
+	_, err = r.client.CreateBucket(ctx, projectId, region, bucketName).ObjectLockEnabled(model.ObjectLock.ValueBool()).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -236,7 +230,7 @@ func (r *bucketResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client.DefaultAPI, projectId, region, bucketName).WaitWithContext(ctx)
+	waitResp, err := wait.CreateBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating bucket", fmt.Sprintf("Bucket creation waiting: %v", err))
 		return
@@ -275,7 +269,7 @@ func (r *bucketResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "name", bucketName)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	bucketResp, err := r.client.DefaultAPI.GetBucket(ctx, projectId, region, bucketName).Execute()
+	bucketResp, err := r.client.GetBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -330,7 +324,7 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Delete existing bucket
-	_, err := r.client.DefaultAPI.DeleteBucket(ctx, projectId, region, bucketName).Execute()
+	_, err := r.client.DeleteBucket(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -348,7 +342,7 @@ func (r *bucketResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteBucketWaitHandler(ctx, r.client.DefaultAPI, projectId, region, bucketName).WaitWithContext(ctx)
+	_, err = wait.DeleteBucketWaitHandler(ctx, r.client, projectId, region, bucketName).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting bucket", fmt.Sprintf("Bucket deletion waiting: %v", err))
 		return

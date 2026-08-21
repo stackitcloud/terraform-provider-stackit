@@ -17,9 +17,7 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	serverbackup "github.com/stackitcloud/stackit-sdk-go/services/serverbackup/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	serverBackupUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/serverbackup/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -46,7 +44,7 @@ func NewServerBackupEnableResource() resource.Resource {
 
 // serverBackupEnableResource is the resource implementation.
 type serverBackupEnableResource struct {
-	client       *serverbackup.APIClient
+	client       serverbackup.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -88,16 +86,14 @@ func (r *serverBackupEnableResource) Metadata(_ context.Context, req resource.Me
 // Configure adds the provider configured client to the resource.
 func (r *serverBackupEnableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := serverBackupUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ServerBackupV2Client
+
 	tflog.Info(ctx, "Server backup client configured")
 }
 
@@ -189,7 +185,7 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{}).Execute()
+	err := r.client.EnableServiceResource(ctx, projectId, serverId, region).EnableServiceResourcePayload(serverbackup.EnableServiceResourcePayload{}).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -201,7 +197,7 @@ func (r *serverBackupEnableResource) Create(ctx context.Context, req resource.Cr
 		tflog.Info(ctx, "Server backup is already enabled for this server. Please check duplicate resources.")
 	}
 
-	serviceResp, err := r.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading server backup enable", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -243,7 +239,7 @@ func (r *serverBackupEnableResource) Read(ctx context.Context, req resource.Read
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	serviceResp, err := r.client.DefaultAPI.GetServiceResource(ctx, projectId, serverId, region).Execute()
+	serviceResp, err := r.client.GetServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -297,7 +293,7 @@ func (r *serverBackupEnableResource) Delete(ctx context.Context, req resource.De
 	ctx = tflog.SetField(ctx, "server_id", serverId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	err := r.client.DefaultAPI.DisableServiceResource(ctx, projectId, serverId, region).Execute()
+	err := r.client.DisableServiceResource(ctx, projectId, serverId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

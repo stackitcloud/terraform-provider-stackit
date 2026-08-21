@@ -25,7 +25,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -79,7 +78,7 @@ func NewStaticRouteResource() resource.Resource {
 }
 
 type staticRouteResource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -88,22 +87,19 @@ func (r *staticRouteResource) Metadata(_ context.Context, req resource.MetadataR
 }
 
 func (r *staticRouteResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table_static_route", core.Resource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "IaaS v2alpha client configured")
 }
 
@@ -280,7 +276,7 @@ func (r *staticRouteResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	route, err := r.client.DefaultAPI.AddVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId).AddVPCStaticRoutePayload(*payload).Execute()
+	route, err := r.client.AddVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId).AddVPCStaticRoutePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating static route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -339,7 +335,7 @@ func (r *staticRouteResource) Read(ctx context.Context, req resource.ReadRequest
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	route, err := r.client.DefaultAPI.GetVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).Execute()
+	route, err := r.client.GetVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -409,7 +405,7 @@ func (r *staticRouteResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	route, err := r.client.DefaultAPI.UpdateVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).UpdateVPCStaticRoutePayload(payload).Execute()
+	route, err := r.client.UpdateVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).UpdateVPCStaticRoutePayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating vpc static route", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -462,7 +458,7 @@ func (r *staticRouteResource) Delete(ctx context.Context, req resource.DeleteReq
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 	ctx = tflog.SetField(ctx, "route_id", routeId)
 
-	err := r.client.DefaultAPI.DeleteVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).Execute()
+	err := r.client.DeleteVPCStaticRoute(ctx, projectId, vpcId, region, routingTableId, routeId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)

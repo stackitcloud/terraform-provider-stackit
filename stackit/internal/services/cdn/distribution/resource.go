@@ -38,7 +38,6 @@ import (
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -302,7 +301,7 @@ var domainTypes = map[string]attr.Type{
 }
 
 type distributionResource struct {
-	client       *cdnSdk.APIClient
+	client       cdnSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -311,22 +310,19 @@ func NewDistributionResource() resource.Resource {
 }
 
 func (r *distributionResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.CdnV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_cdn_distribution", "resource")
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -802,7 +798,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
+	createResp, err := r.client.CreateDistribution(ctx, projectId).CreateDistributionPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -824,7 +820,7 @@ func (r *distributionResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client.DefaultAPI, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	waitResp, err := wait.CreateDistributionPoolWaitHandler(ctx, r.client, projectId, createResp.Distribution.Id).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN distribution", fmt.Sprintf("Waiting for create: %v", err))
 		return
@@ -864,7 +860,7 @@ func (r *distributionResource) Read(ctx context.Context, req resource.ReadReques
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	cdnResp, err := r.client.DefaultAPI.GetDistribution(ctx, projectId, distributionId).Execute()
+	cdnResp, err := r.client.GetDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -1088,7 +1084,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 		configPatch.Optimizer = optimizer
 	}
 
-	_, err := r.client.DefaultAPI.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdnSdk.PatchDistributionPayload{
+	_, err := r.client.PatchDistribution(ctx, projectId, distributionId).PatchDistributionPayload(cdnSdk.PatchDistributionPayload{
 		Config:   configPatch,
 		IntentId: new(uuid.NewString()),
 	}).Execute()
@@ -1099,7 +1095,7 @@ func (r *distributionResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.LogResponse(ctx)
 
-	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
+	waitResp, err := wait.UpdateDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Update CDN distribution", fmt.Sprintf("Waiting for update: %v", err))
 		return
@@ -1134,14 +1130,14 @@ func (r *distributionResource) Delete(ctx context.Context, req resource.DeleteRe
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "distribution_id", distributionId)
 
-	_, err := r.client.DefaultAPI.DeleteDistribution(ctx, projectId, distributionId).Execute()
+	_, err := r.client.DeleteDistribution(ctx, projectId, distributionId).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Delete distribution: %v", err))
 	}
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId).WaitWithContext(ctx)
+	_, err = wait.DeleteDistributionWaitHandler(ctx, r.client, projectId, distributionId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN distribution", fmt.Sprintf("Waiting for deletion: %v", err))
 		return

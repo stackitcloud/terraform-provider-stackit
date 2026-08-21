@@ -8,11 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -46,16 +43,12 @@ type Model struct {
 	Members         types.List   `tfsdk:"members"`
 }
 
-func NewAffinityGroupResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &affinityGroupResource{
-		clientFactory: clientFactory,
-	}
+func NewAffinityGroupResource() resource.Resource {
+	return &affinityGroupResource{}
 }
 
 // affinityGroupResource is the resource implementation.
 type affinityGroupResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -97,16 +90,13 @@ func (r *affinityGroupResource) ModifyPlan(ctx context.Context, req resource.Mod
 
 // Configure adds the provider configured client to the resource.
 func (r *affinityGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

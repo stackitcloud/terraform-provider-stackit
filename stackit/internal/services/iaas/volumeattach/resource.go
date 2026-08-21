@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -45,16 +43,12 @@ type Model struct {
 }
 
 // NewVolumeAttachResource is a helper function to simplify the provider implementation.
-func NewVolumeAttachResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &volumeAttachResource{
-		clientFactory: clientFactory,
-	}
+func NewVolumeAttachResource() resource.Resource {
+	return &volumeAttachResource{}
 }
 
 // volumeAttachResource is the resource implementation.
 type volumeAttachResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -97,15 +91,13 @@ func (r *volumeAttachResource) ModifyPlan(ctx context.Context, req resource.Modi
 // Configure adds the provider configured client to the resource.
 func (r *volumeAttachResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

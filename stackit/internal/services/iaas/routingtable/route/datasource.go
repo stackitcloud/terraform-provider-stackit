@@ -10,9 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	shared "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/routingtable/shared"
@@ -25,16 +22,12 @@ var (
 )
 
 // NewRoutingTableRouteDataSource is a helper function to simplify the provider implementation.
-func NewRoutingTableRouteDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &routingTableRouteDataSource{
-		clientFactory: clientFactory,
-	}
+func NewRoutingTableRouteDataSource() datasource.DataSource {
+	return &routingTableRouteDataSource{}
 }
 
 // routingTableRouteDataSource is the data source implementation.
 type routingTableRouteDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -45,18 +38,15 @@ func (d *routingTableRouteDataSource) Metadata(_ context.Context, req datasource
 }
 
 func (d *routingTableRouteDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Datasource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &d.providerData, features.RoutingTablesExperiment, "stackit_routing_table_route", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}

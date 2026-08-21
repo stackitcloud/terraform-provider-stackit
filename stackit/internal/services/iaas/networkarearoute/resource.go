@@ -7,10 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
+	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -72,16 +70,12 @@ type NexthopModelV1 struct {
 }
 
 // NewNetworkAreaRouteResource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRouteResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &networkAreaRouteResource{
-		clientFactory: clientFactory,
-	}
+func NewNetworkAreaRouteResource() resource.Resource {
+	return &networkAreaRouteResource{}
 }
 
 // networkResource is the resource implementation.
 type networkAreaRouteResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -124,15 +118,13 @@ func (r *networkAreaRouteResource) ModifyPlan(ctx context.Context, req resource.
 // Configure adds the provider configured client to the resource.
 func (r *networkAreaRouteResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "IaaS client configured")
 }

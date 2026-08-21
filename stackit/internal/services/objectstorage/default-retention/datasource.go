@@ -13,9 +13,8 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
 
@@ -28,22 +27,19 @@ func NewDefaultRetentionDataSource() datasource.DataSource {
 }
 
 type defaultRetentionDataSource struct {
-	client       *objectstorage.APIClient
+	client       objectstorage.DefaultAPI
 	providerData core.ProviderData
 }
 
 func (r *defaultRetentionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ObjectStorageV2Client
+
 	tflog.Info(ctx, "Bucket Default Retention configured")
 }
 
@@ -110,7 +106,7 @@ func (d *defaultRetentionDataSource) Read(ctx context.Context, req datasource.Re
 	ctx = tflog.SetField(ctx, "region", region)
 
 	// Read default-retention
-	result, err := d.client.DefaultAPI.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
+	result, err := d.client.GetDefaultRetention(ctx, projectId, region, bucketName).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {

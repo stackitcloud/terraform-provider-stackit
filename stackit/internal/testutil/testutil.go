@@ -19,8 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	sdkConf "github.com/stackitcloud/stackit-sdk-go/core/config"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit"
 )
 
@@ -520,7 +518,7 @@ func CheckAttrHasPrefix(prefix string) resource.CheckResourceAttrWithFunc {
 	}
 }
 
-func NewTestUnitV6ProviderFactories(clientFactory clientutils.ClientFactory) map[string]func() (tfprotov6.ProviderServer, error) {
+func NewTestUnitV6ProviderFactories() map[string]func() (tfprotov6.ProviderServer, error) {
 	return map[string]func() (tfprotov6.ProviderServer, error){
 		"stackit": providerserver.NewProtocol6WithError(stackit.NewTestProvider("test-version", clientFactory)()),
 	}

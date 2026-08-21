@@ -19,10 +19,9 @@ import (
 	sfs "github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api"
 	"github.com/stackitcloud/stackit-sdk-go/services/sfs/v1api/wait"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	sfsUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/sfs/utils"
+
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -54,7 +53,7 @@ func NewShareResource() resource.Resource {
 
 // shareResource is the resource implementation.
 type shareResource struct {
-	client       *sfs.APIClient
+	client       sfs.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -94,22 +93,19 @@ func (r *shareResource) Metadata(_ context.Context, req resource.MetadataRequest
 
 // Configure adds the provider configured client to the resource.
 func (r *shareResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.SfsV1Client
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_sfs_share", core.Resource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := sfsUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "SFS client configured")
 }
 
@@ -233,7 +229,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	// Create new share
-	share, err := r.client.DefaultAPI.CreateShare(ctx, projectId, region, resourcePoolId).
+	share, err := r.client.CreateShare(ctx, projectId, region, resourcePoolId).
 		CreateSharePayload(*payload).
 		Execute()
 	if err != nil {
@@ -258,7 +254,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	response, err := wait.CreateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, *share.Share.Id).
+	response, err := wait.CreateShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, *share.Share.Id).
 		WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share creation waiting: %v", err))
@@ -273,7 +269,7 @@ func (r *shareResource) Create(ctx context.Context, req resource.CreateRequest, 
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", "response did not contain an ID")
 		return
 	}
-	getResponse, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, *response.Share.Id).Execute()
+	getResponse, err := r.client.GetShare(ctx, projectId, region, resourcePoolId, *response.Share.Id).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
 		return
@@ -319,7 +315,7 @@ func (r *shareResource) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	ctx = core.InitProviderContext(ctx)
 
-	response, err := r.client.DefaultAPI.GetShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
+	response, err := r.client.GetShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -383,7 +379,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	response, err := r.client.DefaultAPI.UpdateShare(ctx, projectId, region, resourcePoolId, shareId).
+	response, err := r.client.UpdateShare(ctx, projectId, region, resourcePoolId, shareId).
 		UpdateSharePayload(*payload).
 		Execute()
 	if err != nil {
@@ -408,7 +404,7 @@ func (r *shareResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
+	getResponse, err := wait.UpdateShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating share", fmt.Sprintf("share get: %v", err))
 		return
@@ -448,7 +444,7 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = core.InitProviderContext(ctx)
 
 	// Delete existing share
-	_, err := r.client.DefaultAPI.DeleteShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
+	_, err := r.client.DeleteShare(ctx, projectId, region, resourcePoolId, shareId).Execute()
 	if err != nil {
 		var openapiError *oapierror.GenericOpenAPIError
 		if errors.As(err, &openapiError) {
@@ -463,7 +459,7 @@ func (r *shareResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	ctx = core.LogResponse(ctx)
 
 	// only delete, if no error occurred
-	_, err = wait.DeleteShareWaitHandler(ctx, r.client.DefaultAPI, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
+	_, err = wait.DeleteShareWaitHandler(ctx, r.client, projectId, region, resourcePoolId, shareId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting share", fmt.Sprintf("share deletion waiting: %v", err))
 		return

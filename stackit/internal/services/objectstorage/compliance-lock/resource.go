@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 
-	objectstorageUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/objectstorage/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -20,7 +19,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	objectstorage "github.com/stackitcloud/stackit-sdk-go/services/objectstorage/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
@@ -45,7 +43,7 @@ func NewComplianceLockResource() resource.Resource {
 
 // compliancelockResource is the resource implementation.
 type compliancelockResource struct {
-	client       *objectstorage.APIClient
+	client       objectstorage.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -86,17 +84,14 @@ func (r *compliancelockResource) Metadata(_ context.Context, req resource.Metada
 
 // Configure adds the provider configured client to the resource.
 func (r *compliancelockResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := objectstorageUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.ObjectStorageV2Client
+
 	tflog.Info(ctx, "ObjectStorage client configured")
 }
 
@@ -165,7 +160,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := r.client.DefaultAPI.CreateComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := r.client.CreateComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		ok := errors.As(err, &oapiErr)
@@ -176,7 +171,7 @@ func (r *compliancelockResource) Create(ctx context.Context, req resource.Create
 		}
 
 		tflog.Info(ctx, "Compliance lock is already enabled for this project. Please check duplicate resources.")
-		complianceResp, err = r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+		complianceResp, err = r.client.GetComplianceLock(ctx, projectId, region).Execute()
 		if err != nil {
 			core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading compliance lock", fmt.Sprintf("Calling API: %v", err))
 			return
@@ -216,7 +211,7 @@ func (r *compliancelockResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	complianceResp, err := r.client.DefaultAPI.GetComplianceLock(ctx, projectId, region).Execute()
+	complianceResp, err := r.client.GetComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		oapiErr, ok := err.(*oapierror.GenericOpenAPIError) //nolint:errorlint //complaining that error.As should be used to catch wrapped errors, but this error should not be wrapped
 		if ok && oapiErr.StatusCode == http.StatusNotFound {
@@ -268,7 +263,7 @@ func (r *compliancelockResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "project_id", projectId)
 	ctx = tflog.SetField(ctx, "region", region)
 
-	_, err := r.client.DefaultAPI.DeleteComplianceLock(ctx, projectId, region).Execute()
+	_, err := r.client.DeleteComplianceLock(ctx, projectId, region).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting compliance lock", fmt.Sprintf("Calling API: %v", err))
 		return

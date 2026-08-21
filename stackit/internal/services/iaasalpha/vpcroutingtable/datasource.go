@@ -13,10 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -34,7 +32,7 @@ func NewVpcRoutingTableDatasource() datasource.DataSource {
 
 // vpcRoutingTableDatasource is the datasource implementation.
 type vpcRoutingTableDatasource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -45,22 +43,19 @@ func (r *vpcRoutingTableDatasource) Metadata(_ context.Context, req datasource.M
 
 // Configure adds the provider configured client to the datasource.
 func (r *vpcRoutingTableDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.IaaSv2AlphaClient
 
 	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_routing_table", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "IaaS v2alpha client configured")
 }
 
@@ -159,7 +154,7 @@ func (r *vpcRoutingTableDatasource) Read(ctx context.Context, req datasource.Rea
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "routing_table_id", routingTableId)
 
-	routingTableResp, err := r.client.DefaultAPI.GetVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).Execute()
+	routingTableResp, err := r.client.GetVPCRoutingTable(ctx, projectId, vpcId, region, routingTableId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

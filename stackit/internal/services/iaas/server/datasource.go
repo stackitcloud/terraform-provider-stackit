@@ -7,9 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	iaasUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaas/utils"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -61,16 +59,12 @@ var agentDataTypes = map[string]attr.Type{
 }
 
 // NewServerDataSource is a helper function to simplify the provider implementation.
-func NewServerDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &serverDataSource{
-		clientFactory: clientFactory,
-	}
+func NewServerDataSource() datasource.DataSource {
+	return &serverDataSource{}
 }
 
 // serverDataSource is the data source implementation.
 type serverDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -81,16 +75,13 @@ func (d *serverDataSource) Metadata(_ context.Context, req datasource.MetadataRe
 }
 
 func (d *serverDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

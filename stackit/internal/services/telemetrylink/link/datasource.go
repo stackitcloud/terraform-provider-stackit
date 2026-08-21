@@ -14,9 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	telemetrylink "github.com/stackitcloud/stackit-sdk-go/services/telemetrylink/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/telemetrylink/utils"
+
 	tfutils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -42,7 +41,7 @@ type DataSourceModel struct {
 }
 
 type telemetryLinkDataSource struct {
-	client       *telemetrylink.APIClient
+	client       telemetrylink.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -51,17 +50,14 @@ func (d *telemetryLinkDataSource) Metadata(_ context.Context, req datasource.Met
 }
 
 func (d *telemetryLinkDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
-	d.providerData = providerData
 
-	apiClient := utils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	d.client = apiClient
+	d.providerData = providerData
+	d.client = clients.TelemetryLinkV1Client
+
 	tflog.Info(ctx, "TelemetryLink client configured")
 }
 
@@ -141,11 +137,11 @@ func (d *telemetryLinkDataSource) Read(ctx context.Context, req datasource.ReadR
 	var err error
 	switch resourceType {
 	case resourceTypeOrganization:
-		response, err = d.client.DefaultAPI.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
+		response, err = d.client.GetOrganizationTelemetryLink(ctx, resourceID, region).Execute()
 	case resourceTypeFolder:
-		response, err = d.client.DefaultAPI.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
+		response, err = d.client.GetFolderTelemetryLink(ctx, resourceID, region).Execute()
 	case resourceTypeProject:
-		response, err = d.client.DefaultAPI.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
+		response, err = d.client.GetProjectTelemetryLink(ctx, resourceID, region).Execute()
 	default:
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error reading TelemetryLink", fmt.Sprintf("Unsupported resource type: %s", resourceType))
 		return

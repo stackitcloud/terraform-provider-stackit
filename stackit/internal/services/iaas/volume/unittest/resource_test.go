@@ -12,7 +12,6 @@ import (
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/testutil"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
 )
 
 //go:embed testdata/resource.tf

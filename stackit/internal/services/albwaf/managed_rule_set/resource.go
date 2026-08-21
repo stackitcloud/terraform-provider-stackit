@@ -21,7 +21,6 @@ import (
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 	albWaf "github.com/stackitcloud/stackit-sdk-go/services/albwaf/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albwaf/utils"
@@ -73,7 +72,7 @@ var ruleType = map[string]attr.Type{
 }
 
 type managedRuleSetResource struct {
-	client       *albWaf.APIClient
+	client       albWaf.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -83,21 +82,19 @@ func NewManagedRuleSetResource() resource.Resource {
 
 func (r *managedRuleSetResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
+
+	r.providerData = providerData
+	r.client = clients.AlbWafV1CLient
 
 	features.CheckBetaResourcesEnabled(ctx, &r.providerData, &resp.Diagnostics, "stackit_alb_waf_managed_rule_set", core.Resource)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	apiClient := utils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
 	tflog.Info(ctx, "ALB WAF client configured")
 }
 
@@ -292,7 +289,7 @@ func (r *managedRuleSetResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	createResp, err := r.client.DefaultAPI.CreateManagedRuleSet(ctx, projectId, region).CreateManagedRuleSetPayload(*payload).Execute()
+	createResp, err := r.client.CreateManagedRuleSet(ctx, projectId, region).CreateManagedRuleSetPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating ALB WAF Managed Rule Set", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -344,7 +341,7 @@ func (r *managedRuleSetResource) Read(ctx context.Context, req resource.ReadRequ
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	managedRuleSetResp, err := r.client.DefaultAPI.GetManagedRuleSet(ctx, projectId, region, name).Execute()
+	managedRuleSetResp, err := r.client.GetManagedRuleSet(ctx, projectId, region, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -388,7 +385,7 @@ func (r *managedRuleSetResource) Delete(ctx context.Context, req resource.Delete
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "name", name)
 
-	_, err := r.client.DefaultAPI.DeleteManagedRuleSet(ctx, projectId, region, name).Execute()
+	_, err := r.client.DeleteManagedRuleSet(ctx, projectId, region, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting ALB WAF Managed Rule Set", fmt.Sprintf("Calling API: %v", err))
 		return

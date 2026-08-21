@@ -1,17 +1,10 @@
 package utils
 
 import (
-	"context"
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/stackitcloud/stackit-sdk-go/core/config"
-	edge "github.com/stackitcloud/stackit-sdk-go/services/edge/v1beta1api"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
 const (
@@ -21,23 +14,6 @@ const (
 	TokenMinDuration        = 600
 	TokenMaxDuration        = 15552000
 )
-
-func ConfigureClient(ctx context.Context, providerData *core.ProviderData, diags *diag.Diagnostics) *edge.APIClient {
-	apiClientConfigOptions := []config.ConfigurationOption{
-		config.WithCustomAuth(providerData.RoundTripper),
-		utils.UserAgentConfigOption(providerData.Version),
-	}
-	if providerData.EdgeCloudCustomEndpoint != "" {
-		apiClientConfigOptions = append(apiClientConfigOptions, config.WithEndpoint(providerData.EdgeCloudCustomEndpoint))
-	}
-	apiClient, err := edge.NewAPIClient(apiClientConfigOptions...)
-	if err != nil {
-		core.LogAndAddError(ctx, diags, "Error configuring API client", fmt.Sprintf("Configuring client: %v. This is an error related to the provider configuration, not to the resource configuration", err))
-		return nil
-	}
-
-	return apiClient
-}
 
 func CheckExpiration(expiresAt types.String, recreateBefore types.Int64, currentTime time.Time) (bool, error) {
 	if expiresAt.IsNull() {

@@ -10,9 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	certSdk "github.com/stackitcloud/stackit-sdk-go/services/certificates/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
-	certUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/albcertificates/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 )
 
@@ -28,7 +26,7 @@ func NewCertificatesDataSource() datasource.DataSource {
 
 // certDataSource is the data source implementation.
 type certDataSource struct {
-	client       *certSdk.APIClient
+	client       certSdk.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -39,17 +37,14 @@ func (r *certDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 
 // Configure adds the provider configured client to the data source.
 func (r *certDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	apiClient := certUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.providerData = providerData
+	r.client = clients.AlbCertificatesV2Client
+
 	tflog.Info(ctx, "Certificate client configured")
 }
 
@@ -117,7 +112,7 @@ func (r *certDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "cert_id", certId)
 
-	certResp, err := r.client.DefaultAPI.GetCertificate(ctx, projectId, region, certId).Execute()
+	certResp, err := r.client.GetCertificate(ctx, projectId, region, certId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

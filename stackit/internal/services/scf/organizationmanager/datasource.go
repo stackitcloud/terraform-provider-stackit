@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	scf "github.com/stackitcloud/stackit-sdk-go/services/scf/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	scfUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/scf/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -51,7 +50,7 @@ type scfOrganizationManagerDataSource struct {
 
 func (s *scfOrganizationManagerDataSource) Configure(ctx context.Context, request datasource.ConfigureRequest, response *datasource.ConfigureResponse) {
 	var ok bool
-	s.providerData, ok = conversion.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
+	s.providerData, ok = core.ParseProviderData(ctx, request.ProviderData, &response.Diagnostics)
 	if !ok {
 		return
 	}

@@ -13,10 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2alpha1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
-	iaasAlphaUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/iaasalpha/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 )
@@ -39,7 +37,7 @@ type DatasourceModel struct {
 
 // vpcNetworkRangeDatasource is the datasource implementation.
 type vpcNetworkRangeDatasource struct {
-	client       *iaas.APIClient
+	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
 
@@ -50,18 +48,15 @@ func (r *vpcNetworkRangeDatasource) Metadata(_ context.Context, req datasource.M
 
 // Configure adds the provider configured client to the datasource.
 func (r *vpcNetworkRangeDatasource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_network_range", core.Datasource, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2AlphaClient
 
-	r.client = iaasAlphaUtils.ConfigureClient(ctx, &r.providerData, &resp.Diagnostics)
+	features.CheckExperimentEnabled(ctx, &r.providerData, features.VpcExperiment, "stackit_vpc_network_range", core.Datasource, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -180,7 +175,7 @@ func (r *vpcNetworkRangeDatasource) Read(ctx context.Context, req datasource.Rea
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "network_range_id", networkRangeId)
 
-	networkRangeResp, err := r.client.DefaultAPI.GetVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).Execute()
+	networkRangeResp, err := r.client.GetVPCNetworkRange(ctx, projectId, vpcId, region, networkRangeId).Execute()
 	if err != nil {
 		utils.LogError(
 			ctx,

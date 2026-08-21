@@ -69,7 +69,7 @@ func (r *runnerResource) Metadata(_ context.Context, req resource.MetadataReques
 
 // Configure adds the provider configured client to the resource.
 func (r *runnerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -234,7 +234,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Create new runner
-	runnerResp, err := r.client.DefaultAPI.CreateIntakeRunner(ctx, projectId, region).CreateIntakeRunnerPayload(*payload).Execute()
+	runnerResp, err := r.client.CreateIntakeRunner(ctx, projectId, region).CreateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -252,7 +252,7 @@ func (r *runnerResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Wait for creation of intake runner
-	_, err = wait.CreateIntakeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
+	_, err = wait.CreateIntakeWaitHandler(ctx, r.client, projectId, region, runnerResp.GetId()).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating runner", fmt.Sprintf("Intake runner creation waiting: %v", err))
 		return
@@ -287,7 +287,7 @@ func (r *runnerResource) Read(ctx context.Context, req resource.ReadRequest, res
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 
-	runnerResp, err := r.client.DefaultAPI.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
+	runnerResp, err := r.client.GetIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) {
@@ -342,7 +342,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	// Update runner
-	runnerResp, err := r.client.DefaultAPI.UpdateIntakeRunner(ctx, projectId, region, runnerId).UpdateIntakeRunnerPayload(*payload).Execute()
+	runnerResp, err := r.client.UpdateIntakeRunner(ctx, projectId, region, runnerId).UpdateIntakeRunnerPayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -351,7 +351,7 @@ func (r *runnerResource) Update(ctx context.Context, req resource.UpdateRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Wait for update
-	_, err = wait.UpdateIntakeWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
+	_, err = wait.UpdateIntakeWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating runner", fmt.Sprintf("Runner update waiting: %v", err))
 		return
@@ -390,7 +390,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = tflog.SetField(ctx, "runner_id", runnerId)
 
 	// Delete existing runner
-	err := r.client.DefaultAPI.DeleteIntakeRunner(ctx, projectId, region, runnerId).Execute()
+	err := r.client.DeleteIntakeRunner(ctx, projectId, region, runnerId).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -404,7 +404,7 @@ func (r *runnerResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	ctx = core.LogResponse(ctx)
 
 	// Wait for the delete operation to complete
-	_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, r.client.DefaultAPI, projectId, region, runnerId).WaitWithContext(ctx)
+	_, err = wait.DeleteIntakeRunnerWaitHandler(ctx, r.client, projectId, region, runnerId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting runner", fmt.Sprintf("Runner deletion waiting: %v", err))
 		return

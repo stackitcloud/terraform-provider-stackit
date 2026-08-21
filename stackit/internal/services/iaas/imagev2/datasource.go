@@ -11,9 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -111,16 +108,12 @@ var checksumTypes = map[string]attr.Type{
 }
 
 // NewImageV2DataSource is a helper function to simplify the provider implementation.
-func NewImageV2DataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &imageDataV2Source{
-		clientFactory: clientFactory,
-	}
+func NewImageV2DataSource() datasource.DataSource {
+	return &imageDataV2Source{}
 }
 
 // imageDataV2Source is the data source implementation.
 type imageDataV2Source struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -131,18 +124,15 @@ func (d *imageDataV2Source) Metadata(_ context.Context, req datasource.MetadataR
 }
 
 func (d *imageDataV2Source) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
+	features.CheckBetaResourcesEnabled(ctx, &d.providerData, &resp.Diagnostics, "stackit_image_v2", "datasource")
 	if resp.Diagnostics.HasError() {
 		return
 	}

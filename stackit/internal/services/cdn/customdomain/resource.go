@@ -13,9 +13,6 @@ import (
 
 	cdnSdk "github.com/stackitcloud/stackit-sdk-go/services/cdn/v1api"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
-	cdnUtils "github.com/stackitcloud/terraform-provider-stackit/stackit/internal/services/cdn/utils"
-
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -79,7 +76,7 @@ type CustomDomainModel struct {
 }
 
 type customDomainResource struct {
-	client *cdnSdk.APIClient
+	client cdnSdk.DefaultAPI
 }
 
 func NewCustomDomainResource() resource.Resource {
@@ -92,7 +89,7 @@ type Certificate struct {
 }
 
 func (r *customDomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -102,11 +99,8 @@ func (r *customDomainResource) Configure(ctx context.Context, req resource.Confi
 		return
 	}
 
-	apiClient := cdnUtils.ConfigureClient(ctx, &providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	r.client = apiClient
+	r.client = clients.CdnV1Client
+
 	tflog.Info(ctx, "CDN client configured")
 }
 
@@ -207,7 +201,7 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
-	_, err = r.client.DefaultAPI.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -224,13 +218,13 @@ func (r *customDomainResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Waiting for create: %v", err))
 		return
 	}
 
-	respCustomDomain, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
+	respCustomDomain, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating CDN custom domain", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -266,7 +260,7 @@ func (r *customDomainResource) Read(ctx context.Context, req resource.ReadReques
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	customDomainResp, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
+	customDomainResp, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		// n.b. err is caught here if of type *oapierror.GenericOpenAPIError, which the stackit SDK client returns
@@ -323,7 +317,7 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 		IntentId:    new(uuid.NewString()),
 		Certificate: certificate,
 	}
-	_, err = r.client.DefaultAPI.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
+	_, err = r.client.PutCustomDomain(ctx, projectId, distributionId, name).PutCustomDomainPayload(payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -331,13 +325,13 @@ func (r *customDomainResource) Update(ctx context.Context, req resource.UpdateRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
+	_, err = wait.CreateCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).SetTimeout(5 * time.Minute).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Waiting for update: %v", err))
 		return
 	}
 
-	respCustomDomain, err := r.client.DefaultAPI.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
+	respCustomDomain, err := r.client.GetCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating CDN custom domain certificate", fmt.Sprintf("Calling API to read final state: %v", err))
 		return
@@ -372,7 +366,7 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 	name := model.Name.ValueString()
 	ctx = tflog.SetField(ctx, "name", name)
 
-	_, err := r.client.DefaultAPI.DeleteCustomDomain(ctx, projectId, distributionId, name).Execute()
+	_, err := r.client.DeleteCustomDomain(ctx, projectId, distributionId, name).Execute()
 	if err != nil {
 		var oapiErr *oapierror.GenericOpenAPIError
 		if errors.As(err, &oapiErr) && oapiErr.StatusCode == http.StatusNotFound {
@@ -385,7 +379,7 @@ func (r *customDomainResource) Delete(ctx context.Context, req resource.DeleteRe
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = wait.DeleteCDNCustomDomainWaitHandler(ctx, r.client.DefaultAPI, projectId, distributionId, name).WaitWithContext(ctx)
+	_, err = wait.DeleteCDNCustomDomainWaitHandler(ctx, r.client, projectId, distributionId, name).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Delete CDN custom domain", fmt.Sprintf("Waiting for deletion: %v", err))
 		return

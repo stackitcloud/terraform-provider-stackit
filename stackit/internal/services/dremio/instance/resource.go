@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/stackitcloud/stackit-sdk-go/core/oapierror"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/features"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -195,7 +194,7 @@ func (r *instanceResource) ModifyPlan(ctx context.Context, req resource.ModifyPl
 }
 
 func (r *instanceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	providerData, ok := conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
@@ -396,7 +395,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	waiterTimeout := dremioWaiter.CreateDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := dremioWaiter.CreateDremioWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	createTimeout, diags := model.Timeouts.Create(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -420,7 +419,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Create new Dremio instance
-	instanceResp, err := r.client.DefaultAPI.CreateDremioInstance(ctx, projectId, region).CreateDremioInstancePayload(*payload).Execute()
+	instanceResp, err := r.client.CreateDremioInstance(ctx, projectId, region).CreateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -441,7 +440,7 @@ func (r *instanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	_, err = dremioWaiter.CreateDremioWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceResp.Id).WaitWithContext(ctx)
+	_, err = dremioWaiter.CreateDremioWaitHandler(ctx, r.client, projectId, region, instanceResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error creating Dremio instance", fmt.Sprintf("Dremio instance creation waiting: %v", err))
 		return
@@ -488,7 +487,7 @@ func (r *instanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	instanceResp, err := r.client.DefaultAPI.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
+	instanceResp, err := r.client.GetDremioInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -521,7 +520,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	waiterTimeout := dremioWaiter.UpdateDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := dremioWaiter.UpdateDremioWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	updateTimeout, diags := model.Timeouts.Update(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -544,7 +543,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 
 	instanceId := state.InstanceId.ValueString()
-	instanceResp, err := r.client.DefaultAPI.UpdateDremioInstance(ctx, projectId, region, instanceId).UpdateDremioInstancePayload(*payload).Execute()
+	instanceResp, err := r.client.UpdateDremioInstance(ctx, projectId, region, instanceId).UpdateDremioInstancePayload(*payload).Execute()
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating instance", fmt.Sprintf("Calling API: %v", err))
 		return
@@ -565,7 +564,7 @@ func (r *instanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	_, err = dremioWaiter.UpdateDremioWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceResp.Id).WaitWithContext(ctx)
+	_, err = dremioWaiter.UpdateDremioWaitHandler(ctx, r.client, projectId, region, instanceResp.Id).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error updating Dremio instance", fmt.Sprintf("Dremio instance updating waiting: %v", err))
 		return
@@ -592,7 +591,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	waiterTimeout := dremioWaiter.DeleteDremioWaitHandler(ctx, r.client.DefaultAPI, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
+	waiterTimeout := dremioWaiter.DeleteDremioWaitHandler(ctx, r.client, "", "", "").GetTimeout() //nolint:tfctxinit,tfwriteid // false positive - only called to get default wait handler timeout value
 	deleteTimeout, diags := model.Timeouts.Delete(ctx, waiterTimeout+core.DefaultTimeoutMargin)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -610,7 +609,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	ctx = tflog.SetField(ctx, "region", region)
 	ctx = tflog.SetField(ctx, "instance_id", instanceId)
 
-	err := r.client.DefaultAPI.DeleteDremioInstance(ctx, projectId, region, instanceId).Execute()
+	err := r.client.DeleteDremioInstance(ctx, projectId, region, instanceId).Execute()
 	if err != nil {
 		if oapiErr, ok := errors.AsType[*oapierror.GenericOpenAPIError](err); ok && oapiErr.StatusCode == http.StatusNotFound {
 			resp.State.RemoveResource(ctx)
@@ -621,7 +620,7 @@ func (r *instanceResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	ctx = core.LogResponse(ctx)
 
-	_, err = dremioWaiter.DeleteDremioWaitHandler(ctx, r.client.DefaultAPI, projectId, region, instanceId).WaitWithContext(ctx)
+	_, err = dremioWaiter.DeleteDremioWaitHandler(ctx, r.client, projectId, region, instanceId).WaitWithContext(ctx)
 	if err != nil {
 		core.LogAndAddError(ctx, &resp.Diagnostics, "Error deleting Dremio instance", fmt.Sprintf("Dremio instance deletion waiting: %v", err))
 		return

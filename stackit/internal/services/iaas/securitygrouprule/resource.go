@@ -9,8 +9,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -98,16 +96,12 @@ var protocolTypes = map[string]attr.Type{
 }
 
 // NewSecurityGroupRuleResource is a helper function to simplify the provider implementation.
-func NewSecurityGroupRuleResource(clientFactory clientutils.ClientFactory) resource.Resource {
-	return &securityGroupRuleResource{
-		clientFactory: clientFactory,
-	}
+func NewSecurityGroupRuleResource() resource.Resource {
+	return &securityGroupRuleResource{}
 }
 
 // securityGroupRuleResource is the resource implementation.
 type securityGroupRuleResource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -149,16 +143,13 @@ func (r *securityGroupRuleResource) ModifyPlan(ctx context.Context, req resource
 
 // Configure adds the provider configured client to the resource.
 func (r *securityGroupRuleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	var ok bool
-	r.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	r.client = r.clientFactory.NewIaaSV2Client(ctx, &r.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	r.providerData = providerData
+	r.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }

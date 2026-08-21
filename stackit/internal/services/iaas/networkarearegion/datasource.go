@@ -7,8 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils/clientutils"
-
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/validate"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -16,8 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	iaas "github.com/stackitcloud/stackit-sdk-go/services/iaas/v2api"
-
-	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/conversion"
 
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/core"
 	"github.com/stackitcloud/terraform-provider-stackit/stackit/internal/utils"
@@ -29,16 +25,12 @@ var (
 )
 
 // NewNetworkAreaRegionDataSource is a helper function to simplify the provider implementation.
-func NewNetworkAreaRegionDataSource(clientFactory clientutils.ClientFactory) datasource.DataSource {
-	return &networkAreaRegionDataSource{
-		clientFactory: clientFactory,
-	}
+func NewNetworkAreaRegionDataSource() datasource.DataSource {
+	return &networkAreaRegionDataSource{}
 }
 
 // networkAreaRegionDataSource is the data source implementation.
 type networkAreaRegionDataSource struct {
-	clientFactory clientutils.ClientFactory
-
 	client       iaas.DefaultAPI
 	providerData core.ProviderData
 }
@@ -49,16 +41,13 @@ func (d *networkAreaRegionDataSource) Metadata(_ context.Context, req datasource
 }
 
 func (d *networkAreaRegionDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	var ok bool
-	d.providerData, ok = conversion.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
+	providerData, clients, ok := core.ParseProviderData(ctx, req.ProviderData, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	d.client = d.clientFactory.NewIaaSV2Client(ctx, &d.providerData, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	d.providerData = providerData
+	d.client = clients.IaaSv2Client
 
 	tflog.Info(ctx, "iaas client configured")
 }
